@@ -1,0 +1,257 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Plus, Edit, Trash2 } from "lucide-react"
+import { dataStore, type MemberType } from "@/lib/data-store"
+import { toast } from "@/lib/toast"
+
+export default function MemberTypesPage() {
+  const [memberTypes, setMemberTypes] = useState<MemberType[]>([])
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [editingType, setEditingType] = useState<MemberType | null>(null)
+
+  const [form, setForm] = useState({
+    name: "",
+    code: "",
+    description: "",
+    requiresSalary: false,
+    isActive: true,
+  })
+
+  useEffect(() => {
+    loadMemberTypes()
+  }, [])
+
+  const loadMemberTypes = async () => {
+    const types = await dataStore.getAllMemberTypes()
+    setMemberTypes(types)
+  }
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.code) {
+      toast.error("Missing Information", "Please fill in all required fields")
+      return
+    }
+
+    // Check for duplicate code
+    const existingType = await dataStore.getMemberTypeByCode(form.code)
+    if (existingType && (!editingType || existingType.id !== editingType.id)) {
+      toast.error("Duplicate Code", "A member type with this code already exists")
+      return
+    }
+
+    if (editingType) {
+      await dataStore.updateMemberType(editingType.id, form)
+      toast.success("Employment Type Updated", `${form.name} has been updated successfully`)
+    } else {
+      await dataStore.createMemberType(form)
+      toast.success("Employment Type Created", `${form.name} has been added to employment types`)
+    }
+
+    await loadMemberTypes()
+    resetForm()
+    setIsAddDialogOpen(false)
+  }
+
+  const handleEdit = (type: MemberType) => {
+    setEditingType(type)
+    setForm({
+      name: type.name,
+      code: type.code,
+      description: type.description,
+      requiresSalary: type.requiresSalary,
+      isActive: type.isActive,
+    })
+    setIsAddDialogOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    const type = memberTypes.find((t) => t.id === id)
+    if (confirm("Are you sure you want to delete this employment type?")) {
+      await dataStore.deleteMemberType(id)
+      await loadMemberTypes()
+      if (type) {
+        toast.success("Employment Type Deleted", `${type.name} has been removed`)
+      }
+    }
+  }
+
+  const toggleActive = async (id: string, currentStatus: boolean) => {
+    const type = memberTypes.find((t) => t.id === id)
+    await dataStore.updateMemberType(id, { isActive: !currentStatus })
+    await loadMemberTypes()
+    if (type) {
+      toast.success(
+        !currentStatus ? "Employment Type Activated" : "Employment Type Deactivated",
+        `${type.name} is now ${!currentStatus ? "active" : "inactive"}`,
+      )
+    }
+  }
+
+  const resetForm = () => {
+    setForm({
+      name: "",
+      code: "",
+      description: "",
+      requiresSalary: false,
+      isActive: true,
+    })
+    setEditingType(null)
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Employment Type</h1>
+          <p className="text-gray-600">Configure employment types for your organization</p>
+        </div>
+        <Dialog
+          open={isAddDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddDialogOpen(open)
+            if (!open) resetForm()
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Employment Type
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingType ? "Edit Employment Type" : "Add Employment Type"}</DialogTitle>
+              <DialogDescription>
+                {editingType ? "Update employment type details" : "Create a new employment type for your organization"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g., In-house Employee"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Code *</Label>
+                <Input
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                  placeholder="e.g., employee"
+                  disabled={!!editingType}
+                />
+                <p className="text-xs text-gray-500">Unique identifier (cannot be changed after creation)</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Brief description of this employment type"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Requires Salary</Label>
+                  <p className="text-xs text-gray-500">Show salary field for this employment type</p>
+                </div>
+                <Switch
+                  checked={form.requiresSalary}
+                  onCheckedChange={(checked) => setForm({ ...form, requiresSalary: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Active</Label>
+                  <p className="text-xs text-gray-500">Make this employment type available</p>
+                </div>
+                <Switch
+                  checked={form.isActive}
+                  onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+                />
+              </div>
+            </div>
+            <Button onClick={handleSubmit} className="w-full">
+              {editingType ? "Update Employment Type" : "Create Employment Type"}
+            </Button>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Employment Types</CardTitle>
+          <CardDescription>Manage different types of employment in your organization</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Requires Salary</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {memberTypes.map((type) => (
+                <TableRow key={type.id}>
+                  <TableCell className="font-medium">{type.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{type.code}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">{type.description}</TableCell>
+                  <TableCell>
+                    {type.requiresSalary ? (
+                      <Badge className="bg-green-100 text-green-800">Yes</Badge>
+                    ) : (
+                      <Badge variant="secondary">No</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={type.isActive} onCheckedChange={() => toggleActive(type.id, type.isActive)} />
+                      <Badge variant={type.isActive ? "default" : "secondary"}>
+                        {type.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(type.id)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

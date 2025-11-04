@@ -1,0 +1,42 @@
+import { type NextRequest, NextResponse } from "next/server"
+import { mongoStore } from "@/lib/mongodb-store"
+import { logActivity } from "@/lib/mongodb-store"
+import { withAuth } from "@/lib/api-auth"
+
+export const GET = withAuth(async (request: NextRequest, user) => {
+  try {
+    const { searchParams } = new URL(request.url)
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "100")
+    const skip = (page - 1) * limit
+
+    const clients = await mongoStore.getAll("clients", { userId: user.id }, { skip, limit, sort: { createdAt: -1 } })
+    const total = await mongoStore.count("clients", { userId: user.id })
+
+    return NextResponse.json({
+      success: true,
+      data: clients,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    })
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Failed to fetch clients" }, { status: 500 })
+  }
+})
+
+export const POST = withAuth(async (request: NextRequest, user) => {
+  try {
+    const body = await request.json()
+    const client = await mongoStore.create("clients", { ...body, userId: user.id })
+
+    await logActivity(user.id, "create", "client", client._id?.toString(), { name: body.name })
+
+    return NextResponse.json({ success: true, data: client })
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Failed to create client" }, { status: 500 })
+  }
+})
