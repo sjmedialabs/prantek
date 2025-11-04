@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Crown, Eye, EyeOff } from "lucide-react"
-import { authenticateSuperAdmin } from "@/lib/auth"
 import { tokenStorage } from "@/lib/token-storage"
 
 export default function SuperAdminSignInPage() {
@@ -27,7 +26,12 @@ export default function SuperAdminSignInPage() {
     setError("")
 
     try {
-      const authResult = await authenticateSuperAdmin(email, password)
+      const response = await fetch("/api/auth/super-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      })
+      const authResult = response.ok ? await response.json() : null
 
       if (authResult) {
         // Store JWT tokens
@@ -35,7 +39,7 @@ export default function SuperAdminSignInPage() {
         tokenStorage.setRefreshToken(authResult.refreshToken)
 
         // Redirect to super admin dashboard
-        router.push("/super-admin/dashboard")
+        window.location.href = "/super-admin/dashboard"
       } else {
         setError("Invalid email or password")
       }
@@ -71,7 +75,6 @@ export default function SuperAdminSignInPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="superadmin@prantek.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -104,11 +107,7 @@ export default function SuperAdminSignInPage() {
             </div>
 
             <div className="text-xs text-slate-400 bg-slate-700 p-3 rounded">
-              <strong>Demo Credentials:</strong>
               <br />
-              Email: superadmin@prantek.com
-              <br />
-              Password: 123
             </div>
 
             <Button

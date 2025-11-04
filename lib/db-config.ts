@@ -19,6 +19,7 @@ export const COLLECTIONS = {
   MEMBER_TYPES: "member_types",
   ROLES: "roles",
   ACTIVITY_LOGS: "activity_logs",
+  WEBSITE_CONTENT: "website_content",
 } as const
 
 export const INDEXES = {
@@ -59,3 +60,6 @@ export const INDEXES = {
   TEAM_MEMBERS: [{ key: { userId: 1 } }, { key: { email: 1 } }, { key: { createdAt: -1 } }],
   ACTIVITY_LOGS: [{ key: { userId: 1 } }, { key: { action: 1 } }, { key: { timestamp: -1 } }],
 }
+
+// Alias for backward compatibility
+export { COLLECTIONS as Collections }

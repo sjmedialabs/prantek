@@ -13,8 +13,9 @@ export function PricingSection() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const activePlans = dataStore.getActiveSubscriptionPlans()
+    dataStore.getActiveSubscriptionPlans().then((activePlans) => {
     setPlans(activePlans)
+    })
     setLoading(false)
   }, [])
 

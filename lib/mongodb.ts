@@ -33,7 +33,11 @@ if (process.env.NODE_ENV === "development") {
 
 export async function getDb(): Promise<Db> {
   const client = await clientPromise
-  return client.db("saas_platform")
+  return client.db("prantek")
+}
+
+export async function connectDB(): Promise<Db> {
+  return getDb()
 }
 
 export async function closeConnection() {

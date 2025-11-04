@@ -11,8 +11,9 @@ export function LandingHeader() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    const websiteContent = dataStore.getWebsiteContent()
+    dataStore.getWebsiteContent().then((websiteContent) => {
     setContent(websiteContent)
+    })
   }, [])
 
   const navLinks = [

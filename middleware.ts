@@ -2,8 +2,8 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { verifyToken } from "./lib/jwt"
 
-// Define protected routes
-const protectedRoutes = ["/dashboard", "/super-admin"]
+// Define protected routes - /super-admin/dashboard and subpaths need auth, but /super-admin login page doesn't
+const protectedRoutes = ["/dashboard", "/super-admin/dashboard", "/super-admin/clients", "/super-admin/sales", "/super-admin/settings", "/super-admin/cms", "/super-admin/activity", "/super-admin/subscriptions"]
 const authRoutes = ["/signin", "/signup", "/super-admin"]
 
 export async function middleware(request: NextRequest) {

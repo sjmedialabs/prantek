@@ -62,3 +62,14 @@ export const tokenStorage = {
     return !!this.getAccessToken()
   },
 }
+
+/**
+ * Server-side function to get token from request headers
+ */
+export function getTokenFromRequest(request: Request): string | null {
+  const authHeader = request.headers.get("authorization")
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.substring(7)
+  }
+  return null
+}

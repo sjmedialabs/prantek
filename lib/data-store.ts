@@ -744,7 +744,7 @@ class DataStore {
       }
 
       const data = await response.json()
-      return data.data || data || this.getDefaultWebsiteContent()
+      return (Array.isArray(data) && data.length === 0) ? this.getDefaultWebsiteContent() : (data.data || data || this.getDefaultWebsiteContent())
     } catch (error) {
       console.error("[v0] Error fetching website content:", error)
       return this.getDefaultWebsiteContent()

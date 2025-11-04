@@ -1,24 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { authenticateUser } from "@/lib/auth-server"
+import { authenticateSuperAdmin } from "@/lib/auth-server"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, userType = "admin" } = body
+    const { email, password } = body
 
-    console.log('[AUTH-LOGIN] Login attempt:', email)
+    console.log('[SUPER-ADMIN AUTH] Attempting login for:', email)
 
     if (!email || !password) {
+      console.log('[SUPER-ADMIN AUTH] Missing email or password')
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const result = await authenticateUser(email, password)
-
-    console.log('[AUTH-LOGIN] Auth result:', result ? 'SUCCESS' : 'FAILED')
+    const result = await authenticateSuperAdmin(email, password)
 
     if (!result) {
+      console.log('[SUPER-ADMIN AUTH] Authentication failed for:', email)
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
+
+    console.log('[SUPER-ADMIN AUTH] Authentication successful for:', email)
 
     const response = NextResponse.json({
       user: result.user,
@@ -36,14 +38,6 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 15, // 15 minutes
     })
 
-    response.cookies.set("accessToken", result.accessToken, {
-      httpOnly: true,
-      secure: false, // Set to true for HTTPS
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 15, // 15 minutes
-    })
-
     response.cookies.set("refreshToken", result.refreshToken, {
       httpOnly: true,
       secure: false, // Set to true for HTTPS
@@ -54,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error("[AUTH-LOGIN] Error in /api/auth/login:", error)
+    console.error("[SUPER-ADMIN AUTH] Error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

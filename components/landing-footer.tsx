@@ -9,8 +9,9 @@ export function LandingFooter() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    const websiteContent = dataStore.getWebsiteContent()
+    dataStore.getWebsiteContent().then((websiteContent) => {
     setContent(websiteContent)
+    })
   }, [])
 
   return (

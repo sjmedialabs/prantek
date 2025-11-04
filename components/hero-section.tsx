@@ -12,13 +12,14 @@ export function HeroSection() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
 
   useEffect(() => {
-    const websiteContent = dataStore.getWebsiteContent()
-    console.log("[v0] Hero section loaded content:", {
-      heroRightImage: websiteContent.heroRightImage,
-      heroBackgroundImage: websiteContent.heroBackgroundImage,
-      heroDemoVideoUrl: websiteContent.heroDemoVideoUrl,
+    dataStore.getWebsiteContent().then((websiteContent) => {
+      console.log("[v0] Hero section loaded content:", {
+        heroRightImage: websiteContent.heroRightImage,
+        heroBackgroundImage: websiteContent.heroBackgroundImage,
+        heroDemoVideoUrl: websiteContent.heroDemoVideoUrl,
+      })
+      setContent(websiteContent)
     })
-    setContent(websiteContent)
   }, [])
 
   const heroTitle = content?.heroTitle || "Smart Financial Management for Modern Businesses"
