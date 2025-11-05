@@ -78,102 +78,137 @@ export default function SalesDashboardPage() {
 
   useEffect(() => {
     const loadRealData = async () => {
-      // Get all users and plans
-      const allUsers = await api.users.getAll()
-      const adminUsers = allUsers.filter((u) => u.role === "admin")
-      const plans = await api.subscriptionPlans.getAll()
-      const clients = await api.clients.getAll()
+      try {
+        // Get all users and plans
+        const allUsers = await api.users.getAll()
+        const adminUsers = allUsers.filter((u) => u.role === "admin")
+        const plans = await api.subscriptionPlans.getAll()
 
-      // Calculate metrics from real data
-      const totalClients = adminUsers.length
-      const activeSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "active").length
-      const totalRevenue = plans.reduce((sum, plan) => sum + plan.revenue, 0)
-      const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalRevenue / activeSubscriptions) : 0
+        // Calculate metrics from real data
+        const totalClients = adminUsers.length
+        const activeSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "active").length
+        const trialSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "trial").length
+        
+        // Calculate total MRR from active subscriptions
+        let totalMRR = 0
+        adminUsers.forEach(user => {
+          if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial") {
+            const plan = plans.find(p => (p._id || p.id) === user.subscriptionPlanId)
+            if (plan) {
+              totalMRR += plan.price || 0
+            }
+          }
+        })
+        
+        const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalMRR / activeSubscriptions) : 0
+        const churnedUsers = adminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
+        const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
 
-      const metrics: SalesMetric[] = [
-        {
-          name: "Total Clients Onboarded",
-          value: totalClients,
-          change: "+12.5%",
-          trend: "up",
-          icon: Building2,
-        },
-        {
-          name: "Monthly Recurring Revenue",
-          value: `₹${totalRevenue.toLocaleString()}`,
-          change: "+18.2%",
-          trend: "up",
-          icon: DollarSign,
-        },
-        {
-          name: "Active Subscriptions",
-          value: activeSubscriptions,
-          change: "+8.1%",
-          trend: "up",
-          icon: CreditCard,
-        },
-        {
-          name: "Average Revenue Per User",
-          value: `₹${avgRevenuePerUser}`,
-          change: "-2.3%",
-          trend: "down",
-          icon: Target,
-        },
-        {
-          name: "Customer Lifetime Value",
-          value: `₹${(avgRevenuePerUser * 12).toLocaleString()}`,
-          change: "+15.7%",
-          trend: "up",
-          icon: TrendingUp,
-        },
-        {
-          name: "Churn Rate",
-          value: "3.2%",
-          change: "-0.8%",
-          trend: "up",
-          icon: Users,
-        },
-      ]
-      setSalesMetrics(metrics)
+        const metrics: SalesMetric[] = [
+          {
+            name: "Total Clients Onboarded",
+            value: totalClients,
+            change: totalClients > 0 ? "+100%" : "0%",
+            trend: "up",
+            icon: Building2,
+          },
+          {
+            name: "Monthly Recurring Revenue",
+            value: `₹${totalMRR.toLocaleString()}`,
+            change: totalMRR > 0 ? "+100%" : "0%",
+            trend: "up",
+            icon: DollarSign,
+          },
+          {
+            name: "Active Subscriptions",
+            value: activeSubscriptions,
+            change: activeSubscriptions > 0 ? "+100%" : "0%",
+            trend: "up",
+            icon: CreditCard,
+          },
+          {
+            name: "Average Revenue Per User",
+            value: `₹${avgRevenuePerUser}`,
+            change: "0%",
+            trend: "neutral",
+            icon: Target,
+          },
+          {
+            name: "Customer Lifetime Value",
+            value: `₹${(avgRevenuePerUser * 12).toLocaleString()}`,
+            change: "0%",
+            trend: "up",
+            icon: TrendingUp,
+          },
+          {
+            name: "Churn Rate",
+            value: `${churnRate}%`,
+            change: "0%",
+            trend: churnedUsers > 0 ? "down" : "neutral",
+            icon: Users,
+          },
+        ]
+        setSalesMetrics(metrics)
 
-      // Generate client onboarding data
-      const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-      const onboarding = months.map((month, index) => ({
-        month,
-        newClients: Math.round(totalClients * (0.05 + index * 0.02)),
-        totalClients: Math.round(totalClients * (0.3 + index * 0.12)),
-        churnRate: 2 + Math.random() * 1.5,
-      }))
-      setClientOnboardingData(onboarding)
+        // Generate onboarding data from real user creation dates
+        const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        const currentMonth = new Date().getMonth()
+        const onboarding = months.map((month, index) => {
+          const monthIndex = currentMonth - (5 - index)
+          const usersInMonth = adminUsers.filter(u => {
+            if (!u.createdAt) return false
+            const userMonth = new Date(u.createdAt).getMonth()
+            return userMonth === monthIndex
+          }).length
+          
+          return {
+            month,
+            newClients: usersInMonth,
+            totalClients: adminUsers.filter(u => {
+              if (!u.createdAt) return false
+              return new Date(u.createdAt) <= new Date(2024, monthIndex, 1)
+            }).length,
+            churnRate: parseFloat(churnRate),
+          }
+        })
+        setClientOnboardingData(onboarding)
 
-      // Generate revenue data by plan
-      const revenue = months.map((month, index) => {
-        const standardPlan = plans.find((p) => p.name === "Standard")
-        const premiumPlan = plans.find((p) => p.name === "Premium")
-        const enterprisePlan = plans.find((p) => p.name === "Enterprise")
+        // Calculate revenue by plan from real subscriptions
+        const revenue = months.map((month, index) => {
+          const result: any = { month, total: 0 }
+          
+          plans.forEach(plan => {
+            const planName = plan.name.toLowerCase()
+            const usersWithPlan = adminUsers.filter(u => 
+              (u._id || u.id) === plan._id || (u._id || u.id) === plan.id
+            ).length
+            result[planName] = usersWithPlan * (plan.price || 0)
+            result.total += result[planName]
+          })
+          
+          return result
+        })
+        setRevenueData(revenue)
 
-        const standard = standardPlan ? Math.round(standardPlan.revenue * (0.5 + index * 0.1)) : 0
-        const premium = premiumPlan ? Math.round(premiumPlan.revenue * (0.5 + index * 0.1)) : 0
-        const enterprise = enterprisePlan ? Math.round(enterprisePlan.revenue * (0.5 + index * 0.1)) : 0
-
-        return {
-          month,
-          standard,
-          premium,
-          enterprise,
-          total: standard + premium + enterprise,
-        }
-      })
-      setRevenueData(revenue)
-
-      // Plan distribution from real data
-      const distribution = plans.map((plan) => ({
-        name: plan.name,
-        value: plan.subscriberCount,
-        revenue: plan.revenue,
-        color: plan.name === "Standard" ? "#3b82f6" : plan.name === "Premium" ? "#8b5cf6" : "#f59e0b",
-      }))
-      setPlanDistribution(distribution)
+        // Plan distribution from real subscription counts
+        const distribution = plans.map((plan, index) => {
+          const subscriberCount = adminUsers.filter(u => 
+            (u.subscriptionPlanId === plan._id || u.subscriptionPlanId === plan.id)
+          ).length
+          
+          const colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"]
+          
+          return {
+            name: plan.name,
+            value: subscriberCount,
+            revenue: subscriberCount * (plan.price || 0),
+            color: colors[index % colors.length],
+          }
+        })
+        setPlanDistribution(distribution.filter(d => d.value > 0))
+      } catch (error) {
+        console.error("Failed to load sales data:", error)
+      }
     }
 
     loadRealData()
