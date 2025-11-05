@@ -1,9 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
-import { withAuth } from "@/lib/api-auth"
 
-// GET is public - no authentication required for viewing website content
+// GET - public access
 export async function GET(req: NextRequest) {
   try {
     const db = await connectDB()
@@ -16,26 +15,75 @@ export async function GET(req: NextRequest) {
       .find(query)
       .toArray()
 
-    return NextResponse.json(content)
+    return NextResponse.json({ success: true, data: content, content })
   } catch (error) {
-    console.error("[v0] Error fetching website content:", error)
-    return NextResponse.json([], { status: 200 }) // Return empty array instead of error
+    console.error("Error fetching website content:", error)
+    return NextResponse.json({ success: true, data: [], content: [] })
   }
 }
 
-// POST requires authentication
-export const POST = withAuth(async (req: NextRequest, user: any) => {
-  const db = await connectDB()
-  const data = await req.json()
+// POST - create new content
+export async function POST(req: NextRequest) {
+  try {
+    const db = await connectDB()
+    const data = await req.json()
 
-  const content = {
-    ...data,
-    organizationId: user.organizationId,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    const content = {
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const result = await db
+      .collection(Collections.WEBSITE_CONTENT || "website_content")
+      .insertOne(content)
+
+    return NextResponse.json({ 
+      success: true, 
+      data: { ...content, _id: result.insertedId },
+      content: { ...content, _id: result.insertedId }
+    })
+  } catch (error) {
+    console.error("Error creating website content:", error)
+    return NextResponse.json({ success: false, error: "Failed to create content" }, { status: 500 })
   }
+}
 
-  const result = await db.collection(Collections.WEBSITE_CONTENT || "website_content").insertOne(content)
+// PUT - update content
+export async function PUT(req: NextRequest) {
+  try {
+    const db = await connectDB()
+    const data = await req.json()
+    const { _id, id, ...updateData } = data
+    
+    const contentId = _id || id
+    if (!contentId) {
+      return NextResponse.json({ success: false, error: "Content ID required" }, { status: 400 })
+    }
 
-  return NextResponse.json({ ...content, _id: result.insertedId })
-})
+    const { ObjectId } = await import("mongodb")
+    const result = await db
+      .collection(Collections.WEBSITE_CONTENT || "website_content")
+      .updateOne(
+        { _id: new ObjectId(contentId) },
+        { $set: { ...updateData, updatedAt: new Date() } }
+      )
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ success: false, error: "Content not found" }, { status: 404 })
+    }
+
+    const updatedContent = await db
+      .collection(Collections.WEBSITE_CONTENT || "website_content")
+      .findOne({ _id: new ObjectId(contentId) })
+
+    return NextResponse.json({ 
+      success: true, 
+      data: updatedContent,
+      content: updatedContent
+    })
+  } catch (error) {
+    console.error("Error updating website content:", error)
+    return NextResponse.json({ success: false, error: "Failed to update content" }, { status: 500 })
+  }
+}
