@@ -1,14 +1,14 @@
 import { generateAccessToken, generateRefreshToken, verifyToken } from "./jwt"
-import { dataStore } from "./data-store"
 
 export interface User {
   id: string
   email: string
   name: string
-  role: "user" | "super-admin"
+  role: "user" | "super-admin" | "admin" | "employee"
   companyId?: string
   subscriptionPlanId?: string
   subscriptionStatus?: string
+  clientId?: string
 }
 
 export interface AuthTokens {
@@ -18,76 +18,28 @@ export interface AuthTokens {
 }
 
 /**
- * Authenticate user with email and password
- * @param email - User email
- * @param password - User password
- * @returns Auth tokens and user data if successful, null if failed
+ * Verify user from access token by calling the API
+ * @param accessToken - JWT access token
+ * @returns User data if valid, null if invalid
  */
-export async function authenticateUser(email: string, password: string): Promise<AuthTokens | null> {
-  // Get all users from dataStore
-  const users = await dataStore.getAll<any>("users")
+export async function verifyUser(accessToken: string): Promise<User | null> {
+  try {
+    const response = await fetch("/api/auth/verify", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
 
-  // Find user by email and password
-  const user = users.find((u: any) => u.email === email && u.password === password)
+    if (!response.ok) {
+      return null
+    }
 
-  if (!user) {
+    const data = await response.json()
+    return data.user
+  } catch (error) {
+    console.error("Error verifying user:", error)
     return null
-  }
-
-  // Generate tokens
-  const tokenPayload = {
-    userId: user.id,
-    email: user.email,
-    role: user.role || "user",
-  }
-
-  const accessToken = await generateAccessToken(tokenPayload)
-  const refreshToken = await generateRefreshToken(tokenPayload)
-
-  // Return tokens and user data (without password)
-  const { password: _, ...userWithoutPassword } = user
-
-  return {
-    accessToken,
-    refreshToken,
-    user: userWithoutPassword,
-  }
-}
-
-/**
- * Authenticate super admin with email and password
- * @param email - Super admin email
- * @param password - Super admin password
- * @returns Auth tokens and user data if successful, null if failed
- */
-export async function authenticateSuperAdmin(email: string, password: string): Promise<AuthTokens | null> {
-  // Get all super admins from dataStore
-  const superAdmins = await dataStore.getAll<any>("superAdmins")
-
-  // Find super admin by email and password
-  const admin = superAdmins.find((a: any) => a.email === email && a.password === password)
-
-  if (!admin) {
-    return null
-  }
-
-  // Generate tokens
-  const tokenPayload = {
-    userId: admin.id,
-    email: admin.email,
-    role: "super-admin" as const,
-  }
-
-  const accessToken = await generateAccessToken(tokenPayload)
-  const refreshToken = await generateRefreshToken(tokenPayload)
-
-  // Return tokens and admin data (without password)
-  const { password: _, ...adminWithoutPassword } = admin
-
-  return {
-    accessToken,
-    refreshToken,
-    user: { ...adminWithoutPassword, role: "super-admin" as const },
   }
 }
 
@@ -104,36 +56,14 @@ export async function refreshAccessToken(refreshToken: string): Promise<string |
   }
 
   // Generate new access token with same payload
-  const newAccessToken = await generateAccessToken({
-    userId: payload.userId,
-    email: payload.email,
-    role: payload.role,
-  })
+  const newAccessToken = await generateAccessToken(
+    {
+      userId: payload.userId,
+      email: payload.email,
+      role: payload.role,
+    },
+    "15m"
+  )
 
   return newAccessToken
-}
-
-/**
- * Verify user from access token
- * @param accessToken - JWT access token
- * @returns User data if valid, null if invalid
- */
-export async function verifyUser(accessToken: string): Promise<User | null> {
-  const payload = await verifyToken(accessToken)
-
-  if (!payload) {
-    return null
-  }
-
-  // Get user from dataStore
-  const collection = payload.role === "super-admin" ? "superAdmins" : "users"
-  const user = await dataStore.getById<any>(collection, payload.userId)
-
-  if (!user) {
-    return null
-  }
-
-  // Return user without password
-  const { password: _, ...userWithoutPassword } = user
-  return userWithoutPassword
 }

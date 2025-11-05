@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { FileText, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
-import { dataStore, type TaxSettings, type TaxRate } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import {
   Dialog,
   DialogContent,
@@ -46,7 +46,7 @@ export default function TaxDetailsPage() {
     const loadTaxData = async () => {
       const settings = await dataStore.getTaxSettings()
       setTaxSettings(settings)
-      const rates = await dataStore.getAllTaxRates()
+      const rates = await api.TaxRates.getAll()
       setTaxRates(rates)
     }
     loadTaxData()
@@ -87,7 +87,7 @@ export default function TaxDetailsPage() {
     }
 
     if (editingRate) {
-      const updated = await dataStore.updateTaxRate(editingRate.id, {
+      const updated = await api.TaxRate.update(editingRate.id, {
         ...rateData,
         rate: Number.parseFloat(rateData.rate),
       })
@@ -95,7 +95,7 @@ export default function TaxDetailsPage() {
         setTaxRates(taxRates.map((rate) => (rate.id === updated.id ? updated : rate)))
       }
     } else {
-      const newRate = await dataStore.createTaxRate({
+      const newRate = await api.TaxRate.create({
         ...rateData,
         rate: Number.parseFloat(rateData.rate),
         isActive: true,
@@ -127,7 +127,7 @@ export default function TaxDetailsPage() {
   }
 
   const handleToggleRateStatus = async (rate: TaxRate) => {
-    const updated = await dataStore.updateTaxRate(rate.id, {
+    const updated = await api.TaxRate.update(rate.id, {
       isActive: !rate.isActive,
     })
     if (updated) {

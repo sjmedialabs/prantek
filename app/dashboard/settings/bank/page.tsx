@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Landmark, Save, Upload, Plus, Edit2, Power, PowerOff } from "lucide-react"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import {
   Dialog,
   DialogContent,
@@ -54,7 +54,7 @@ export default function BankAccountPage() {
 
   useEffect(() => {
     const loadAccounts = async () => {
-      const accounts = await dataStore.getAll<BankAccount>("bank_accounts")
+      const accounts = await api.bankAccounts.getAll()
       setBankAccounts(accounts)
     }
     loadAccounts()
@@ -68,7 +68,7 @@ export default function BankAccountPage() {
 
     if (editingAccount) {
       // Update existing account
-      const updated = await dataStore.update<BankAccount>("bank_accounts", editingAccount.id, {
+      const updated = await api.bankAccounts.update( editingAccount.id, {
         ...bankData,
         upiScanner: bankData.upiScanner ? URL.createObjectURL(bankData.upiScanner) : editingAccount.upiScanner,
       })
@@ -77,7 +77,7 @@ export default function BankAccountPage() {
       }
     } else {
       // Create new account
-      const newAccount = await dataStore.create<BankAccount>("bank_accounts", {
+      const newAccount = await api.bankAccounts.create( {
         ...bankData,
         upiScanner: bankData.upiScanner ? URL.createObjectURL(bankData.upiScanner) : null,
         isActive: true,
@@ -119,7 +119,7 @@ export default function BankAccountPage() {
   }
 
   const handleToggleStatus = async (account: BankAccount) => {
-    const updated = await dataStore.update<BankAccount>("bank_accounts", account.id, {
+    const updated = await api.bankAccounts.update( account.id, {
       isActive: !account.isActive,
     })
     if (updated) {

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { toast } from "sonner"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
@@ -104,9 +104,9 @@ export default function NewReceiptPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const loadedClients = await dataStore.getAll("clients")
+      const loadedClients = await api.clients.getAll()
       const loadedQuotations = await dataStore.getAll("quotations")
-      const loadedItems = await dataStore.getAll("items")
+      const loadedItems = await api.items.getAll()
 
       console.log("[v0] Loaded clients:", loadedClients)
       console.log("[v0] Loaded quotations:", loadedQuotations)
@@ -311,7 +311,7 @@ export default function NewReceiptPage() {
     try {
       console.log("[v0] Calling createReceiptWithQuotation...")
 
-      const receipt = await dataStore.createReceiptWithQuotation({
+      const receipt = await api.ReceiptWithQuotation.create({
         clientId: selectedClientId,
         clientName,
         clientEmail,

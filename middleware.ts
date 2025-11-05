@@ -12,16 +12,26 @@ export async function middleware(request: NextRequest) {
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
   const isAuthRoute = authRoutes.some((route) => pathname === route)
+  const isSuperAdminRoute = pathname.startsWith("/super-admin")
 
-  // Get token from cookie or Authorization header
-  const token = request.cookies.get("auth_token")?.value || request.headers.get("authorization")?.replace("Bearer ", "")
+  // Get token based on context (super-admin has separate tokens)
+  let token: string | undefined
+  if (isSuperAdminRoute) {
+    token = request.cookies.get("super_admin_auth_token")?.value || 
+            request.cookies.get("super_admin_accessToken")?.value ||
+            request.headers.get("authorization")?.replace("Bearer ", "")
+  } else {
+    token = request.cookies.get("auth_token")?.value || 
+            request.cookies.get("accessToken")?.value ||
+            request.headers.get("authorization")?.replace("Bearer ", "")
+  }
 
   // If accessing protected route
   if (isProtectedRoute) {
     if (!token) {
-      // No token, redirect to signin
+      // No token, redirect to appropriate signin
       const url = request.nextUrl.clone()
-      url.pathname = "/signin"
+      url.pathname = isSuperAdminRoute ? "/super-admin" : "/signin"
       url.searchParams.set("redirect", pathname)
       return NextResponse.redirect(url)
     }
@@ -30,19 +40,26 @@ export async function middleware(request: NextRequest) {
     const payload = await verifyToken(token)
 
     if (!payload) {
-      // Invalid token, redirect to signin
+      // Invalid token, redirect to appropriate signin
       const url = request.nextUrl.clone()
-      url.pathname = "/signin"
+      url.pathname = isSuperAdminRoute ? "/super-admin" : "/signin"
       url.searchParams.set("redirect", pathname)
       url.searchParams.set("error", "session_expired")
       return NextResponse.redirect(url)
     }
 
     // Check role-based access
-    if (pathname.startsWith("/super-admin") && payload.role !== "super-admin") {
+    if (isSuperAdminRoute && payload.role !== "super-admin") {
       // Not a super admin, redirect to regular dashboard
       const url = request.nextUrl.clone()
       url.pathname = "/dashboard"
+      return NextResponse.redirect(url)
+    }
+
+    if (!isSuperAdminRoute && pathname.startsWith("/dashboard") && payload.role === "super-admin") {
+      // Super admin trying to access regular dashboard, redirect to super-admin
+      const url = request.nextUrl.clone()
+      url.pathname = "/super-admin/dashboard"
       return NextResponse.redirect(url)
     }
 
@@ -64,8 +81,18 @@ export async function middleware(request: NextRequest) {
     if (payload) {
       // Already logged in, redirect to appropriate dashboard
       const url = request.nextUrl.clone()
-      url.pathname = payload.role === "super-admin" ? "/super-admin/dashboard" : "/dashboard"
-      return NextResponse.redirect(url)
+      
+      // If on super-admin login and have super-admin token, go to super-admin dashboard
+      if (pathname === "/super-admin" && payload.role === "super-admin") {
+        url.pathname = "/super-admin/dashboard"
+        return NextResponse.redirect(url)
+      }
+      
+      // If on regular signin and have regular token, go to dashboard
+      if (pathname === "/signin" && payload.role !== "super-admin") {
+        url.pathname = "/dashboard"
+        return NextResponse.redirect(url)
+      }
     }
   }
 

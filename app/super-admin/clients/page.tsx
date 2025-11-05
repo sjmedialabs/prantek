@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { api } from "@/lib/api-client"
 
 interface ClientAccount {
   id: string
@@ -63,89 +64,49 @@ export default function ClientAccountsPage() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  const [clients, setClients] = useState<ClientAccount[]>([
-    {
-      id: "1",
-      companyName: "Acme Corporation",
-      contactName: "John Smith",
-      email: "john@acme.com",
-      phone: "+1 (555) 123-4567",
-      address: "123 Business St, New York, NY 10001",
-      plan: "premium",
-      status: "active",
-      userCount: 25,
-      monthlyRevenue: 199,
-      totalRevenue: 2388,
-      joinDate: "2024-01-15",
-      lastActivity: "2024-01-20",
-      paymentStatus: "current",
-    },
-    {
-      id: "2",
-      companyName: "Tech Startup Inc",
-      contactName: "Sarah Johnson",
-      email: "sarah@techstartup.com",
-      phone: "+1 (555) 987-6543",
-      address: "456 Innovation Ave, San Francisco, CA 94105",
-      plan: "standard",
-      status: "active",
-      userCount: 8,
-      monthlyRevenue: 99,
-      totalRevenue: 891,
-      joinDate: "2024-01-10",
-      lastActivity: "2024-01-19",
-      paymentStatus: "current",
-    },
-    {
-      id: "3",
-      companyName: "Global Enterprises",
-      contactName: "Michael Brown",
-      email: "michael@globalent.com",
-      phone: "+1 (555) 456-7890",
-      address: "789 Corporate Blvd, Chicago, IL 60601",
-      plan: "enterprise",
-      status: "trial",
-      userCount: 45,
-      monthlyRevenue: 0,
-      totalRevenue: 0,
-      joinDate: "2024-01-18",
-      lastActivity: "2024-01-20",
-      paymentStatus: "current",
-      trialEndsAt: "2024-02-18",
-    },
-    {
-      id: "4",
-      companyName: "Small Business Co",
-      contactName: "Lisa Davis",
-      email: "lisa@smallbiz.com",
-      phone: "+1 (555) 321-0987",
-      address: "321 Main St, Austin, TX 73301",
-      plan: "standard",
-      status: "suspended",
-      userCount: 5,
-      monthlyRevenue: 99,
-      totalRevenue: 495,
-      joinDate: "2024-01-05",
-      lastActivity: "2024-01-15",
-      paymentStatus: "overdue",
-    },
-    {
-      id: "5",
-      companyName: "Creative Agency",
-      contactName: "David Wilson",
-      email: "david@creative.com",
-      phone: "+1 (555) 654-3210",
-      address: "654 Design St, Los Angeles, CA 90210",
-      plan: "premium",
-      status: "cancelled",
-      userCount: 0,
-      monthlyRevenue: 0,
-      totalRevenue: 1194,
-      joinDate: "2023-12-01",
-      lastActivity: "2024-01-10",
-      paymentStatus: "failed",
-    },
-  ])
+  useEffect(() => {
+    loadClients()
+  }, [])
+
+  const loadClients = async () => {
+    try {
+      const users = await api.users.getAll()
+      const plans = await api.subscriptionPlans.getAll()
+      
+      // Map users to client accounts format
+      const clientAccounts = users
+        .filter(user => user.role === "admin") // Only admin users are clients
+        .map(user => {
+          const plan = plans.find(p => (p._id || p.id) === user.subscriptionPlanId)
+          return {
+            id: user._id || user.id,
+            companyName: user.name || user.email.split('@')[0],
+            contactName: user.name || "N/A",
+            email: user.email,
+            phone: user.phone || "N/A",
+            address: user.address || "N/A",
+            plan: plan?.name?.toLowerCase() || "standard",
+            status: user.subscriptionStatus || "inactive",
+            userCount: 1,
+            monthlyRevenue: plan?.price || 0,
+            totalRevenue: plan?.price || 0,
+            joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            lastActivity: user.updatedAt ? new Date(user.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            paymentStatus: user.subscriptionStatus === "active" ? "current" : "overdue",
+            trialEndsAt: user.trialEndsAt,
+          }
+        })
+      
+      setClients(clientAccounts)
+    } catch (error) {
+      console.error("Failed to load clients:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const [clients, setClients] = useState<ClientAccount[]>([])
+  const [loading, setLoading] = useState(true)
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
@@ -247,14 +208,7 @@ export default function ClientAccountsPage() {
     setIsDetailsDialogOpen(true)
   }
 
-  if (!hasPermission("manage_client_accounts")) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-        <p className="text-gray-600">You don't have permission to manage client accounts.</p>
-      </div>
-    )
-  }
+  // Super-admin has access to everything - permission check removed
 
   return (
     <div className="space-y-6">

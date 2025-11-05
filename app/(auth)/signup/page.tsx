@@ -12,9 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api-client"
-import { dataStore, type SubscriptionPlan } from "@/lib/data-store"
 import { Check, Zap, Eye, EyeOff } from "lucide-react"
-import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 import { tokenStorage } from "@/lib/token-storage"
 
 export default function SignUpPage() {
@@ -38,10 +36,10 @@ export default function SignUpPage() {
   useEffect(() => {
     const loadPlans = async () => {
       try {
-        const plans = await dataStore.getActiveSubscriptionPlans()
+        const plans = await api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive))
         setAvailablePlans(plans)
         if (plans.length > 0) {
-          setSelectedPlan(plans[0].id)
+          setSelectedPlan(plans[0]._id || plans[0].id)
         }
       } catch (error) {
         console.error("Failed to load plans:", error)
@@ -67,53 +65,44 @@ export default function SignUpPage() {
         return
       }
 
-      // Check if user already exists
-      const existingUsers = await api.users.getAll()
-      const userExists = existingUsers.some((u) => u.email === formData.email)
-
-      if (userExists) {
-        setError("An account with this email already exists")
+      // Validate required fields
+      if (!formData.name || !formData.email || !formData.password) {
+        setError("Name, email, and password are required")
         return
       }
 
-      const plan = availablePlans.find((p) => p.id === selectedPlan)
+      // Find selected plan
+      const plan = availablePlans.find((p) => (p._id || p.id) === selectedPlan)
+      if (!plan) {
+        setError("Selected plan not found")
+        return
+      }
 
-      // Create new user with admin role
-      const newUser = await api.users.create({
+      // Store signup data in localStorage for use after payment
+      const signupData = {
         email: formData.email,
         password: formData.password,
         name: formData.name,
-        role: "admin",
-        phone: formData.phone || undefined,
-        address: formData.address || undefined,
+        phone: formData.phone || "",
+        address: formData.address || "",
         subscriptionPlanId: selectedPlan,
-        subscriptionStatus: formData.freeTrial ? "trial" : "inactive",
-        trialEndsAt: formData.freeTrial ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() : undefined,
-      })
-
-      const tokenPayload = {
-        userId: newUser.id,
-        email: newUser.email,
-        role: "user" as const,
+        freeTrial: formData.freeTrial,
       }
-      const accessToken = await generateAccessToken(tokenPayload)
-      const refreshToken = await generateRefreshToken(tokenPayload)
+      localStorage.setItem("pending_signup", JSON.stringify(signupData))
 
-      // Store tokens
-      tokenStorage.setAccessToken(accessToken)
-      tokenStorage.setRefreshToken(refreshToken)
-
+      // Redirect to payment page
       if (formData.freeTrial) {
         // Free trial flow: redirect to trial payment verification (₹1)
-        router.push(`/trial-payment?email=${encodeURIComponent(formData.email)}`)
+        router.push(`/trial-payment?email=${encodeURIComponent(formData.email)}&plan=${selectedPlan}`)
       } else {
         // Paid plan flow: redirect to payment page with selected plan
         router.push(
-          `/payment?plan=${plan?.name.toLowerCase()}&email=${encodeURIComponent(formData.email)}&company=${encodeURIComponent(formData.name)}`,
+          `/payment?plan=${plan.name.toLowerCase()}&planId=${selectedPlan}&email=${encodeURIComponent(formData.email)}&company=${encodeURIComponent(formData.name)}&amount=${plan.price}`,
         )
       }
-    } catch (err) {
-      setError("Failed to create account. Please try again.")
+    } catch (err: any) {
+      console.error("Signup error:", err)
+      setError(err?.message || "Failed to process signup. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -141,7 +130,7 @@ export default function SignUpPage() {
               <Label className="text-base font-semibold">Select Your Plan</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {availablePlans.map((plan) => {
-                  const isSelected = selectedPlan === plan.id
+                  const isSelected = selectedPlan === (plan._id || plan.id)
                   const isPopular = plan.name === "Premium"
 
                   return (
@@ -150,7 +139,7 @@ export default function SignUpPage() {
                       className={`relative cursor-pointer transition-all ${
                         isSelected ? "border-blue-600 border-2 shadow-md" : "border-gray-200 hover:border-blue-300"
                       }`}
-                      onClick={() => setSelectedPlan(plan.id)}
+                      onClick={() => setSelectedPlan(plan._id || plan.id)}
                     >
                       {isPopular && <Badge className="absolute -top-2 -right-2 bg-blue-600 text-white">Popular</Badge>}
                       <CardContent className="p-4">

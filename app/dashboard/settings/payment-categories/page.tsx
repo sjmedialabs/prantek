@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 interface Category {
   id: string
@@ -40,17 +40,17 @@ export default function PaymentCategoriesPage() {
   }, [])
 
   const loadCategories = async () => {
-    const data = await dataStore.getAll<Category>("payment_categories")
+    const data = await api.paymentCategories.getAll()
     if (data.length === 0) {
       // Initialize with default categories
       const defaultCategories = ["Miscellaneous", "Refund", "Other", "Salary", "Rent", "Stationary"]
       for (const name of defaultCategories) {
-        await dataStore.create<Category>("payment_categories", {
+        await api.paymentCategories.create( {
           name,
           isActive: true,
         })
       }
-      const newData = await dataStore.getAll<Category>("payment_categories")
+      const newData = await api.paymentCategories.getAll()
       setCategories(newData)
     } else {
       setCategories(data)
@@ -65,7 +65,7 @@ export default function PaymentCategoriesPage() {
 
     if (editingCategory) {
       // Update existing category
-      const updated = await dataStore.update<Category>("payment_categories", editingCategory.id, {
+      const updated = await api.paymentCategories.update( editingCategory.id, {
         name: categoryName,
       })
       if (updated) {
@@ -73,7 +73,7 @@ export default function PaymentCategoriesPage() {
       }
     } else {
       // Create new category
-      const newCategory = await dataStore.create<Category>("payment_categories", {
+      const newCategory = await api.paymentCategories.create( {
         name: categoryName,
         isActive: true,
       })
@@ -98,7 +98,7 @@ export default function PaymentCategoriesPage() {
   }
 
   const handleToggleStatus = async (category: Category) => {
-    const updated = await dataStore.update<Category>("payment_categories", category.id, {
+    const updated = await api.paymentCategories.update( category.id, {
       isActive: !category.isActive,
     })
     if (updated) {

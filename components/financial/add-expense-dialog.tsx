@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Command, CommandInput, CommandItem, CommandList, CommandGroup, CommandEmpty } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Plus, Check, ChevronsUpDown } from "lucide-react"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 interface Vendor {
   id: string

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Play, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
-import { dataStore, type WebsiteContent } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { VideoModal } from "@/components/video-modal"
 
 export function HeroSection() {
@@ -12,7 +12,7 @@ export function HeroSection() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
 
   useEffect(() => {
-    dataStore.getWebsiteContent().then((websiteContent) => {
+    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
       console.log("[v0] Hero section loaded content:", {
         heroRightImage: websiteContent.heroRightImage,
         heroBackgroundImage: websiteContent.heroBackgroundImage,

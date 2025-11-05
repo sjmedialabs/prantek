@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { User, Mail, Phone, MapPin, Save, CreditCard, Check, Zap } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { dataStore, type SubscriptionPlan } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
 
 export default function ProfilePage() {

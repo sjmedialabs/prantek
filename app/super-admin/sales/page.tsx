@@ -34,7 +34,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import type { User as UserType, SubscriptionPlan, Client } from "@/lib/data-store"
 
 interface SalesMetric {
@@ -79,10 +79,10 @@ export default function SalesDashboardPage() {
   useEffect(() => {
     const loadRealData = async () => {
       // Get all users and plans
-      const allUsers = await dataStore.getAll<UserType>("users")
+      const allUsers = await api.users.getAll()
       const adminUsers = allUsers.filter((u) => u.role === "admin")
-      const plans = await dataStore.getAll<SubscriptionPlan>("subscription_plans")
-      const clients = await dataStore.getAll<Client>("clients")
+      const plans = await api.subscriptionPlans.getAll()
+      const clients = await api.clients.getAll()
 
       // Calculate metrics from real data
       const totalClients = adminUsers.length
@@ -208,14 +208,7 @@ export default function SalesDashboardPage() {
     }
   }
 
-  if (!hasPermission("view_sales_dashboard")) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-        <p className="text-gray-600">You don't have permission to view the sales dashboard.</p>
-      </div>
-    )
-  }
+  // Super-admin has access to everything - permission check removed
 
   return (
     <div className="space-y-6">

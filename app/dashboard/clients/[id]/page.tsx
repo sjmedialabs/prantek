@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, CreditCard, Pencil, Download } from "lucide-react"
 import Link from "next/link"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { downloadCSV, formatCurrencyForExport, formatDateForExport } from "@/lib/export-utils"
 
 interface Transaction {
@@ -48,10 +48,10 @@ export default function ClientDetailsPage() {
     const loadClientData = async () => {
       if (params.id) {
         try {
-          const loadedClient = await dataStore.getById<Client>("clients", params.id as string)
+          const loadedClient = await api.clients.getById( params.id as string)
           setClient(loadedClient)
 
-          const allQuotations = await dataStore.getAll<any>("quotations")
+          const allQuotations = await api.quotations.getAll()
           const clientQuotations = allQuotations
             .filter((q) => q.clientId === params.id || q.clientName === loadedClient?.clientName)
             .map((q) => ({

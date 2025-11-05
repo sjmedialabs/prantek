@@ -13,7 +13,7 @@ import { Command, CommandInput, CommandItem, CommandList } from "@/components/ui
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Search, Check, ChevronsUpDown } from "lucide-react"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 interface Client {
   id: string

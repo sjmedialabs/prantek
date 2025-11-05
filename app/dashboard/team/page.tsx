@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Edit, Trash2, DollarSign, Search, Key, Copy, Mail, CheckCircle2 } from "lucide-react"
-import { dataStore, type TeamMember, type TeamPayment, type User } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -119,7 +119,7 @@ export default function TeamManagementPage() {
   }
 
   const loadData = async () => {
-    const members = await dataStore.getAll<TeamMember>("team_members")
+    const members = await api.teamMembers.getAll()
     const payments = await dataStore.getAll<TeamPayment>("team_payments")
     setTeamMembers(members)
     setTeamPayments(payments)
@@ -143,10 +143,10 @@ export default function TeamManagementPage() {
     }
 
     if (editingMember) {
-      await dataStore.update<TeamMember>("team_members", editingMember.id, memberData)
+      await api.teamMembers.update( editingMember.id, memberData)
       toast.success("Member Updated", `${memberForm.name} has been updated successfully`)
     } else {
-      await dataStore.create<TeamMember>("team_members", {
+      await api.teamMembers.create( {
         ...memberData,
         assignedAssets: [],
       })
@@ -193,14 +193,14 @@ export default function TeamManagementPage() {
   }
 
   const memberHasCredentials = async (member: TeamMember): Promise<boolean> => {
-    const users = await dataStore.getAll<User>("users")
+    const users = await api.users.getAll()
     return users.some((user) => user.email === member.email && user.role === "employee")
   }
 
   const handleGenerateCredentials = async (member: TeamMember) => {
     setSelectedMemberForCredentials(member)
 
-    const existingUsers = await dataStore.getAll<User>("users")
+    const existingUsers = await api.users.getAll()
     const existingUser = existingUsers.find((u) => u.email === member.email)
 
     if (existingUser) {
@@ -219,7 +219,7 @@ export default function TeamManagementPage() {
       address: "",
     }
 
-    await dataStore.create<User>("users", newUser)
+    await api.users.create( newUser)
 
     setGeneratedCredentials({
       email: member.email,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import type { Receipt } from "@/lib/data-store"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

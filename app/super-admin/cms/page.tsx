@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { dataStore, type WebsiteContent } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { Save, Plus, Trash2 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -18,7 +18,7 @@ export default function CMSPage() {
 
   useEffect(() => {
     const loadContent = async () => {
-      const websiteContent = await dataStore.getWebsiteContent()
+      const websiteContent = await api.websiteContent.getAll().then(data => data[0])
       const normalizedContent = {
         ...websiteContent,
         trustedByLogos: websiteContent.trustedByLogos || [],
@@ -39,7 +39,7 @@ export default function CMSPage() {
     if (!content) return
 
     const { updatedAt, ...contentToSave } = content
-    await dataStore.saveWebsiteContent(contentToSave)
+    await api.websiteContent.update(contentToSave)
 
     toast.success("Website content updated successfully")
   }

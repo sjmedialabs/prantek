@@ -35,8 +35,8 @@ export default function SuperAdminSignInPage() {
 
       if (authResult) {
         // Store JWT tokens
-        tokenStorage.setAccessToken(authResult.accessToken)
-        tokenStorage.setRefreshToken(authResult.refreshToken)
+        tokenStorage.setAccessToken(authResult.accessToken, true)
+        tokenStorage.setRefreshToken(authResult.refreshToken, true)
 
         // Redirect to super admin dashboard
         window.location.href = "/super-admin/dashboard"

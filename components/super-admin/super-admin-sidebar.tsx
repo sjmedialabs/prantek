@@ -40,7 +40,7 @@ export default function SuperAdminSidebar() {
   const pathname = usePathname()
   const { user, hasPermission } = useUser()
 
-  const filteredNavigation = navigationItems.filter((item) => !item.permission || hasPermission(item.permission))
+  const filteredNavigation = navigationItems
 
   return (
     <div

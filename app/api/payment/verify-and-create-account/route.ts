@@ -8,10 +8,10 @@ import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 export async function POST(request: NextRequest) {
   try {
     const db = await connectDB()
-    const data = await request.json()
+    const { signupData, paymentId, razorpayOrderId, razorpaySignature } = await request.json()
     
     // Validate required fields
-    if (!data.email || !data.password || !data.name) {
+    if (!signupData?.email || !signupData?.password || !signupData?.name) {
       return NextResponse.json({ 
         success: false, 
         error: "Email, password, and name are required" 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if user already exists
-    const existingUser = await db.collection(Collections.USERS).findOne({ email: data.email })
+    const existingUser = await db.collection(Collections.USERS).findOne({ email: signupData.email })
     if (existingUser) {
       return NextResponse.json({ 
         success: false, 
@@ -28,19 +28,27 @@ export async function POST(request: NextRequest) {
     }
     
     // Hash password
-    const hashedPassword = await bcrypt.hash(data.password, 10)
+    const hashedPassword = await bcrypt.hash(signupData.password, 10)
+    
+    // Determine subscription status
+    const subscriptionStatus = signupData.freeTrial ? "trial" : "active"
+    const trialEndsAt = signupData.freeTrial 
+      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) 
+      : null
     
     // Create new user
     const newUser = {
-      email: data.email,
+      email: signupData.email,
       password: hashedPassword,
-      name: data.name,
-      role: data.role || "admin",
-      phone: data.phone || "",
-      address: data.address || "",
-      subscriptionPlanId: data.subscriptionPlanId || "",
-      subscriptionStatus: data.subscriptionStatus || "inactive",
-      trialEndsAt: data.trialEndsAt || null,
+      name: signupData.name,
+      role: "admin",
+      phone: signupData.phone || "",
+      address: signupData.address || "",
+      subscriptionPlanId: signupData.subscriptionPlanId || "",
+      subscriptionStatus: subscriptionStatus,
+      trialEndsAt: trialEndsAt,
+      paymentId: paymentId || "",
+      razorpayOrderId: razorpayOrderId || "",
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -73,29 +81,29 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
     })
     
     response.cookies.set("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 15, // 15 minutes
+      maxAge: 60 * 15,
     })
     
     response.cookies.set("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
     })
     
     return response
   } catch (error) {
-    console.error("Error registering user:", error)
+    console.error("Error creating account after payment:", error)
     return NextResponse.json({ 
       success: false, 
-      error: "Failed to create account" 
+      error: "Failed to create account after payment verification" 
     }, { status: 500 })
   }
 }

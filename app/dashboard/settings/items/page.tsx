@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
-import { dataStore } from "@/lib/data-store"
 import type { Item } from "@/lib/data-store"
 
 export default function ItemsPage() {

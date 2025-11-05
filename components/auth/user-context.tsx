@@ -43,7 +43,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     const loadUser = async () => {
       setLoading(true)
       try {
-        const accessToken = tokenStorage.getAccessToken()
+        const accessToken = tokenStorage.getAccessToken(isSuperAdmin)
 
         if (accessToken) {
           const userData = await verifyUser(accessToken)
@@ -70,7 +70,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const accessToken = tokenStorage.getAccessToken()
+      const accessToken = tokenStorage.getAccessToken(isSuperAdmin)
 
       if (accessToken) {
         const userData = await verifyUser(accessToken)
@@ -83,23 +83,38 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const logout = () => {
-    tokenStorage.clearTokens()
+  const logout = async () => {
+    const isSuperAdminContext = pathname?.startsWith("/super-admin") || user?.role === "super-admin"
+    
+    try {
+      // Call logout API to clear cookies
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isSuperAdmin: isSuperAdminContext }),
+      })
+    } catch (error) {
+      console.error("Logout API error:", error)
+    }
+    
+    // Clear localStorage tokens
+    tokenStorage.clearTokens(isSuperAdminContext)
     setUser(null)
 
     if (typeof window !== "undefined") {
-      const currentPath = window.location.pathname
-
-      if (currentPath.startsWith("/super-admin") || user?.role === "super-admin") {
-        router.push("/super-admin")
+      if (isSuperAdminContext) {
+        window.location.href = "/super-admin"
       } else {
-        router.push("/signin")
+        window.location.href = "/signin"
       }
     }
   }
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false
+    
+    // Super-admin has ALL permissions
+    if (user.role === "super-admin") return true
 
     const permissions = {
       "super-admin": [

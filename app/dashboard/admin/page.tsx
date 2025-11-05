@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { Users, DollarSign, FileText, Activity } from "lucide-react"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import type { User as UserType, Quotation, Receipt, Payment } from "@/lib/data-store"
 
 export default function AdminPage() {
@@ -22,7 +22,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     const loadTenantData = async () => {
-      const users = await dataStore.getAll<UserType>("users")
+      const users = await api.users.getAll()
       const quotations = await dataStore.getAll<Quotation>("quotations")
       const receipts = await dataStore.getAll<Receipt>("receipts")
       const payments = await dataStore.getAll<Payment>("payments")

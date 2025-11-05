@@ -1,14 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -17,134 +23,158 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Search, Plus, Edit, Trash2, DollarSign, Users, CheckCircle, XCircle, Star, Package } from "lucide-react"
-import { dataStore, type SubscriptionPlan } from "@/lib/data-store"
-import { useToast } from "@/hooks/use-toast"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Pencil, Power, PowerOff, Search, TrendingUp, Users, DollarSign, CheckCircle, XCircle } from "lucide-react"
+import { toast } from "sonner"
+import { api } from "@/lib/api-client"
 
 export default function SubscriptionPlansPage() {
-  const { hasPermission } = useUser()
-  const { toast } = useToast()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null)
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const loadPlans = async () => {
-      const loadedPlans = await dataStore.getAll<SubscriptionPlan>("subscription_plans")
-      setPlans(loadedPlans)
-      setLoading(false)
-    }
-    loadPlans()
-  }, [])
-
-  const [newPlan, setNewPlan] = useState<Partial<SubscriptionPlan>>({
+  const [plans, setPlans] = useState<any[]>([])
+  const [editingPlan, setEditingPlan] = useState<any>(null)
+  const [newPlan, setNewPlan] = useState({
     name: "",
     description: "",
     price: 0,
     billingCycle: "monthly",
-    features: [],
     maxUsers: 0,
     maxStorage: "",
+    features: [] as string[],
     isActive: true,
   })
+  const [newFeature, setNewFeature] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const filteredPlans = plans.filter(
-    (plan) =>
-      plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      plan.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  useEffect(() => {
+    loadPlans()
+  }, [])
 
-  const totalRevenue = plans.reduce((sum, plan) => sum + plan.revenue, 0)
-  const totalSubscribers = plans.reduce((sum, plan) => sum + plan.subscriberCount, 0)
-  const activePlans = plans.filter((p) => p.isActive).length
+  const loadPlans = async () => {
+    const data = await api.subscriptionPlans.getAll()
+    setPlans(data)
+    setLoading(false)
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    
+    if (!newPlan.name.trim()) newErrors.name = "Plan name is required"
+    if (!newPlan.description.trim()) newErrors.description = "Description is required"
+    if (!newPlan.price || newPlan.price <= 0) newErrors.price = "Price must be greater than 0"
+    if (!newPlan.billingCycle) newErrors.billingCycle = "Billing cycle is required"
+    if (!newPlan.maxUsers || newPlan.maxUsers <= 0) newErrors.maxUsers = "Max users must be greater than 0"
+    if (!newPlan.maxStorage || !newPlan.maxStorage.trim()) newErrors.maxStorage = "Storage limit is required"
+    if (newPlan.features.length === 0) newErrors.features = "At least one feature is required"
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleCreatePlan = async () => {
-    const plan = await dataStore.create<SubscriptionPlan>("subscription_plans", {
-      name: newPlan.name || "",
-      description: newPlan.description || "",
-      price: newPlan.price || 0,
-      billingCycle: newPlan.billingCycle || "monthly",
-      features: newPlan.features || [],
-      maxUsers: newPlan.maxUsers || 0,
-      maxStorage: newPlan.maxStorage || "",
-      isActive: newPlan.isActive !== undefined ? newPlan.isActive : true,
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
+
+    const plan = await api.subscriptionPlans.create({
+      ...newPlan,
       subscriberCount: 0,
       revenue: 0,
     })
-
+    
     setPlans([...plans, plan])
+    resetForm()
+    toast.success("Subscription plan created successfully")
+  }
+
+  const handleEditPlan = (plan: any) => {
+    setEditingPlan(plan)
+    setNewPlan({
+      name: plan.name,
+      description: plan.description,
+      price: plan.price,
+      billingCycle: plan.billingCycle,
+      maxUsers: plan.maxUsers,
+      maxStorage: plan.maxStorage,
+      features: plan.features || [],
+      isActive: plan.isActive,
+    })
+    setErrors({})
+    setIsCreateDialogOpen(true)
+  }
+
+  const handleUpdatePlan = async () => {
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form")
+      return
+    }
+
+    const id = editingPlan._id || editingPlan.id
+    await api.subscriptionPlans.update(id, newPlan)
+    setPlans(plans.map(p => (p._id || p.id) === id ? { ...newPlan, _id: id, id, subscriberCount: p.subscriberCount, revenue: p.revenue } : p))
+    resetForm()
+    toast.success("Subscription plan updated successfully")
+  }
+
+  const handleTogglePlanStatus = async (planId: string) => {
+    const plan = plans.find((p) => p.id === planId || p._id === planId)
+    if (plan) {
+      const id = plan._id || plan.id
+      await api.subscriptionPlans.update(id, { isActive: !plan.isActive })
+      setPlans(plans.map((p) => (p._id === id || p.id === planId ? { ...p, isActive: !p.isActive } : p)))
+      toast.success(`Plan ${plan.isActive ? "disabled" : "enabled"} successfully`)
+    }
+  }
+
+  const resetForm = () => {
     setNewPlan({
       name: "",
       description: "",
       price: 0,
       billingCycle: "monthly",
-      features: [],
       maxUsers: 0,
       maxStorage: "",
+      features: [],
       isActive: true,
     })
+    setEditingPlan(null)
+    setErrors({})
     setIsCreateDialogOpen(false)
-
-    toast({
-      title: "Success",
-      description: "Subscription plan created successfully",
-    })
   }
 
-  const handleTogglePlanStatus = async (planId: string) => {
-    const plan = plans.find((p) => p.id === planId)
-    if (plan) {
-      await dataStore.update<SubscriptionPlan>("subscription_plans", planId, { isActive: !plan.isActive })
-      setPlans(plans.map((p) => (p.id === planId ? { ...p, isActive: !p.isActive } : p)))
-
-      toast({
-        title: "Success",
-        description: `Plan ${!plan.isActive ? "activated" : "deactivated"} successfully`,
-      })
-    }
-  }
-
-  const handleDeletePlan = async (planId: string) => {
-    await dataStore.delete("subscription_plans", planId)
-    setPlans(plans.filter((plan) => plan.id !== planId))
-
-    toast({
-      title: "Success",
-      description: "Subscription plan deleted successfully",
-    })
-  }
-
-  const addFeature = (feature: string) => {
-    if (feature.trim() && !newPlan.features?.includes(feature.trim())) {
-      setNewPlan({
-        ...newPlan,
-        features: [...(newPlan.features || []), feature.trim()],
-      })
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      setNewPlan({ ...newPlan, features: [...newPlan.features, newFeature.trim()] })
+      setNewFeature("")
+      if (errors.features) setErrors({ ...errors, features: "" })
     }
   }
 
   const removeFeature = (index: number) => {
-    setNewPlan({
-      ...newPlan,
-      features: newPlan.features?.filter((_, i) => i !== index) || [],
-    })
+    setNewPlan({ ...newPlan, features: newPlan.features.filter((_, i) => i !== index) })
   }
 
-  if (!hasPermission("manage_subscriptions")) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-        <p className="text-gray-600">You don't have permission to manage subscription plans.</p>
-      </div>
-    )
-  }
+  const filteredPlans = plans.filter(
+    (plan) =>
+      plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      plan.description.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const totalRevenue = plans.reduce((sum, plan) => sum + (plan.revenue || 0), 0)
+  const totalSubscribers = plans.reduce((sum, plan) => sum + (plan.subscriberCount || 0), 0)
+  const activePlans = plans.filter((plan) => plan.isActive).length
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return <div className="flex items-center justify-center h-screen">Loading...</div>
   }
 
   return (
@@ -152,344 +182,300 @@ export default function SubscriptionPlansPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Subscription Plans</h1>
-          <p className="text-gray-600">Manage subscription plans and pricing</p>
+          <p className="text-sm text-gray-500">Manage your subscription plans and pricing</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { setIsCreateDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600">
+            <Button>
               <Plus className="h-4 w-4 mr-2" />
               Create Plan
             </Button>
           </DialogTrigger>
-          <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
-              <DialogHeader>
-                <DialogTitle>Create New Subscription Plan</DialogTitle>
-                <DialogDescription>Define a new subscription plan with features and pricing.</DialogDescription>
-              </DialogHeader>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Plan Name</Label>
-                    <Input
-                      id="name"
-                      value={newPlan.name}
-                      onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
-                      placeholder="e.g., Professional"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={newPlan.price}
-                      onChange={(e) => setNewPlan({ ...newPlan, price: Number(e.target.value) })}
-                      placeholder="99"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newPlan.description}
-                    onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
-                    placeholder="Brief description of the plan"
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingPlan ? "Edit Plan" : "Create New Plan"}</DialogTitle>
+              <DialogDescription>
+                {editingPlan ? "Update the subscription plan details" : "Add a new subscription plan for your customers"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Plan Name *</Label>
+                <Input
+                  placeholder="Plan Name"
+                  value={newPlan.name}
+                  onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+              </div>
+              <div>
+                <Label>Description *</Label>
+                <Input
+                  placeholder="Description"
+                  value={newPlan.description}
+                  onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                  className={errors.description ? "border-red-500" : ""}
+                />
+                {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Price (₹) *</Label>
+                  <Input
+                    type="number"
+                    placeholder="Price"
+                    value={newPlan.price || ""}
+                    onChange={(e) => setNewPlan({ ...newPlan, price: Number(e.target.value) })}
+                    className={errors.price ? "border-red-500" : ""}
                   />
+                  {errors.price && <p className="text-sm text-red-500 mt-1">{errors.price}</p>}
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="maxUsers">Max Users</Label>
-                    <Input
-                      id="maxUsers"
-                      type="number"
-                      value={newPlan.maxUsers}
-                      onChange={(e) => setNewPlan({ ...newPlan, maxUsers: Number(e.target.value) })}
-                      placeholder="10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="maxStorage">Storage Limit</Label>
-                    <Input
-                      id="maxStorage"
-                      value={newPlan.maxStorage}
-                      onChange={(e) => setNewPlan({ ...newPlan, maxStorage: e.target.value })}
-                      placeholder="5GB"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Features</Label>
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Add a feature"
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          addFeature(e.currentTarget.value)
-                          e.currentTarget.value = ""
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={(e) => {
-                        const input = e.currentTarget.previousElementSibling as HTMLInputElement
-                        addFeature(input.value)
-                        input.value = ""
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newPlan.features?.map((feature, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="cursor-pointer"
-                        onClick={() => removeFeature(index)}
-                      >
-                        {feature} ×
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={newPlan.isActive}
-                    onCheckedChange={(checked) => setNewPlan({ ...newPlan, isActive: checked })}
-                  />
-                  <Label htmlFor="isActive">Active Plan</Label>
+                <div>
+                  <Label>Billing Cycle *</Label>
+                  <Select
+                    value={newPlan.billingCycle}
+                    onValueChange={(value) => setNewPlan({ ...newPlan, billingCycle: value })}
+                  >
+                    <SelectTrigger className={errors.billingCycle ? "border-red-500" : ""}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {errors.billingCycle && <p className="text-sm text-red-500 mt-1">{errors.billingCycle}</p>}
                 </div>
               </div>
-            </div>
-
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg">
-              <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Max Users *</Label>
+                  <Input
+                    type="number"
+                    placeholder="Max Users"
+                    value={newPlan.maxUsers || ""}
+                    onChange={(e) => setNewPlan({ ...newPlan, maxUsers: Number(e.target.value) })}
+                    className={errors.maxUsers ? "border-red-500" : ""}
+                  />
+                  {errors.maxUsers && <p className="text-sm text-red-500 mt-1">{errors.maxUsers}</p>}
+                </div>
+                <div>
+                  <Label>Storage Limit *</Label>
+                  <Input
+                    placeholder="e.g., 10GB"
+                    value={newPlan.maxStorage}
+                    onChange={(e) => setNewPlan({ ...newPlan, maxStorage: e.target.value })}
+                    className={errors.maxStorage ? "border-red-500" : ""}
+                  />
+                  {errors.maxStorage && <p className="text-sm text-red-500 mt-1">{errors.maxStorage}</p>}
+                </div>
+              </div>
+              <div>
+                <Label>Features *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a feature"
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
+                  />
+                  <Button type="button" onClick={addFeature} variant="outline">
+                    Add
+                  </Button>
+                </div>
+                {errors.features && <p className="text-sm text-red-500 mt-1">{errors.features}</p>}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {newPlan.features.map((feature, index) => (
+                    <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeFeature(index)}>
+                      {feature}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>Active Plan</Label>
+                <Switch
+                  checked={newPlan.isActive}
+                  onCheckedChange={(checked) => setNewPlan({ ...newPlan, isActive: checked })}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreatePlan}>Create Plan</Button>
+                <Button onClick={editingPlan ? handleUpdatePlan : handleCreatePlan}>
+                  {editingPlan ? "Update Plan" : "Create Plan"}
+                </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">₹{totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">Monthly recurring revenue</p>
+            <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Subscribers</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Total Subscribers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{totalSubscribers}</div>
-            <p className="text-xs text-gray-600 mt-1">Across all plans</p>
+            <div className="text-2xl font-bold">{totalSubscribers}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Active Plans</CardTitle>
-            <Package className="h-4 w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium">Active Plans</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{activePlans}</div>
-            <p className="text-xs text-gray-600 mt-1">Available for subscription</p>
+            <div className="text-2xl font-bold">{activePlans}</div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="plans" className="space-y-6">
+      <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="plans">All Plans</TabsTrigger>
+          <TabsTrigger value="all">All Plans</TabsTrigger>
           <TabsTrigger value="analytics">Plan Analytics</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="plans" className="space-y-6">
+        <TabsContent value="all" className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search plans..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Subscription Plans</CardTitle>
-                  <CardDescription>Manage pricing plans and features</CardDescription>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search plans..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Subscribers</TableHead>
-                    <TableHead>Revenue</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Features</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPlans.map((plan) => (
-                    <TableRow key={plan.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium flex items-center space-x-2">
-                            <span>{plan.name}</span>
-                            {plan.name === "Premium" && <Star className="h-4 w-4 text-yellow-500" />}
-                          </div>
-                          <div className="text-sm text-gray-500">{plan.description}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">₹{plan.price}</div>
-                        <div className="text-sm text-gray-500">per {plan.billingCycle}</div>
-                      </TableCell>
-                      <TableCell>{plan.subscriberCount}</TableCell>
-                      <TableCell>₹{plan.revenue.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {plan.isActive ? (
-                            <Badge className="bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Inactive
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {plan.features.slice(0, 2).map((feature, index) => (
-                            <div key={index} className="text-gray-600">
-                              • {feature}
-                            </div>
-                          ))}
-                          {plan.features.length > 2 && (
-                            <div className="text-gray-400">+{plan.features.length - 2} more</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleTogglePlanStatus(plan.id)}
-                            className={plan.isActive ? "text-red-600" : "text-green-600"}
-                          >
-                            {plan.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeletePlan(plan.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Plan Performance</CardTitle>
-                <CardDescription>Revenue and subscriber metrics by plan</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {plans.map((plan) => (
-                    <div key={plan.id} className="flex items-center justify-between p-3 border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Subscribers</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Features</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPlans.map((plan) => (
+                  <TableRow key={plan._id || plan.id}>
+                    <TableCell>
                       <div>
                         <div className="font-medium">{plan.name}</div>
-                        <div className="text-sm text-gray-500">{plan.subscriberCount} subscribers</div>
+                        <div className="text-sm text-gray-500">{plan.description}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>₹{plan.price}</div>
+                      <div className="text-sm text-gray-500">per {plan.billingCycle}</div>
+                    </TableCell>
+                    <TableCell>{plan.subscriberCount || 0}</TableCell>
+                    <TableCell>₹{(plan.revenue || 0).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={plan.isActive ? "default" : "secondary"}>
+                        {plan.isActive ? (
+                          <>
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {plan.features?.slice(0, 2).join(", ")}
+                        {plan.features?.length > 2 && ` +${plan.features.length - 2} more`}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditPlan(plan)}>
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleTogglePlanStatus(plan._id || plan.id)}
+                          className={plan.isActive ? "text-red-600" : "text-green-600"}
+                        >
+                          {plan.isActive ? (
+                            <>
+                              <PowerOff className="h-4 w-4 mr-1" />
+                              Disable
+                            </>
+                          ) : (
+                            <>
+                              <Power className="h-4 w-4 mr-1" />
+                              Enable
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plan Performance</CardTitle>
+              <CardDescription>Revenue and subscriber distribution across plans</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {plans.map((plan) => (
+                  <div key={plan._id || plan.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{plan.name}</div>
+                        <div className="text-sm text-gray-500">{plan.subscriberCount || 0} subscribers</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">₹{plan.revenue.toLocaleString()}</div>
+                        <div className="font-medium">₹{(plan.revenue || 0).toLocaleString()}</div>
                         <div className="text-sm text-gray-500">
-                          ₹{Math.round(plan.revenue / plan.subscriberCount || 0)} avg/user
+                          {totalSubscribers > 0 ? Math.round(((plan.subscriberCount || 0) / totalSubscribers) * 100) : 0}% of total
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Plan Distribution</CardTitle>
-                <CardDescription>Subscriber distribution across plans</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {plans.map((plan) => {
-                    const percentage = Math.round((plan.subscriberCount / totalSubscribers) * 100)
-                    return (
-                      <div key={plan.id} className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>{plan.name}</span>
-                          <span>{percentage}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full"
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{
+                          width: `${totalSubscribers > 0 ? ((plan.subscriberCount || 0) / totalSubscribers) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

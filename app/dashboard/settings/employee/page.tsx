@@ -12,7 +12,7 @@ import { Users, Save, Plus, Edit, X } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { MultiDocumentUpload } from "@/components/multi-document-upload"
@@ -86,9 +86,9 @@ export default function EmployeePage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const loadedEmployees = await dataStore.getAll<Employee>("employees")
-      const loadedMemberTypes = await dataStore.getAll("member_types")
-      const loadedRoles = await dataStore.getAll("roles")
+      const loadedEmployees = await api.employees.getAll()
+      const loadedMemberTypes = await api.memberTypes.getAll()
+      const loadedRoles = await api.roles.getAll()
 
       if (loadedRoles.length === 0) {
         const defaultRoles = [
@@ -120,7 +120,7 @@ export default function EmployeePage() {
             createdAt: new Date().toISOString(),
           },
         ]
-        await dataStore.saveAll("roles", defaultRoles)
+        await api.roles.create(defaultRoles)
         setRoles(defaultRoles)
       } else {
         setRoles(loadedRoles)
@@ -199,12 +199,12 @@ export default function EmployeePage() {
     }
 
     if (editingEmployee) {
-      const updated = await dataStore.update<Employee>("employees", editingEmployee.id, formData)
+      const updated = await api.employees.update( editingEmployee.id, formData)
       if (updated) {
         setEmployees(employees.map((emp) => (emp.id === editingEmployee.id ? updated : emp)))
       }
     } else {
-      const newEmployee = await dataStore.create<Employee>("employees", {
+      const newEmployee = await api.employees.create( {
         ...formData,
         employeeNumber: generateEmployeeNumber(),
       })
@@ -255,7 +255,7 @@ export default function EmployeePage() {
   const handleToggleActive = async (id: string) => {
     const employee = employees.find((emp) => emp.id === id)
     if (employee) {
-      const updated = await dataStore.update<Employee>("employees", id, { isActive: !employee.isActive })
+      const updated = await api.employees.update( id, { isActive: !employee.isActive })
       if (updated) {
         setEmployees(employees.map((emp) => (emp.id === id ? updated : emp)))
       }

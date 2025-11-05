@@ -1,19 +1,17 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle2, Eye, EyeOff } from "lucide-react"
-import { authenticateUser } from "@/lib/auth"
+import { Eye, EyeOff, FileText, CheckCircle2 } from "lucide-react"
 import { tokenStorage } from "@/lib/token-storage"
 
 export default function SignInPage() {
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -21,20 +19,13 @@ export default function SignInPage() {
   const [error, setError] = useState("")
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
 
   useEffect(() => {
-    const paymentStatus = searchParams.get("payment")
-    if (paymentStatus === "success") {
+    if (searchParams.get("payment") === "success") {
       setPaymentSuccess(true)
-      setTimeout(() => setPaymentSuccess(false), 5000)
     }
-
-    const registered = searchParams.get("registered")
-    if (registered === "true") {
+    if (searchParams.get("registered") === "true") {
       setRegistrationSuccess(true)
-      setTimeout(() => setRegistrationSuccess(false), 5000)
     }
   }, [searchParams])
 
@@ -44,40 +35,45 @@ export default function SignInPage() {
     setError("")
 
     try {
-      const authResult = await authenticateUser(email, password)
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
 
-      if (authResult) {
-        // Store JWT tokens
-        tokenStorage.setAccessToken(authResult.accessToken)
-        tokenStorage.setRefreshToken(authResult.refreshToken)
+      if (response.ok) {
+        const authResult = await response.json()
+        
+        // Store JWT tokens (context-aware for regular admin)
+        tokenStorage.setAccessToken(authResult.accessToken, false)
+        tokenStorage.setRefreshToken(authResult.refreshToken, false)
 
-        // Redirect based on role
-        if (authResult.user.role === "super-admin") {
-          router.push("/super-admin/dashboard")
-        } else {
-          router.push("/dashboard")
-        }
+        // Redirect with full page reload
+        window.location.href = "/dashboard"
       } else {
         setError("Invalid email or password")
+        setLoading(false)
       }
     } catch (err) {
+      console.error("Sign in error:", err)
       setError("An error occurred during sign in")
-    } finally {
       setLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">P</span>
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-lg shadow-xl p-8">
+          <div className="flex items-center justify-center mb-6">
+            <FileText className="h-10 w-10 text-blue-600 mr-2" />
+            <h1 className="text-3xl font-bold text-gray-900">Invoice Manager</h1>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
-        </CardHeader>
-        <CardContent>
+
+          <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">Sign In to Your Account</h2>
+
           <form onSubmit={handleSignIn} className="space-y-4">
             {registrationSuccess && (
               <Alert className="bg-green-50 border-green-200">
@@ -92,7 +88,7 @@ export default function SignInPage() {
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  Payment successful! Your account has been activated. Please sign in to continue.
+                  Payment successful! Please sign in to access your account.
                 </AlertDescription>
               </Alert>
             )}
@@ -108,20 +104,16 @@ export default function SignInPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@saas.com"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="w-full"
               />
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -130,7 +122,7 @@ export default function SignInPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pr-10"
+                  className="w-full pr-10"
                 />
                 <button
                   type="button"
@@ -143,18 +135,18 @@ export default function SignInPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Signing In..." : "Sign In"}
             </Button>
-
-            <div className="text-center text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link href="/signup" className="text-blue-600 hover:underline">
-                Sign up
-              </Link>
-            </div>
           </form>
-        </CardContent>
-      </Card>
+
+          <div className="mt-6 text-center text-sm text-gray-600">
+            Don't have an account?{" "}
+            <Link href="/signup" className="text-blue-600 hover:text-blue-800 font-medium">
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

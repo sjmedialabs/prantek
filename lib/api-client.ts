@@ -11,12 +11,16 @@ import type {
   Vendor,
 } from "./data-store"
 
+import { tokenStorage } from "./token-storage"
 // Helper function to make authenticated API calls
 async function fetchAPI(url: string, options: RequestInit = {}) {
+  const token = tokenStorage.getAccessToken()
+  
   const response = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ` } : {}),
       ...options.headers,
     },
   })
@@ -349,6 +353,230 @@ export const api = {
     },
     delete: async (id: string) => {
       await fetchAPI(`/api/team-payments/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Subscription Plans
+  subscriptionPlans: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/subscription-plans")
+      return data.data || data.subscriptionPlans || data.plans || []
+    },
+    getById: async (id: string) => {
+      const data = await fetchAPI(`/api/subscription-plans/${id}`)
+      return data.data || data.plan
+    },
+    create: async (planData: any) => {
+      const data = await fetchAPI("/api/subscription-plans", {
+        method: "POST",
+        body: JSON.stringify(planData),
+      })
+      return data.data || data.plan
+    },
+    update: async (id: string, planData: any) => {
+      const data = await fetchAPI(`/api/subscription-plans/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(planData),
+      })
+      return data.data || data.plan
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/subscription-plans/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Website Content (CMS)
+  websiteContent: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/website-content")
+      return data.data || data.content || []
+    },
+    getById: async (id: string) => {
+      const data = await fetchAPI(`/api/website-content/${id}`)
+      return data.data || data.content
+    },
+    create: async (contentData: any) => {
+      const data = await fetchAPI("/api/website-content", {
+        method: "POST",
+        body: JSON.stringify(contentData),
+      })
+      return data.data || data.content
+    },
+    update: async (id: string, contentData: any) => {
+      const data = await fetchAPI(`/api/website-content/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(contentData),
+      })
+      return data.data || data.content
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/website-content/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Bank Accounts
+  bankAccounts: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/bank-accounts")
+      return data.data || data.bankAccounts || []
+    },
+    create: async (accountData: any) => {
+      const data = await fetchAPI("/api/bank-accounts", {
+        method: "POST",
+        body: JSON.stringify(accountData),
+      })
+      return data.data || data.account
+    },
+    update: async (id: string, accountData: any) => {
+      const data = await fetchAPI(`/api/bank-accounts/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(accountData),
+      })
+      return data.data || data.account
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/bank-accounts/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Tax Rates
+  taxRates: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/tax-rates")
+      return data.data || data.taxRates || []
+    },
+    create: async (taxData: any) => {
+      const data = await fetchAPI("/api/tax-rates", {
+        method: "POST",
+        body: JSON.stringify(taxData),
+      })
+      return data.data || data.taxRate
+    },
+    update: async (id: string, taxData: any) => {
+      const data = await fetchAPI(`/api/tax-rates/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(taxData),
+      })
+      return data.data || data.taxRate
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/tax-rates/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Member Types
+  memberTypes: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/member-types")
+      return data.data || data.memberTypes || []
+    },
+    create: async (memberTypeData: any) => {
+      const data = await fetchAPI("/api/member-types", {
+        method: "POST",
+        body: JSON.stringify(memberTypeData),
+      })
+      return data.data || data.memberType
+    },
+    update: async (id: string, memberTypeData: any) => {
+      const data = await fetchAPI(`/api/member-types/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(memberTypeData),
+      })
+      return data.data || data.memberType
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/member-types/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Payment Categories
+  paymentCategories: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/payment-categories")
+      return data.data || data.paymentCategories || []
+    },
+    create: async (categoryData: any) => {
+      const data = await fetchAPI("/api/payment-categories", {
+        method: "POST",
+        body: JSON.stringify(categoryData),
+      })
+      return data.data || data.category
+    },
+    update: async (id: string, categoryData: any) => {
+      const data = await fetchAPI(`/api/payment-categories/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(categoryData),
+      })
+      return data.data || data.category
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/payment-categories/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Employees
+  employees: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/employees")
+      return data.data || data.employees || []
+    },
+    create: async (employeeData: any) => {
+      const data = await fetchAPI("/api/employees", {
+        method: "POST",
+        body: JSON.stringify(employeeData),
+      })
+      return data.data || data.employee
+    },
+    update: async (id: string, employeeData: any) => {
+      const data = await fetchAPI(`/api/employees/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(employeeData),
+      })
+      return data.data || data.employee
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/employees/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
+
+  // Roles
+  roles: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/roles")
+      return data.data || data.roles || []
+    },
+    create: async (roleData: any) => {
+      const data = await fetchAPI("/api/roles", {
+        method: "POST",
+        body: JSON.stringify(roleData),
+      })
+      return data.data || data.role
+    },
+    update: async (id: string, roleData: any) => {
+      const data = await fetchAPI(`/api/roles/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(roleData),
+      })
+      return data.data || data.role
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/roles/${id}`, {
         method: "DELETE",
       })
     },

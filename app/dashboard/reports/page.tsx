@@ -25,7 +25,7 @@ import {
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, Activity, Download, AlertCircle } from "lucide-react"
 import { downloadCSV, downloadJSON, formatCurrencyForExport } from "@/lib/export-utils"
 import { generatePDF } from "@/lib/pdf-utils"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/data-store"
 
 export default function ReportsPage() {
@@ -43,11 +43,11 @@ export default function ReportsPage() {
   useEffect(() => {
     const loadData = async () => {
       if (hasPermission("view_reports")) {
-        const loadedReceipts = await dataStore.getAll<Receipt>("receipts")
-        const loadedQuotations = await dataStore.getAll<Quotation>("quotations")
-        const loadedPayments = await dataStore.getAll<Payment>("payments")
-        const loadedClients = await dataStore.getAll<Client>("clients")
-        const loadedItems = await dataStore.getAll<Item>("items")
+        const loadedReceipts = await api.receipts.getAll()
+        const loadedQuotations = await api.quotations.getAll()
+        const loadedPayments = await api.payments.getAll()
+        const loadedClients = await api.clients.getAll()
+        const loadedItems = await api.items.getAll()
 
         setReceipts(loadedReceipts)
         setQuotations(loadedQuotations)

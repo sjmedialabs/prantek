@@ -19,7 +19,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Search, Edit, Trash2, Plus, Shield, Users } from "lucide-react"
-import { dataStore } from "@/lib/data-store" // Fixed import path from dataStore to data-store
+import { api } from "@/lib/api-client" // Fixed import path from dataStore to data-store
 
 interface Permission {
   id: string
@@ -91,7 +91,7 @@ export default function RolesPage() {
 
   useEffect(() => {
     const loadRoles = async () => {
-      const loadedRoles = await dataStore.getAll<Role>("roles")
+      const loadedRoles = await api.roles.getAll()
       if (loadedRoles.length > 0) {
         setRoles(loadedRoles)
       } else {

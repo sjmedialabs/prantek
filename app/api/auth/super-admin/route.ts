@@ -28,9 +28,8 @@ export async function POST(request: NextRequest) {
       refreshToken: result.refreshToken,
     })
 
-    // Set tokens in httpOnly cookies for security
-    // Note: Secure flag removed for HTTP access (add it back for HTTPS)
-    response.cookies.set("auth_token", result.accessToken, {
+    // Set super-admin specific cookies (separate from regular admin)
+    response.cookies.set("super_admin_auth_token", result.accessToken, {
       httpOnly: true,
       secure: false, // Set to true for HTTPS
       sameSite: "lax",
@@ -38,7 +37,15 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 15, // 15 minutes
     })
 
-    response.cookies.set("refreshToken", result.refreshToken, {
+    response.cookies.set("super_admin_accessToken", result.accessToken, {
+      httpOnly: true,
+      secure: false, // Set to true for HTTPS
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 15, // 15 minutes
+    })
+
+    response.cookies.set("super_admin_refreshToken", result.refreshToken, {
       httpOnly: true,
       secure: false, // Set to true for HTTPS
       sameSite: "lax",

@@ -17,7 +17,7 @@ import {
   Package,
   Receipt,
 } from "lucide-react"
-import { dataStore, type WebsiteContent } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 const iconMap: Record<string, any> = {
   Shield,
@@ -40,7 +40,7 @@ export function FeaturesSection() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    dataStore.getWebsiteContent().then((websiteContent) => {
+    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
     setContent(websiteContent)
     })
   }, [])

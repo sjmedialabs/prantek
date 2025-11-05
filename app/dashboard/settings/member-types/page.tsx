@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Edit, Trash2 } from "lucide-react"
-import { dataStore, type MemberType } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 
 export default function MemberTypesPage() {
@@ -38,7 +38,7 @@ export default function MemberTypesPage() {
   }, [])
 
   const loadMemberTypes = async () => {
-    const types = await dataStore.getAllMemberTypes()
+    const types = await api.memberTypes.getAll()
     setMemberTypes(types)
   }
 
@@ -49,17 +49,17 @@ export default function MemberTypesPage() {
     }
 
     // Check for duplicate code
-    const existingType = await dataStore.getMemberTypeByCode(form.code)
+    const existingType = await api.memberTypes.getAll().then(types => types.find(t => t.code === form.code))
     if (existingType && (!editingType || existingType.id !== editingType.id)) {
       toast.error("Duplicate Code", "A member type with this code already exists")
       return
     }
 
     if (editingType) {
-      await dataStore.updateMemberType(editingType.id, form)
+      await api.memberTypes.update(editingType.id, form)
       toast.success("Employment Type Updated", `${form.name} has been updated successfully`)
     } else {
-      await dataStore.createMemberType(form)
+      await api.memberTypes.create(form)
       toast.success("Employment Type Created", `${form.name} has been added to employment types`)
     }
 
@@ -83,7 +83,7 @@ export default function MemberTypesPage() {
   const handleDelete = async (id: string) => {
     const type = memberTypes.find((t) => t.id === id)
     if (confirm("Are you sure you want to delete this employment type?")) {
-      await dataStore.deleteMemberType(id)
+      await api.MemberType.delete(id)
       await loadMemberTypes()
       if (type) {
         toast.success("Employment Type Deleted", `${type.name} has been removed`)
@@ -93,7 +93,7 @@ export default function MemberTypesPage() {
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
     const type = memberTypes.find((t) => t.id === id)
-    await dataStore.updateMemberType(id, { isActive: !currentStatus })
+    await api.memberTypes.update(id, { isActive: !currentStatus })
     await loadMemberTypes()
     if (type) {
       toast.success(

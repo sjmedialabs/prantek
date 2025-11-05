@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Loader2, Lock } from "lucide-react"
-import { dataStore, type SubscriptionPlan } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import Link from "next/link"
 import { toast } from "@/lib/toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -34,7 +34,7 @@ export default function CheckoutPage() {
         }
 
         try {
-          const selectedPlan = await dataStore.getById<SubscriptionPlan>("subscription_plans", planId)
+          const selectedPlan = await api.subscriptionPlans.getById( planId)
           if (selectedPlan) {
             setPlan(selectedPlan)
           }
@@ -82,7 +82,7 @@ export default function CheckoutPage() {
 
     try {
       const totalAmount = Math.round(plan.price * 1.18)
-      const currentUser = await dataStore.getCurrentUser()
+      const currentUser = await api.auth.getCurrentUser()
 
       const options = {
         key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
@@ -128,9 +128,9 @@ export default function CheckoutPage() {
   }
 
   const handlePaymentSuccess = async (response: any) => {
-    const currentUser = await dataStore.getCurrentUser()
+    const currentUser = await api.auth.getCurrentUser()
     if (currentUser && plan) {
-      const updatedUser = await dataStore.update<any>("users", currentUser.id, {
+      const updatedUser = await api.users.update( currentUser.id, {
         subscriptionPlanId: plan.id,
         subscriptionStatus: "active",
         subscriptionStartDate: new Date().toISOString(),
@@ -138,7 +138,7 @@ export default function CheckoutPage() {
       })
 
       if (updatedUser) {
-        await dataStore.setCurrentUser(updatedUser)
+        await api.auth.setCurrentUser(updatedUser)
       }
 
       localStorage.setItem(

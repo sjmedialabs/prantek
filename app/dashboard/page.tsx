@@ -30,12 +30,13 @@ export default function DashboardPage() {
     loadDashboardData()
   }, [])
 
-  const loadDashboardData = () => {
-    const quotations = api.quotations.getAll()
-    const receipts = api.receipts.getAll()
-    const payments = api.payments.getAll()
-    const users = api.users.getAll()
-    const items = api.items.getAll()
+  const loadDashboardData = async () => {
+    try {
+          const quotations = await api.quotations.getAll()
+          const receipts = await api.receipts.getAll()
+          const payments = await api.payments.getAll()
+          const users = await api.users.getAll()
+          const items = await api.items.getAll()
 
     // Calculate cash in hand (total receipts - total payments)
     const totalReceipts = receipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0)
@@ -99,7 +100,11 @@ export default function DashboardPage() {
     })
 
     setRecentTransactions(allTransactions)
-    setLoading(false)
+      setLoading(false)
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error)
+      setLoading(false)
+    }
   }
 
   if (loading) {

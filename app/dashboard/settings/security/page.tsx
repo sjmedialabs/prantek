@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Shield, Save, Key, Eye, EyeOff } from "lucide-react"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 export default function SecurityPage() {
   const { hasPermission } = useUser()
@@ -58,7 +58,7 @@ export default function SecurityPage() {
     }
 
     // Get current user
-    const currentUser = await dataStore.getCurrentUser("admin")
+    const currentUser = await api.auth.getCurrentUser()
     if (!currentUser) {
       setPasswordError("User not found")
       return
@@ -71,7 +71,7 @@ export default function SecurityPage() {
     }
 
     // Update password
-    const updated = await dataStore.update("users", currentUser.id, { password: passwordData.newPassword }, null)
+    const updated = await api.users.update(currentUser.id, { password: passwordData.newPassword }, null)
 
     if (updated) {
       setPasswordSuccess(true)

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Check, ArrowLeft, Crown, TrendingUp } from "lucide-react"
-import { dataStore, type SubscriptionPlan } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { useUser } from "@/components/auth/user-context"
 import Link from "next/link"
 
@@ -20,11 +20,11 @@ export default function PlansPage() {
   useEffect(() => {
     const loadPlans = async () => {
       try {
-        const activePlans = await dataStore.getActiveSubscriptionPlans()
+        const activePlans = await api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive))
         setPlans(activePlans)
 
         if (user?.subscriptionPlanId) {
-          const plan = await dataStore.getById<SubscriptionPlan>("subscription_plans", user.subscriptionPlanId)
+          const plan = await api.subscriptionPlans.getById( user.subscriptionPlanId)
           setCurrentPlan(plan)
         }
       } catch (error) {

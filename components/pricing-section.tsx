@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
 import Link from "next/link"
-import { dataStore, type SubscriptionPlan } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 export function PricingSection() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    dataStore.getActiveSubscriptionPlans().then((activePlans) => {
+    api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive)).then((activePlans) => {
     setPlans(activePlans)
     })
     setLoading(false)

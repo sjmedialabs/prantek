@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000 // 30 minutes in milliseconds
@@ -49,7 +49,7 @@ export function InactivityTracker() {
       })
     }
 
-    dataStore.logout(userType)
+    api.auth.logout(userType)
     toast.error("You have been logged out due to inactivity")
 
     if (isSuperAdmin) {

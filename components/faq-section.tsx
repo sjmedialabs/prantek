@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
-import { dataStore, type WebsiteContent } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    dataStore.getWebsiteContent().then((websiteContent) => {
+    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
     setContent(websiteContent)
     })
   }, [])

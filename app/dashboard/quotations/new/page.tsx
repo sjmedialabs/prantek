@@ -21,7 +21,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
 import { api } from "@/lib/api-client"
-import { dataStore } from "@/lib/data-store"
 import { SearchableSelect } from "@/components/searchable-select"
 
 interface QuotationItem {
@@ -106,8 +105,8 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const loadedClients = await dataStore.getAll<Client>("clients")
-      const loadedItems = await dataStore.getAll<MasterItem>("items")
+      const loadedClients = await api.clients.getAll()
+      const loadedItems = await api.items.getAll()
       setClients(loadedClients)
       setMasterItems(loadedItems)
     }
@@ -226,7 +225,7 @@ export default function NewQuotationPage() {
   }
 
   const handleCreateClient = async () => {
-    const newClientData = await dataStore.create<Client>("clients", {
+    const newClientData = await api.clients.create( {
       clientName: newClient.clientName,
       email: newClient.email,
       phone: newClient.phone,

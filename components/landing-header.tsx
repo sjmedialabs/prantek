@@ -4,14 +4,14 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import Link from "next/link"
-import { dataStore, type WebsiteContent } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    dataStore.getWebsiteContent().then((websiteContent) => {
+    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
     setContent(websiteContent)
     })
   }, [])

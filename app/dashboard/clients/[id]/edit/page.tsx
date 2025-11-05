@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 
 interface Client {
   id: string
@@ -46,7 +46,7 @@ export default function EditClientPage() {
     const loadClient = async () => {
       if (params.id) {
         try {
-          const client = await dataStore.getById<Client>("clients", params.id as string)
+          const client = await api.clients.getById( params.id as string)
           if (client) {
             setFormData({
               clientName: client.clientName || "",
@@ -80,7 +80,7 @@ export default function EditClientPage() {
         return
       }
 
-      const updated = await dataStore.update("clients", params.id as string, formData)
+      const updated = await api.clients.update( params.id as string, formData)
 
       if (updated) {
         setSuccess(true)
