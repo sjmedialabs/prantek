@@ -18,19 +18,47 @@ export default function CMSPage() {
 
   useEffect(() => {
     const loadContent = async () => {
-      const websiteContent = await api.websiteContent.getAll().then(data => data[0])
-      const normalizedContent = {
-        ...websiteContent,
-        trustedByLogos: websiteContent.trustedByLogos || [],
-        features: websiteContent.features || [],
-        industries: websiteContent.industries || [],
-        showcaseFeatures: websiteContent.showcaseFeatures || [],
-        testimonials: websiteContent.testimonials || [],
-        faqs: websiteContent.faqs || [],
-        ctaFeatures: websiteContent.ctaFeatures || [],
+      try {
+        const data = await api.websiteContent.getAll()
+        const websiteContent = data && data.length > 0 ? data[0] : null
+        
+        // If no content exists, create default content
+        if (!websiteContent) {
+          const defaultContent = {
+            heroTitle: "Welcome to Prantek",
+            heroSubtitle: "Your Business Solution",
+            heroDescription: "Manage your business efficiently",
+            ctaButtonText: "Get Started",
+            ctaButtonLink: "/signup",
+            trustedByLogos: [],
+            features: [],
+            industries: [],
+            showcaseFeatures: [],
+            testimonials: [],
+            faqs: [],
+            ctaFeatures: [],
+          }
+          setContent(defaultContent)
+          setLoading(false)
+          return
+        }
+        
+        const normalizedContent = {
+          ...websiteContent,
+          trustedByLogos: websiteContent.trustedByLogos || [],
+          features: websiteContent.features || [],
+          industries: websiteContent.industries || [],
+          showcaseFeatures: websiteContent.showcaseFeatures || [],
+          testimonials: websiteContent.testimonials || [],
+          faqs: websiteContent.faqs || [],
+          ctaFeatures: websiteContent.ctaFeatures || [],
+        }
+        setContent(normalizedContent)
+        setLoading(false)
+      } catch (error) {
+        console.error("Failed to load CMS content:", error)
+        setLoading(false)
       }
-      setContent(normalizedContent)
-      setLoading(false)
     }
     loadContent()
   }, [])
@@ -38,10 +66,23 @@ export default function CMSPage() {
   const handleSave = async () => {
     if (!content) return
 
-    const { updatedAt, ...contentToSave } = content
-    await api.websiteContent.update(content._id || content.id, contentToSave)
-
-    toast.success("Website content updated successfully")
+    try {
+      const { updatedAt, _id, id, ...contentToSave } = content as any
+      
+      if (_id || id) {
+        // Update existing content
+        await api.websiteContent.update(_id || id, contentToSave)
+      } else {
+        // Create new content
+        const result = await api.websiteContent.create(contentToSave)
+        setContent({ ...contentToSave, _id: result._id || result.id })
+      }
+      
+      toast.success("Website content updated successfully")
+    } catch (error) {
+      console.error("Failed to save content:", error)
+      toast.error("Failed to save content")
+    }
   }
 
   const updateContent = (field: keyof WebsiteContent, value: any) => {
