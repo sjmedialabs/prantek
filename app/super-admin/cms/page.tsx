@@ -39,7 +39,7 @@ export default function CMSPage() {
     if (!content) return
 
     const { updatedAt, ...contentToSave } = content
-    await api.websiteContent.update(contentToSave)
+    await api.websiteContent.update(content._id || content.id, contentToSave)
 
     toast.success("Website content updated successfully")
   }
