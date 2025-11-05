@@ -105,23 +105,75 @@ export default function PaymentPage() {
     }
   }
 
-  const handlePaymentSuccess = (response: any) => {
-    console.log("[v0] Processing payment success, redirecting to signin...")
-    // Store payment details
-    localStorage.setItem(
-      "paymentDetails",
-      JSON.stringify({
-        paymentId: response.razorpay_payment_id,
-        plan: plan,
-        amount: selectedPlan.price,
-        timestamp: new Date().toISOString(),
-      }),
-    )
+  const handlePaymentSuccess = async (response: any) => {
+    console.log("[v0] Processing payment success...")
+    
+    try {
+      // Get pending signup data from localStorage
+      const pendingSignupStr = localStorage.getItem("pending_signup")
+      if (!pendingSignupStr) {
+        console.error("[v0] No pending signup data found")
+        setError("Signup data not found. Please try signing up again.")
+        return
+      }
 
-    // Show success message briefly before redirect
-    setTimeout(() => {
-      router.push("/signin?payment=success")
-    }, 2000)
+      const signupData = JSON.parse(pendingSignupStr)
+      console.log("[v0] Found pending signup data:", { email: signupData.email })
+
+      // Call the account creation API
+      const createAccountResponse = await fetch("/api/payment/verify-and-create-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          signupData,
+          paymentId: response.razorpay_payment_id,
+          razorpayOrderId: response.razorpay_order_id || "",
+          razorpaySignature: response.razorpay_signature || "",
+        }),
+      })
+
+      const result = await createAccountResponse.json()
+
+      if (!result.success) {
+        console.error("[v0] Account creation failed:", result.error)
+        setError(result.error || "Failed to create account after payment")
+        return
+      }
+
+      console.log("[v0] Account created successfully!")
+
+      // Store tokens in localStorage
+      if (result.accessToken) {
+        localStorage.setItem("accessToken", result.accessToken)
+      }
+      if (result.refreshToken) {
+        localStorage.setItem("refreshToken", result.refreshToken)
+      }
+
+      // Clear pending signup data
+      localStorage.removeItem("pending_signup")
+
+      // Store payment details for reference
+      localStorage.setItem(
+        "paymentDetails",
+        JSON.stringify({
+          paymentId: response.razorpay_payment_id,
+          plan: plan,
+          amount: selectedPlan.price,
+          timestamp: new Date().toISOString(),
+        }),
+      )
+
+      // Show success message and redirect to dashboard
+      setTimeout(() => {
+        router.push("/dashboard?signup=success")
+      }, 2000)
+    } catch (err) {
+      console.error("[v0] Error processing payment success:", err)
+      setError("Failed to complete account creation. Please contact support.")
+    }
   }
 
   return (
