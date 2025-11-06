@@ -7,9 +7,9 @@ import { ObjectId } from "mongodb"
 export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
 
-  const receipts = await db.collection(Collections.RECEIPTS).find({ organizationId: user.organizationId }).toArray()
+  const receipts = await db.collection(Collections.RECEIPTS).find({ userId: user.userId }).toArray()
 
-  const payments = await db.collection(Collections.PAYMENTS).find({ organizationId: user.organizationId }).toArray()
+  const payments = await db.collection(Collections.PAYMENTS).find({ userId: user.userId }).toArray()
 
   const reconciliation = [...receipts, ...payments].map((item) => ({
     ...item,
@@ -28,7 +28,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const result = await db
     .collection(collection)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), organizationId: user.organizationId },
+      { _id: new ObjectId(id), userId: user.userId },
       { $set: { cleared, updatedAt: new Date() } },
       { returnDocument: "after" },
     )

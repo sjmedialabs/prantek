@@ -20,8 +20,8 @@ export async function getHealthStatus(): Promise<HealthCheck> {
   // Check database connection
   let databaseHealthy = false
   try {
-    const { connectToDatabase } = await import("./mongodb")
-    const { db } = await connectToDatabase()
+    const { connectDB } = await import("./mongodb")
+    const db = await connectDB()
     await db.admin().ping()
     databaseHealthy = true
   } catch (error) {

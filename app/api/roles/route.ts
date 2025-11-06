@@ -5,7 +5,7 @@ import { withAuth } from "@/lib/api-auth"
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
-  const roles = await db.collection(Collections.ROLES).find({ organizationId: user.organizationId }).toArray()
+  const roles = await db.collection(Collections.ROLES).find({ userId: user.userId }).toArray()
 
   return NextResponse.json(roles)
 })
@@ -16,7 +16,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
 
   const role = {
     ...data,
-    organizationId: user.organizationId,
+    userId: user.userId,
     createdAt: new Date(),
     updatedAt: new Date(),
   }

@@ -8,7 +8,7 @@ export const GET = withAuth(async (req: NextRequest, user: any, { params }: { pa
   const db = await connectDB()
   const bankAccount = await db
     .collection(Collections.BANK_ACCOUNTS)
-    .findOne({ _id: new ObjectId(params.id), organizationId: user.organizationId })
+    .findOne({ _id: new ObjectId(params.id), userId: user.userId })
 
   if (!bankAccount) {
     return NextResponse.json({ error: "Bank account not found" }, { status: 404 })
@@ -24,7 +24,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any, { params }: { pa
   const result = await db
     .collection(Collections.BANK_ACCOUNTS)
     .findOneAndUpdate(
-      { _id: new ObjectId(params.id), organizationId: user.organizationId },
+      { _id: new ObjectId(params.id), userId: user.userId },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -41,7 +41,7 @@ export const DELETE = withAuth(async (req: NextRequest, user: any, { params }: {
 
   const result = await db
     .collection(Collections.BANK_ACCOUNTS)
-    .deleteOne({ _id: new ObjectId(params.id), organizationId: user.organizationId })
+    .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Bank account not found" }, { status: 404 })

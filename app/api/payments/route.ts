@@ -9,8 +9,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    const payments = await mongoStore.getAll("payments", { userId: user.id }, { skip, limit, sort: { date: -1 } })
-    const total = await mongoStore.count("payments", { userId: user.id })
+    const payments = await mongoStore.getAll("payments", { userId: user.userId }, { skip, limit, sort: { date: -1 } })
+    const total = await mongoStore.count("payments", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
@@ -32,12 +32,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const body = await request.json()
 
     if (!body.paymentNumber) {
-      body.paymentNumber = await generateNextNumber("payments", "PAY", user.id)
+      body.paymentNumber = await generateNextNumber("payments", "PAY", user.userId)
     }
 
     const payment = await mongoStore.create("payments", { ...body, userId: user.id })
 
-    await logActivity(user.id, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
+    await logActivity(user.userId, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
 
     return NextResponse.json({ success: true, data: payment })
   } catch (error) {

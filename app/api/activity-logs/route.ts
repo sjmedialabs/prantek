@@ -12,13 +12,13 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
 
   const logs = await db
     .collection(Collections.ACTIVITY_LOGS)
-    .find({ organizationId: user.organizationId })
+    .find({ userId: user.userId })
     .sort({ timestamp: -1 })
     .skip(skip)
     .limit(limit)
     .toArray()
 
-  const total = await db.collection(Collections.ACTIVITY_LOGS).countDocuments({ organizationId: user.organizationId })
+  const total = await db.collection(Collections.ACTIVITY_LOGS).countDocuments({ userId: user.userId })
 
   return NextResponse.json({
     data: logs,

@@ -8,7 +8,7 @@ export const GET = withAuth(async (req: NextRequest, user: any, { params }: { pa
   const db = await connectDB()
   const employee = await db
     .collection(Collections.EMPLOYEES)
-    .findOne({ _id: new ObjectId(params.id), organizationId: user.organizationId })
+    .findOne({ _id: new ObjectId(params.id), userId: user.userId })
 
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 })
@@ -24,7 +24,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any, { params }: { pa
   const result = await db
     .collection(Collections.EMPLOYEES)
     .findOneAndUpdate(
-      { _id: new ObjectId(params.id), organizationId: user.organizationId },
+      { _id: new ObjectId(params.id), userId: user.userId },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -41,7 +41,7 @@ export const DELETE = withAuth(async (req: NextRequest, user: any, { params }: {
 
   const result = await db
     .collection(Collections.EMPLOYEES)
-    .deleteOne({ _id: new ObjectId(params.id), organizationId: user.organizationId })
+    .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 })

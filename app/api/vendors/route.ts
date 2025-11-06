@@ -9,8 +9,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    const vendors = await mongoStore.getAll("vendors", { userId: user.id }, { skip, limit, sort: { createdAt: -1 } })
-    const total = await mongoStore.count("vendors", { userId: user.id })
+    const vendors = await mongoStore.getAll("vendors", { userId: user.userId }, { skip, limit, sort: { createdAt: -1 } })
+    const total = await mongoStore.count("vendors", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
@@ -32,7 +32,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const body = await request.json()
     const vendor = await mongoStore.create("vendors", { ...body, userId: user.id })
 
-    await logActivity(user.id, "create", "vendor", vendor._id?.toString(), { name: body.name })
+    await logActivity(user.userId, "create", "vendor", vendor._id?.toString(), { name: body.name })
 
     return NextResponse.json({ success: true, data: vendor })
   } catch (error) {

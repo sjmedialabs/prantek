@@ -5,8 +5,9 @@ const secret = new TextEncoder().encode(JWT_SECRET)
 
 export interface JWTPayload {
   userId: string
+  id?: string // Alias for userId for backward compatibility
   email: string
-  role: "user" | "super-admin"
+  role: "user" | "super-admin" | "admin"
   iat?: number
   exp?: number
 }
@@ -17,7 +18,10 @@ export interface JWTPayload {
  * @param expiresIn - Token expiration time (default: 1 hour)
  */
 export async function generateAccessToken(payload: Omit<JWTPayload, "iat" | "exp">, expiresIn = "1h"): Promise<string> {
-  const token = await new SignJWT(payload as any)
+  // Ensure both userId and id are set for compatibility
+  const tokenPayload = { ...payload, id: payload.userId } as any
+  
+  const token = await new SignJWT(tokenPayload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expiresIn)
@@ -35,7 +39,10 @@ export async function generateRefreshToken(
   payload: Omit<JWTPayload, "iat" | "exp">,
   expiresIn = "7d",
 ): Promise<string> {
-  const token = await new SignJWT(payload as any)
+  // Ensure both userId and id are set for compatibility
+  const tokenPayload = { ...payload, id: payload.userId } as any
+  
+  const token = await new SignJWT(tokenPayload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expiresIn)
@@ -52,7 +59,12 @@ export async function generateRefreshToken(
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret)
-    return payload as JWTPayload
+    const result = payload as JWTPayload
+    // Ensure id is set if userId exists
+    if (result.userId && !result.id) {
+      result.id = result.userId
+    }
+    return result
   } catch (error) {
     return null
   }

@@ -9,8 +9,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    const quotations = await mongoStore.getAll("quotations", { userId: user.userId }, { skip, limit, sort: { date: -1 } })
-    const total = await mongoStore.count("quotations", { userId: user.userId })
+    const quotations = await mongoStore.getAll("quotations", { userId: user.id }, { skip, limit, sort: { date: -1 } })
+    const total = await mongoStore.count("quotations", { userId: user.id })
 
     return NextResponse.json({
       success: true,
@@ -32,12 +32,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const body = await request.json()
 
     if (!body.quotationNumber) {
-      body.quotationNumber = await generateNextNumber("quotations", "QT", user.userId)
+      body.quotationNumber = await generateNextNumber("quotations", "QT", user.id)
     }
 
     const quotation = await mongoStore.create("quotations", { ...body, userId: user.id })
 
-    await logActivity(user.userId, "create", "quotation", quotation._id?.toString(), {
+    await logActivity(user.id, "create", "quotation", quotation._id?.toString(), {
       quotationNumber: body.quotationNumber,
     })
 

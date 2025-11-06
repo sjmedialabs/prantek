@@ -1,36 +1,50 @@
-import { put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
+import { writeFile, mkdir } from "fs/promises"
+import { join } from "path"
+import { existsSync } from "fs"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] Upload API called")
+    console.log("[Upload] Upload API called")
 
     const formData = await request.formData()
     const file = formData.get("file") as File
 
     if (!file) {
-      console.error("[v0] No file provided in request")
+      console.error("[Upload] No file provided in request")
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    console.log("[v0] File received:", file.name, file.size, file.type)
+    console.log("[Upload] File received:", file.name, file.size, file.type)
 
-    // Upload to Vercel Blob
-    console.log("[v0] Uploading to Vercel Blob...")
-    const blob = await put(file.name, file, {
-      access: "public",
-    })
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = join(process.cwd(), "public", "uploads")
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true })
+    }
 
-    console.log("[v0] Blob upload successful:", blob.url)
+    // Generate unique filename to avoid collisions
+    const timestamp = Date.now()
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+    const filename = `${timestamp}_${sanitizedName}`
+    const filepath = join(uploadsDir, filename)
+
+    // Convert File to Buffer and save
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    await writeFile(filepath, buffer)
+
+    const url = `/uploads/${filename}`
+    console.log("[Upload] File saved successfully:", url)
 
     return NextResponse.json({
-      url: blob.url,
+      url,
       filename: file.name,
       size: file.size,
       type: file.type,
     })
   } catch (error) {
-    console.error("[v0] Upload error:", error)
+    console.error("[Upload] Upload error:", error)
     return NextResponse.json({ error: error instanceof Error ? error.message : "Upload failed" }, { status: 500 })
   }
 }

@@ -11,7 +11,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any, { params }: { pa
   const result = await db
     .collection(Collections.TEAM_MEMBERS)
     .findOneAndUpdate(
-      { _id: new ObjectId(params.id), organizationId: user.organizationId },
+      { _id: new ObjectId(params.id), userId: user.userId },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -28,7 +28,7 @@ export const DELETE = withAuth(async (req: NextRequest, user: any, { params }: {
 
   const result = await db
     .collection(Collections.TEAM_MEMBERS)
-    .deleteOne({ _id: new ObjectId(params.id), organizationId: user.organizationId })
+    .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Team member not found" }, { status: 404 })

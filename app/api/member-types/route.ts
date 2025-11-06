@@ -7,7 +7,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const memberTypes = await db
     .collection(Collections.MEMBER_TYPES)
-    .find({ organizationId: user.organizationId })
+    .find({ userId: user.userId })
     .toArray()
 
   return NextResponse.json(memberTypes)
@@ -19,7 +19,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
 
   const memberType = {
     ...data,
-    organizationId: user.organizationId,
+    userId: user.userId,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
