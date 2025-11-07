@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { toast } from "@/components/ui/use-toast"   // ✅ ADDED
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
@@ -21,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Search, Edit, Trash2, Plus, Shield, Users } from "lucide-react"
 import { api } from "@/lib/api-client" // Fixed import path from dataStore to data-store
 
+
 interface Permission {
   id: string
   name: string
@@ -29,12 +32,14 @@ interface Permission {
 }
 
 interface Role {
+  _id: any
   id: string
   name: string
   description: string
   permissions: string[]
   userCount: number
   isSystem: boolean
+  isActive: boolean
   createdAt: string
 }
 
@@ -89,143 +94,95 @@ export default function RolesPage() {
     permissions: [] as string[],
   })
 
+ // ✅ Load from DB — NO DATASTORE
   useEffect(() => {
     const loadRoles = async () => {
       const loadedRoles = await api.roles.getAll()
-      if (loadedRoles.length > 0) {
-        setRoles(loadedRoles)
-      } else {
-        // Initialize with default roles if none exist
-        const defaultRoles: Role[] = [
-          {
-            id: "1",
-            name: "Super Admin",
-            description: "Full system access with all permissions",
-            permissions: availablePermissions.map((p) => p.id),
-            userCount: 1,
-            isSystem: true,
-            createdAt: "2024-01-01",
-          },
-          {
-            id: "2",
-            name: "Admin",
-            description: "Administrative access with most permissions",
-            permissions: [
-              "view_dashboard",
-              "view_financials",
-              "manage_financials",
-              "view_quotations",
-              "manage_quotations",
-              "manage_users",
-              "manage_assets",
-              "view_reports",
-              "tenant_settings",
-            ],
-            userCount: 2,
-            isSystem: true,
-            createdAt: "2024-01-01",
-          },
-          {
-            id: "3",
-            name: "Manager",
-            description: "Management level access to core features",
-            permissions: [
-              "view_dashboard",
-              "view_financials",
-              "manage_financials",
-              "view_quotations",
-              "manage_quotations",
-              "view_reports",
-            ],
-            userCount: 3,
-            isSystem: false,
-            createdAt: "2024-01-05",
-          },
-          {
-            id: "4",
-            name: "Employee",
-            description: "Standard employee access",
-            permissions: ["view_dashboard", "view_financials", "view_quotations", "view_reports"],
-            userCount: 8,
-            isSystem: false,
-            createdAt: "2024-01-10",
-          },
-          {
-            id: "5",
-            name: "Viewer",
-            description: "Read-only access to basic information",
-            permissions: ["view_dashboard", "view_financials", "view_reports"],
-            userCount: 5,
-            isSystem: true,
-            createdAt: "2024-01-01",
-          },
-        ]
-        await dataStore.saveAll("roles", defaultRoles)
-        setRoles(defaultRoles)
-      }
+      setRoles(loadedRoles)   // ✅ Always use DB roles
+      console.log("Loaded roles from DB:", loadedRoles)
     }
     loadRoles()
   }, [])
-
-  useEffect(() => {
-    const saveRoles = async () => {
-      if (roles.length > 0) {
-        await dataStore.saveAll("roles", roles)
-      }
-    }
-    saveRoles()
-  }, [roles])
-
-  const filteredRoles = roles.filter(
-    (role) =>
-      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.description.toLowerCase().includes(searchTerm.toLowerCase()),
+const filteredRoles = (roles || [])
+  .filter((role) => role?.name)
+  .filter((role) =>
+    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (role.description ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleAddRole = () => {
-    const role: Role = {
-      id: Date.now().toString(),
-      ...newRole,
-      userCount: 0,
+// ✅ CREATE ROLE IN DB
+const handleAddRole = async () => {
+  try {
+    const payload = {
+      name: newRole.name,
+      description: newRole.description,
+      permissions: newRole.permissions,
       isSystem: false,
-      createdAt: new Date().toISOString().split("T")[0],
+      userCount: 0,
     }
-    setRoles([...roles, role])
+
+    const saved = await api.roles.create(payload)
+
+    setRoles([...roles, saved])
     setNewRole({ name: "", description: "", permissions: [] })
     setIsAddRoleOpen(false)
+    alert("Role created successfully!")   // ✅ ADDED
+
+  } catch (err: any) {
+    alert("Failed to create role: " + (err.message || "Something went wrong"))   // ✅ ADDED
   }
+}
 
-  const handleEditRole = (role: Role) => {
-    setEditingRole(role)
-    setNewRole({
-      name: role.name,
-      description: role.description,
-      permissions: [...role.permissions],
-    })
-    setIsAddRoleOpen(true)
-  }
 
-  const handleUpdateRole = () => {
-    if (!editingRole) return
+// ✅ START EDIT — works same + popup added
+const handleEditRole = (role: Role) => {
+  setEditingRole(role)
+  setNewRole({
+    name: role.name,
+    description: role.description,
+    permissions: [...role.permissions],
+  })
+  setIsAddRoleOpen(true)
+}
 
-    setRoles(roles.map((role) => (role.id === editingRole.id ? { ...role, ...newRole } : role)))
+// ✅ UPDATE ROLE IN DB
+const handleUpdateRole = async () => {
+  if (!editingRole || !editingRole._id) return
+
+  try {
+    const updated = await api.roles.update(editingRole._id, newRole)
+
+    setRoles(roles.map((r) => (r._id === editingRole._id ? updated : r)))
+
+    alert("Role updated successfully!")   // ✅ ADDED
+
     setEditingRole(null)
     setNewRole({ name: "", description: "", permissions: [] })
     setIsAddRoleOpen(false)
-  }
 
-  const handleDeleteRole = (roleId: string) => {
-    const role = roles.find((r) => r.id === roleId)
-    if (role?.isSystem) {
-      alert("Cannot delete system roles")
-      return
-    }
-    if (role?.userCount > 0) {
-      alert("Cannot delete roles that are assigned to users")
-      return
-    }
-    setRoles(roles.filter((role) => role.id !== roleId))
+  } catch (err: any) {
+    alert("Failed to update role: " + (err.message || "Something went wrong"))   // ✅ ADDED
   }
+}
+
+
+const handleToggleRoleActive = async (id: string, isActive: boolean) => {
+  try {
+    const updated = await api.roles.toggle(id, isActive)
+
+    setRoles((prev) =>
+      prev.map((role) =>
+        role.id === id ? { ...role, isActive } : role
+      )
+    )
+    alert("Role status updated successfully!")   // ✅ ADDED
+
+  } catch (err: any) {
+    alert("Failed to update status: " + (err.message || "Something went wrong"))   // ✅ ADDED
+  }
+}
+
+
 
   const handlePermissionToggle = (permissionId: string) => {
     setNewRole((prev) => ({
@@ -246,6 +203,7 @@ export default function RolesPage() {
     })
     return categories
   }
+
 
   if (!hasPermission("manage_roles")) {
     return (
@@ -372,7 +330,7 @@ export default function RolesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{roles.length}</div>
-            <p className="text-xs text-muted-foreground">{roles.filter((r) => !r.isSystem).length} custom roles</p>
+            {/* <p className="text-xs text-muted-foreground">{roles.filter((r) => !r.isSystem).length} custom roles</p> */}
           </CardContent>
         </Card>
 
@@ -382,7 +340,7 @@ export default function RolesPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div>
+            {/* <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div> */}
             <p className="text-xs text-muted-foreground">Across all roles</p>
           </CardContent>
         </Card>
@@ -458,15 +416,11 @@ export default function RolesPage() {
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)} disabled={role.isSystem}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteRole(role.id)}
-                        className="text-red-600 hover:text-red-700"
-                        disabled={role.isSystem || role.userCount > 0}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+<Switch
+  checked={!!role.isActive}   // ✅ ensures boolean
+  onCheckedChange={(checked) => handleToggleRoleActive(role._id, checked)}
+  disabled={role.isSystem || role.userCount > 0}
+/>
                     </div>
                   </TableCell>
                 </TableRow>
