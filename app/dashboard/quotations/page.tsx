@@ -60,8 +60,11 @@ export default function QuotationsPage() {
     const matchesDateFrom = !dateFromFilter || new Date(quotation.date) >= new Date(dateFromFilter)
     const matchesDateTo = !dateToFilter || new Date(quotation.date) <= new Date(dateToFilter)
 
-    const matchesMinAmount = !minAmountFilter || quotation.total >= Number.parseFloat(minAmountFilter)
-    const matchesMaxAmount = !maxAmountFilter || quotation.total <= Number.parseFloat(maxAmountFilter)
+   const matchesMinAmount =
+  !minAmountFilter || Number(quotation.grandTotal) >= Number(minAmountFilter)
+
+const matchesMaxAmount =
+  !maxAmountFilter || Number(quotation.grandTotal) <= Number(maxAmountFilter)
 
     const matchesClient = clientFilter === "all" || quotation.clientName === clientFilter
 
@@ -166,7 +169,7 @@ export default function QuotationsPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search quotations..."
+                  placeholder="Search quotations by client name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -293,9 +296,11 @@ export default function QuotationsPage() {
                         </Button>
                       </Link>
                       {quotation.status !== "accepted" && (
+                        <Link href={`/dashboard/quotations/${quotation._id}/edit`}>
                         <Button variant="outline" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
+                        </Link>
                       )}
                       {quotation.status === "pending" && (
                         <Button

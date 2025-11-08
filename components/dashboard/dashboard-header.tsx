@@ -1,7 +1,9 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { Button } from "@/components/ui/button"
+import { tokenStorage } from "@/lib/token-storage"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,17 +14,102 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Bell, Search, User, LogOut, UserCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import type { Notification } from "@/lib/models/types"
 
 export default function DashboardHeader() {
   const { user, logout, hasPermission } = useUser()
   const router = useRouter()
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationOpen, setNotificationOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
   }
 
+  // Fetch notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/notifications", {
+          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setNotifications(data)
+          setUnreadCount(data.filter((n: Notification) => !n.isRead).length)
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error)
+      }
+    }
+
+    if (user) {
+      fetchNotifications()
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    if (!notification.isRead) {
+      try {
+        const token = tokenStorage.getAccessToken()
+        await fetch("/api/notifications", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({ 
+            notificationId: notification._id?.toString(), 
+            isRead: true 
+          }),
+        })
+        
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
+        )
+        setUnreadCount(prev => Math.max(0, prev - 1))
+      } catch (error) {
+        console.error("Failed to mark notification as read:", error)
+      }
+    }
+
+    // Close dropdown before navigation
+    setNotificationOpen(false)
+
+    // Navigate to link if provided
+    if (notification.link) {
+      router.push(notification.link)
+    }
+  }
+
+  const formatNotificationTime = (date: Date) => {
+    const now = new Date()
+    const notifDate = new Date(date)
+    const diffMs = now.getTime() - notifDate.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return "Just now"
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return notifDate.toLocaleDateString()
+  }
+
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 relative">
+    <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="relative">
@@ -36,10 +123,56 @@ export default function DashboardHeader() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-          </Button>
+          <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
+            <DropdownMenuTrigger>
+              <button className="relative px-2 py-2 rounded hover:bg-gray-100 transition-colors">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="max-h-96 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-gray-500">
+                    No notifications
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <DropdownMenuItem
+                      key={notification._id?.toString()}
+                      onSelect={() => handleNotificationClick(notification)}
+                      className={`flex flex-col items-start p-3 cursor-pointer ${
+                        !notification.isRead ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between w-full">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {formatNotificationTime(notification.createdAt)}
+                          </p>
+                        </div>
+                        {!notification.isRead && (
+                          <span className="ml-2 h-2 w-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -50,7 +183,7 @@ export default function DashboardHeader() {
                 <span className="text-sm font-medium">{user?.name}</span>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 z-[300]">
+            <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>

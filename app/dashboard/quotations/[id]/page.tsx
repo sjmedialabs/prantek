@@ -90,6 +90,11 @@ export default function QuotationDetailsPage() {
     status: quotation.status === "accepted" ? "Accepted" : "Pending",
     acceptedDate: quotation.acceptedDate,
   }
+  const invoiceTaxTotal = quotation.items.reduce((acc, item) => {
+  const net = (item.quantity * item.price) * (1 - item.discount / 100);
+  return acc + (net * ((item.cgst + item.sgst + item.igst) / 100));
+}, 0);
+
   console.log("Quatation for Print ::",quotationForPrint.items[0].name);
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -264,13 +269,19 @@ export default function QuotationDetailsPage() {
                   <div key={item.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="font-semibold text-md">{item.itemNamee}</p>
+                        <p className="font-semibold text-md">{item.itemName}</p>
                         <p className="text-sm text-gray-600">{item.description}</p>
                         <Badge variant="outline" className="mt-1">
                           {item.type}
                         </Badge>
                       </div>
-                      <p className="font-bold text-lg">₹{(item.total || 0).toLocaleString()}</p>
+                      <p className="text-purple-600 font-semibold">
+                        ₹{(
+                          (item.quantity * item.price) * (1 - item.discount / 100) * 
+                          (1 + ((item.cgst + item.sgst + item.igst) / 100))
+                        ).toLocaleString()}
+                      </p>
+
                     </div>
                     <Separator className="my-2" />
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -284,15 +295,35 @@ export default function QuotationDetailsPage() {
                       </div>
                       <div>
                         <p className="text-gray-600">Discount</p>
-                        <p className="font-semibold">₹{(item.discount || 0).toLocaleString()}</p>
+                        <p className="font-semibold">
+                          ₹{((item.quantity * item.price * item.discount) / 100 || 0).toLocaleString()}
+                        </p>
+
                       </div>
                       <div>
                         <p className="text-gray-600">Amount</p>
-                        <p className="font-semibold">₹{(item.amount || 0).toLocaleString()}</p>
+                       <p className="font-semibold">₹{((item.quantity * item.price) - ((item.quantity * item.price * item.discount) / 100) || 0).toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600">Tax ({item.taxRate}%)</p>
-                        <p className="font-semibold">₹{(item.taxAmount || 0).toLocaleString()}</p>
+                        <p className="text-gray-600">CGST ({item.cgst}%)</p>
+                        <p className="font-semibold">
+                          ₹{(((item.quantity * item.price) * (1 - item.discount / 100) * item.cgst) / 100).toLocaleString()}
+                        </p>
+
+                      </div>
+                      <div>
+                        <p className="text-gray-600">SGST ({item.sgst}%)</p>
+                        <p className="font-semibold">
+                          ₹{(((item.quantity * item.price) * (1 - item.discount / 100) * item.sgst) / 100).toLocaleString()}
+                        </p>
+
+                      </div>
+                      <div>
+                        <p className="text-gray-600">IGST ({item.igst}%)</p>
+                        <p className="font-semibold">
+                          ₹{(((item.quantity * item.price) * (1 - item.discount / 100) * item.igst) / 100).toLocaleString()}
+                        </p>
+
                       </div>
                     </div>
                   </div>
@@ -312,16 +343,16 @@ export default function QuotationDetailsPage() {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-semibold">₹{(quotation.subtotal || 0).toLocaleString()}</span>
+                <span className="font-semibold">₹{(quotation.grandTotal-invoiceTaxTotal || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Tax</span>
-                <span className="font-semibold">₹{(quotation.totalTax || 0).toLocaleString()}</span>
+                <span className="font-semibold">₹{(invoiceTaxTotal).toLocaleString()}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-lg">
                 <span className="font-semibold">Grand Total</span>
-                <span className="font-bold">₹{(quotation.total || 0).toLocaleString()}</span>
+                <span className="font-bold">₹{(quotation.grandTotal || 0).toLocaleString()}</span>
               </div>
             </CardContent>
           </Card>

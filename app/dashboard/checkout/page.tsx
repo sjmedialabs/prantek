@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useUser } from "@/components/auth/user-context"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ declare global {
 }
 
 export default function CheckoutPage() {
+  const { user } = useUser()
   const router = useRouter()
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
@@ -82,7 +84,6 @@ export default function CheckoutPage() {
 
     try {
       const totalAmount = Math.round(plan.price * 1.18)
-      const currentUser = await api.auth.getCurrentUser()
 
       const options = {
         key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
@@ -92,8 +93,8 @@ export default function CheckoutPage() {
         description: `${plan.name} Plan Subscription`,
         image: "/images/prantek-logo.png",
         prefill: {
-          name: currentUser?.name || "",
-          email: currentUser?.email || "",
+          name: user?.name || "",
+          email: user?.email || "",
         },
         theme: {
           color: "#3b82f6", // Blue theme color
@@ -128,9 +129,8 @@ export default function CheckoutPage() {
   }
 
   const handlePaymentSuccess = async (response: any) => {
-    const currentUser = await api.auth.getCurrentUser()
-    if (currentUser && plan) {
-      const updatedUser = await api.users.update( currentUser.id, {
+    if (user && plan) {
+      const updatedUser = await api.users.update( user.id, {
         subscriptionPlanId: plan.id,
         subscriptionStatus: "active",
         subscriptionStartDate: new Date().toISOString(),

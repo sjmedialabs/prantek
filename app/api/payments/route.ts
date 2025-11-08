@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity, generateNextNumber } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
+import { notifyAdminsNewPayment } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -38,6 +39,19 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const payment = await mongoStore.create("payments", { ...body, userId: user.id })
 
     await logActivity(user.userId, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
+
+    // Notify admins about new payment
+    try {
+      await notifyAdminsNewPayment(
+        payment._id?.toString() || "",
+        body.paymentNumber,
+        body.amount,
+        user.companyId
+      )
+    } catch (notifError) {
+      console.error("Failed to send notification:", notifError)
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({ success: true, data: payment })
   } catch (error) {
