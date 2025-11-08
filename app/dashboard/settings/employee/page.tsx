@@ -25,7 +25,10 @@ interface DocumentItem {
 }
 
 interface Employee {
+  userCount: number
+  isSystem: boolean
   id: string
+  _id: string
   employeeNumber: string
   employeeName: string
   surname: string
@@ -60,6 +63,7 @@ export default function EmployeePage() {
   const [roles, setRoles] = useState<any[]>([])
   const [formData, setFormData] = useState<Employee>({
     id: "",
+    _id: "",
     employeeNumber: "",
     employeeName: "",
     surname: "",
@@ -72,6 +76,8 @@ export default function EmployeePage() {
     joiningDate: "",
     relievingDate: "",
     description: "",
+    isSystem: false,
+    userCount: 0,
     memberType: "",
     role: "",
     resume: "",
@@ -87,6 +93,7 @@ export default function EmployeePage() {
   useEffect(() => {
     const loadData = async () => {
       const loadedEmployees = await api.employees.getAll()
+      console.log("loadedEmployees", loadedEmployees)
       const loadedMemberTypes = await api.memberTypes.getAll()
       console.log("loadedMemberTypes", loadedMemberTypes)
       const loadedRoles = await api.roles.getAll()
@@ -110,6 +117,7 @@ export default function EmployeePage() {
   }
 
   const handleSave = async () => {
+    console.log("Saving employee:", formData)
     if (!formData.employeeName.trim()) {
       alert("Please enter employee name")
       return
@@ -163,11 +171,12 @@ export default function EmployeePage() {
       alert("Please select joining date")
       return
     }
-
-    if (editingEmployee) {
-      const updated = await api.employees.update( editingEmployee.id, formData)
+    console.log("Saving employee as editing employee:", editingEmployee)
+    console.log("Saving employee:", formData)
+    if (editingEmployee?._id) {
+      const updated = await api.employees.update( editingEmployee?._id, formData)
       if (updated) {
-        setEmployees(employees.map((emp) => (emp.id === editingEmployee.id ? updated : emp)))
+        setEmployees(employees.map((emp) => (emp._id === editingEmployee._id ? updated : emp)))
       }
     } else {
       const newEmployee = await api.employees.create( {
@@ -181,7 +190,9 @@ export default function EmployeePage() {
     setEditingEmployee(null)
     resetForm()
     setSaved(true)
+    alert("Employee saved successfully!")
     setTimeout(() => setSaved(false), 3000)
+    window.location.reload()
   }
 
   const resetForm = () => {
@@ -191,6 +202,9 @@ export default function EmployeePage() {
       employeeName: "",
       surname: "",
       photo: "",
+      _id: "",
+      isSystem: false,
+      userCount: 0,
       mobileNo: "",
       email: "",
       address: "",
@@ -218,14 +232,21 @@ export default function EmployeePage() {
     setIsDialogOpen(true)
   }
 
-  const handleToggleActive = async (id: string) => {
-    const employee = employees.find((emp) => emp.id === id)
-    if (employee) {
-      const updated = await api.employees.update( id, { isActive: !employee.isActive })
-      if (updated) {
-        setEmployees(employees.map((emp) => (emp.id === id ? updated : emp)))
-      }
-    }
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    console.log("Toggling  for employee:", id)
+      try {
+    const updated = await api.employees.toggle(id, isActive)
+
+    setEmployees((prev) =>
+      prev.map((emp) =>
+        emp.id === id ? { ...emp, isActive } : emp
+      )
+    )
+    alert("Status updated successfully!")   // ✅ ADDED
+    window.location.reload()
+  } catch (err: any) {
+    alert("Failed to update status: " + (err.message || "Something went wrong"))   // ✅ ADDED
+  }
   }
 
   if (!hasPermission("tenant_settings")) {
@@ -334,47 +355,47 @@ export default function EmployeePage() {
                         <Label htmlFor="memberType" className="text-sm font-medium">
                           Employment Type *
                         </Label>
-                        <Select
-                          value={formData?.memberType}
-                          onValueChange={(value) => setFormData({ ...formData, memberType: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select employment type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {memberTypes.map((type) => (
-                              <SelectItem key={type.id} value={type.id}>
-                                {type.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+<Select
+  value={formData.memberType ?? ""}
+  onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
+>
+  <SelectTrigger>
+    <SelectValue/>
+  </SelectTrigger>
+  <SelectContent>
+    {memberTypes.map((type) => (
+      <SelectItem key={type._id} value={String(type._id)}>
+        {type.name}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="role" className="text-sm font-medium">
                           Role *
                         </Label>
-                        <Select
-                          value={formData.role}
-                          onValueChange={(value) => setFormData({ ...formData, role: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roles.length === 0 ? (
-                              <SelectItem value="no-roles" disabled>
-                                No roles available. Please create roles first.
-                              </SelectItem>
-                            ) : (
-                              roles.map((role) => (
-                                <SelectItem key={role.id} value={role.id}>
-                                  {role.name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+<Select
+  value={formData.role ?? ""}
+  onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Select role" />
+  </SelectTrigger>
+  <SelectContent>
+    {roles.length === 0 ? (
+      <SelectItem value="no-roles" disabled>
+        No roles available. Please create roles first.
+      </SelectItem>
+    ) : (
+      roles.map((role) => (
+        <SelectItem key={role._id} value={String(role._id)}>
+          {role.name}
+        </SelectItem>
+      ))
+    )}
+  </SelectContent>
+</Select>
                       </div>
                     </div>
                   </CardContent>
@@ -630,7 +651,7 @@ export default function EmployeePage() {
                 <div
                   key={employee.id}
                   className={`flex items-center justify-between p-4 border rounded-lg ${
-                    !employee.isActive ? "bg-gray-50 opacity-60" : ""
+                    !employee?.isActive ? "bg-gray-50 opacity-60" : ""
                   }`}
                 >
                   <div className="flex-1">
@@ -668,11 +689,11 @@ export default function EmployeePage() {
                       <Label htmlFor={`active-${employee.id}`} className="text-sm">
                         {employee.isActive ? "Active" : "Inactive"}
                       </Label>
-                      <Switch
-                        id={`active-${employee.id}`}
-                        checked={employee.isActive}
-                        onCheckedChange={() => handleToggleActive(employee.id)}
-                      />
+<Switch
+  checked={!!employee.isActive}   // ✅ ensures boolean
+  onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
+  disabled={employee.isSystem || employee.userCount > 0}
+/>
                     </div>
                   </div>
                 </div>

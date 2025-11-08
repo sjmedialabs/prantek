@@ -15,7 +15,7 @@ export const COLLECTIONS = {
   PAYMENT_CATEGORIES: "payment_categories",
   TAX_SETTINGS: "tax_settings",
   TAX_RATES: "tax_rates",
-  BANK_DETAILS: "bank_details",
+  BANK_ACCOUNTS: "bank_accounts",
   COMPANY_SETTINGS: "company_settings",
   TEAM_MEMBERS: "team_members",
   MEMBER_TYPES: "member_types",

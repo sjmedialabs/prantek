@@ -20,6 +20,7 @@ import {
 import { api } from "@/lib/api-client"
 
 interface Category {
+  _id: string
   id: string
   name: string
   isActive: boolean // Added isActive field
@@ -62,14 +63,14 @@ export default function PaymentCategoriesPage() {
       alert("Please enter a category name")
       return
     }
-
+    console.log("Editing category:", editingCategory?._id)
     if (editingCategory) {
       // Update existing category
-      const updated = await api.paymentCategories.update( editingCategory.id, {
+      const updated = await api.paymentCategories.update( editingCategory._id, {
         name: categoryName,
       })
       if (updated) {
-        setCategories(categories.map((cat) => (cat.id === updated.id ? updated : cat)))
+        setCategories(categories.map((cat) => (cat._id === updated._id ? updated : cat)))
       }
     } else {
       // Create new category
@@ -83,6 +84,8 @@ export default function PaymentCategoriesPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     setIsDialogOpen(false)
+          alert("Category Saved successfully")
+      window.location.reload()
     resetForm()
   }
 
@@ -98,12 +101,15 @@ export default function PaymentCategoriesPage() {
   }
 
   const handleToggleStatus = async (category: Category) => {
-    const updated = await api.paymentCategories.update( category.id, {
+    console.log("Toggling status for category:", category._id)
+    const updated = await api.paymentCategories.update( category._id, {
       isActive: !category.isActive,
     })
     if (updated) {
       setCategories(categories.map((cat) => (cat.id === updated.id ? updated : cat)))
     }
+    alert("Category status updated successfully!")
+    window.location.reload()
   }
 
   if (!hasPermission("tenant_settings")) {
@@ -156,13 +162,13 @@ export default function PaymentCategoriesPage() {
             <div className="space-y-2">
               {categories.map((category) => (
                 <div
-                  key={category.id}
-                  className={`flex items-center justify-between p-3 border rounded-lg ${category.isActive ? "" : "opacity-50 bg-gray-50"}`}
+                  key={category?.id}
+                  className={`flex items-center justify-between p-3 border rounded-lg ${category?.isActive ? "" : "opacity-50 bg-gray-50"}`}
                 >
                   <div className="flex items-center space-x-3">
-                    <span className="font-medium">{category.name}</span>
-                    <Badge variant={category.isActive ? "default" : "secondary"}>
-                      {category.isActive ? "Active" : "Inactive"}
+                    <span className="font-medium">{category?.name}</span>
+                    <Badge variant={category?.isActive ? "default" : "secondary"}>
+                      {category?.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2">
@@ -170,7 +176,7 @@ export default function PaymentCategoriesPage() {
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(category)}>
-                      {category.isActive ? (
+                      {category?.isActive ? (
                         <PowerOff className="h-4 w-4 text-red-500" />
                       ) : (
                         <Power className="h-4 w-4 text-green-500" />

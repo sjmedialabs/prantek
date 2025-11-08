@@ -60,6 +60,31 @@ const loadItems = async () => {
   setItems(mapped)
 }
 
+const validateItem = (data: any) => {
+  if (!data.type || !["product", "service"].includes(data.type)) {
+    return "Please select a valid item type."
+  }
+
+  if (!data.name || data.name.trim().length < 2) {
+    return "Item name must be at least 2 characters long."
+  }
+
+  if (!data.price || data.price <= 0) {
+    return "Price must be greater than 0."
+  }
+
+  if (data.type === "product" && !data.unitType) {
+    return "Please select a unit type for product."
+  }
+
+  if (data.applyTax) {
+    if (!data.cgst && !data.sgst && !data.igst) {
+      return "At least one tax (CGST/SGST/IGST) must be selected."
+    }
+  }
+
+  return null // ✅ VALID
+}
 
 
   // const loadTaxRates = async () => {
@@ -114,6 +139,13 @@ const loadItems = async () => {
 
 const handleSave = async () => {
   try {
+    // ✅ VALIDATE FIRST
+    const errMsg = validateItem(formData)
+    if (errMsg) {
+      alert(errMsg)
+      return
+    }
+
     if (editingItem?.id) {
       await api.items.update(editingItem.id, {
         ...formData,
@@ -131,11 +163,13 @@ const handleSave = async () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     alert("Item saved successfully!")
+
   } catch (err) {
     console.error("Failed to save", err)
     alert("Failed to save item")
   }
 }
+
 
   const resetForm = () => {
     setFormData({

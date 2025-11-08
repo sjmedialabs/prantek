@@ -155,15 +155,12 @@ export interface SubscriptionPlan extends BaseDocument {
 export interface PaymentMethod extends BaseDocument {
   userId: string
   name: string
-  type: "bank" | "upi" | "card" | "cash"
-  details: Record<string, string>
   isEnabled: boolean
 }
 
 export interface Category extends BaseDocument {
   userId: string
   name: string
-  type: "receipt" | "payment"
   isEnabled: boolean
 }
 

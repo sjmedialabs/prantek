@@ -464,7 +464,7 @@ export const api = {
     bankAccounts: {
       getAll: async () => {
         const data = await fetchAPI("/api/bank-accounts")
-        return data.data || data.bankAccounts || []
+        return data || data.data || data.bankAccounts || []
       },
       create: async (accountData: any) => {
         const data = await fetchAPI("/api/bank-accounts", {
@@ -555,7 +555,7 @@ export const api = {
     paymentCategories: {
       getAll: async () => {
         const data = await fetchAPI("/api/payment-categories")
-        return data.data || data.paymentCategories || []
+        return data || data.data || data.paymentCategories || []
       },
       create: async (categoryData: any) => {
         const data = await fetchAPI("/api/payment-categories", {
@@ -569,7 +569,7 @@ export const api = {
           method: "PUT",
           body: JSON.stringify(categoryData),
         })
-        return data.data || data.category
+        return data.Data || data.data || data.category
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/payment-categories/${id}`, {
@@ -582,7 +582,7 @@ export const api = {
     employees: {
       getAll: async () => {
         const data = await fetchAPI("/api/employees")
-        return data.data || data.employees || []
+        return data.data || data.employees || data || []
       },
       create: async (employeeData: any) => {
         const data = await fetchAPI("/api/employees", {
@@ -591,12 +591,20 @@ export const api = {
         })
         return data.data || data.employee
       },
-      update: async (id: string, employeeData: any) => {
+      update: async (id: string, formData: any) => {
+        console.log("Updating employee:", id, formData)
         const data = await fetchAPI(`/api/employees/${id}`, {
           method: "PUT",
-          body: JSON.stringify(employeeData),
+          body: JSON.stringify(formData),
         })
-        return data.data || data.employee
+        return data.data 
+      },
+            toggle: async (id: string, isActive: boolean) => {
+        const data = await fetchAPI(`/api/employees/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ isActive }),
+        })
+        return data.data
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/employees/${id}`, {
@@ -657,6 +665,80 @@ export const api = {
     return data.data
   },
 },
+
+paymentMethods: {
+  getAll: async () => {
+    const data = await fetchAPI("/api/payment-methods")
+    return data.data || []
+  },
+
+  create: async (method: { name: string; isEnabled?: boolean }) => {
+    const data = await fetchAPI("/api/payment-methods", {
+      method: "POST",
+      body: JSON.stringify(method),
+    })
+    return data.data
+  },
+
+  update: async (id: string, payload: Partial<{ name: string; isEnabled: boolean }>) => {
+    const data = await fetchAPI(`/api/payment-methods/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    })
+    return data.data
+  },
+
+  delete: async (id: string) => {
+    await fetchAPI(`/api/payment-methods/${id}`, {
+      method: "DELETE",
+    })
+    return true
+  },
+},
+
+receiptCategories: {
+  getAll: async () => {
+    const data = await fetchAPI("/api/receipt-categories")
+    return data.data || []
+  },
+
+  create: async (payload: { name: string; isEnabled?: boolean }) => {
+    const data = await fetchAPI("/api/receipt-categories", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
+    return data.data
+  },
+
+  update: async (id: string, payload: Partial<{ name: string; isEnabled: boolean }>) => {
+    const data = await fetchAPI(`/api/receipt-categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    })
+    return data.data
+  },
+
+  delete: async (id: string) => {
+    await fetchAPI(`/api/receipt-categories/${id}`, {
+      method: "DELETE",
+    })
+    return true
+  },
+},
+activityLogs: {
+  getAll: async () => {
+    const data = await fetchAPI("/api/activity-logs")
+    return data || data.data || data.logs || []
+  },
+  clearOld: async (daysOld: number) => {
+    const data = await fetchAPI("/api/activity-logs", {
+      method: "DELETE",
+      body: JSON.stringify({ daysOld }),
+    })
+    return data
+  },
+},
+
 
 
 }
