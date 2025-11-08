@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api-client"
 import { Check, Zap, Eye, EyeOff } from "lucide-react"
-import { tokenStorage } from "@/lib/token-storage"
+import { SubscriptionPlan } from "@/lib/data-store"
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -36,7 +36,7 @@ export default function SignUpPage() {
   useEffect(() => {
     const loadPlans = async () => {
       try {
-        const plans = await api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive))
+        const plans = await api.subscriptionPlans.getAll().then(plans => plans.filter((p: { isActive: any }) => p.isActive))
         setAvailablePlans(plans)
         if (plans.length > 0) {
           setSelectedPlan(plans[0]._id || plans[0].id)
@@ -107,6 +107,47 @@ export default function SignUpPage() {
       setLoading(false)
     }
   }
+  // ✅ Trigger auto signup after payment
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+  const paymentStatus = params.get("payment")
+
+  if (paymentStatus === "success") {
+    completeSignup()
+  }
+}, [])
+
+const completeSignup = async () => {
+  const stored = localStorage.getItem("pending_signup")
+
+  if (!stored) {
+    setError("Signup data missing. Please signup again.")
+    return
+  }
+
+  const signupData = JSON.parse(stored)
+
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(signupData),
+    })
+
+    if (!res.ok) {
+      const d = await res.json()
+      setError(d.error || "Signup failed")
+      return
+    }
+
+    localStorage.removeItem("pending_signup")
+    router.push("/signin")
+  } catch (err) {
+    console.error("Signup error:", err)
+    setError("Signup failed. Try again.")
+  }
+}
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">

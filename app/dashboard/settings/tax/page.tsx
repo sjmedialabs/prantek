@@ -22,16 +22,19 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { TaxRate, TaxSetting } from "@/lib/models/types"
 
 export default function TaxDetailsPage() {
   const { hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
-  const [taxSettings, setTaxSettings] = useState<TaxSettings>({
-    tanNumber: "",
-    tanDocument: null,
-    gstNumber: "",
-    gstDocument: null,
-    updatedAt: new Date().toISOString(),
+  const [taxSettings, setTaxSettings] = useState<TaxSetting>({
+    tan: "",
+    userId: "",
+    tanUrl: "",
+    gst: "",
+    gstUrl: "",
+    createdAt: new Date(),
+    updatedAt: new Date(),
   })
   const [taxRates, setTaxRates] = useState<TaxRate[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -44,26 +47,42 @@ export default function TaxDetailsPage() {
 
   useEffect(() => {
     const loadTaxData = async () => {
-      const settings = await dataStore.getTaxSettings()
+      const settings = await api.taxSetting.get()
       setTaxSettings(settings)
-      const rates = await api.TaxRates.getAll()
+      const rates = await api.taxRates.getAll()
       setTaxRates(rates)
     }
     loadTaxData()
   }, [])
 
-  const handleSaveSettings = async () => {
-    await dataStore.saveTaxSettings(taxSettings)
+const handleSaveSettings = async () => {
+  try {
+    // 1) Check if tax settings already exist
+    const existing = await api.taxSetting.get()
+
+    if (existing) {
+      // ✅ UPDATE
+      await api.taxSetting.update(taxSettings)
+    } else {
+      // ✅ CREATE
+      await api.taxSetting.create(taxSettings)
+    }
+
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
+  } catch (error) {
+    console.error("Failed to save tax settings", error)
+    alert("Failed to save tax settings")
   }
+}
+
 
   const handleTanDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       const reader = new FileReader()
       reader.onloadend = () => {
-        setTaxSettings({ ...taxSettings, tanDocument: reader.result as string })
+        setTaxSettings({ ...taxSettings, tanUrl: reader.result as string })
       }
       reader.readAsDataURL(file)
     }
@@ -74,7 +93,7 @@ export default function TaxDetailsPage() {
       const file = e.target.files[0]
       const reader = new FileReader()
       reader.onloadend = () => {
-        setTaxSettings({ ...taxSettings, gstDocument: reader.result as string })
+        setTaxSettings({ ...taxSettings, gstUrl: reader.result as string })
       }
       reader.readAsDataURL(file)
     }
@@ -87,7 +106,7 @@ export default function TaxDetailsPage() {
     }
 
     if (editingRate) {
-      const updated = await api.TaxRate.update(editingRate.id, {
+      const updated = await api.taxRates.update(editingRate.id, {
         ...rateData,
         rate: Number.parseFloat(rateData.rate),
       })
@@ -95,7 +114,7 @@ export default function TaxDetailsPage() {
         setTaxRates(taxRates.map((rate) => (rate.id === updated.id ? updated : rate)))
       }
     } else {
-      const newRate = await api.TaxRate.create({
+      const newRate = await api.taxRates.create({
         ...rateData,
         rate: Number.parseFloat(rateData.rate),
         isActive: true,
@@ -127,7 +146,7 @@ export default function TaxDetailsPage() {
   }
 
   const handleToggleRateStatus = async (rate: TaxRate) => {
-    const updated = await api.TaxRate.update(rate.id, {
+    const updated = await api.taxRates.update(rate.id, {
       isActive: !rate.isActive,
     })
     if (updated) {
@@ -177,8 +196,8 @@ export default function TaxDetailsPage() {
               <Label htmlFor="tanNumber">TAN Number</Label>
               <Input
                 id="tanNumber"
-                value={taxSettings.tanNumber}
-                onChange={(e) => setTaxSettings({ ...taxSettings, tanNumber: e.target.value })}
+                value={taxSettings?.tan || ""}
+                onChange={(e) => setTaxSettings({ ...taxSettings, tan: e.target.value })}
                 placeholder="Enter TAN number"
               />
             </div>
@@ -186,7 +205,7 @@ export default function TaxDetailsPage() {
             <div className="space-y-2">
               <Label htmlFor="tanDocument">TAN Document</Label>
               <Input id="tanDocument" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleTanDocumentUpload} />
-              {taxSettings.tanDocument && <p className="text-sm text-green-600">Document uploaded</p>}
+              {taxSettings?.tanUrl && <p className="text-sm text-green-600">Document uploaded</p>}
             </div>
           </div>
 
@@ -195,8 +214,8 @@ export default function TaxDetailsPage() {
               <Label htmlFor="gstNumber">GST Number</Label>
               <Input
                 id="gstNumber"
-                value={taxSettings.gstNumber}
-                onChange={(e) => setTaxSettings({ ...taxSettings, gstNumber: e.target.value })}
+                value={taxSettings?.gst}
+                onChange={(e) => setTaxSettings({ ...taxSettings, gst: e.target.value })}
                 placeholder="Enter GST number"
               />
             </div>
@@ -204,7 +223,7 @@ export default function TaxDetailsPage() {
             <div className="space-y-2">
               <Label htmlFor="gstDocument">GST Document</Label>
               <Input id="gstDocument" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleGstDocumentUpload} />
-              {taxSettings.gstDocument && <p className="text-sm text-green-600">Document uploaded</p>}
+              {taxSettings?.gstUrl && <p className="text-sm text-green-600">Document uploaded</p>}
             </div>
           </div>
         </CardContent>

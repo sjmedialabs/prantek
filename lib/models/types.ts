@@ -49,15 +49,27 @@ export interface Vendor extends BaseDocument {
 }
 
 export interface Item extends BaseDocument {
-  userId: string
+  userId?: string
+  id?: string               // optional for frontend
   name: string
   description?: string
   category?: string
+
+  type?: "product" | "service"
+  unitType?: string
   unit?: string
+
   price: number
-  taxRate?: number
   hsnCode?: string
+  applyTax?: boolean
+  cgst?: number
+  sgst?: number
+  igst?: number
+  isActive?: boolean
+
+  taxRate?: number
 }
+
 
 export interface ReceiptItem {
   itemId: string
@@ -157,9 +169,19 @@ export interface Category extends BaseDocument {
 
 export interface TaxSetting extends BaseDocument {
   userId: string
-  name: string
+  tan: string
+  tanUrl: string
+  gst: string
+  gstUrl: string
+}
+
+export interface TaxRate extends BaseDocument {
+  id: string
+  userId: string
+  type: "CGST" | "SGST" | "IGST"
   rate: number
-  isDefault: boolean
+  description: string
+  isActive: boolean
 }
 
 export interface BankDetail extends BaseDocument {
@@ -207,6 +229,7 @@ export interface Role extends BaseDocument {
   name: string
   permissions: string[]
   description?: string
+  isActive: boolean
 }
 
 export interface ActivityLog extends BaseDocument {

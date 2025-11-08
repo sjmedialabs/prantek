@@ -20,10 +20,10 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
-import type { Item } from "@/lib/data-store"
+import { Item } from "@/lib/models/types"
 
 export default function ItemsPage() {
-  const { hasPermission } = useUser()
+  const { user, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [items, setItems] = useState<Item[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -34,6 +34,7 @@ export default function ItemsPage() {
     unitType: "",
     name: "",
     description: "",
+    userId: user?.id,
     price: 0,
     hsnCode: "", // Added HSN code field
     applyTax: false, // Added tax checkbox
@@ -48,44 +49,38 @@ export default function ItemsPage() {
     loadTaxRates()
   }, [])
 
-  const loadItems = () => {
-    const data = api.items.getAll()
-    setItems(data)
-  }
+const loadItems = async () => {
+  const data = await api.items.getAll()
+
+  const mapped = data.map((i:any)=> ({
+    ...i,
+    id: i._id?.toString?.() || i.id   // ✅ keep both
+  }))
+
+  setItems(mapped)
+}
+
+
 
   const loadTaxRates = async () => {
-    const rates = (await dataStore.getAll("taxRates")) || []
-    setTaxRates(rates)
-  }
-
-  const handleSave = () => {
-    if (editingItem) {
-      api.items.update(editingItem.id, formData)
-    } else {
-      api.items.create(formData)
-    }
-
-    loadItems()
-    setIsDialogOpen(false)
-    setEditingItem(null)
-    resetForm()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    // const rates = (await api.taxRates.getAll()) || []
+    // setTaxRates(rates)
   }
 
   const handleEdit = (item: Item) => {
     setEditingItem(item)
     setFormData({
-      type: item.type,
+      type: item.type as "product" | "service",
       unitType: item.unitType || "",
       name: item.name,
-      description: item.description,
+      description: item.description || "",
       price: item.price,
       hsnCode: item.hsnCode || "",
       applyTax: item.applyTax || false,
       cgst: item.cgst || 0,
       sgst: item.sgst || 0,
       igst: item.igst || 0,
+      userId: user?.id,
       isActive: item.isActive !== false,
     })
     setIsDialogOpen(true)
@@ -94,10 +89,36 @@ export default function ItemsPage() {
   const toggleActive = (id: string) => {
     const item = items.find((i) => i.id === id)
     if (item) {
-      api.items.update(id, { ...item, isActive: !item.isActive })
+      api.items.update(id, { isActive: !item.isActive  })
       loadItems()
     }
+    alert("Item status updated successfully!")
   }
+
+const handleSave = async () => {
+  try {
+    if (editingItem?.id) {
+      await api.items.update(editingItem.id, {
+        ...formData,
+      })
+    } else {
+      await api.items.create({
+        ...formData,
+      })
+    }
+
+    await loadItems()
+    resetForm()
+    setEditingItem(null)
+    setIsDialogOpen(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+    alert("Item saved successfully!")
+  } catch (err) {
+    console.error("Failed to save", err)
+    alert("Failed to save item")
+  }
+}
 
   const resetForm = () => {
     setFormData({
@@ -112,6 +133,7 @@ export default function ItemsPage() {
       sgst: 0,
       igst: 0,
       isActive: true,
+      userId: user?.id
     })
   }
 
@@ -395,7 +417,7 @@ export default function ItemsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleActive(item.id)}
+                      onClick={() => toggleActive(item?.id || "")}
                       title={item.isActive === false ? "Enable" : "Disable"}
                     >
                       {item.isActive === false ? (

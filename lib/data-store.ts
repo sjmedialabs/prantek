@@ -199,6 +199,7 @@ export interface CompanyDetails {
 
 export interface SubscriptionPlan {
   id: string
+  _id: string
   name: string
   description: string
   price: number

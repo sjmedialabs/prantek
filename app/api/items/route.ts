@@ -9,7 +9,7 @@ export const GET = withAuth(async (request: NextRequest, user: any) => {
     const db = await connectDB()
 
     // ✅ Always fetch all items belonging to logged-in user
-    const filter = { userId: String(user.id) }
+    const filter = { userId: String(user.userId) }
 
     const items = await db
       .collection(Collections.ITEMS)
@@ -42,7 +42,7 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
 
     const newItem = {
       ...body,
-      userId: String(user.id),
+      userId: String(user.userId),
       createdAt: now,
       updatedAt: now,
     }

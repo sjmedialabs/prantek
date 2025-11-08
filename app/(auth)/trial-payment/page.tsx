@@ -70,12 +70,14 @@ export default function TrialPaymentPage() {
           email: email || "",
         },
         theme: {
-          color: "#3b82f6", // Blue theme color
+          color: "#3b82f6",
         },
+
         handler: (response: any) => {
           console.log("[v0] Trial payment successful:", response)
           handlePaymentSuccess(response)
         },
+
         modal: {
           ondismiss: () => {
             console.log("[v0] Payment modal closed")
@@ -85,6 +87,7 @@ export default function TrialPaymentPage() {
       }
 
       const razorpay = new window.Razorpay(options)
+
       razorpay.on("payment.failed", (response: any) => {
         console.error("[v0] Payment failed:", response.error)
         setError(`Payment failed: ${response.error.description}`)
@@ -101,27 +104,27 @@ export default function TrialPaymentPage() {
     }
   }
 
-  const handlePaymentSuccess = (response: any) => {
-    console.log("[v0] Processing trial payment success, redirecting to signin...")
+  const handlePaymentSuccess = async (response: any) => {
+    console.log("[v0] Processing trial payment success...")
 
-    // Store payment details
     localStorage.setItem(
       "trialPaymentDetails",
       JSON.stringify({
         paymentId: response.razorpay_payment_id,
-        email: email,
+        email,
         amount: 1,
         timestamp: new Date().toISOString(),
-      }),
+      })
     )
 
-    toast.success("Payment verified! Your free trial has started.")
+    toast.success("Payment verified! Redirecting...")
 
-    // Redirect to signin with success message
     setTimeout(() => {
-      router.push("/signin?payment=success&trial=true")
-    }, 2000)
+      // ✅ ADDED — proper flow
+      router.push("/signup?payment=success&trial=true")
+    }, 1000)
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -133,6 +136,7 @@ export default function TrialPaymentPage() {
           <CardTitle className="text-2xl font-bold">Verify Your Account</CardTitle>
           <CardDescription>₹1 verification payment (Refunded instantly)</CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-6">
           {error && (
             <Alert variant="destructive">
@@ -143,8 +147,8 @@ export default function TrialPaymentPage() {
           <Alert className="bg-blue-50 border-blue-200">
             <Shield className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              This ₹1 payment verifies your payment method and enables auto-pay after your 14-day free trial. The amount
-              will be refunded immediately.
+              This ₹1 payment verifies your payment method and enables auto-pay after your 14-day free trial.
+              The amount is refunded instantly.
             </AlertDescription>
           </Alert>
 
@@ -160,14 +164,7 @@ export default function TrialPaymentPage() {
               <Zap className="h-5 w-5 text-yellow-600 mt-0.5" />
               <div>
                 <p className="font-medium">Instant Refund</p>
-                <p className="text-sm text-gray-600">₹1 returned to your account immediately</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-medium">Secure Auto-Pay</p>
-                <p className="text-sm text-gray-600">Seamless billing after trial ends</p>
+                <p className="text-sm text-gray-600">₹1 returned immediately</p>
               </div>
             </div>
           </div>
@@ -209,7 +206,8 @@ export default function TrialPaymentPage() {
           </div>
 
           <p className="text-xs text-center text-gray-500">
-            By continuing, you agree to our Terms of Service and Privacy Policy. Cancel anytime during the trial period.
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+            Cancel anytime during the trial period.
           </p>
         </CardContent>
       </Card>
