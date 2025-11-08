@@ -153,6 +153,46 @@ export const api = {
       return data.data || data.item
     },
   },
+    // Quotations
+    quotations: {
+      getAll: async () => {
+        const data = await fetchAPI("/api/quotations")
+        return data.quotations || []
+      },
+      getById: async (id: string) => {
+        const data = await fetchAPI(`/api/quotations/${id}`)
+        return data.quotation
+      },
+      create: async (quotationData: Omit<Quotation, "id" | "createdAt" | "updatedAt" | "quotationNumber">) => {
+        const data = await fetchAPI("/api/quotations", {
+          method: "POST",
+          body: JSON.stringify(quotationData),
+        })
+        return data.quotation
+      },
+      update: async (id: string, quotationData: Partial<Quotation>) => {
+        const data = await fetchAPI(`/api/quotations/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(quotationData),
+        })
+        return data.quotation
+      },
+      delete: async (id: string) => {
+        await fetchAPI(`/api/quotations/${id}`, {
+          method: "DELETE",
+        })
+      },
+      accept: async (id: string) => {
+        const data = await fetchAPI(`/api/quotations/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            status: "accepted",
+            acceptedDate: new Date().toISOString(),
+          }),
+        })
+        return data.quotation
+      },
+    },
 
   // Quotations
   quotations: {
