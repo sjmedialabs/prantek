@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
 import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
+import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +47,18 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
+    
+    // Notify super admins about new registration
+    try {
+      await notifySuperAdminsNewRegistration(
+        result.insertedId.toString(),
+        newUser.name,
+        newUser.email
+      )
+    } catch (notifError) {
+      console.error("Failed to send registration notification:", notifError)
+      // Don't fail the registration if notification fails
+    }
     
     // Generate JWT tokens
     const tokenPayload = {

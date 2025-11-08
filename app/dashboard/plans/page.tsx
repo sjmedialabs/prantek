@@ -23,9 +23,17 @@ export default function PlansPage() {
         const activePlans = await api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive))
         setPlans(activePlans)
 
+        // Only fetch current plan if user has a subscription
         if (user?.subscriptionPlanId) {
-          const plan = await api.subscriptionPlans.getById( user.subscriptionPlanId)
+          const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
           setCurrentPlan(plan)
+        } else {
+          // User has no subscription - find and set the free plan as current
+          const freePlan = activePlans.find(p => p.price === 0)
+          if (freePlan) {
+        console.log("[PLANS] Current plan set:", freePlan ? `${freePlan.name} (${freePlan._id || freePlan.id})` : "none")
+            setCurrentPlan(freePlan)
+          }
         }
       } catch (error) {
         console.error("Failed to load plans:", error)
@@ -55,7 +63,10 @@ export default function PlansPage() {
   }
 
   const isCurrentPlan = (plan: SubscriptionPlan): boolean => {
-    return currentPlan?.id === plan.id
+    return (currentPlan?.id || currentPlan?._id?.toString()) === (plan.id || plan._id?.toString())
+    const result = (currentPlan?.id || currentPlan?._id?.toString()) === (plan.id || plan._id?.toString())
+    console.log("[PLANS] Comparing:", plan.name, "with current:", currentPlan?.name, "=>", result)
+    return result
   }
 
   if (loading) {
@@ -125,7 +136,7 @@ export default function PlansPage() {
 
             return (
               <Card
-                key={plan.id}
+                key={plan.id || plan._id?.toString()}
                 className={`relative hover:shadow-xl transition-shadow ${isCurrent ? "border-2 border-blue-500" : ""}`}
               >
                 {plan.name === "Premium" && !isCurrent && (
@@ -163,7 +174,7 @@ export default function PlansPage() {
                     </Button>
                   ) : isDowngrade ? (
                     <Button
-                      onClick={() => handleSelectPlan(plan.id)}
+                      onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
                       variant="outline"
                       className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                       size="lg"
@@ -172,7 +183,7 @@ export default function PlansPage() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => handleSelectPlan(plan.id)}
+                      onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                       size="lg"
                     >
