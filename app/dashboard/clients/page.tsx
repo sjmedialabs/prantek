@@ -23,6 +23,9 @@ import { Plus, Search, Edit, Trash2, Users, Eye } from "lucide-react"
 import { api } from "@/lib/api-client"
 import type { Client } from "@/lib/data-store"
 import { toast } from "@/lib/toast"
+import { json } from "stream/consumers"
+import { Switch } from "@/components/ui/switch"
+
 
 export default function ClientsPage() {
   const { hasPermission } = useUser()
@@ -38,6 +41,12 @@ export default function ClientsPage() {
     phone: "",
     address: "",
   })
+const [errors, setErrors] = useState({
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+})
 
   useEffect(() => {
     loadClients()
@@ -45,39 +54,72 @@ export default function ClientsPage() {
 
   const loadClients = async () => {
     const data = await api.clients.getAll()
+    console.log("loaded clienyts",data);
     setClients(data)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  e.preventDefault()
 
-    if (!formData.name || !formData.email || !formData.phone || !formData.address) {
-      toast.error("Missing Information", "Please fill in all required fields")
-      return
-    }
+  const localStored = localStorage.getItem("loginedUser");
+  const parsed = localStored ? JSON.parse(localStored) : null;
 
-    try {
-      if (editingClient) {
-        await api.clients.update(editingClient.id, formData)
-        toast.success("Client Updated", `${formData.name} has been updated successfully`)
-      } else {
-        await api.clients.create(formData)
-        toast.success("Client Added", `${formData.name} has been added to your clients`)
-      }
+  let newErrors = { name: "", email: "", phone: "", address: "" }
+  let isValid = true
 
-      await loadClients()
-      setIsDialogOpen(false)
-      setEditingClient(null)
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        address: "",
-      })
-    } catch (error) {
-      toast.error("Error", error instanceof Error ? error.message : "Failed to save client")
-    }
+  // Name required
+  if (!formData.name.trim()) {
+    newErrors.name = "Client name is required"
+    isValid = false
   }
+
+  // Phone validation (Indian 10-digit)
+  const phoneRegex = /^[6-9]\d{9}$/
+  if (!phoneRegex.test(formData.phone)) {
+    newErrors.phone = "Enter a valid 10-digit Indian mobile number"
+    isValid = false
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.email)) {
+    newErrors.email = "Enter a valid email address"
+    isValid = false
+  }
+
+  // Address required
+  if (!formData.address.trim()) {
+    newErrors.address = "Address is required"
+    isValid = false
+  }
+
+  setErrors(newErrors)
+  if (!isValid) return // <-- Stop submit if invalid
+
+  try {
+    if (editingClient) {
+      await api.clients.update(editingClient._id, formData)
+      toast.success("Client Updated", `${formData.name} has been updated successfully`)
+    } else {
+      const dataTosend = {
+        ...formData,
+        userId: parsed.id,
+        status: "active",
+      }
+      await api.clients.create(dataTosend)
+      toast.success("Client Added", `${formData.name} has been added to your clients`)
+    }
+
+    await loadClients()
+    setIsDialogOpen(false)
+    setEditingClient(null)
+    setFormData({ name: "", email: "", phone: "", address: "" })
+    setErrors({ name: "", email: "", phone: "", address: "" })
+  } catch (error) {
+    toast.error("Error", error instanceof Error ? error.message : "Failed to save client")
+  }
+}
+
 
   const handleEdit = (client: Client) => {
     setEditingClient(client)
@@ -111,17 +153,22 @@ export default function ClientsPage() {
       client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.phone.toLowerCase().includes(searchTerm.toLowerCase())
 
-    // Date filtering
-    let matchesDate = true
-    if (dateFilter !== "all") {
-      const clientDate = new Date(client.createdAt)
-      const now = new Date()
-      const daysDiff = Math.floor((now.getTime() - clientDate.getTime()) / (1000 * 60 * 60 * 24))
+   // Date filtering
+let matchesDate = true
+if (dateFilter !== "all") {
+  const clientDate = new Date(client.createdAt)
 
-      if (dateFilter === "today") matchesDate = daysDiff === 0
-      else if (dateFilter === "week") matchesDate = daysDiff <= 7
-      else if (dateFilter === "month") matchesDate = daysDiff <= 30
-    }
+  // Convert both dates to YYYY-MM-DD (removes timezone differences)
+  const today = new Date().toISOString().split("T")[0]
+  const created = clientDate.toISOString().split("T")[0]
+
+  const diffInDays =
+    (new Date(today).getTime() - new Date(created).getTime()) / (1000 * 60 * 60 * 24)
+
+  if (dateFilter === "today") matchesDate = diffInDays === 0
+  else if (dateFilter === "week") matchesDate = diffInDays <= 7
+  else if (dateFilter === "month") matchesDate = diffInDays <= 30
+}
 
     return matchesSearch && matchesDate
   })
@@ -172,43 +219,47 @@ export default function ClientsPage() {
 
               <div className="flex-1 overflow-y-auto px-6 py-6">
                 <form onSubmit={handleSubmit} className="space-y-4" id="client-form">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Client Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone *</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address *</Label>
-                    <Textarea
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      required
-                    />
-                  </div>
+                 <div className="space-y-1">
+  <Label htmlFor="name">Client Name *</Label>
+  <Input
+    id="name"
+    value={formData.name}
+    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+  />
+  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="phone">Phone *</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                  {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                  {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="address">Address *</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  />
+                  {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                </div>
+
                 </form>
               </div>
 
@@ -290,7 +341,7 @@ export default function ClientsPage() {
                       {hasPermission("manage_clients") && (
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Link href={`/dashboard/clients/${client.id}`}>
+                            <Link href={`/dashboard/clients/${client._id}`}>
                               <Button variant="ghost" size="sm">
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -298,9 +349,20 @@ export default function ClientsPage() {
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(client.id)}>
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
+                           <Switch
+                              checked={client.status === "active"}
+                              onCheckedChange={async (checked) => {
+                                try {
+                                  const newStatus = checked ? "active" : "inactive"
+                                  await api.clients.updateStatus(client._id, newStatus)
+                                  toast.success("Status Updated", `${client.name} is now ${newStatus}`)
+                                  await loadClients()
+                                } catch (err) {
+                                  toast.error("Error", "Failed to update status")
+                                }
+                              }}
+                            />
+
                           </div>
                         </TableCell>
                       )}

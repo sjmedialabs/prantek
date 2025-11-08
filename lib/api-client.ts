@@ -1,3 +1,4 @@
+import { cookies } from "next/headers"
 import type {
   Client,
   Item,
@@ -5,25 +6,31 @@ import type {
   Receipt,
   Payment,
   User,
-  CompanyDetails,
+  
   TeamMember,
-  TeamPayment,
+  
   Vendor,
-} from "./data-store"
+} from "./models/types"
 
 import { tokenStorage } from "./token-storage"
+//import { cookies } from 'next/headers'
 // Helper function to make authenticated API calls
 async function fetchAPI(url: string, options: RequestInit = {}) {
   const token = tokenStorage.getAccessToken()
-  
+//     const cookieStore = await cookies()
+// const token = cookieStore.get("accessToken")
+  console.log("access token",token);
   const response = await fetch(url, {
     ...options,
+    credentials:"include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ` } : {}),
-      ...options.headers,
+      // ...(token ? { Authorization: `Bearer ` } : {}),
+      // ...options.headers,
+      Authorization:`Bearer ${token}`
     },
   })
+  //console.log(response.json());
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Request failed" }))
@@ -38,11 +45,12 @@ export const api = {
   clients: {
     getAll: async () => {
       const data = await fetchAPI("/api/clients")
-      return data.clients || []
+      return data.data || []
     },
     getById: async (id: string) => {
       const data = await fetchAPI(`/api/clients/${id}`)
-      return data.client
+      // console.log("Get client the based on the id:::",data)
+      return data.data
     },
     create: async (clientData: Omit<Client, "id" | "createdAt" | "updatedAt">) => {
       const data = await fetchAPI("/api/clients", {
@@ -58,6 +66,14 @@ export const api = {
       })
       return data.client
     },
+    updateStatus:async(id: string, status: "active" | "inactive")=> {
+      const data=await fetchAPI(`/api/clients/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ status })
+     })
+     return data.client
+    },
+
     delete: async (id: string) => {
       await fetchAPI(`/api/clients/${id}`, {
         method: "DELETE",
@@ -100,7 +116,7 @@ export const api = {
   items: {
     getAll: async () => {
       const data = await fetchAPI("/api/items")
-      return data.items || []
+      return data.data || []
     },
     getById: async (id: string) => {
       const data = await fetchAPI(`/api/items/${id}`)
@@ -131,7 +147,7 @@ export const api = {
   quotations: {
     getAll: async () => {
       const data = await fetchAPI("/api/quotations")
-      return data.quotations || []
+      return data.data || []
     },
     getById: async (id: string) => {
       const data = await fetchAPI(`/api/quotations/${id}`)
@@ -149,7 +165,8 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(quotationData),
       })
-      return data.quotation
+      console.log("qutation update request ::",data)
+      return data.data
     },
     delete: async (id: string) => {
       await fetchAPI(`/api/quotations/${id}`, {

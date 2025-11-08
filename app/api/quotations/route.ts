@@ -9,12 +9,13 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    const quotations = await mongoStore.getAll("quotations", { userId: user.userId }, { skip, limit, sort: { date: -1 } })
+    const quotations = await mongoStore.getAll("quotations", { userId:String( user.userId) }, { skip, limit, sort: { date: -1 } })
+    console.log(quotations)
     const total = await mongoStore.count("quotations", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
-      data: quotations,
+      data: quotations, 
       pagination: {
         page,
         limit,

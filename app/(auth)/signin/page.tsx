@@ -45,6 +45,8 @@ export default function SignInPage() {
 
       if (response.ok) {
         const authResult = await response.json()
+        console.log("logined user details::",authResult.user);
+        localStorage.setItem("loginedUser",JSON.stringify(authResult.user))
         
         // Store JWT tokens (context-aware for regular admin)
         tokenStorage.setAccessToken(authResult.accessToken, false)

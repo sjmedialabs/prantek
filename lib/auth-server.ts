@@ -39,7 +39,7 @@ export async function authenticate(email: string, password: string): Promise<Aut
     role: user.role || "user",
   }
 
-  const accessToken = await generateAccessToken(tokenPayload, "15m")
+  const accessToken = await generateAccessToken(tokenPayload, "1d") 
   const refreshToken = await generateRefreshToken(tokenPayload, "7d")
 
   return {
@@ -47,7 +47,7 @@ export async function authenticate(email: string, password: string): Promise<Aut
     refreshToken,
     user: {
       id: user._id.toString(),
-      email: user.email,
+      email: user.email, 
       name: user.name,
       role: user.role || "user",
       clientId: user.clientId

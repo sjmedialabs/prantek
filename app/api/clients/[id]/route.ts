@@ -2,36 +2,59 @@ import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
 
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
-  try {
-    const client = await mongoStore.getById("clients", params.id)
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  return withAuth(async (request: NextRequest, user: any) => {
+    try {
+      const { params } = context
 
-    if (!client) {
-      return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
+      const client = await mongoStore.getById("clients", params.id)
+      console.log(client)
+
+      if (!client) {
+        return NextResponse.json(
+          { success: false, error: "Client not found" },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({ success: true, data: client })
+    } catch (error) {
+      console.error("GET error:", error)
+      return NextResponse.json(
+        { success: false, error: "Failed to fetch client" },
+        { status: 500 }
+      )
     }
+  })(request) // ✅ same pattern as your PUT
+}
 
-    return NextResponse.json({ success: true, data: client })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to fetch client" }, { status: 500 })
-  }
-})
 
-export const PUT = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
-  try {
-    const body = await request.json()
-    const client = await mongoStore.update("clients", params.id, body)
 
-    if (!client) {
-      return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+  return withAuth(async (request: NextRequest, user: any) => {
+    try {
+      const { params } = context
+      const body = await request.json()
+
+      console.log("params id is::", params.id)
+
+      const client = await mongoStore.update("clients", params.id, body)
+
+      if (!client) {
+        return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
+      }
+
+      await logActivity(user.userId, "update", "client", params.id, { name: body.name })
+
+      return NextResponse.json({ success: true, data: client })
+    } catch (error) {
+      console.error("PUT error:", error)
+      return NextResponse.json({ success: false, error: "Failed to update client" }, { status: 500 })
     }
+  })(request) // ✅ Notice this
+}
 
-    await logActivity(user.userId, "update", "client", params.id, { name: body.name })
 
-    return NextResponse.json({ success: true, data: client })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to update client" }, { status: 500 })
-  }
-})
 
 export const DELETE = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
   try {

@@ -45,6 +45,7 @@ export default function QuotationsPage() {
 
   const loadQuotations = async () => {
     const data = await api.quotations.getAll()
+    console.log("Fetched Quotations are:::",data)
     setQuotations(data)
     setLoading(false)
   }
@@ -93,8 +94,9 @@ export default function QuotationsPage() {
 
   const confirmAcceptance = async () => {
     if (selectedQuotation) {
+      console.log("selected quation id:::",selectedQuotation)
       try {
-        await api.quotations.update(selectedQuotation.id, {
+        await api.quotations.update(selectedQuotation._id, {
           ...selectedQuotation,
           status: "accepted",
           acceptedDate: acceptedDate,
@@ -278,7 +280,7 @@ export default function QuotationsPage() {
 
                   <div className="flex items-center space-x-4">
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">₹{(quotation.total || 0).toLocaleString()}</p>
+                      <p className="font-semibold text-gray-900">₹{(quotation.grandTotal || 0).toLocaleString()}</p>
                       <p className="text-sm text-gray-600">
                         Valid till: {new Date(quotation.validity).toLocaleDateString()}
                       </p>
@@ -354,7 +356,7 @@ export default function QuotationsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Amount:</span>
-                  <span className="font-medium">₹{(selectedQuotation.total || 0).toLocaleString()}</span>
+                  <span className="font-medium">₹{(selectedQuotation.grandTotal || 0).toLocaleString()}</span>
                 </div>
               </div>
             )}

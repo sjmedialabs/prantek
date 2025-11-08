@@ -106,6 +106,7 @@ export interface Quotation extends BaseDocument {
   quotationNumber: string
   date: Date
   validUntil?: Date
+  acceptedDate?: Date
   items: QuotationItem[]
   subtotal: number
   taxAmount: number

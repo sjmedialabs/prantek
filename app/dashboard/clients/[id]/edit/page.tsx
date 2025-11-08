@@ -49,7 +49,7 @@ export default function EditClientPage() {
           const client = await api.clients.getById( params.id as string)
           if (client) {
             setFormData({
-              clientName: client.clientName || "",
+              clientName: client.name || "",
               email: client.email || "",
               phone: client.phone || "",
               address: client.address || "",
@@ -79,20 +79,31 @@ export default function EditClientPage() {
         setError("Please fill in all required fields")
         return
       }
-
-      const updated = await api.clients.update( params.id as string, formData)
-
-      if (updated) {
-        setSuccess(true)
+      const  dataTosend={
+        name:formData.clientName,
+        email:formData.email,
+        phone:formData.phone,
+        address:formData.address,
+        bankAccount:formData.bankAccount,
+        upiId:formData.upiId
+      }
+      const updated = await api.clients.update( params.id as string, dataTosend)
+      setSuccess(true)
         setTimeout(() => {
           router.push(`/dashboard/clients/${params.id}`)
-        }, 1500)
-      } else {
-        setError("Failed to update client")
-      }
+       }, 1500)
+
+      // if (updated) {
+      //   setSuccess(true)
+      //   setTimeout(() => {
+      //     router.push(`/dashboard/clients/${params.id}`)
+      //   }, 1500)
+      // } else {
+      //   setError("Failed to update client")
+      // }
     } catch (err) {
       console.error("[v0] Error updating client:", err)
-      setError("An error occurred while updating the client")
+      setError("Failed to update client")
     } finally {
       setLoading(false)
     }

@@ -26,10 +26,11 @@ export interface Client {
   email: string
   phone: string
   address: string
+  status: "active" | "inactive"  
   createdAt: string
   updatedAt: string
 }
-
+ 
 export interface Vendor {
   id: string
   name: string
@@ -107,7 +108,7 @@ export interface Quotation {
   clientId: string
   clientName: string
   clientEmail: string
-  clientPhone: string
+  clientPhone: string 
   clientAddress: string
   date: string
   validUntil: string

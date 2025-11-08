@@ -49,9 +49,11 @@ export default function ClientDetailsPage() {
       if (params.id) {
         try {
           const loadedClient = await api.clients.getById( params.id as string)
+
           setClient(loadedClient)
 
           const allQuotations = await api.quotations.getAll()
+          console.log("all loaded Quotations::",allQuotations);
           const clientQuotations = allQuotations
             .filter((q) => q.clientId === params.id || q.clientName === loadedClient?.clientName)
             .map((q) => ({
@@ -155,7 +157,7 @@ export default function ClientDetailsPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Client Name</p>
-              <p className="font-medium">{client.clientName}</p>
+              <p className="font-medium">{client.name}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Email</p>

@@ -13,15 +13,17 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle, 
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Plus, Minus, Save, Send, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { toast } from "sonner"
+// import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import { api } from "@/lib/api-client"
 import { SearchableSelect } from "@/components/searchable-select"
+import { OwnSearchableSelect } from "@/components/searchableSelect"
 
 interface QuotationItem {
   id: string
@@ -39,7 +41,7 @@ interface QuotationItem {
 }
 
 interface Client {
-  id: string
+  _id: string
   clientNumber: string
   clientName: string
   address: string
@@ -68,7 +70,8 @@ export default function NewQuotationPage() {
   const [validityDate, setValidityDate] = useState("")
   const [note, setNote] = useState("")
 
-  const [selectedClientId, setSelectedClientId] = useState("")
+  const [selectedClientId, setSelectedClientId] = useState<string>("")
+  
   const [clientName, setClientName] = useState("")
   const [clientAddress, setClientAddress] = useState("")
   const [clientContact, setClientContact] = useState("")
@@ -76,6 +79,12 @@ export default function NewQuotationPage() {
 
   const [clients, setClients] = useState<Client[]>([])
   const [masterItems, setMasterItems] = useState<MasterItem[]>([])
+ const [errors, setErrors] = useState({
+   name: "",
+   email: "",
+   phone: "",
+   address: "",
+ })
 
   const [items, setItems] = useState<QuotationItem[]>([
     {
@@ -106,7 +115,9 @@ export default function NewQuotationPage() {
   useEffect(() => {
     const loadData = async () => {
       const loadedClients = await api.clients.getAll()
+      console.log("loaded clients  for the Quatations",loadedClients)
       const loadedItems = await api.items.getAll()
+      console.log("LOADED iTEMS ARE",loadedItems);
       setClients(loadedClients)
       setMasterItems(loadedItems)
     }
@@ -115,7 +126,7 @@ export default function NewQuotationPage() {
 
   useEffect(() => {
     if (selectedClientId) {
-      const client = clients.find((c) => c.id === selectedClientId)
+      const client = clients.find((c) => c._id === selectedClientId)
       if (client) {
         setClientName(client.clientName || client.name)
         setClientAddress(client.address)
@@ -148,6 +159,9 @@ export default function NewQuotationPage() {
       setItems(items.filter((item) => item.id !== id))
     }
   }
+  // console.log("clients state is",clients[0]._id)
+  // console.log(typeof clients[0]._id, clients[0]._id)
+
 
   const updateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
     setItems(
@@ -164,7 +178,8 @@ export default function NewQuotationPage() {
           }
 
           if (field === "itemName") {
-            const masterItem = masterItems.find((i) => i.itemName === value)
+            const masterItem = masterItems.find((i) => i.name === value)
+            console.log("entered into itemName::::",masterItem)
             if (masterItem) {
               updatedItem.description = masterItem.description
               updatedItem.price = masterItem.price
@@ -186,68 +201,174 @@ export default function NewQuotationPage() {
 
   const quotationTotal = items.reduce((sum, item) => sum + item.total, 0)
 
-  const handleSave = (status: "draft" | "sent") => {
-    console.log("[v0] Saving quotation with status:", status)
+ const handleSave = async (status: "draft" | "sent") => {
+  console.log("[v0] Saving quotation with status:", status)
 
-    try {
-      const quotationData = {
-        date,
-        validity: validityDate,
-        note,
-        clientName,
-        clientEmail,
-        clientAddress,
-        clientContact,
-        items: items.map((item) => ({
-          type: item.type,
-          itemName: item.itemName,
-          description: item.description,
-          quantity: item.quantity,
-          price: item.price,
-          discount: item.discount,
-          taxName: item.taxName,
-          taxRate: item.taxRate,
-        })),
-        grandTotal: quotationTotal,
-        status: status === "sent" ? "pending" : "draft",
-      }
-
-      console.log("[v0] Creating quotation:", quotationData)
-      const createdQuotation = api.quotations.create(quotationData)
-      console.log("[v0] Quotation created successfully:", createdQuotation)
-
-      toast.success(`Quotation ${status === "sent" ? "sent" : "saved as draft"} successfully!`)
-      router.push("/dashboard/quotations")
-    } catch (error) {
-      console.error("[v0] Error saving quotation:", error)
-      toast.error("Failed to save quotation. Please try again.")
-    }
+  // ---- VALIDATION START ----
+  if (!clientName.trim()) {
+    toast.error("Please select a client.")
+    return
   }
 
+  if (items.length === 0) {
+    toast.error("Please add at least one item.")
+    return
+  }
+
+  for (const item of items) {
+    if (!item.itemName.trim()) {
+      toast.error("Item name cannot be empty.")
+      return
+    }
+    if (!item.quantity || item.quantity <= 0) {
+      toast.error("Item quantity must be at least 1.")
+      return
+    }
+    if (!item.price || item.price <= 0) {
+      toast.error("Item price must be greater than 0.")
+      return
+    }
+  }
+  // ---- VALIDATION END ----
+  if(!date){
+     toast.error("Please select a date.")
+    return
+  }
+  if(!validityDate){
+     toast.error("Please select a validityDate.")
+    return
+  }
+  if(!clientEmail.trim()){
+     toast.error("Please enter the clientEmail.")
+    return
+  }
+  try {
+    const quotationData = {
+      date,
+      validity: validityDate,
+      note,
+      clientName,
+      clientEmail,
+      clientAddress,
+      clientContact,
+      clientId:selectedClientId,
+      items: items.map((item) => ({
+        type: item.type,
+        itemName: item.itemName,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+        taxName: item.taxName,
+        taxRate: item.taxRate,
+      })),
+      grandTotal: quotationTotal,
+      status: status === "sent" ? "pending" : "draft",
+    }
+
+    console.log("[v0] Creating quotation:", quotationData)
+    const createdQuotation = await api.quotations.create(quotationData)
+    console.log("[v0] Quotation created successfully:", createdQuotation)
+
+    toast.success(`Quotation ${status === "sent" ? "sent" : "saved as draft"} successfully!`)
+    router.push("/dashboard/quotations")
+
+  } catch (error) {
+    console.error("[v0] Error saving quotation:", error)
+    toast.error("Failed to save quotation. Please try again.")
+  }
+}
+
   const handleCreateClient = async () => {
-    const newClientData = await api.clients.create( {
-      clientName: newClient.clientName,
+    const localStored = localStorage.getItem("loginedUser");
+    const parsed = localStored ? JSON.parse(localStored) : null;
+     let newErrors = { name: "", email: "", phone: "", address: "" }
+  let isValid = true
+
+  // Name required
+  if (!newClient.clientName.trim()) {
+    newErrors.name = "Client name is required"
+    isValid = false
+  }
+
+  // Phone validation (Indian 10-digit)
+  const phoneRegex = /^[6-9]\d{9}$/
+  if (!phoneRegex.test(newClient.phone)) {
+    newErrors.phone = "Enter a valid 10-digit Indian mobile number"
+    isValid = false
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newClient.email)) {
+    newErrors.email = "Enter a valid email address"
+    isValid = false
+  }
+
+  // Address required
+  if (!newClient.address.trim()) {
+    newErrors.address = "Address is required"
+    isValid = false
+  }
+
+  setErrors(newErrors)
+  if (!isValid) return // <-- Stop submit if invalid
+   
+  try{
+     const newClientData = await api.clients.create( {
+      name: newClient.clientName,
       email: newClient.email,
       phone: newClient.phone,
       address: newClient.address,
+      status:"active",
+      userId: parsed.id
     })
-
-    setClients([...clients, newClientData])
-    setSelectedClientId(newClientData.id)
+    toast.success("Client Added", `${newClient.clientName} has been added to your clients`)
+    const loadedClients = await api.clients.getAll()
+    setClients(loadedClients)
+    const filteredClinets=loadedClients.filter((eachItem:any)=>eachItem.name===newClient.clientName);
+    setSelectedClientId(filteredClinets[0]._id);
     setIsCreateDialogOpen(false)
     setNewClient({ clientName: "", email: "", phone: "", address: "" })
+  }catch(error){
+    toast.error("Error", error instanceof Error ? error.message : "Failed to save client")
   }
+
+}
 
   const tabs = ["quotation", "client", "items"]
   const currentTabIndex = tabs.indexOf(activeTab)
   const isLastTab = currentTabIndex === tabs.length - 1
 
   const handleContinue = () => {
-    if (!isLastTab) {
-      setActiveTab(tabs[currentTabIndex + 1])
+  // Check fields only when on "quotation" tab
+  if (activeTab === "quotation") {
+    if (!date || !validityDate) {
+      // setError("Please fill all required fields before moving to next step.");
+      toast.error("Please fill all required fields before moving to next step.")
+      return; // stop navigation!
+    }
+  }
+  if(activeTab==="client"){
+    console.log(clientName,clientAddress,clientContact,clientEmail)
+    if(!clientName || !clientAddress || !clientContact || !clientAddress){
+      toast.error("Please fill all required fields before moving to next step.")
+      return; // stop navigation!
     }
   }
 
+  // Clear error and move to next tab
+ 
+  if (!isLastTab) {
+    setActiveTab(tabs[currentTabIndex + 1]);
+  }
+};
+
+// Transform your backend array exactly as before
+const clientOptions = clients.map((c) => ({
+  value: String(c._id),
+  label: c.clientName || c.name || "Unnamed",
+}));
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between">
@@ -332,15 +453,13 @@ export default function NewQuotationPage() {
                   <div>
                     <Label htmlFor="clientSelect">Client Name *</Label>
                     <div className="flex gap-2">
-                      <SearchableSelect
-                        options={clients.map((client) => ({
-                          value: client.id,
-                          label: client.clientName || client.name,
-                        }))}
+              
+                      <OwnSearchableSelect
+                        options={clientOptions}
                         value={selectedClientId}
                         onValueChange={setSelectedClientId}
                         placeholder="Search and select a client..."
-                        searchPlaceholder="Type to search clients..."
+                        searchPlaceholder="Type to filter..."
                         emptyText="No clients found."
                       />
 
@@ -364,6 +483,7 @@ export default function NewQuotationPage() {
                                 onChange={(e) => setNewClient({ ...newClient, clientName: e.target.value })}
                                 placeholder="Enter client name"
                               />
+                               {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                             </div>
                             <div>
                               <Label htmlFor="newClientEmail">Email</Label>
@@ -374,6 +494,7 @@ export default function NewQuotationPage() {
                                 onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
                                 placeholder="client@example.com"
                               />
+                               {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                             </div>
                             <div>
                               <Label htmlFor="newClientPhone">Phone *</Label>
@@ -383,6 +504,7 @@ export default function NewQuotationPage() {
                                 onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
                                 placeholder="+1 (555) 123-4567"
                               />
+                               {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
                             </div>
                             <div>
                               <Label htmlFor="newClientAddress">Address</Label>
@@ -393,6 +515,7 @@ export default function NewQuotationPage() {
                                 placeholder="Enter client address"
                                 rows={2}
                               />
+                               {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                             </div>
                           </div>
                           <div className="flex justify-end gap-2">
@@ -492,12 +615,12 @@ export default function NewQuotationPage() {
 
                           <div>
                             <Label>Item Name *</Label>
-                            <SearchableSelect
+                            <OwnSearchableSelect
                               options={masterItems
                                 .filter((masterItem) => masterItem.type === item.type)
                                 .map((masterItem) => ({
-                                  value: masterItem.itemName,
-                                  label: masterItem.itemName,
+                                  value: masterItem.name,
+                                  label: masterItem.name,
                                 }))}
                               value={item.itemName}
                               onValueChange={(value) => updateItem(item.id, "itemName", value)}

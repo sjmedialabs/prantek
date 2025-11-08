@@ -9,8 +9,16 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
+ 
+    // console.log(user.userId)
+    //const clients = await mongoStore.getAll("clients", { userId: user.userId }, { skip, limit, sort: { createdAt: -1 } })
+    const clients = await mongoStore.getAll(
+  "clients",
+  { userId: String(user.userId) },
+  { skip, limit, sort: { createdAt: -1 } }
+)
+// console.log(clients);
 
-    const clients = await mongoStore.getAll("clients", { userId: user.userId }, { skip, limit, sort: { createdAt: -1 } })
     const total = await mongoStore.count("clients", { userId: user.userId })
 
     return NextResponse.json({
@@ -31,12 +39,36 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
-    const client = await mongoStore.create("clients", { ...body, userId: user.id })
 
-    await logActivity(user.userId, "create", "client", client._id?.toString(), { name: body.name })
+    const userId = String(user.userId)  // ensure consistent string value
+
+    // ✅ Check if client with same email or name exists under same user
+    const existingClient = await mongoStore.findOne("clients", {
+      userId,
+      $or: [
+        { name: body.name },
+        { email: body.email }
+      ]
+    })
+
+    if (existingClient) {
+      return NextResponse.json({
+        success: false,
+        message: "Client name or email already exists. Please use a different one."
+      }, { status: 400 })
+    }
+
+    // ✅ Create new client
+    const client = await mongoStore.create("clients", { 
+      ...body, 
+      userId 
+    })
+
+    await logActivity(userId, "create", "client", client._id?.toString(), { name: body.name })
 
     return NextResponse.json({ success: true, data: client })
   } catch (error) {
     return NextResponse.json({ success: false, error: "Failed to create client" }, { status: 500 })
   }
 })
+ 
