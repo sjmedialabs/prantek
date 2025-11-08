@@ -46,7 +46,7 @@ export default function ItemsPage() {
 
   useEffect(() => {
     loadItems()
-    loadTaxRates()
+    // loadTaxRates()
   }, [])
 
 const loadItems = async () => {
@@ -62,10 +62,27 @@ const loadItems = async () => {
 
 
 
-  const loadTaxRates = async () => {
-    // const rates = (await api.taxRates.getAll()) || []
-    // setTaxRates(rates)
+  // const loadTaxRates = async () => {
+  //   const rates = (await api.taxRates.getAll()) || []
+  //   setTaxRates(rates)
+  // }
+
+  useEffect(() => {
+  const loadTaxData = async () => {
+    try {
+      const rates = await api.taxRates.getAll()
+      console.log("Loaded Tax Rates:", rates)
+
+      setTaxRates(Array.isArray(rates) ? rates : [])
+      console.log("Tax Rates:", taxRates)
+    } catch (err) {
+      console.error("Failed loading tax data:", err)
+    }
   }
+
+  loadTaxData()
+}, [])
+
 
   const handleEdit = (item: Item) => {
     setEditingItem(item)
@@ -168,7 +185,7 @@ const handleSave = async () => {
               </DialogHeader>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            <div className="flex-1 min-h-0 max-h-full mb-20 overflow-y-auto px-6 py-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="type">
@@ -287,7 +304,7 @@ const handleSave = async () => {
                           </SelectTrigger>
                           <SelectContent>
                             {taxRates
-                              .filter((rate) => rate.type === "cgst" && rate.isActive)
+                              .filter((rate) => rate.type === "CGST" && rate.isActive)
                               .map((rate) => (
                                 <SelectItem key={rate.id} value={rate.rate.toString()}>
                                   {rate.rate}%
@@ -308,7 +325,7 @@ const handleSave = async () => {
                           </SelectTrigger>
                           <SelectContent>
                             {taxRates
-                              .filter((rate) => rate.type === "sgst" && rate.isActive)
+                              .filter((rate) => rate.type === "SGST" && rate.isActive)
                               .map((rate) => (
                                 <SelectItem key={rate.id} value={rate.rate.toString()}>
                                   {rate.rate}%
@@ -329,7 +346,7 @@ const handleSave = async () => {
                           </SelectTrigger>
                           <SelectContent>
                             {taxRates
-                              .filter((rate) => rate.type === "igst" && rate.isActive)
+                              .filter((rate) => rate.type === "IGST" && rate.isActive)
                               .map((rate) => (
                                 <SelectItem key={rate.id} value={rate.rate.toString()}>
                                   {rate.rate}%

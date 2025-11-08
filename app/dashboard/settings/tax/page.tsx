@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { TaxRate, TaxSetting } from "@/lib/models/types"
+import { tokenStorage } from "@/lib/token-storage"
 
 export default function TaxDetailsPage() {
   const { hasPermission } = useUser()
@@ -50,23 +51,74 @@ export default function TaxDetailsPage() {
       const settings = await api.taxSetting.get()
       setTaxSettings(settings)
       const rates = await api.taxRates.getAll()
+      console.log("Tax rates:", rates)
       setTaxRates(rates)
     }
     loadTaxData()
   }, [])
 
 const handleSaveSettings = async () => {
+  const token = tokenStorage.getAccessToken()
+
+  // ✅ Regex
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
+  const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
+
+  // ✅ Trim
+  const gst = taxSettings.gst.trim().toUpperCase()
+  const tan = taxSettings.tan.trim().toUpperCase()
+
+  // ✅ Validation
+  if (!tanRegex.test(tan)) {
+    alert("Invalid TAN format! Example: ABCD12345E")
+    return
+  }
+
+  if (!gstRegex.test(gst)) {
+    alert("Invalid GST format! Example: 22ABCDE1234F1Z5")
+    return
+  }
+
   try {
-    // 1) Check if tax settings already exist
+    const payload = {
+      tan,
+      tanUrl: taxSettings.tanUrl,
+      gst,
+      gstUrl: taxSettings.gstUrl,
+    }
+
     const existing = await api.taxSetting.get()
+
+    let response
 
     if (existing) {
       // ✅ UPDATE
-      await api.taxSetting.update(taxSettings)
+      response = await fetch("/api/tax-settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
     } else {
       // ✅ CREATE
-      await api.taxSetting.create(taxSettings)
+      response = await fetch("/api/tax-settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
     }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log("Tax settings saved:", data)
 
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
@@ -75,8 +127,6 @@ const handleSaveSettings = async () => {
     alert("Failed to save tax settings")
   }
 }
-
-
   const handleTanDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -104,15 +154,15 @@ const handleSaveSettings = async () => {
       alert("Please fill in all fields")
       return
     }
-
-    if (editingRate) {
-      const updated = await api.taxRates.update(editingRate.id, {
-        ...rateData,
-        rate: Number.parseFloat(rateData.rate),
-      })
+    console.log("Rate data:", rateData)
+    console.log("Editing rate:", editingRate?._id)
+    if (editingRate?._id) {
+      const updated = await api.taxRates.update(editingRate._id,rateData)
       if (updated) {
         setTaxRates(taxRates.map((rate) => (rate.id === updated.id ? updated : rate)))
       }
+      alert("Rate updated successfully!")
+      window.location.reload()
     } else {
       const newRate = await api.taxRates.create({
         ...rateData,
@@ -120,6 +170,8 @@ const handleSaveSettings = async () => {
         isActive: true,
       })
       setTaxRates([...taxRates, newRate])
+      alert("Rate created successfully!")
+      window.location.reload()
     }
 
     setIsDialogOpen(false)
@@ -138,20 +190,23 @@ const handleSaveSettings = async () => {
   const handleEditRate = (rate: TaxRate) => {
     setEditingRate(rate)
     setRateData({
-      type: rate.type,
-      rate: rate.rate.toString(),
-      description: rate.description,
+      type: rate?.type,
+      rate: rate?.rate.toString(),
+      description: rate?.description,
     })
     setIsDialogOpen(true)
   }
 
   const handleToggleRateStatus = async (rate: TaxRate) => {
-    const updated = await api.taxRates.update(rate.id, {
+    console.log("Toggling status for rate:", rate)
+    const updated = await api.taxRates.update(rate?._id, {
       isActive: !rate.isActive,
     })
     if (updated) {
       setTaxRates(taxRates.map((r) => (r.id === updated.id ? updated : r)))
     }
+    alert("Rate status toggled successfully!")
+    window.location.reload()
   }
 
   if (!hasPermission("tenant_settings")) {
@@ -265,15 +320,15 @@ const handleSaveSettings = async () => {
               </TableHeader>
               <TableBody>
                 {taxRates.map((rate) => (
-                  <TableRow key={rate.id}>
+                  <TableRow key={rate?.id}>
                     <TableCell>
-                      <Badge variant="outline">{rate.type}</Badge>
+                      <Badge variant="outline">{rate?.type}</Badge>
                     </TableCell>
-                    <TableCell className="font-medium">{rate.rate}%</TableCell>
-                    <TableCell>{rate.description}</TableCell>
+                    <TableCell className="font-medium">{rate?.rate}%</TableCell>
+                    <TableCell>{rate?.description}</TableCell>
                     <TableCell>
-                      <Badge variant={rate.isActive ? "default" : "secondary"}>
-                        {rate.isActive ? "Active" : "Inactive"}
+                      <Badge variant={rate?.isActive ? "default" : "secondary"}>
+                        {rate?.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -282,7 +337,7 @@ const handleSaveSettings = async () => {
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleToggleRateStatus(rate)}>
-                          {rate.isActive ? (
+                          {rate?.isActive ? (
                             <PowerOff className="h-4 w-4 text-red-500" />
                           ) : (
                             <Power className="h-4 w-4 text-green-500" />

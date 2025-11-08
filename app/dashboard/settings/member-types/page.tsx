@@ -16,9 +16,10 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Edit, Trash2 } from "lucide-react"
+import { Plus, Edit, Trash2, Power, PowerOff } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
+import { MemberType } from "@/lib/models/types"
 
 export default function MemberTypesPage() {
   const [memberTypes, setMemberTypes] = useState<MemberType[]>([])
@@ -56,7 +57,9 @@ export default function MemberTypesPage() {
     }
 
     if (editingType) {
-      await api.memberTypes.update(editingType.id, form)
+      console.log("editingType", editingType._id)
+      console.log("form data", form)
+      await api.memberTypes.update(editingType._id, form)
       toast.success("Employment Type Updated", `${form.name} has been updated successfully`)
     } else {
       await api.memberTypes.create(form)
@@ -73,8 +76,8 @@ export default function MemberTypesPage() {
     setForm({
       name: type.name,
       code: type.code,
-      description: type.description,
-      requiresSalary: type.requiresSalary,
+      description: type.description || "",
+      requiresSalary: type.requiresSalary || false,
       isActive: type.isActive,
     })
     setIsAddDialogOpen(true)
@@ -83,7 +86,7 @@ export default function MemberTypesPage() {
   const handleDelete = async (id: string) => {
     const type = memberTypes.find((t) => t.id === id)
     if (confirm("Are you sure you want to delete this employment type?")) {
-      await api.MemberType.delete(id)
+      await api.memberTypes.delete(id)
       await loadMemberTypes()
       if (type) {
         toast.success("Employment Type Deleted", `${type.name} has been removed`)
@@ -91,17 +94,25 @@ export default function MemberTypesPage() {
     }
   }
 
-  const toggleActive = async (id: string, currentStatus: boolean) => {
-    const type = memberTypes.find((t) => t.id === id)
-    await api.memberTypes.update(id, { isActive: !currentStatus })
-    await loadMemberTypes()
-    if (type) {
-      toast.success(
-        !currentStatus ? "Employment Type Activated" : "Employment Type Deactivated",
-        `${type.name} is now ${!currentStatus ? "active" : "inactive"}`,
+  const toggleActive = async (id: string, isActive: boolean) => {
+    console.log("toggleActive", id, isActive)
+      try {
+    const updated = await api.memberTypes.toggle(id, isActive)
+
+    setMemberTypes((prev) =>
+      prev.map((type) =>
+        type.id === id ? { ...type, isActive } : type
       )
-    }
+    
+    )
+    alert("status updated successfully!")   // ✅ ADDED
+    window.location.reload()
+  } catch (err: any) {
+    alert("Failed to update status: " + (err.message || "Something went wrong"))   // ✅ ADDED
   }
+  }
+
+
 
   const resetForm = () => {
     setForm({
@@ -230,7 +241,6 @@ export default function MemberTypesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Switch checked={type.isActive} onCheckedChange={() => toggleActive(type.id, type.isActive)} />
                       <Badge variant={type.isActive ? "default" : "secondary"}>
                         {type.isActive ? "Active" : "Inactive"}
                       </Badge>
@@ -241,9 +251,23 @@ export default function MemberTypesPage() {
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(type.id)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                    {/* <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleActive(type?.id || "")}
+                      title={type.isActive === false ? "Enable" : "Disable"}
+                    >
+                      {type.isActive === false ? (
+                        <Power className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <PowerOff className="h-4 w-4 text-red-500" />
+                      )}
+                    </Button> */}
+<Switch
+  checked={!!type.isActive}   // ✅ ensures boolean
+  onCheckedChange={(checked) => toggleActive(type?._id, checked)}
+  // disabled={type.isSystem || type.userCount > 0}
+/>
                     </div>
                   </TableCell>
                 </TableRow>

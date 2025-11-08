@@ -220,9 +220,15 @@ export interface TeamMember extends BaseDocument {
 }
 
 export interface MemberType extends BaseDocument {
+  userCount: number
+  isSystem: boolean
+  id: string
   userId: string
   name: string
+  code: string
   description?: string
+  requiresSalary: boolean
+  isActive: boolean
 }
 
 export interface Role extends BaseDocument {

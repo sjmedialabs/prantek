@@ -162,7 +162,7 @@ export const api = {
     },
     getById: async (id: string) => {
       const data = await fetchAPI(`/api/quotations/${id}`)
-      return data.quotation
+      return data.data
     },
     create: async (quotationData: Omit<Quotation, "id" | "createdAt" | "updatedAt" | "quotationNumber">) => {
       const data = await fetchAPI("/api/quotations", {
@@ -491,7 +491,8 @@ export const api = {
     taxRates: {
       getAll: async () => {
         const data = await fetchAPI("/api/tax-rates")
-        return data.data || data.taxRates || []
+        console.log("Tax rates from api :", data)
+        return data || data.taxRates || []
       },
       create: async (taxData: any) => {
         const data = await fetchAPI("/api/tax-rates", {
@@ -505,7 +506,7 @@ export const api = {
           method: "PUT",
           body: JSON.stringify(taxData),
         })
-        return data.data || data.taxRate
+        return data.data || data.taxRate || data
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/tax-rates/${id}`, {
@@ -518,21 +519,30 @@ export const api = {
     memberTypes: {
       getAll: async () => {
         const data = await fetchAPI("/api/member-types")
-        return data.data || data.memberTypes || []
+        console.log("Member types from api :", data)
+        return data || data.memberTypes || []
       },
       create: async (memberTypeData: any) => {
         const data = await fetchAPI("/api/member-types", {
           method: "POST",
           body: JSON.stringify(memberTypeData),
         })
-        return data.data || data.memberType
+        console.log("Member types from api :", data)
+        return data || data.memberType || data.data
       },
-      update: async (id: string, memberTypeData: any) => {
+      update: async (id: string, form: any) => {
         const data = await fetchAPI(`/api/member-types/${id}`, {
           method: "PUT",
-          body: JSON.stringify(memberTypeData),
+          body: JSON.stringify(form),
         })
-        return data.data || data.memberType
+        return data.data || data.memberType || data
+      },
+            toggle: async (id: string, isActive: boolean) => {
+        const data = await fetchAPI(`/api/member-types/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ isActive }),
+        })
+        return data.data || data.memberType || data
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/member-types/${id}`, {

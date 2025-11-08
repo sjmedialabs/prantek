@@ -110,12 +110,34 @@ const filteredRoles = (roles || [])
     (role.description ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const validateRole = (role: { name: string; description: string; permissions: string[] }) => {
+  if (!role.name || role.name.trim().length < 3) {
+    return "Role name must be at least 3 characters."
+  }
+
+  if (!role.description || role.description.trim().length < 5) {
+    return "Description must be at least 5 characters."
+  }
+
+  if (!role.permissions || role.permissions.length === 0) {
+    return "Select at least 1 permission."
+  }
+
+  return null // ✅ passes
+}
+
 // ✅ CREATE ROLE IN DB
 const handleAddRole = async () => {
+  const error = validateRole(newRole)
+  if (error) {
+    alert(error)
+    return
+  }
+
   try {
     const payload = {
-      name: newRole.name,
-      description: newRole.description,
+      name: newRole.name.trim(),
+      description: newRole.description.trim(),
       permissions: newRole.permissions,
       isSystem: false,
       userCount: 0,
@@ -123,16 +145,16 @@ const handleAddRole = async () => {
 
     const saved = await api.roles.create(payload)
 
-    setRoles([...roles, saved])
+    setRoles((prev) => [...prev, saved])
     setNewRole({ name: "", description: "", permissions: [] })
     setIsAddRoleOpen(false)
-    alert("Role created successfully!")   // ✅ ADDED
+
+    alert("Role created successfully!") // ✅
 
   } catch (err: any) {
-    alert("Failed to create role: " + (err.message || "Something went wrong"))   // ✅ ADDED
+    alert("Failed to create role: " + (err.message || "Something went wrong"))
   }
 }
-
 
 // ✅ START EDIT — works same + popup added
 const handleEditRole = (role: Role) => {
@@ -149,21 +171,30 @@ const handleEditRole = (role: Role) => {
 const handleUpdateRole = async () => {
   if (!editingRole || !editingRole._id) return
 
+  const error = validateRole(newRole)
+  if (error) {
+    alert(error)
+    return
+  }
+
   try {
     const updated = await api.roles.update(editingRole._id, newRole)
 
-    setRoles(roles.map((r) => (r._id === editingRole._id ? updated : r)))
+    setRoles((prev) =>
+      prev.map((r) => (r._id === editingRole._id ? updated : r))
+    )
 
-    alert("Role updated successfully!")   // ✅ ADDED
+    alert("Role updated successfully!") // ✅
 
     setEditingRole(null)
     setNewRole({ name: "", description: "", permissions: [] })
     setIsAddRoleOpen(false)
 
   } catch (err: any) {
-    alert("Failed to update role: " + (err.message || "Something went wrong"))   // ✅ ADDED
+    alert("Failed to update role: " + (err.message || "Something went wrong"))
   }
 }
+
 
 
 const handleToggleRoleActive = async (id: string, isActive: boolean) => {

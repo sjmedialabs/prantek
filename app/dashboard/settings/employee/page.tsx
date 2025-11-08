@@ -88,44 +88,10 @@ export default function EmployeePage() {
     const loadData = async () => {
       const loadedEmployees = await api.employees.getAll()
       const loadedMemberTypes = await api.memberTypes.getAll()
+      console.log("loadedMemberTypes", loadedMemberTypes)
       const loadedRoles = await api.roles.getAll()
-
-      if (loadedRoles.length === 0) {
-        const defaultRoles = [
-          {
-            id: "role-admin",
-            name: "Admin",
-            description: "Administrator role with full access",
-            permissions: [],
-            userCount: 0,
-            isSystem: true,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "role-manager",
-            name: "Manager",
-            description: "Manager role with limited access",
-            permissions: [],
-            userCount: 0,
-            isSystem: false,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: "role-employee",
-            name: "Employee",
-            description: "Standard employee role",
-            permissions: [],
-            userCount: 0,
-            isSystem: false,
-            createdAt: new Date().toISOString(),
-          },
-        ]
-        await api.roles.create(defaultRoles)
-        setRoles(defaultRoles)
-      } else {
+      console.log("loadedRoles", loadedRoles)
         setRoles(loadedRoles)
-      }
-
       setEmployees(loadedEmployees)
       setMemberTypes(loadedMemberTypes)
     }
@@ -369,7 +335,7 @@ export default function EmployeePage() {
                           Employment Type *
                         </Label>
                         <Select
-                          value={formData.memberType}
+                          value={formData?.memberType}
                           onValueChange={(value) => setFormData({ ...formData, memberType: value })}
                         >
                           <SelectTrigger>

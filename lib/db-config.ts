@@ -9,6 +9,7 @@ export const COLLECTIONS = {
   QUOTATIONS: "quotations",
   PAYMENTS: "payments",
   SUBSCRIPTION_PLANS: "subscription_plans",
+  EMPLOYEES: "employees",
   PAYMENT_METHODS: "payment_methods",
   RECEIPT_CATEGORIES: "receipt_categories",
   PAYMENT_CATEGORIES: "payment_categories",
