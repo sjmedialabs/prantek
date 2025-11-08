@@ -247,3 +247,14 @@ export interface ActivityLog extends BaseDocument {
   timestamp: Date
   ipAddress?: string
 }
+
+export interface Notification extends BaseDocument {
+  userId: string
+  type: "quotation" | "receipt" | "payment" | "registration"
+  title: string
+  message: string
+  entityId?: string
+  entityType?: string
+  isRead: boolean
+  link?: string
+}

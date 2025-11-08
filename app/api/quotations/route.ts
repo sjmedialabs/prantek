@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity, generateNextNumber } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
+import { notifyAdminsNewQuotation } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -41,6 +42,23 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     await logActivity(user.userId, "create", "quotation", quotation._id?.toString(), {
       quotationNumber: body.quotationNumber,
     })
+
+    // Notify admins about new quotation
+    try {
+      // Get client info for notification
+      const client = await mongoStore.get("clients", body.clientId)
+      const clientName = client?.name || "Unknown Client"
+      
+      await notifyAdminsNewQuotation(
+        quotation._id?.toString() || "",
+        body.quotationNumber,
+        clientName,
+        user.companyId
+      )
+    } catch (notifError) {
+      console.error("Failed to send notification:", notifError)
+      // Don't fail the request if notification fails
+    }
 
     return NextResponse.json({ success: true, data: quotation })
   } catch (error) {

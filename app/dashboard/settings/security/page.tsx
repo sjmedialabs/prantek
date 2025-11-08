@@ -15,9 +15,7 @@ export default function SecurityPage() {
   const { hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [settings, setSettings] = useState({
-    twoFactorAuth: false,
     sessionTimeout: true,
-    loginNotifications: true,
   })
 
   const [passwordData, setPasswordData] = useState({
@@ -211,34 +209,12 @@ export default function SecurityPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <h4 className="font-medium">Two-Factor Authentication</h4>
-              <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
-            </div>
-            <Switch
-              checked={settings.twoFactorAuth}
-              onCheckedChange={(checked) => setSettings({ ...settings, twoFactorAuth: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
               <h4 className="font-medium">Session Timeout</h4>
               <p className="text-sm text-gray-600">Automatically log out after period of inactivity</p>
             </div>
             <Switch
               checked={settings.sessionTimeout}
               onCheckedChange={(checked) => setSettings({ ...settings, sessionTimeout: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <h4 className="font-medium">Login Notifications</h4>
-              <p className="text-sm text-gray-600">Get notified of new login attempts</p>
-            </div>
-            <Switch
-              checked={settings.loginNotifications}
-              onCheckedChange={(checked) => setSettings({ ...settings, loginNotifications: checked })}
             />
           </div>
         </CardContent>
