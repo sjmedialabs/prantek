@@ -3,19 +3,31 @@ import { mongoStore, logActivity } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
 
 // ✅ GET QUOTATION BY ID
-export const GET = withAuth(async (request: NextRequest, user, { params }: { params: { id: string } }) => {
-  try {
-    const quotation = await mongoStore.getById("quotations", params.id)
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  return withAuth(async (request: NextRequest, user: any) => {
+    try {
+      const { params } = context
 
-    if (!quotation) {
-      return NextResponse.json({ success: false, error: "Quotation not found" }, { status: 404 })
+      const quotation = await mongoStore.getById("quotations", params.id)
+
+      if (!quotation) {
+        return NextResponse.json(
+          { success: false, error: "Quotation not found" },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json({ success: true, data: quotation })
+    } catch (error) {
+      console.error("GET error:", error)
+      return NextResponse.json(
+        { success: false, error: "Failed to fetch quotation" },
+        { status: 500 }
+      )
     }
+  })(request) // ✅ Keep this exactly the same
+}
 
-    return NextResponse.json({ success: true, data: quotation })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to fetch quotation" }, { status: 500 })
-  }
-})
 
 // ✅ UPDATE QUOTATION
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {

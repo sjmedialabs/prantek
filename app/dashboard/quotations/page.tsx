@@ -96,14 +96,10 @@ export default function QuotationsPage() {
     if (selectedQuotation) {
       console.log("selected quation id:::",selectedQuotation)
       try {
-        await api.quotations.update(selectedQuotation._id, {
-          ...selectedQuotation,
-          status: "accepted",
-          acceptedDate: acceptedDate,
-        })
+        await api.quotations.accept(selectedQuotation._id)
         await loadQuotations()
         setAcceptDialogOpen(false)
-        window.location.href = `/dashboard/receipts/new?quotationId=${selectedQuotation.id}`
+        window.location.href = `/dashboard/receipts/new?quotationId=${selectedQuotation._id}`
       } catch (error) {
         console.error("Failed to accept quotation:", error)
       }
@@ -291,7 +287,7 @@ export default function QuotationsPage() {
                     </Badge>
 
                     <div className="flex items-center space-x-2">
-                      <Link href={`/dashboard/quotations/${quotation.id}`}>
+                      <Link href={`/dashboard/quotations/${quotation._id}`}>
                         <Button variant="outline" size="sm">
                           View
                         </Button>

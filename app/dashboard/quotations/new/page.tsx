@@ -38,6 +38,10 @@ interface QuotationItem {
   taxRate: number
   taxAmount: number
   total: number
+  cgst:number,
+  sgst:number,
+  igst:number,
+  itemId:string
 }
 
 interface Client {
@@ -58,6 +62,9 @@ interface MasterItem {
   price: number
   taxName: string
   taxRate: number
+  cgst?: number
+  sgst?: number
+  igst?: number
 }
 
 export default function NewQuotationPage() {
@@ -98,6 +105,10 @@ export default function NewQuotationPage() {
       amount: 0,
       taxName: "",
       taxRate: 0,
+      cgst:0,
+      sgst:0,
+      igst:0,
+      itemId:"",
       taxAmount: 0,
       total: 0,
     },
@@ -164,6 +175,7 @@ export default function NewQuotationPage() {
 
 
   const updateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
+    console.log("Selected Item Id is:::",id)
     setItems(
       items.map((item) => {
         if (item.id === id) {
@@ -177,20 +189,47 @@ export default function NewQuotationPage() {
             updatedItem.taxRate = 0
           }
 
-          if (field === "itemName") {
-            const masterItem = masterItems.find((i) => i.name === value)
-            console.log("entered into itemName::::",masterItem)
-            if (masterItem) {
-              updatedItem.description = masterItem.description
-              updatedItem.price = masterItem.price
-              updatedItem.taxName = masterItem.taxName
-              updatedItem.taxRate = masterItem.taxRate
+         if (field === "itemName") {
+              const masterItem = masterItems.find((i) => i.name === value)
+
+              if (masterItem) {
+                updatedItem.description = masterItem.description
+                updatedItem.price = masterItem.price
+                updatedItem.itemId=masterItem._id;
+
+                if (masterItem.applyTax) {
+                 
+
+                  // Show all taxes in UI
+                  updatedItem.cgst = masterItem.cgst || 0
+                  updatedItem.sgst = masterItem.sgst || 0
+                  updatedItem.igst = masterItem.igst || 0
+
+                  // ✅ TaxRate = sum of all applicable taxes
+                  updatedItem.taxRate =
+                    (masterItem.cgst || 0) +
+                    (masterItem.sgst || 0) +
+                    (masterItem.igst || 0)
+
+                  updatedItem.taxName = "CGST + SGST + IGST"
+                } else {
+                  
+                  updatedItem.cgst = 0
+                  updatedItem.sgst = 0
+                  updatedItem.igst = 0
+                  updatedItem.taxRate = 0
+                  updatedItem.taxName = ""
+                }
+              }
             }
-          }
+
+
+
 
           updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
-          updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
-          updatedItem.total = updatedItem.amount + updatedItem.taxAmount
+updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
+updatedItem.total = updatedItem.amount + updatedItem.taxAmount
+
 
           return updatedItem
         }
@@ -259,8 +298,10 @@ export default function NewQuotationPage() {
         quantity: item.quantity,
         price: item.price,
         discount: item.discount,
-        taxName: item.taxName,
-        taxRate: item.taxRate,
+        cgst:item.cgst,
+        sgst:item.sgst,
+        igst:item.igst,
+        itemId:item.itemId
       })),
       grandTotal: quotationTotal,
       status: status === "sent" ? "pending" : "draft",
@@ -679,28 +720,23 @@ const clientOptions = clients.map((c) => ({
                               />
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label>Tax Name</Label>
-                              <Input
-                                value={item.taxName}
-                                onChange={(e) => updateItem(item.id, "taxName", e.target.value)}
-                                placeholder="e.g., GST"
-                                className="bg-gray-100"
-                              />
+                          
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <Label>CGST (%)</Label>
+                                <Input value={item.cgst} disabled className="bg-gray-100" />
+                              </div>
+                              <div>
+                                <Label>SGST (%)</Label>
+                                <Input value={item.sgst} disabled className="bg-gray-100" />
+                              </div>
+                              <div>
+                                <Label>IGST (%)</Label>
+                                <Input value={item.igst} disabled className="bg-gray-100" />
+                              </div>
                             </div>
-                            <div>
-                              <Label>Tax Rate (%)</Label>
-                              <Input
-                                type="number"
-                                value={item.taxRate}
-                                onChange={(e) => updateItem(item.id, "taxRate", Number.parseFloat(e.target.value) || 0)}
-                                min="0"
-                                step="0.01"
-                                className="bg-gray-100"
-                              />
-                            </div>
-                          </div>
+                          
+
                           <div className="pt-3 border-t space-y-1">
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Amount:</span>

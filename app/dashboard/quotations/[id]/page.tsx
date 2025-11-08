@@ -30,9 +30,10 @@ export default function QuotationDetailsPage() {
     loadQuotation()
   }, [quotationId])
 
-  const loadQuotation = () => {
+  const loadQuotation = async() => {
     try {
-      const data = api.quotations.getById(quotationId)
+      const data =await api.quotations.getById(quotationId)
+      console.log("Accepted quotation View Details:::",data);
       if (data) {
         setQuotation(data)
       } else {
@@ -78,7 +79,7 @@ export default function QuotationDetailsPage() {
       email: quotation.clientEmail,
     },
     items: (quotation.items || []).map((item) => ({
-      name: item.name,
+      name: item.itemName,
       description: item.description,
       quantity: item.quantity,
       price: item.price,
@@ -89,7 +90,7 @@ export default function QuotationDetailsPage() {
     status: quotation.status === "accepted" ? "Accepted" : "Pending",
     acceptedDate: quotation.acceptedDate,
   }
-
+  console.log("Quatation for Print ::",quotationForPrint.items[0].name);
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -122,7 +123,7 @@ export default function QuotationDetailsPage() {
     await generatePDF("print-content", `Quotation-${quotation.quotationNumber}.pdf`)
   }
 
-  const handlePrint = () => {
+  const handlePrint = () => { 
     printDocument("print-content")
   }
 
@@ -195,7 +196,8 @@ export default function QuotationDetailsPage() {
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
                   <Badge className={getStatusColor(quotation.status)}>
-                    {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
+                    {/* {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)} */}
+                    {quotation.status}
                   </Badge>
                 </div>
               </div>
@@ -262,7 +264,7 @@ export default function QuotationDetailsPage() {
                   <div key={item.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="font-semibold">{item.name}</p>
+                        <p className="font-semibold text-md">{item.itemNamee}</p>
                         <p className="text-sm text-gray-600">{item.description}</p>
                         <Badge variant="outline" className="mt-1">
                           {item.type}
@@ -334,7 +336,8 @@ export default function QuotationDetailsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Current Status</span>
                   <Badge className={getStatusColor(quotation.status)}>
-                    {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
+                    {/* {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)} */}
+                    {quotation.status}
                   </Badge>
                 </div>
                 {quotation.status === "accepted" && (
