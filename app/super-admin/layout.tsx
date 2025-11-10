@@ -6,6 +6,7 @@ import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
 import SuperAdminSidebar from "@/components/super-admin/super-admin-sidebar"
 import SuperAdminHeader from "@/components/super-admin/super-admin-header"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function SuperAdminLayout({
   children,
@@ -22,6 +23,7 @@ export default function SuperAdminLayout({
             <main className="p-6">{children}</main>
           </div>
         </div>
+        <Toaster />
       </ProtectedRoute>
     </UserProvider>
   )

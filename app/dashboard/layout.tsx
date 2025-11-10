@@ -6,6 +6,7 @@ import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function DashboardLayout({
   children,
@@ -22,6 +23,7 @@ export default function DashboardLayout({
             <main className="p-6">{children}</main>
           </div>
         </div>
+        <Toaster />
       </ProtectedRoute>
     </UserProvider>
   )

@@ -13,6 +13,7 @@ export const COLLECTIONS = {
   PAYMENT_METHODS: "payment_methods",
   RECEIPT_CATEGORIES: "receipt_categories",
   PAYMENT_CATEGORIES: "payment_categories",
+  RECIPIENT_TYPES: "recipient_types",
   TAX_SETTINGS: "tax_settings",
   TAX_RATES: "tax_rates",
 <<<<<<< HEAD

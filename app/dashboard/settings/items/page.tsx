@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { Package, Save, Plus, Edit, Power, PowerOff } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -23,6 +24,7 @@ import { api } from "@/lib/api-client"
 import { Item } from "@/lib/models/types"
 
 export default function ItemsPage() {
+  const { toast } = useToast()
   const { user, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [items, setItems] = useState<Item[]>([])
@@ -134,7 +136,7 @@ const validateItem = (data: any) => {
       api.items.update(id, { isActive: !item.isActive  })
       loadItems()
     }
-    alert("Item status updated successfully!")
+    toast({ title: "Success", description: "Item status updated successfully!" })
   }
 
 const handleSave = async () => {
@@ -142,7 +144,7 @@ const handleSave = async () => {
     // ✅ VALIDATE FIRST
     const errMsg = validateItem(formData)
     if (errMsg) {
-      alert(errMsg)
+      toast({ title: "Notification", description: errMsg, variant: "default" })
       return
     }
 
@@ -162,11 +164,11 @@ const handleSave = async () => {
     setIsDialogOpen(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
-    alert("Item saved successfully!")
+    toast({ title: "Success", description: "Item saved successfully!" })
 
   } catch (err) {
     console.error("Failed to save", err)
-    alert("Failed to save item")
+    toast({ title: "Error", description: "Failed to save item", variant: "destructive" })
   }
 }
 

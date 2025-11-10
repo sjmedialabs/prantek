@@ -36,7 +36,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       body.paymentNumber = await generateNextNumber("payments", "PAY", user.userId)
     }
 
-    const payment = await mongoStore.create("payments", { ...body, userId: user.id })
+    const payment = await mongoStore.create("payments", { ...body, userId: user.userId })
 
     await logActivity(user.userId, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
 
