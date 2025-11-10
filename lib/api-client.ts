@@ -169,6 +169,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify(quotationData),
       })
+      console.log("response api-clients while creating the quotataions",data)
       return data.quotation
     },
     update: async (id: string, quotationData: Partial<Quotation>) => {
@@ -184,6 +185,15 @@ export const api = {
         method: "DELETE",
       })
     },
+   updateStatus: async (id: string, isActive: "active" | "inactive") => {
+  const data = await fetchAPI(`/api/quotations/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ isActive })  // ✅ CORRECT
+  })
+  return data.data
+},
+
+
     accept: async (id: string) => {
       const data = await fetchAPI(`/api/quotations/${id}`, {
         method: "PUT",

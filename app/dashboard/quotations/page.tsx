@@ -10,6 +10,8 @@ import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
+import { toast } from "@/lib/toast"
+import { Switch } from "@/components/ui/switch"
 
 interface Quotation {
   id: string
@@ -112,6 +114,7 @@ const matchesMaxAmount =
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this quotation?")) {
       try {
+        console.log("Delte Quotation Id :::",id)
         await api.quotations.delete(id)
         await loadQuotations()
       } catch (error) {
@@ -119,6 +122,17 @@ const matchesMaxAmount =
       }
     }
   }
+  const handleToggleStatus = async (id, newStatus) => {
+  try {
+    await api.quotations. updateStatus(id, { isActive: newStatus })
+    toast.success(`Quotation ${newStatus ? "enabled" : "disabled"} successfully`)
+    loadQuotations() // refresh list
+  } catch (err) {
+    console.error(err)
+    toast.error("Failed to update quotation status")
+  }
+}
+
 
   const uniqueClients = Array.from(new Set(quotations.map((q) => q.clientName)))
 
@@ -286,7 +300,8 @@ const matchesMaxAmount =
                     </div>
 
                     <Badge className={getStatusColor(quotation.status)}>
-                      {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)}
+                      {/* {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)} */}
+                      {quotation.status}
                     </Badge>
 
                     <div className="flex items-center space-x-2">
@@ -313,15 +328,25 @@ const matchesMaxAmount =
                         </Button>
                       )}
                       {quotation.status !== "accepted" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 bg-transparent"
-                          onClick={() => handleDelete(quotation.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <Switch
+                      checked={quotation.isActive === "active"}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          await api.quotations.updateStatus(
+                            quotation._id,
+                            checked ? "active" : "inactive"
+                          )
+                          toast.success(`Quotation ${checked ? "Enabled" : "Disabled"}`)
+                          await loadQuotations()
+                        } catch (err) {
+                          console.error(err)
+                          toast.error("Failed to update quotation status")
+                        }
+                      }}
+                      />
+
+                    )}
+
                     </div>
                   </div>
                 </div>

@@ -102,31 +102,34 @@ export interface Receipt extends BaseDocument {
 
 export interface QuotationItem {
   itemId: string
-  name: string
+  itemName: string            // changed field name
   description?: string
   quantity: number
-  unit?: string
   price: number
-  taxRate?: number
-  taxAmount?: number
-  total: number
+  discount?: number           // add since FE sends it
+  cgst?: number               // add
+  sgst?: number               // add
+  igst?: number               // add
+  total?: number              // optional if you calculate later
 }
+
 
 export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
   quotationNumber: string
-  date: Date
-  validUntil?: Date
-  acceptedDate?: Date
+  date: string | Date
+
+  validity?: string | Date     // accept the field exactly as FE sends
+  note?: string                // rename notes → note so FE works
+
   items: QuotationItem[]
-  subtotal: number
-  taxAmount: number
-  total: number
-  status: "draft" | "sent" | "accepted" | "rejected" | "expired"
-  notes?: string
-  terms?: string
+
+  grandTotal: number           // replace subtotal + total → grandTotal
+  status: string               // keep as is ("pending", "sent", etc.)
+  isActive?:string
 }
+
 
 export interface Payment extends BaseDocument {
   userId: string

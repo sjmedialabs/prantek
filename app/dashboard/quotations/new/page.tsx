@@ -304,10 +304,11 @@ updatedItem.total = updatedItem.amount + updatedItem.taxAmount
         itemId:item.itemId
       })),
       grandTotal: quotationTotal,
-      status: status === "sent" ? "pending" : "draft",
+      status: status === "sent" ? "pending" : "pending",
+      isActive:"active"
     }
 
-    console.log("[v0] Creating quotation:", quotationData)
+    console.log("quotation Data to send:", quotationData)
     const createdQuotation = await api.quotations.create(quotationData)
     console.log("[v0] Quotation created successfully:", createdQuotation)
 
@@ -684,7 +685,8 @@ const clientOptions = clients.map((c) => ({
                             />
                           </div>
                           <div className="grid grid-cols-3 gap-3">
-                            <div>
+                           {item.type==="product" && (
+                             <div>
                               <Label>Quantity *</Label>
                               <Input
                                 type="number"
@@ -694,6 +696,7 @@ const clientOptions = clients.map((c) => ({
                                 className="bg-white"
                               />
                             </div>
+                           )}
                             <div>
                               <Label>Price *</Label>
                               <Input

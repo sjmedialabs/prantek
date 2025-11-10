@@ -36,8 +36,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     if (!body.quotationNumber) {
       body.quotationNumber = await generateNextNumber("quotations", "QT", user.userId)
     }
-
-    const quotation = await mongoStore.create("quotations", { ...body, userId: user.id })
+   console.log("user id is :::",user.userId)
+    const quotation = await mongoStore.create("quotations", { ...body, userId: user.userId })
 
     await logActivity(user.userId, "create", "quotation", quotation._id?.toString(), {
       quotationNumber: body.quotationNumber,
@@ -46,14 +46,14 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     // Notify admins about new quotation
     try {
       // Get client info for notification
-      const client = await mongoStore.get("clients", body.clientId)
+      const client = await mongoStore.getById("clients", body.clientId)
       const clientName = client?.name || "Unknown Client"
       
       await notifyAdminsNewQuotation(
         quotation._id?.toString() || "",
         body.quotationNumber,
         clientName,
-        user.companyId
+        user.userId
       )
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)
@@ -62,6 +62,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     return NextResponse.json({ success: true, data: quotation })
   } catch (error) {
+    console.error("[Quotation Create Error]:", error)
     return NextResponse.json({ success: false, error: "Failed to create quotation" }, { status: 500 })
   }
 })
