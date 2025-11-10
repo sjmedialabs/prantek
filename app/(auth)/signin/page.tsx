@@ -71,7 +71,7 @@ export default function SignInPage() {
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="flex items-center justify-center mb-6">
             <FileText className="h-10 w-10 text-blue-600 mr-2" />
-            <h1 className="text-3xl font-bold text-gray-900">Invoice Manager</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Prantek Fin App</h1>
           </div>
 
           <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">Sign In to Your Account</h2>

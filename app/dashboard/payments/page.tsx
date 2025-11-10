@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Download, Edit, Trash2, Filter, X } from "lucide-react"
+import { Plus, Search, Download, Filter, X } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
@@ -96,16 +96,16 @@ export default function PaymentsPage() {
   })
 
   const uniqueClients = Array.from(
-    new Set(payments.filter((p) => p.recipientType === "client").map((p) => p.recipientName)),
+    new Set(payments.filter((p) => p.recipientType === "client" && p.recipientName).map((p) => p.recipientName)),
   )
   const uniqueVendors = Array.from(
-    new Set(payments.filter((p) => p.recipientType === "vendor").map((p) => p.recipientName)),
+    new Set(payments.filter((p) => p.recipientType === "vendor" && p.recipientName).map((p) => p.recipientName)),
   )
   const uniqueTeams = Array.from(
-    new Set(payments.filter((p) => p.recipientType === "team").map((p) => p.recipientName)),
+    new Set(payments.filter((p) => p.recipientType === "team" && p.recipientName).map((p) => p.recipientName)),
   )
-  const uniqueCategories = Array.from(new Set(payments.map((p) => p.category)))
-  const uniquePaymentMethods = Array.from(new Set(payments.map((p) => p.paymentMethod)))
+  const uniqueCategories = Array.from(new Set(payments.filter((p) => p.category).map((p) => p.category)))
+  const uniquePaymentMethods = Array.from(new Set(payments.filter((p) => p.paymentMethod).map((p) => p.paymentMethod)))
 
   const clearFilters = () => {
     setStatusFilter("all")
@@ -441,7 +441,7 @@ export default function PaymentsPage() {
               {filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell className="font-medium">{payment.paymentNumber}</TableCell>
-                  <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString() : "N/A"}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="capitalize">
                       {payment.recipientType}
@@ -466,7 +466,7 @@ export default function PaymentsPage() {
                       {payment.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-semibold">₹{payment.amount.toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-semibold">₹{payment.amount ? payment.amount.toLocaleString() : "0"}</TableCell>
                   {hasPermission("manage_payments") && (
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
@@ -475,12 +475,6 @@ export default function PaymentsPage() {
                             View
                           </Button>
                         </Link>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
                       </div>
                     </TableCell>
                   )}

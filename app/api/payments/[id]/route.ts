@@ -24,7 +24,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
     .collection(Collections.PAYMENTS)
     .findOne({
       _id: new ObjectId(id),
-      userId: String(user.id),
+      userId: user.userId,
     })
 
   if (!payment) {
@@ -53,7 +53,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
     .findOneAndUpdate(
       {
         _id: new ObjectId(id),
-        userId: String(user.id),
+        userId: user.userId,
       },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" }

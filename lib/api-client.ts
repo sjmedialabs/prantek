@@ -244,7 +244,7 @@ export const api = {
     payments: {
       getAll: async () => {
         const data = await fetchAPI("/api/payments")
-        return data || data.data || data.payments || []
+        return data.data || data.payments || data || []
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/payments/${id}`)
