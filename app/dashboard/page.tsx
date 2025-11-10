@@ -140,6 +140,7 @@ if (lastMonthRevenue > 0) {
           date: new Date(r.date),
         })),
         ...payments.map((p: any) => ({
+          type: "Expense",
           category: "Salary",
           amount: p.amount || 0,
           description: `${p.description || p.category}`,
