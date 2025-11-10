@@ -48,6 +48,8 @@ export default function NewReceiptPage() {
 
   const [clients, setClients] = useState<any[]>([])
   const[bankDetails,setBankDetails]=useState<any[]>([]);
+  const [selectedBank, setSelectedBank] = useState<string>(""); // <-- NEW
+  const[selectUpiId,setSelectedUpiId]=useState<String>("")
   const [quotations, setQuotations] = useState<any[]>([])
   const [allQuotations, setAllQuotations] = useState<any[]>([])
   const [masterItems, setMasterItems] = useState<any[]>([])
@@ -121,11 +123,12 @@ export default function NewReceiptPage() {
       console.log("[v0] Loaded clients:", loadedClients)
       console.log("[v0] Loaded quotations:", loadedQuotations)
       console.log("[v0] Loaded items:", loadedItems)
-      console.log("[v0] Loaded BANK DETAILS:", loadedBankDetails)
+      // console.log("[v0] Loaded BANK DETAILS:", loadedBankDetails)
 
       setClients(loadedClients)
       setAllQuotations(loadedQuotations)
       setMasterItems(loadedItems)
+      setBankDetails(loadedBankDetails)
 
       // Set default payment methods and bank accounts
       setPaymentMethods(["Cash", "Bank Transfer", "UPI", "Check", "Credit Card", "Debit Card"])
@@ -137,7 +140,10 @@ export default function NewReceiptPage() {
   useEffect(() => {
     const filterQuotations = async () => {
       if (selectedClientId && !selectedQuotationId) {
-        const clientQuotations = await dataStore.getActiveQuotationsByClient(selectedClientId)
+       const clientQuotations = allQuotations.filter(
+          (q: any) => q.clientId === selectedClientId && q.isActive === "active"
+        );
+
         console.log("[v0] Filtered quotations for client:", selectedClientId, clientQuotations)
         setQuotations(clientQuotations)
       } else if (!selectedClientId) {
@@ -146,7 +152,7 @@ export default function NewReceiptPage() {
     }
     filterQuotations()
   }, [selectedClientId, selectedQuotationId])
-
+console.log("from quotations:::",allQuotations)
   useEffect(() => {
     if (!selectedQuotationId) {
       const total = items.reduce((sum, item) => sum + item.total, 0)
@@ -353,7 +359,7 @@ export default function NewReceiptPage() {
     try {
       console.log("[v0] Calling createReceiptWithQuotation...")
 
-      const receipt = await api.ReceiptWithQuotation.create({
+      const receipt = await api.receipts.create({
         clientId: selectedClientId,
         clientName,
         clientEmail,
@@ -382,11 +388,11 @@ export default function NewReceiptPage() {
         notes: description,
       })
 
-      console.log("[v0] Receipt created successfully:", receipt)
-      console.log("[v0] Receipt ID:", receipt.id)
-      console.log("[v0] Receipt Number:", receipt.receiptNumber)
-      console.log("[v0] Quotation ID:", receipt.quotationId)
-      console.log("[v0] ===== RECEIPT SUBMISSION COMPLETED =====")
+      // console.log("[v0] Receipt created successfully:", receipt)
+      // console.log("[v0] Receipt ID:", receipt.id)
+      // console.log("[v0] Receipt Number:", receipt.receiptNumber)
+      // console.log("[v0] Quotation ID:", receipt.quotationId)
+      // console.log("[v0] ===== RECEIPT SUBMISSION COMPLETED =====")
 
       toast.success(`Receipt ${receipt.receiptNumber} created successfully!`)
 
@@ -483,6 +489,7 @@ const clientOptions = clients.map((c) => ({
   value: String(c._id),
   label: c.clientName || c.name || "Unnamed",
 }));
+console.log("bankDetails are:::",bankDetails)
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between">
@@ -656,7 +663,7 @@ const clientOptions = clients.map((c) => ({
                   <OwnSearchableSelect
                     options={quotations.map((q) => ({
                       value: q.id,
-                      label: `${q.quotationNumber} - ${q.projectName} (Pending: ₹${(q.amountPending || 0).toLocaleString()})`,
+                      label: `${q.quotationNumber} `,
                     }))}
                     value={selectedQuotationId}
                     onValueChange={setSelectedQuotationId}
@@ -1088,18 +1095,20 @@ const clientOptions = clients.map((c) => ({
               {(paymentMethod === "Bank Transfer" || paymentMethod === "UPI") && (
                 <div>
                   <Label htmlFor="bankAccount">Bank Account *</Label>
-                  <Select value={bankAccount} onValueChange={setBankAccount} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select bank account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bankAccounts.map((account) => (
-                        <SelectItem key={account} value={account}>
-                          {account}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Select value={selectedBank} onValueChange={setSelectedBank} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank account" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {bankDetails.map((account) => (
+                      <SelectItem key={account._id} value={account.accountNumber}>
+                        {`${account.bankName} - ${account.accountNumber}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 </div>
               )}
               {paymentMethod && paymentMethod !== "Cash" && (

@@ -210,7 +210,7 @@ export const api = {
     receipts: {
       getAll: async () => {
         const data = await fetchAPI("/api/receipts")
-        return data.receipts || []
+        return data.data || []
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/receipts/${id}`)
@@ -221,6 +221,7 @@ export const api = {
           method: "POST",
           body: JSON.stringify(receiptData),
         })
+        console.log("reciept created :::",data)
         return data.receipt
       },
       update: async (id: string, receiptData: Partial<Receipt>) => {
