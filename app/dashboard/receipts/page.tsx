@@ -11,7 +11,7 @@ import { Plus, Search, Edit, ReceiptIcon, Filter, X } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
-
+ 
 interface Receipt {
   id: string
   receiptNumber: string
@@ -112,7 +112,7 @@ export default function ReceiptsPage() {
   }
 
   const formatStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1)
+    return status
   }
 
   if (!hasPermission("view_receipts")) {

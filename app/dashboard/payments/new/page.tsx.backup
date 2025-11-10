@@ -25,7 +25,7 @@ import { ArrowLeft, Upload, UserPlus, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
-import { ClientSelectSimple } from "@/components/client-select-simple"
+import { SearchableSelect } from "@/components/searchable-select"
 
 export default function NewPaymentPage() {
   const router = useRouter()
@@ -593,7 +593,7 @@ export default function NewPaymentPage() {
                           </Label>
                           <div className="flex gap-2">
                             <div className="flex-1">
-                              <ClientSelectSimple
+                              <SearchableSelect
                                 options={clients.map((client) => ({
                                   value: client.id,
                                   label: client.name,
@@ -684,7 +684,7 @@ export default function NewPaymentPage() {
                           </Label>
                           <div className="flex gap-2">
                             <div className="flex-1">
-                              <ClientSelectSimple
+                              <SearchableSelect
                                 options={vendors.map((vendor) => ({
                                   value: vendor.id,
                                   label: vendor.name,
@@ -791,7 +791,7 @@ export default function NewPaymentPage() {
                           <Label htmlFor="teamMember">
                             Team Member <span className="text-red-500">*</span>
                           </Label>
-                          <ClientSelectSimple
+                          <SearchableSelect
                             options={teamMembers
                               .filter((m) => m.status === "active")
                               .map((member) => ({

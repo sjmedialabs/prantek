@@ -125,8 +125,8 @@ export default function AssetsPage() {
   }
 
   // Calculate asset metrics
-  const totalAssetValue = assets.reduce((sum, asset) => sum + asset.currentValue, 0)
-  const totalPurchaseValue = assets.reduce((sum, asset) => sum + asset.purchasePrice, 0)
+  const totalAssetValue = assets.reduce((sum, asset) => sum + (asset.currentValue || 0), 0)
+  const totalPurchaseValue = assets.reduce((sum, asset) => sum + (asset.purchasePrice || 0), 0)
   const totalDepreciation = totalPurchaseValue - totalAssetValue
   const assetsNeedingMaintenance = assets.filter((asset) => {
     if (!asset.nextMaintenance) return false
@@ -146,9 +146,9 @@ export default function AssetsPage() {
 
   const depreciationData = assets.map((asset) => ({
     name: asset.name.substring(0, 15) + (asset.name.length > 15 ? "..." : ""),
-    original: asset.purchasePrice,
-    current: asset.currentValue,
-    depreciation: asset.purchasePrice - asset.currentValue,
+    original: asset.purchasePrice || 0,
+    current: asset.currentValue || 0,
+    depreciation: (asset.purchasePrice || 0) - (asset.currentValue || 0),
   }))
 
   const filteredAssets = assets.filter((asset) => {
@@ -396,7 +396,7 @@ export default function AssetsPage() {
             <TrendingDown className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₹{totalAssetValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600">₹{(totalAssetValue || 0).toLocaleString()}</div>
             <p className="text-xs text-gray-600 mt-1">Current market value</p>
           </CardContent>
         </Card>
@@ -407,7 +407,7 @@ export default function AssetsPage() {
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">₹{totalDepreciation.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-600">₹{(totalDepreciation || 0).toLocaleString()}</div>
             <p className="text-xs text-gray-600 mt-1">
               {totalPurchaseValue > 0 ? ((totalDepreciation / totalPurchaseValue) * 100).toFixed(1) : 0}% total
               depreciation
@@ -519,12 +519,12 @@ export default function AssetsPage() {
                       <TableCell>
                         <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
                       </TableCell>
-                      <TableCell>₹{asset.purchasePrice.toLocaleString()}</TableCell>
-                      <TableCell>₹{asset.currentValue.toLocaleString()}</TableCell>
+                      <TableCell>₹{(asset.purchasePrice || 0).toLocaleString()}</TableCell>
+                      <TableCell>₹{(asset.currentValue || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <span className="text-red-600">
-                            -₹{(asset.purchasePrice - asset.currentValue).toLocaleString()}
+                            -₹{((asset.purchasePrice || 0) - (asset.currentValue || 0)).toLocaleString()}
                           </span>
                           <Progress
                             value={((asset.purchasePrice - asset.currentValue) / asset.purchasePrice) * 100}
@@ -695,8 +695,8 @@ export default function AssetsPage() {
             <CardContent>
               <div className="space-y-4">
                 {assets.map((asset) => {
-                  const depreciationAmount = asset.purchasePrice - asset.currentValue
-                  const depreciationPercent = (depreciationAmount / asset.purchasePrice) * 100
+                  const depreciationAmount = (asset.purchasePrice || 0) - (asset.currentValue || 0)
+                  const depreciationPercent = (depreciationAmount / (asset.purchasePrice || 1)) * 100
                   const yearsOwned = Math.floor(
                     (new Date().getTime() - new Date(asset.purchaseDate).getTime()) / (1000 * 60 * 60 * 24 * 365),
                   )
@@ -715,7 +715,7 @@ export default function AssetsPage() {
                         </div>
                         <div className="text-right">
                           <div className="text-lg font-semibold text-red-600">
-                            -₹{depreciationAmount.toLocaleString()}
+                            -₹{(depreciationAmount || 0).toLocaleString()}
                           </div>
                           <p className="text-sm text-gray-600">{depreciationPercent.toFixed(1)}% depreciation</p>
                         </div>
@@ -723,11 +723,11 @@ export default function AssetsPage() {
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
                           <span className="text-gray-600">Purchase Price:</span>
-                          <div className="font-medium">₹{asset.purchasePrice.toLocaleString()}</div>
+                          <div className="font-medium">₹{(asset.purchasePrice || 0).toLocaleString()}</div>
                         </div>
                         <div>
                           <span className="text-gray-600">Current Value:</span>
-                          <div className="font-medium">₹{asset.currentValue.toLocaleString()}</div>
+                          <div className="font-medium">₹{(asset.currentValue || 0).toLocaleString()}</div>
                         </div>
                         <div>
                           <span className="text-gray-600">Annual Rate:</span>

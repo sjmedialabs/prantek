@@ -1,8 +1,10 @@
 "use client"
 
 import type React from "react"
-import { toast } from "sonner"
+// import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import { api } from "@/lib/api-client"
+import { dataStore } from "@/lib/data-store"
 
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
@@ -24,6 +26,7 @@ import { Save, ArrowLeft, UserPlus, X, Plus, Minus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { SearchableSelect } from "@/components/searchable-select"
+import { OwnSearchableSelect } from "@/components/searchableSelect"
 
 interface ReceiptItem {
   id: string
@@ -45,6 +48,9 @@ export default function NewReceiptPage() {
   const { user } = useUser()
 
   const [clients, setClients] = useState<any[]>([])
+  const[bankDetails,setBankDetails]=useState<any[]>([]);
+  const [selectedBank, setSelectedBank] = useState<string>(""); // <-- NEW
+  const[selectUpiId,setSelectedUpiId]=useState<String>("")
   const [quotations, setQuotations] = useState<any[]>([])
   const [allQuotations, setAllQuotations] = useState<any[]>([])
   const [masterItems, setMasterItems] = useState<any[]>([])
@@ -101,20 +107,29 @@ export default function NewReceiptPage() {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({
+   name: "",
+   email: "",
+   phone: "",
+   address: "",
+ })
 
   useEffect(() => {
     const loadData = async () => {
       const loadedClients = await api.clients.getAll()
-      const loadedQuotations = await dataStore.getAll("quotations")
+      const loadedQuotations = await api.quotations.getAll()
       const loadedItems = await api.items.getAll()
+      const loadedBankDetails=await api.bankAccounts.getAll();
 
       console.log("[v0] Loaded clients:", loadedClients)
       console.log("[v0] Loaded quotations:", loadedQuotations)
       console.log("[v0] Loaded items:", loadedItems)
+      // console.log("[v0] Loaded BANK DETAILS:", loadedBankDetails)
 
       setClients(loadedClients)
       setAllQuotations(loadedQuotations)
       setMasterItems(loadedItems)
+      setBankDetails(loadedBankDetails)
 
       // Set default payment methods and bank accounts
       setPaymentMethods(["Cash", "Bank Transfer", "UPI", "Check", "Credit Card", "Debit Card"])
@@ -126,7 +141,10 @@ export default function NewReceiptPage() {
   useEffect(() => {
     const filterQuotations = async () => {
       if (selectedClientId && !selectedQuotationId) {
-        const clientQuotations = await dataStore.getActiveQuotationsByClient(selectedClientId)
+       const clientQuotations = allQuotations.filter(
+          (q: any) => q.clientId === selectedClientId && q.isActive === "active"
+        );
+
         console.log("[v0] Filtered quotations for client:", selectedClientId, clientQuotations)
         setQuotations(clientQuotations)
       } else if (!selectedClientId) {
@@ -135,7 +153,7 @@ export default function NewReceiptPage() {
     }
     filterQuotations()
   }, [selectedClientId, selectedQuotationId])
-
+console.log("from quotations:::",allQuotations)
   useEffect(() => {
     if (!selectedQuotationId) {
       const total = items.reduce((sum, item) => sum + item.total, 0)
@@ -177,7 +195,9 @@ export default function NewReceiptPage() {
 
   useEffect(() => {
     if (selectedClientId && !selectedQuotationId) {
-      const client = clients.find((c) => c.id === selectedClientId)
+     
+      const client = clients.find((c) => c._id === selectedClientId)
+       console.log("Entered into selectedClientId if client ::",client)
       if (client) {
         setClientName(client.name)
         setClientAddress(client.address)
@@ -219,7 +239,8 @@ export default function NewReceiptPage() {
     }
   }
 
-  const updateItem = (id: string, field: keyof ReceiptItem, value: string | number) => {
+ const updateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
+    console.log("Selected Item Id is:::",id)
     setItems(
       items.map((item) => {
         if (item.id === id) {
@@ -233,19 +254,47 @@ export default function NewReceiptPage() {
             updatedItem.taxRate = 0
           }
 
-          if (field === "itemName") {
-            const masterItem = masterItems.find((i) => i.name === value || i.itemName === value)
-            if (masterItem) {
-              updatedItem.description = masterItem.description || ""
-              updatedItem.price = masterItem.price || 0
-              updatedItem.taxName = masterItem.taxName || ""
-              updatedItem.taxRate = masterItem.taxRate || 0
+         if (field === "itemName") {
+              const masterItem = masterItems.find((i) => i.name === value)
+
+              if (masterItem) {
+                updatedItem.description = masterItem.description
+                updatedItem.price = masterItem.price
+                updatedItem.itemId=masterItem._id;
+
+                if (masterItem.applyTax) {
+                 
+
+                  // Show all taxes in UI
+                  updatedItem.cgst = masterItem.cgst || 0
+                  updatedItem.sgst = masterItem.sgst || 0
+                  updatedItem.igst = masterItem.igst || 0
+
+                  // ✅ TaxRate = sum of all applicable taxes
+                  updatedItem.taxRate =
+                    (masterItem.cgst || 0) +
+                    (masterItem.sgst || 0) +
+                    (masterItem.igst || 0)
+
+                  updatedItem.taxName = "CGST + SGST + IGST"
+                } else {
+                  
+                  updatedItem.cgst = 0
+                  updatedItem.sgst = 0
+                  updatedItem.igst = 0
+                  updatedItem.taxRate = 0
+                  updatedItem.taxName = ""
+                }
+              }
             }
-          }
+
+
+
 
           updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
           updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
           updatedItem.total = updatedItem.amount + updatedItem.taxAmount
+
 
           return updatedItem
         }
@@ -311,7 +360,7 @@ export default function NewReceiptPage() {
     try {
       console.log("[v0] Calling createReceiptWithQuotation...")
 
-      const receipt = await api.ReceiptWithQuotation.create({
+      const receipt = await api.receipts.create({
         clientId: selectedClientId,
         clientName,
         clientEmail,
@@ -340,11 +389,11 @@ export default function NewReceiptPage() {
         notes: description,
       })
 
-      console.log("[v0] Receipt created successfully:", receipt)
-      console.log("[v0] Receipt ID:", receipt.id)
-      console.log("[v0] Receipt Number:", receipt.receiptNumber)
-      console.log("[v0] Quotation ID:", receipt.quotationId)
-      console.log("[v0] ===== RECEIPT SUBMISSION COMPLETED =====")
+      // console.log("[v0] Receipt created successfully:", receipt)
+      // console.log("[v0] Receipt ID:", receipt.id)
+      // console.log("[v0] Receipt Number:", receipt.receiptNumber)
+      // console.log("[v0] Quotation ID:", receipt.quotationId)
+      // console.log("[v0] ===== RECEIPT SUBMISSION COMPLETED =====")
 
       toast.success(`Receipt ${receipt.receiptNumber} created successfully!`)
 
@@ -360,20 +409,63 @@ export default function NewReceiptPage() {
     }
   }
 
+  
   const handleCreateClient = async () => {
-    const newClientData = await dataStore.create("clients", {
-      name: newClient.clientName,
-      email: newClient.email,
-      phone: newClient.phone,
-      address: newClient.address,
-    })
-
-    setClients([...clients, newClientData])
-    setSelectedClientId(newClientData.id)
-    setIsCreateClientOpen(false)
-    setNewClient({ clientName: "", email: "", phone: "", address: "" })
-    toast.success("Client created successfully!")
-  }
+      const localStored = localStorage.getItem("loginedUser");
+      const parsed = localStored ? JSON.parse(localStored) : null;
+       let newErrors = { name: "", email: "", phone: "", address: "" }
+    let isValid = true
+  
+    // Name required
+    if (!newClient.clientName.trim()) {
+      newErrors.name = "Client name is required"
+      isValid = false
+    }
+  
+    // Phone validation (Indian 10-digit)
+    const phoneRegex = /^[6-9]\d{9}$/
+    if (!phoneRegex.test(newClient.phone)) {
+      newErrors.phone = "Enter a valid 10-digit Indian mobile number"
+      isValid = false
+    }
+  
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(newClient.email)) {
+      newErrors.email = "Enter a valid email address"
+      isValid = false
+    }
+  
+    // Address required
+    if (!newClient.address.trim()) {
+      newErrors.address = "Address is required"
+      isValid = false
+    }
+  
+    setErrors(newErrors)
+    if (!isValid) return // <-- Stop submit if invalid
+     
+    try{
+       const newClientData = await api.clients.create( {
+        name: newClient.clientName,
+        email: newClient.email,
+        phone: newClient.phone,
+        address: newClient.address,
+        status:"active",
+        userId: parsed.id
+      })
+      toast.success("Client Added", `${newClient.clientName} has been added to your clients`)
+      const loadedClients = await api.clients.getAll()
+      setClients(loadedClients)
+      const filteredClinets=loadedClients.filter((eachItem:any)=>eachItem.name===newClient.clientName);
+      setSelectedClientId(filteredClinets[0]._id);
+      setIsCreateClientOpen(false)
+      setNewClient({ clientName: "", email: "", phone: "", address: "" })
+    }catch(error){
+      toast.error("Error", error instanceof Error ? error.message : "Failed to save client")
+    }
+  
+    }
 
   const handleClearQuotation = () => {
     setSelectedQuotationId("")
@@ -393,6 +485,12 @@ export default function NewReceiptPage() {
     return `${num.toLocaleString()} Rupees Only`
   }
 
+  // Transform your backend array exactly as before
+const clientOptions = clients.map((c) => ({
+  value: String(c._id),
+  label: c.clientName || c.name || "Unnamed",
+}));
+console.log("bankDetails are:::",bankDetails)
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between">
@@ -454,11 +552,8 @@ export default function NewReceiptPage() {
               <div>
                 <Label htmlFor="client">Client Name *</Label>
                 <div className="flex gap-2">
-                  <SearchableSelect
-                    options={clients.map((c) => ({
-                      value: c.id,
-                      label: c.name,
-                    }))}
+                  <OwnSearchableSelect
+                    options={clientOptions}
                     value={selectedClientId}
                     onValueChange={setSelectedClientId}
                     placeholder="Search and select a client..."
@@ -486,6 +581,7 @@ export default function NewReceiptPage() {
                             onChange={(e) => setNewClient({ ...newClient, clientName: e.target.value })}
                             placeholder="Enter client name"
                           />
+                          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                         </div>
                         <div>
                           <Label htmlFor="newClientEmail">Email</Label>
@@ -496,6 +592,7 @@ export default function NewReceiptPage() {
                             onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
                             placeholder="client@example.com"
                           />
+                           {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                         </div>
                         <div>
                           <Label htmlFor="newClientPhone">Phone *</Label>
@@ -505,6 +602,7 @@ export default function NewReceiptPage() {
                             onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
                             placeholder="+1 (555) 123-4567"
                           />
+                           {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
                         </div>
                         <div>
                           <Label htmlFor="newClientAddress">Address</Label>
@@ -515,6 +613,7 @@ export default function NewReceiptPage() {
                             placeholder="Enter client address"
                             rows={2}
                           />
+                           {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
@@ -562,10 +661,10 @@ export default function NewReceiptPage() {
               <div>
                 <Label htmlFor="quotation">Quotation Number</Label>
                 <div className="flex gap-2">
-                  <SearchableSelect
+                  <OwnSearchableSelect
                     options={quotations.map((q) => ({
                       value: q.id,
-                      label: `${q.quotationNumber} - ${q.projectName} (Pending: ₹${(q.amountPending || 0).toLocaleString()})`,
+                      label: `${q.quotationNumber} `,
                     }))}
                     value={selectedQuotationId}
                     onValueChange={setSelectedQuotationId}
@@ -614,7 +713,7 @@ export default function NewReceiptPage() {
             </CardContent>
           </Card>
 
-          {!selectedQuotationId && (
+          {/* {!selectedQuotationId && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -766,7 +865,159 @@ export default function NewReceiptPage() {
                 </div>
               </CardContent>
             </Card>
+          )} */}
+          {!selectedQuotationId && (
+            <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Items/Services</CardTitle>
+                    <Button onClick={addItem} size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Item
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {items.map((item, index) => (
+                      <div key={item.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium">Item {index + 1}</h4>
+                          {items.length > 1 && (
+                            <Button
+                              onClick={() => removeItem(item.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <Label>Type *</Label>
+                            <Select
+                              value={item.type}
+                              onValueChange={(value: "product" | "service") => updateItem(item.id, "type", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="product">Product</SelectItem>
+                                <SelectItem value="service">Service</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label>Item Name *</Label>
+                            <OwnSearchableSelect
+                              options={masterItems
+                                .filter((masterItem) => masterItem.type === item.type)
+                                .map((masterItem) => ({
+                                  value: masterItem.name,
+                                  label: masterItem.name,
+                                }))}
+                              value={item.itemName}
+                              onValueChange={(value) => updateItem(item.id, "itemName", value)}
+                              placeholder="Search and select an item..."
+                              searchPlaceholder="Type to search items..."
+                              emptyText={`No ${item.type === "product" ? "products" : "services"} found.`}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Showing {item.type === "product" ? "products" : "services"} only
+                            </p>
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Textarea
+                              value={item.description}
+                              onChange={(e) => updateItem(item.id, "description", e.target.value)}
+                              placeholder="Item description"
+                              rows={2}
+                              className="bg-white"
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                           {item.type==="product" && (
+                             <div>
+                              <Label>Quantity *</Label>
+                              <Input
+                                type="number"
+                                value={item.quantity}
+                                onChange={(e) => updateItem(item.id, "quantity", Number.parseInt(e.target.value) || 0)}
+                                min="1"
+                                className="bg-white"
+                              />
+                            </div>
+                           )}
+                            <div>
+                              <Label>Price *</Label>
+                              <Input
+                                type="number"
+                                value={item.price}
+                                onChange={(e) => updateItem(item.id, "price", Number.parseFloat(e.target.value) || 0)}
+                                min="0"
+                                step="0.01"
+                                className="bg-white"
+                              />
+                            </div>
+                            <div>
+                              <Label>Discount *</Label>
+                              <Input
+                                type="number"
+                                value={item.discount}
+                                onChange={(e) =>
+                                  updateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
+                                }
+                                min="0"
+                                step="0.01"
+                                placeholder="0"
+                                className="bg-white"
+                              />
+                            </div>
+                          </div>
+                          
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <Label>CGST (%)</Label>
+                                <Input value={item.cgst} disabled className="bg-gray-100" />
+                              </div>
+                              <div>
+                                <Label>SGST (%)</Label>
+                                <Input value={item.sgst} disabled className="bg-gray-100" />
+                              </div>
+                              <div>
+                                <Label>IGST (%)</Label>
+                                <Input value={item.igst} disabled className="bg-gray-100" />
+                              </div>
+                            </div>
+                          
+
+                          <div className="pt-3 border-t space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Amount:</span>
+                              <span className="font-medium">₹{item.amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Tax Amount:</span>
+                              <span className="font-medium">₹{item.taxAmount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between font-semibold">
+                              <span>Total:</span>
+                              <span className="text-purple-600">₹{item.total.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
           )}
+
 
           <Card>
             <CardHeader>
@@ -845,18 +1096,20 @@ export default function NewReceiptPage() {
               {(paymentMethod === "Bank Transfer" || paymentMethod === "UPI") && (
                 <div>
                   <Label htmlFor="bankAccount">Bank Account *</Label>
-                  <Select value={bankAccount} onValueChange={setBankAccount} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select bank account" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bankAccounts.map((account) => (
-                        <SelectItem key={account} value={account}>
-                          {account}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Select value={selectedBank} onValueChange={setSelectedBank} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank account" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {bankDetails.map((account) => (
+                      <SelectItem key={account._id} value={account.accountNumber}>
+                        {`${account.bankName} - ${account.accountNumber}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 </div>
               )}
               {paymentMethod && paymentMethod !== "Cash" && (

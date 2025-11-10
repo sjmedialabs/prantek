@@ -54,6 +54,7 @@ const navigationItems: NavItem[] = [
       { name: "Payment Categories", href: "/dashboard/settings/payment-categories", permission: "tenant_settings" },
       { name: "Payment Methods", href: "/dashboard/settings/payment-methods", permission: "tenant_settings" },
       { name: "Receipt Categories", href: "/dashboard/settings/receipt-categories", permission: "tenant_settings" },
+      { name: "Recipient Types", href: "/dashboard/settings/recipient-types", permission: "tenant_settings" },
       { name: "Activity Log", href: "/dashboard/settings/activity-log", permission: "tenant_settings" },
     ],
   },

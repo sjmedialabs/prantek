@@ -33,7 +33,7 @@ export const models = {
   receiptCategories: new BaseModel<Category>(COLLECTIONS.RECEIPT_CATEGORIES),
   paymentCategories: new BaseModel<Category>(COLLECTIONS.PAYMENT_CATEGORIES),
   taxSettings: new BaseModel<TaxSetting>(COLLECTIONS.TAX_SETTINGS),
-  bankDetails: new BaseModel<BankDetail>(COLLECTIONS.BANK_DETAILS),
+  bankDetails: new BaseModel<BankDetail>(COLLECTIONS.BANK_ACCOUNTS),
   companySettings: new BaseModel<CompanySetting>(COLLECTIONS.COMPANY_SETTINGS),
   teamMembers: new BaseModel<TeamMember>(COLLECTIONS.TEAM_MEMBERS),
   memberTypes: new BaseModel<MemberType>(COLLECTIONS.MEMBER_TYPES),

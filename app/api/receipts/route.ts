@@ -36,21 +36,21 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       body.receiptNumber = await generateNextNumber("receipts", "RC", user.userId)
     }
 
-    const receipt = await mongoStore.create("receipts", { ...body, userId: user.id })
+    const receipt = await mongoStore.create("receipts", { ...body, userId: user.userId })
 
     await logActivity(user.userId, "create", "receipt", receipt._id?.toString(), { receiptNumber: body.receiptNumber })
 
     // Notify admins about new receipt
     try {
       // Get client info for notification
-      const client = await mongoStore.get("clients", body.clientId)
+      const client = await mongoStore.getById("clients", body.clientId)
       const clientName = client?.name || "Unknown Client"
       
       await notifyAdminsNewReceipt(
         receipt._id?.toString() || "",
         body.receiptNumber,
         clientName,
-        user.companyId
+        user.userId
       )
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)

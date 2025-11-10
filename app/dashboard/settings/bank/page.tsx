@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { Landmark, Save, Upload, Plus, Edit2, Power, PowerOff } from "lucide-react"
 import { api } from "@/lib/api-client"
 import {
@@ -39,6 +40,7 @@ interface BankAccount {
 
 export default function BankAccountPage() {
   const { hasPermission } = useUser()
+  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -63,7 +65,7 @@ export default function BankAccountPage() {
 
   const handleSave = async () => {
     if (!bankData.bankName || !bankData.accountNumber) {
-      alert("Please fill in required fields")
+      toast({ title: "Validation Error", description: "Please fill in required fields", variant: "destructive" })
       return
     }
 
@@ -89,7 +91,7 @@ export default function BankAccountPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     setIsDialogOpen(false)
-    alert("Account saved successfully!")
+    toast({ title: "Success", description: "Account saved successfully!" })
     window.location.reload()
     resetForm()
   }
@@ -128,7 +130,7 @@ export default function BankAccountPage() {
     if (updated) {
       setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
     }
-    alert("Account status updated successfully!")
+    toast({ title: "Success", description: "Account status updated successfully!" })
     window.location.reload()
   }
 

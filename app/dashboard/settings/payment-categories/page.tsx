@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { CreditCard, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -30,6 +31,7 @@ interface Category {
 
 export default function PaymentCategoriesPage() {
   const { hasPermission } = useUser()
+  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -60,7 +62,7 @@ export default function PaymentCategoriesPage() {
 
   const handleSave = async () => {
     if (!categoryName.trim()) {
-      alert("Please enter a category name")
+      toast({ title: "Validation Error", description: "Please enter a category name", variant: "destructive" })
       return
     }
     console.log("Editing category:", editingCategory?._id)
@@ -84,7 +86,7 @@ export default function PaymentCategoriesPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     setIsDialogOpen(false)
-          alert("Category Saved successfully")
+          toast({ title: "Success", description: "Category Saved successfully" })
       window.location.reload()
     resetForm()
   }
@@ -108,7 +110,7 @@ export default function PaymentCategoriesPage() {
     if (updated) {
       setCategories(categories.map((cat) => (cat.id === updated.id ? updated : cat)))
     }
-    alert("Category status updated successfully!")
+    toast({ title: "Success", description: "Category status updated successfully!" })
     window.location.reload()
   }
 
