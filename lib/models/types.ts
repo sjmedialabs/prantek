@@ -127,7 +127,9 @@ export interface Quotation extends BaseDocument {
 
   grandTotal: number           // replace subtotal + total → grandTotal
   status: string               // keep as is ("pending", "sent", etc.)
-  isActive?:string
+  isActive?:string,
+  paidAmount?:number,
+  balanceAmount?:number
 }
 
 

@@ -304,6 +304,8 @@ updatedItem.total = updatedItem.amount + updatedItem.taxAmount
         itemId:item.itemId
       })),
       grandTotal: quotationTotal,
+      paidAmount:0,
+      balanceAmount:quotationTotal,
       status: status === "sent" ? "pending" : "pending",
       isActive:"active"
     }

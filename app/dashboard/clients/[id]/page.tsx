@@ -57,14 +57,14 @@ export default function ClientDetailsPage() {
           const clientQuotations = allQuotations
             .filter((q) => q.clientId === params.id || q.clientName === loadedClient?.clientName)
             .map((q) => ({
-              id: q.id,
+              id: q._id,
               type: "quotation" as const,
               number: q.quotationNumber,
               date: q.date,
               items: q.items?.map((item: any) => item.itemName) || [],
               amount: q.grandTotal || 0,
               paidAmount: q.amountPaid || 0,
-              balanceAmount: q.amountPending || 0,
+              balanceAmount: q.balanceAmount || 0,
               status: q.status === "accepted" ? "completed" : q.amountPaid > 0 ? "partial" : "pending",
             }))
 
@@ -121,6 +121,8 @@ export default function ClientDetailsPage() {
       ],
     )
   }
+
+  console.log("transactions are nothing but quotations",transactions)
 
   return (
     <div className="space-y-6">
@@ -349,7 +351,7 @@ export default function ClientDetailsPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleContinuePayment(transaction)}
+                                    onClick={() => handleContinuePayment(transaction.id)}
                                   >
                                     <CreditCard className="h-4 w-4 mr-2" />
                                     Pay

@@ -4,7 +4,6 @@ import type React from "react"
 // import { toast } from "sonner"
 import { toast } from "@/lib/toast"
 import { api } from "@/lib/api-client"
-import { dataStore } from "@/lib/data-store"
 
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
@@ -141,10 +140,7 @@ export default function NewReceiptPage() {
   useEffect(() => {
     const filterQuotations = async () => {
       if (selectedClientId && !selectedQuotationId) {
-       const clientQuotations = allQuotations.filter(
-          (q: any) => q.clientId === selectedClientId && q.isActive === "active"
-        );
-
+        const clientQuotations = allQuotations.filter((eachItem:any)=>eachItem.clientId===selectedClientId)
         console.log("[v0] Filtered quotations for client:", selectedClientId, clientQuotations)
         setQuotations(clientQuotations)
       } else if (!selectedClientId) {
@@ -153,7 +149,7 @@ export default function NewReceiptPage() {
     }
     filterQuotations()
   }, [selectedClientId, selectedQuotationId])
-console.log("from quotations:::",allQuotations)
+
   useEffect(() => {
     if (!selectedQuotationId) {
       const total = items.reduce((sum, item) => sum + item.total, 0)
@@ -360,7 +356,7 @@ console.log("from quotations:::",allQuotations)
     try {
       console.log("[v0] Calling createReceiptWithQuotation...")
 
-      const receipt = await api.receipts.create({
+      const receipt = await api.clients.create({
         clientId: selectedClientId,
         clientName,
         clientEmail,
@@ -664,7 +660,7 @@ console.log("bankDetails are:::",bankDetails)
                   <OwnSearchableSelect
                     options={quotations.map((q) => ({
                       value: q.id,
-                      label: `${q.quotationNumber} `,
+                      label: `${q.quotationNumber} - ${q.projectName} (Pending: ₹${(q.amountPending || 0).toLocaleString()})`,
                     }))}
                     value={selectedQuotationId}
                     onValueChange={setSelectedQuotationId}
