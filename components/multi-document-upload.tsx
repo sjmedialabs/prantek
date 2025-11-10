@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { Plus, X, FileText } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface DocumentItem {
   id: string
@@ -28,13 +29,14 @@ export function MultiDocumentUpload({
   onChange,
   placeholder = "e.g., Bachelor's Degree, Company Name - Offer Letter",
 }: MultiDocumentUploadProps) {
+  const { toast } = useToast()
   const [newDocLabel, setNewDocLabel] = useState("")
   const [newDocUrl, setNewDocUrl] = useState("")
   const [isAdding, setIsAdding] = useState(false)
 
   const handleAddDocument = () => {
     if (!newDocLabel.trim() || !newDocUrl.trim()) {
-      alert("Please provide both document label and file")
+      toast({ title: "Validation Error", description: "Please provide both document label and file", variant: "destructive" })
       return
     }
 

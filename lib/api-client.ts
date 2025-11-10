@@ -52,7 +52,7 @@ export const api = {
   clients: {
     getAll: async () => {
       const data = await fetchAPI("/api/clients")
-      return data.data || []
+      return (data.data || []).map((item: any) => ({ ...item, id: item._id || item.id }))
     },
     getById: async (id: string) => {
       const data = await fetchAPI(`/api/clients/${id}`)
@@ -64,21 +64,22 @@ export const api = {
         method: "POST",
         body: JSON.stringify(clientData),
       })
-      return data.client
+      const client = data.data
+      return client ? { ...client, id: client._id || client.id } : client
     },
     update: async (id: string, clientData: Partial<Client>) => {
       const data = await fetchAPI(`/api/clients/${id}`, {
         method: "PUT",
         body: JSON.stringify(clientData),
       })
-      return data.client
+      return data.data
     },
     updateStatus:async(id: string, status: "active" | "inactive")=> {
       const data=await fetchAPI(`/api/clients/${id}`, {
       method: "PUT",
       body: JSON.stringify({ status })
      })
-     return data.client
+     return data.data
     },
 
     delete: async (id: string) => {
@@ -92,25 +93,26 @@ export const api = {
   vendors: {
     getAll: async () => {
       const data = await fetchAPI("/api/vendors")
-      return data.vendors || []
+      return (data.data || []).map((item: any) => ({ ...item, id: item._id || item.id }))
     },
     getById: async (id: string) => {
       const data = await fetchAPI(`/api/vendors/${id}`)
-      return data.vendor
+      return data.data
     },
     create: async (vendorData: Omit<Vendor, "id" | "createdAt" | "updatedAt">) => {
       const data = await fetchAPI("/api/vendors", {
         method: "POST",
         body: JSON.stringify(vendorData),
       })
-      return data.vendor
+      const vendor = data.data
+      return vendor ? { ...vendor, id: vendor._id || vendor.id } : vendor
     },
     update: async (id: string, vendorData: Partial<Vendor>) => {
       const data = await fetchAPI(`/api/vendors/${id}`, {
         method: "PUT",
         body: JSON.stringify(vendorData),
       })
-      return data.vendor
+      return data.data
     },
     delete: async (id: string) => {
       await fetchAPI(`/api/vendors/${id}`, {
@@ -242,7 +244,7 @@ export const api = {
     payments: {
       getAll: async () => {
         const data = await fetchAPI("/api/payments")
-        return data.payments || []
+        return data.data || data.payments || []
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/payments/${id}`)
@@ -588,6 +590,32 @@ export const api = {
         })
       },
     },
+    recipientTypes: {
+      getAll: async () => {
+        const data = await fetchAPI("/api/recipient-types")
+        return data || data.data || data.recipientTypes || []
+      },
+      create: async (typeData: any) => {
+        const data = await fetchAPI("/api/recipient-types", {
+          method: "POST",
+          body: JSON.stringify(typeData),
+        })
+        return data.data || data.recipientType
+      },
+      update: async (id: string, typeData: any) => {
+        const data = await fetchAPI(`/api/recipient-types/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(typeData),
+        })
+        return data.Data || data.data || data.recipientType
+      },
+      delete: async (id: string) => {
+        await fetchAPI(`/api/recipient-types/${id}`, {
+          method: "DELETE",
+        })
+      },
+    },
+
 
     // Employees
     employees: {

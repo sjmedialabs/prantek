@@ -23,12 +23,14 @@ import {
   AreaChart,
 } from "recharts"
 import { TrendingUp, TrendingDown, DollarSign, Users, Package, Activity, Download, AlertCircle } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import { downloadCSV, downloadJSON, formatCurrencyForExport } from "@/lib/export-utils"
 import { generatePDF } from "@/lib/pdf-utils"
 import { api } from "@/lib/api-client"
 import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/data-store"
 
 export default function ReportsPage() {
+  const { toast } = useToast()
   const { user, tenant, hasPermission } = useUser()
   const [dateRange, setDateRange] = useState("6months")
   const [reportType, setReportType] = useState("overview")
@@ -338,7 +340,7 @@ export default function ReportsPage() {
       await generatePDF("reports-content", `report-${dateRange}-${new Date().toISOString().split("T")[0]}.pdf`)
     } catch (error) {
       console.error("Failed to generate PDF:", error)
-      alert("Failed to generate PDF. Please try again.")
+      toast({ title: "Error", description: "Failed to generate PDF. Please try again.", variant: "destructive" })
     }
   }
 

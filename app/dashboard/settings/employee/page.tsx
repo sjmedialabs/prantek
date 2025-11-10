@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { Users, Save, Plus, Edit, X } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -55,6 +56,7 @@ interface Employee {
 
 export default function EmployeePage() {
   const { hasPermission } = useUser()
+  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -119,56 +121,56 @@ export default function EmployeePage() {
   const handleSave = async () => {
     console.log("Saving employee:", formData)
     if (!formData.employeeName.trim()) {
-      alert("Please enter employee name")
+      toast({ title: "Validation Error", description: "Please enter employee name", variant: "destructive" })
       return
     }
     if (!formData.surname.trim()) {
-      alert("Please enter surname")
+      toast({ title: "Validation Error", description: "Please enter surname", variant: "destructive" })
       return
     }
     if (!formData.photo) {
-      alert("Please upload employee photo")
+      toast({ title: "Validation Error", description: "Please upload employee photo", variant: "destructive" })
       return
     }
     if (!formData.memberType) {
-      alert("Please select employment type")
+      toast({ title: "Validation Error", description: "Please select employment type", variant: "destructive" })
       return
     }
     if (!formData.role) {
-      alert("Please select role")
+      toast({ title: "Validation Error", description: "Please select role", variant: "destructive" })
       return
     }
     if (!formData.mobileNo.trim()) {
-      alert("Please enter mobile number")
+      toast({ title: "Validation Error", description: "Please enter mobile number", variant: "destructive" })
       return
     }
     if (!formData.email.trim()) {
-      alert("Please enter email address")
+      toast({ title: "Validation Error", description: "Please enter email address", variant: "destructive" })
       return
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
-      alert("Please enter a valid email address")
+      toast({ title: "Validation Error", description: "Please enter a valid email address", variant: "destructive" })
       return
     }
     if (!formData.address.trim()) {
-      alert("Please enter address")
+      toast({ title: "Validation Error", description: "Please enter address", variant: "destructive" })
       return
     }
     if (!formData.aadharNo.trim()) {
-      alert("Please enter Aadhar number")
+      toast({ title: "Validation Error", description: "Please enter Aadhar number", variant: "destructive" })
       return
     }
     if (!validateAadhar(formData.aadharNo)) {
-      alert("Please enter a valid 12-digit Aadhar number")
+      toast({ title: "Validation Error", description: "Please enter a valid 12-digit Aadhar number", variant: "destructive" })
       return
     }
     if (!formData.aadharUpload) {
-      alert("Please upload Aadhar document")
+      toast({ title: "Validation Error", description: "Please upload Aadhar document", variant: "destructive" })
       return
     }
     if (!formData.joiningDate) {
-      alert("Please select joining date")
+      toast({ title: "Validation Error", description: "Please select joining date", variant: "destructive" })
       return
     }
     console.log("Saving employee as editing employee:", editingEmployee)
@@ -190,7 +192,7 @@ export default function EmployeePage() {
     setEditingEmployee(null)
     resetForm()
     setSaved(true)
-    alert("Employee saved successfully!")
+    toast({ title: "Success", description: "Employee saved successfully!" })
     setTimeout(() => setSaved(false), 3000)
     window.location.reload()
   }
@@ -242,10 +244,10 @@ export default function EmployeePage() {
         emp.id === id ? { ...emp, isActive } : emp
       )
     )
-    alert("Status updated successfully!")   // ✅ ADDED
+    toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
     window.location.reload()
   } catch (err: any) {
-    alert("Failed to update status: " + (err.message || "Something went wrong"))   // ✅ ADDED
+    toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
   }
   }
 

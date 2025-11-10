@@ -21,6 +21,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Search, Edit, Trash2, Plus, Shield, Users } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client" // Fixed import path from dataStore to data-store
 
 
@@ -84,6 +85,7 @@ const availablePermissions: Permission[] = [
 
 export default function RolesPage() {
   const { hasPermission } = useUser()
+  const { toast } = useToast()
   const [roles, setRoles] = useState<Role[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false)
@@ -130,7 +132,7 @@ const filteredRoles = (roles || [])
 const handleAddRole = async () => {
   const error = validateRole(newRole)
   if (error) {
-    alert(error)
+    toast({ title: "Notification", description: error, variant: "default" })
     return
   }
 
@@ -149,10 +151,10 @@ const handleAddRole = async () => {
     setNewRole({ name: "", description: "", permissions: [] })
     setIsAddRoleOpen(false)
 
-    alert("Role created successfully!") // ✅
+    toast({ title: "Success", description: "Role created successfully!" }) // ✅
 
   } catch (err: any) {
-    alert("Failed to create role: " + (err.message || "Something went wrong"))
+    toast({ title: "Notification", description: "Failed to create role: " + (err.message || "Something went wrong"), variant: "default" })
   }
 }
 
@@ -173,7 +175,7 @@ const handleUpdateRole = async () => {
 
   const error = validateRole(newRole)
   if (error) {
-    alert(error)
+    toast({ title: "Notification", description: error, variant: "default" })
     return
   }
 
@@ -184,14 +186,14 @@ const handleUpdateRole = async () => {
       prev.map((r) => (r._id === editingRole._id ? updated : r))
     )
 
-    alert("Role updated successfully!") // ✅
+    toast({ title: "Success", description: "Role updated successfully!" }) // ✅
 
     setEditingRole(null)
     setNewRole({ name: "", description: "", permissions: [] })
     setIsAddRoleOpen(false)
 
   } catch (err: any) {
-    alert("Failed to update role: " + (err.message || "Something went wrong"))
+    toast({ title: "Notification", description: "Failed to update role: " + (err.message || "Something went wrong"), variant: "default" })
   }
 }
 
@@ -206,10 +208,10 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
         role.id === id ? { ...role, isActive } : role
       )
     )
-    alert("Role status updated successfully!")   // ✅ ADDED
+    toast({ title: "Success", description: "Role status updated successfully!" })   // ✅ ADDED
 
   } catch (err: any) {
-    alert("Failed to update status: " + (err.message || "Something went wrong"))   // ✅ ADDED
+    toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
   }
 }
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { Building, Save } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -14,6 +15,7 @@ import { CompanySetting } from "@/lib/models/types"
 
 export default function CompanyDetailsPage() {
 const { user, hasPermission } = useUser()
+  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
 
   // ✅ ADDED error message state
@@ -92,7 +94,7 @@ const handleSave = async () => {
   console.log("button clicked")
 
   if (!validateFields()) {
-    alert("Please fix the fill the valid details.\n" + errors.join("\n"))
+    toast({ title: "Validation Error", description: errors.join(", "), variant: "destructive" })
     return
   }
 
@@ -118,7 +120,7 @@ const handleSave = async () => {
       })
 
       console.log("Company updated:", response)
-      alert("Company details updated successfully!")  // ✅ ADDED
+      toast({ title: "Success", description: "Company details updated successfully!" })  // ✅ ADDED
 
     } else {
       console.log("userid", user?.id)
@@ -139,7 +141,7 @@ const handleSave = async () => {
       })
 
       console.log("Company created:", response)
-      alert("Company details saved successfully!")   // ✅ ADDED
+      toast({ title: "Success", description: "Company details saved successfully!" })   // ✅ ADDED
     }
 
     // ✅ Update UI state
@@ -153,7 +155,7 @@ const handleSave = async () => {
 
   } catch (error) {
     console.error("Error saving company:", error)
-    alert("Something went wrong while saving company details.")
+    toast({ title: "Error", description: "Something went wrong while saving company details.", variant: "destructive" })
   }
 }
 

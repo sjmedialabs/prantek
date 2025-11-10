@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import { FileText, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
 import { api } from "@/lib/api-client"
 import {
@@ -27,6 +28,7 @@ import { tokenStorage } from "@/lib/token-storage"
 
 export default function TaxDetailsPage() {
   const { hasPermission } = useUser()
+  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [taxSettings, setTaxSettings] = useState<TaxSetting>({
     tan: "",
@@ -70,12 +72,12 @@ const handleSaveSettings = async () => {
 
   // ✅ Validation
   if (!tanRegex.test(tan)) {
-    alert("Invalid TAN format! Example: ABCD12345E")
+    toast({ title: "Invalid TAN Format", description: "Example: ABCD12345E", variant: "destructive" })
     return
   }
 
   if (!gstRegex.test(gst)) {
-    alert("Invalid GST format! Example: 22ABCDE1234F1Z5")
+    toast({ title: "Invalid GST Format", description: "Example: 22ABCDE1234F1Z5", variant: "destructive" })
     return
   }
 
@@ -124,7 +126,7 @@ const handleSaveSettings = async () => {
     setTimeout(() => setSaved(false), 3000)
   } catch (error) {
     console.error("Failed to save tax settings", error)
-    alert("Failed to save tax settings")
+    toast({ title: "Error", description: "Failed to save tax settings", variant: "destructive" })
   }
 }
   const handleTanDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,7 +153,7 @@ const handleSaveSettings = async () => {
 
   const handleSaveRate = async () => {
     if (!rateData.rate || !rateData.description) {
-      alert("Please fill in all fields")
+      toast({ title: "Validation Error", description: "Please fill in all fields", variant: "destructive" })
       return
     }
     console.log("Rate data:", rateData)
@@ -161,7 +163,7 @@ const handleSaveSettings = async () => {
       if (updated) {
         setTaxRates(taxRates.map((rate) => (rate.id === updated.id ? updated : rate)))
       }
-      alert("Rate updated successfully!")
+      toast({ title: "Success", description: "Rate updated successfully!" })
       window.location.reload()
     } else {
       const newRate = await api.taxRates.create({
@@ -170,7 +172,7 @@ const handleSaveSettings = async () => {
         isActive: true,
       })
       setTaxRates([...taxRates, newRate])
-      alert("Rate created successfully!")
+      toast({ title: "Success", description: "Rate created successfully!" })
       window.location.reload()
     }
 
@@ -205,7 +207,7 @@ const handleSaveSettings = async () => {
     if (updated) {
       setTaxRates(taxRates.map((r) => (r.id === updated.id ? updated : r)))
     }
-    alert("Rate status toggled successfully!")
+    toast({ title: "Success", description: "Rate status toggled successfully!" })
     window.location.reload()
   }
 
