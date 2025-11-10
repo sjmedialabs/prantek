@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Download, Trash2 } from "lucide-react"
 import { toast } from "@/lib/toast"
+import api from "@/lib/api-client"
 
 type ActivityLog = {
   _id: string
@@ -30,37 +31,21 @@ export default function ActivityLogPage() {
     loadLogs()
   }, [])
 
-  useEffect(() => {
-    if (searchTerm) {
-      const filtered = logs.filter(
-        (log) =>
-          log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          log.description.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
-      setFilteredLogs(filtered)
-    } else {
-      setFilteredLogs(logs)
-    }
-  }, [searchTerm, logs])
 
-  const loadLogs = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch("/api/activity-logs")
-      if (!response.ok) throw new Error("Failed to fetch activity logs")
-      const data = await response.json()
-      setLogs(data.logs || [])
-      setFilteredLogs(data.logs || [])
-    } catch (error) {
-      console.error("Error loading activity logs:", error)
-      toast.error("Failed to load activity logs")
-      setLogs([])
-      setFilteredLogs([])
-    } finally {
-      setLoading(false)
-    }
+
+const loadLogs = async () => {
+  setLoading(true)
+  try {
+    const logs = await api.activityLogs.getAll()
+    console.log("Loaded activity logs:", logs.data)
+    setLogs(logs.data)
+    setFilteredLogs(logs)
+  } catch {
+    toast.error("Failed to load activity logs")
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleClearOldLogs = async () => {
     if (confirm("Are you sure you want to clear activity logs older than 30 days?")) {
@@ -118,6 +103,20 @@ export default function ActivityLogPage() {
 
     return <Badge className={colorClass}>{action.replace(/_/g, " ")}</Badge>
   }
+
+    useEffect(() => {
+    if (searchTerm) {
+      const filtered = logs.filter(
+        (log) =>
+          log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      setFilteredLogs(filtered)
+    } else {
+      setFilteredLogs(logs)
+    }
+  }, [searchTerm, logs])
 
   if (loading) {
     return (
@@ -178,15 +177,15 @@ export default function ActivityLogPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.length === 0 ? (
+                {filteredLogs.length == 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                       No activity logs found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredLogs.map((log) => (
-                    <TableRow key={log._id}>
+                  logs.map((log) => (
+                    <TableRow key={log?._id}>
                       <TableCell className="font-mono text-sm">{new Date(log.timestamp).toLocaleString()}</TableCell>
                       <TableCell>{log.userName}</TableCell>
                       <TableCell>

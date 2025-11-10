@@ -4,35 +4,41 @@ import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 
-export const PUT = withAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
+// ✅ helper
+function getIdFromRequest(req: NextRequest): string {
+  const segments = req.nextUrl.pathname.split("/")
+  return segments[segments.length - 1]
+}
+
+export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const data = await req.json()
-
-  const result = await db
+  const id = getIdFromRequest(req)
+  const Data = await db
     .collection(Collections.PAYMENT_CATEGORIES)
     .findOneAndUpdate(
-      { _id: new ObjectId(params.id), userId: user.userId },
+      { _id: new ObjectId(id), userId: String(user.id) },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
 
-  if (!result) {
+  if (!Data) {
     return NextResponse.json({ error: "Payment category not found" }, { status: 404 })
   }
 
-  return NextResponse.json(result)
+  return NextResponse.json(Data)
 })
 
-export const DELETE = withAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
-  const db = await connectDB()
+// export const DELETE = withAuth(async (req: NextRequest, user: any) => {
+//   const db = await connectDB()
 
-  const result = await db
-    .collection(Collections.PAYMENT_CATEGORIES)
-    .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
+//   const result = await db
+//     .collection(Collections.PAYMENT_CATEGORIES)
+//     .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
 
-  if (result.deletedCount === 0) {
-    return NextResponse.json({ error: "Payment category not found" }, { status: 404 })
-  }
+//   if (result.deletedCount === 0) {
+//     return NextResponse.json({ error: "Payment category not found" }, { status: 404 })
+//   }
 
-  return NextResponse.json({ success: true })
-})
+//   return NextResponse.json({ success: true })
+// })

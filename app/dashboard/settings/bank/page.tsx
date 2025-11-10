@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge"
 
 interface BankAccount {
   id: string
+  _id: string
   bankName: string
   branchName: string
   accountName: string
@@ -68,12 +69,12 @@ export default function BankAccountPage() {
 
     if (editingAccount) {
       // Update existing account
-      const updated = await api.bankAccounts.update( editingAccount.id, {
+      const updated = await api.bankAccounts.update( editingAccount._id, {
         ...bankData,
         upiScanner: bankData.upiScanner ? URL.createObjectURL(bankData.upiScanner) : editingAccount.upiScanner,
       })
       if (updated) {
-        setBankAccounts(bankAccounts.map((acc) => (acc.id === updated.id ? updated : acc)))
+        setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
       }
     } else {
       // Create new account
@@ -88,6 +89,8 @@ export default function BankAccountPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     setIsDialogOpen(false)
+    alert("Account saved successfully!")
+    window.location.reload()
     resetForm()
   }
 
@@ -119,12 +122,14 @@ export default function BankAccountPage() {
   }
 
   const handleToggleStatus = async (account: BankAccount) => {
-    const updated = await api.bankAccounts.update( account.id, {
+    const updated = await api.bankAccounts.update( account._id, {
       isActive: !account.isActive,
     })
     if (updated) {
-      setBankAccounts(bankAccounts.map((acc) => (acc.id === updated.id ? updated : acc)))
+      setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
     }
+    alert("Account status updated successfully!")
+    window.location.reload()
   }
 
   const handleScannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,14 +198,14 @@ export default function BankAccountPage() {
               </TableHeader>
               <TableBody>
                 {bankAccounts.map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.bankName}</TableCell>
-                    <TableCell>{account.accountNumber}</TableCell>
-                    <TableCell>{account.ifscCode}</TableCell>
-                    <TableCell>{account.accountName}</TableCell>
+                  <TableRow key={account?.id}>
+                    <TableCell className="font-medium">{account?.bankName}</TableCell>
+                    <TableCell>{account?.accountNumber}</TableCell>
+                    <TableCell>{account?.ifscCode}</TableCell>
+                    <TableCell>{account?.accountName}</TableCell>
                     <TableCell>
-                      <Badge variant={account.isActive ? "default" : "secondary"}>
-                        {account.isActive ? "Active" : "Inactive"}
+                      <Badge variant={account?.isActive ? "default" : "secondary"}>
+                        {account?.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -209,7 +214,7 @@ export default function BankAccountPage() {
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleToggleStatus(account)}>
-                          {account.isActive ? (
+                          {account?.isActive ? (
                             <PowerOff className="h-4 w-4 text-red-500" />
                           ) : (
                             <Power className="h-4 w-4 text-green-500" />
@@ -241,7 +246,7 @@ export default function BankAccountPage() {
                   <Label htmlFor="bankName">Bank Name *</Label>
                   <Input
                     id="bankName"
-                    value={bankData.bankName}
+                    value={bankData?.bankName}
                     onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
                     placeholder="Enter bank name"
                   />
@@ -251,7 +256,7 @@ export default function BankAccountPage() {
                   <Label htmlFor="branchName">Branch Name</Label>
                   <Input
                     id="branchName"
-                    value={bankData.branchName}
+                    value={bankData?.branchName}
                     onChange={(e) => setBankData({ ...bankData, branchName: e.target.value })}
                     placeholder="Enter branch name"
                   />
@@ -262,7 +267,7 @@ export default function BankAccountPage() {
                 <Label htmlFor="accountName">Bank Account Name</Label>
                 <Input
                   id="accountName"
-                  value={bankData.accountName}
+                  value={bankData?.accountName}
                   onChange={(e) => setBankData({ ...bankData, accountName: e.target.value })}
                   placeholder="Account holder name"
                 />
@@ -273,7 +278,7 @@ export default function BankAccountPage() {
                   <Label htmlFor="accountNumber">Bank Account Number *</Label>
                   <Input
                     id="accountNumber"
-                    value={bankData.accountNumber}
+                    value={bankData?.accountNumber}
                     onChange={(e) => setBankData({ ...bankData, accountNumber: e.target.value })}
                     placeholder="Enter account number"
                   />
@@ -283,7 +288,7 @@ export default function BankAccountPage() {
                   <Label htmlFor="ifscCode">IFSC Code</Label>
                   <Input
                     id="ifscCode"
-                    value={bankData.ifscCode}
+                    value={bankData?.ifscCode}
                     onChange={(e) => setBankData({ ...bankData, ifscCode: e.target.value })}
                     placeholder="Enter IFSC code"
                   />
@@ -294,7 +299,7 @@ export default function BankAccountPage() {
                 <Label htmlFor="upiId">UPI ID</Label>
                 <Input
                   id="upiId"
-                  value={bankData.upiId}
+                  value={bankData?.upiId}
                   onChange={(e) => setBankData({ ...bankData, upiId: e.target.value })}
                   placeholder="yourname@upi"
                 />
@@ -304,15 +309,15 @@ export default function BankAccountPage() {
                 <Label htmlFor="upiScanner">UPI Scanner (QR Code)</Label>
                 <div className="flex items-center space-x-4">
                   <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                    {bankData.upiScanner ? (
+                    {bankData?.upiScanner ? (
                       <img
-                        src={URL.createObjectURL(bankData.upiScanner) || "/placeholder.svg"}
+                        src={URL.createObjectURL(bankData?.upiScanner) || "/placeholder.svg"}
                         alt="QR Code"
                         className="w-full h-full object-cover rounded-lg"
                       />
                     ) : editingAccount?.upiScanner ? (
                       <img
-                        src={editingAccount.upiScanner || "/placeholder.svg"}
+                        src={editingAccount?.upiScanner || "/placeholder.svg"}
                         alt="QR Code"
                         className="w-full h-full object-cover rounded-lg"
                       />
