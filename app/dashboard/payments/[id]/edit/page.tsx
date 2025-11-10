@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Save } from "lucide-react"
 import { api } from "@/lib/api-client"
-import type { Payment } from "@/lib/data-store"
+import type { Payment } from "@/lib/models/types"
 import { toast } from "react-toastify"
 
 export default function EditPaymentPage() {
@@ -25,41 +25,46 @@ export default function EditPaymentPage() {
 
   const [formData, setFormData] = useState({
     referenceNumber: "",
-    note: "",
+    description: "",
   })
 
-  useEffect(() => {
-    loadPayment()
-  }, [paymentId])
+useEffect(() => {
+  loadPayment()
+}, [paymentId])
 
-  const loadPayment = () => {
-    try {
-      const data = api.payments.getById(paymentId)
-      if (data) {
-        setPayment(data)
-        setFormData({
-          referenceNumber: data.referenceNumber || "",
-          note: data.note || "",
-        })
-      }
-    } catch (error) {
-      console.error("Error loading payment:", error)
-      toast.error("Failed to load payment")
-    } finally {
-      setLoading(false)
+const loadPayment = async () => {
+  setLoading(true)
+  try {
+    const data = await api.payments.getById(paymentId)
+
+    if (data) {
+      setPayment(data.payment)
+      setFormData({
+        referenceNumber: data.payment.referenceNumber || "",
+        description: data.payment.description || "",
+      })
     }
+  } catch (error) {
+    console.error("Error loading payment:", error)
+    toast.error("Failed to load payment")
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
 
     try {
-      const updated = api.payments.update(paymentId, formData)
-      if (updated) {
+      const updated = await api.payments.update(paymentId, formData)
+      if (updated.status === 200) {
+        alert("Payment updated successfully!")
         toast.success("Payment updated successfully")
         router.push(`/dashboard/payments/${paymentId}`)
       }
+      
     } catch (error) {
       console.error("Error updating payment:", error)
       toast.error("Failed to update payment")
@@ -130,11 +135,11 @@ export default function EditPaymentPage() {
             </div>
 
             <div>
-              <Label htmlFor="note">Note</Label>
+              <Label htmlFor="description">description</Label>
               <Textarea
-                id="note"
-                value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 placeholder="Add any additional notes..."
               />

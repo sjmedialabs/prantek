@@ -159,7 +159,7 @@ export function PaymentPrint({ payment, companyDetails }: PaymentPrintProps) {
       <div className="bg-gray-50 p-6 rounded-lg mb-8">
         <div className="flex justify-between items-center mb-4">
           <span className="text-lg font-semibold text-gray-700">Payment Amount:</span>
-          <span className="text-3xl font-bold text-red-600">₹{payment.amount.toFixed(2)}</span>
+          <span className="text-3xl font-bold text-red-600">₹{payment?.amount?.toFixed(2)}</span>
         </div>
         <div className="border-t border-gray-300 pt-4">
           <p className="text-sm text-gray-700">

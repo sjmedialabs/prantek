@@ -129,17 +129,20 @@ export interface Quotation extends BaseDocument {
 }
 
 export interface Payment extends BaseDocument {
+  recipientName: string
   userId: string
   recipientId: string
-  recipientType: "client" | "vendor" | "team"
+  recipientType: string
   paymentNumber: string
-  date: Date
+  date: string
   amount: number
   paymentMethod: string
+  bankAccount?: string
+  createdBy: string
   category?: string
   status: "pending" | "completed" | "failed" | "cancelled"
-  notes?: string
-  reference?: string
+  description?: string
+  referenceNumber?: string
 }
 
 export interface SubscriptionPlan extends BaseDocument {

@@ -231,13 +231,13 @@ export const api = {
     payments: {
       getAll: async () => {
         const data = await fetchAPI("/api/payments")
-        return data.payments || []
+        return data || data.data || data.payments || []
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/payments/${id}`)
-        return data.payment
+        return data || data.data || data.payment
       },
-      create: async (paymentData: Omit<Payment, "id" | "createdAt" | "updatedAt" | "paymentNumber">) => {
+      create: async (paymentData: Omit<Payment, "id" | "createdAt" | "updatedAt">) => {
         const data = await fetchAPI("/api/payments", {
           method: "POST",
           body: JSON.stringify(paymentData),

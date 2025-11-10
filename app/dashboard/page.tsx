@@ -9,7 +9,8 @@ import { api } from "@/lib/api-client"
 import { formatCurrency } from "@/lib/currency-utils"
 
 export default function DashboardPage() {
-  const { user, tenant } = useUser()
+  const { user } = useUser()
+
   const [stats, setStats] = useState({
     cashInHand: 0,
     receivables: 0,
@@ -23,6 +24,7 @@ export default function DashboardPage() {
     pendingInvoices: 0,
     billsDue: 0,
   })
+
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -30,82 +32,206 @@ export default function DashboardPage() {
     loadDashboardData()
   }, [])
 
+  /** ✅ Rewritten — fetches real DB data using API */
   const loadDashboardData = async () => {
     try {
-          const quotations = await api.quotations.getAll()
-          const receipts = await api.receipts.getAll()
-          const payments = await api.payments.getAll()
-          const users = await api.users.getAll()
-          const items = await api.items.getAll()
+      const [
+        quotations,
+        receipts,
+        payments,
+        users,
+        items
+      ] = await Promise.all([
+        api.quotations.getAll(),
+        api.receipts.getAll(),
+        api.payments.getAll(),
+        api.users.getAll(),
+        api.items.getAll(),
+      ])
 
-    // Calculate cash in hand (total receipts - total payments)
-    const totalReceipts = receipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0)
-    const totalPayments = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
-    const cashInHand = totalReceipts - totalPayments
-
-    // Calculate receivables (pending quotations)
-    const pendingQuotations = quotations.filter((q) => q.status === "pending" || q.status === "sent")
-    const receivables = pendingQuotations.reduce((sum, q) => sum + (q.total || 0), 0)
-
-    // Calculate payables (recent payments)
-    const recentPayments = payments.filter((p) => {
-      const paymentDate = new Date(p.date)
+      // ✅ cash in hand
+      const totalReceipts = receipts.reduce(
+        (sum: number, r: any) => sum + (r.amountPaid || 0),
+        0
+      )
+      const totalPayments = payments.data.reduce(
+        (sum: number, p: any) => sum + (p.amount || 0),
+        0
+      )
+      const cashInHand = totalReceipts - totalPayments
+      // ✅ receivables = pending quotations
+      const pendingQuotations = quotations.filter(
+        (q: any) => q.status === "pending" || q.status === "sent")
+      const receivables = pendingQuotations.reduce(
+        (sum: number, q: any) => sum + (q.grandTotal || 0),
+        0
+      )
+      // ✅ payables (last 7 days)
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
-      return paymentDate >= weekAgo
-    })
-    const payables = recentPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+      const recentPayments = payments.data.filter((p: any) => {
+        const d = new Date(p.date)
+        return d >= weekAgo
+      })
+      const payables = recentPayments.reduce(
+        (sum: number, p: any) => sum + (p.amount || 0),
+        0
+      )
+      // ✅ monthly revenue
+      const now = new Date()
+      const monthlyReceipts = receipts.filter((r: any) => {
+        const date = new Date(r.date)
+        return (
+          date.getMonth() === now.getMonth() &&
+          date.getFullYear() === now.getFullYear()
+        )
+      })
+      console.log("Monthly receipts:", monthlyReceipts)
+      const monthlyRevenue = monthlyReceipts.reduce(
+        (sum: number, r: any) => sum + (r.amountPaid || 0),
+        0
+      )
+      console.log("Monthly revenue:", monthlyRevenue)
 
-    // Calculate monthly revenue (receipts from this month)
-    const thisMonth = new Date().getMonth()
-    const thisYear = new Date().getFullYear()
-    const monthlyReceipts = receipts.filter((r) => {
-      const receiptDate = new Date(r.date)
-      return receiptDate.getMonth() === thisMonth && receiptDate.getFullYear() === thisYear
-    })
-    const monthlyRevenue = monthlyReceipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0)
+      // ✅ Calculate last month revenue
+const lastMonth = new Date()
+lastMonth.setMonth(lastMonth.getMonth() - 1)
 
-    // Get recent transactions (last 3)
-    const allTransactions = [
-      ...receipts.map((r) => ({
-        type: "Income",
-        amount: r.amountPaid || 0,
-        description: `Receipt #${r.receiptNumber} - ${r.clientName}`,
-        time: new Date(r.date).toLocaleDateString(),
-        date: new Date(r.date),
-      })),
-      ...payments.map((p) => ({
-        type: "Expense",
-        amount: p.amount || 0,
-        description: `${p.description || p.category}`,
-        time: new Date(p.date).toLocaleDateString(),
-        date: new Date(p.date),
-      })),
-    ]
-      .sort((a, b) => b.date.getTime() - a.date.getTime())
-      .slice(0, 3)
+const lastMonthReceipts = receipts.filter((r: any) => {
+  const date = new Date(r.date)
+  return (
+    date.getMonth() === lastMonth.getMonth() &&
+    date.getFullYear() === lastMonth.getFullYear()
+  )
+})
 
-    setStats({
-      cashInHand,
-      receivables,
-      payables,
-      activeUsers: users.length,
-      monthlyRevenue,
-      assetsManaged: items.length,
-      growthRate: 12.5, // This would need historical data to calculate
-      quotations: quotations.length,
-      pendingQuotations: pendingQuotations.length,
-      pendingInvoices: pendingQuotations.length,
-      billsDue: recentPayments.length,
-    })
+const lastMonthRevenue = lastMonthReceipts.reduce(
+  (sum: number, r: any) => sum + (r.amountPaid || 0),
+  0
+)
 
-    setRecentTransactions(allTransactions)
+// ✅ Growth Rate (MoM %)
+let growthRate = 0
+if (lastMonthRevenue > 0) {
+  growthRate = ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+}
+
+            setStats({
+        cashInHand,
+        receivables,
+        payables,
+        activeUsers: users.length,
+        monthlyRevenue,
+        assetsManaged: items.length,
+         growthRate: Number(growthRate.toFixed(2)), 
+        quotations: quotations.length,
+        pendingQuotations: pendingQuotations.length,
+        pendingInvoices: pendingQuotations.length,
+        billsDue: recentPayments.length,
+      })
+
+      // ✅ Recent Transactions
+      const allTransactions = [
+        ...receipts.map((r: any) => ({
+          type: "Income",
+          amount: r.amountPaid || 0,
+          description: `Receipt #${r.receiptNumber} - ${r.clientName}`,
+          time: new Date(r.date).toLocaleDateString(),
+          date: new Date(r.date),
+        })),
+        ...payments.map((p: any) => ({
+          category: "Salary",
+          amount: p.amount || 0,
+          description: `${p.description || p.category}`,
+          time: new Date(p.date).toLocaleDateString(),
+          date: new Date(p.date),
+        })),
+      ]
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+        .slice(0, 3)
+
+      console.log("All transactions:", allTransactions)
+      setRecentTransactions(allTransactions)
+      console.log("Recent transactions:", recentTransactions)
+      // ✅ Update UI stats
+      console.log("Actiive users lenght", stats.activeUsers)
+
       setLoading(false)
     } catch (error) {
       console.error("Failed to load dashboard data:", error)
       setLoading(false)
     }
   }
+  const statCards = [
+  {
+    title: "Cash in Hand",
+    value: formatCurrency(stats.cashInHand),
+    change: `${stats.cashInHand >= 0 ? "+" : ""}${((stats.cashInHand / 1000) * 10).toFixed(
+      1
+    )}% from last month`, // TEMP placeholder
+    icon: Wallet,
+    color: "text-green-600",
+  },
+  {
+    title: "Receivables",
+    value: formatCurrency(stats.receivables),
+    change: `${stats.pendingInvoices} pending invoices`,
+    icon: ArrowUpRight,
+    color: "text-blue-600",
+  },
+  {
+    title: "Payables",
+    value: formatCurrency(stats.payables),
+    change: `${stats.billsDue} bills due this week`,
+    icon: ArrowDownLeft,
+    color: "text-red-600",
+  },
+  {
+    title: "Active Users",
+    value: stats.activeUsers?.toString(),
+    change: `+${stats.activeUsers > 1 ? "2" : "1"} this month`, // TEMP
+    icon: Users,
+    color: "text-purple-600",
+  },
+]
+
+const financialOverview = [
+  {
+    title: "Monthly Revenue",
+    value: formatCurrency(stats.monthlyRevenue),
+    change:
+      stats.growthRate > 0
+        ? `+${stats.growthRate}% from last month`
+        : `${stats.growthRate}% from last month`,
+    icon: DollarSign,
+    color: "text-green-600",
+  },
+  {
+    title: "Assets Managed",
+    value: stats.assetsManaged?.toString(),
+    change: `+${Math.max(0, stats.assetsManaged - 1)} this week`, // placeholder
+    icon: Package,
+    color: "text-indigo-600",
+  },
+  {
+    title: "Growth Rate",
+    value: `${stats.growthRate}%`,
+    change:
+      stats.growthRate > 0
+        ? `+${stats.growthRate}% vs last month`
+        : `${stats.growthRate}% vs last month`,
+    icon: TrendingUp,
+    color: "text-orange-600",
+  },
+  {
+    title: "Quotations",
+    value: stats.quotations?.toString(),
+    change: `${stats.pendingQuotations} pending approval`,
+    icon: FileText,
+    color: "text-cyan-600",
+  },
+]
+
 
   if (loading) {
     return (
@@ -117,81 +243,18 @@ export default function DashboardPage() {
       </div>
     )
   }
-
-  const statCards = [
-    {
-      title: "Cash in Hand",
-      value: formatCurrency(stats.cashInHand),
-      change: "+8.2% from last month",
-      icon: Wallet,
-      color: "text-green-600",
-    },
-    {
-      title: "Receivables",
-      value: formatCurrency(stats.receivables),
-      change: `${stats.pendingInvoices} pending invoices`,
-      icon: ArrowUpRight,
-      color: "text-blue-600",
-    },
-    {
-      title: "Payables",
-      value: formatCurrency(stats.payables),
-      change: `${stats.billsDue} bills due this week`,
-      icon: ArrowDownLeft,
-      color: "text-red-600",
-    },
-    {
-      title: "Active Users",
-      value: stats.activeUsers.toString(),
-      change: "+2 this month",
-      icon: Users,
-      color: "text-purple-600",
-    },
-  ]
-
-  const financialOverview = [
-    {
-      title: "Monthly Revenue",
-      value: formatCurrency(stats.monthlyRevenue),
-      change: "+20.1%",
-      icon: DollarSign,
-      color: "text-green-600",
-    },
-    {
-      title: "Assets Managed",
-      value: stats.assetsManaged.toString(),
-      change: "+5 this week",
-      icon: Package,
-      color: "text-indigo-600",
-    },
-    {
-      title: "Growth Rate",
-      value: `${stats.growthRate}%`,
-      change: "+2.1% from last month",
-      icon: TrendingUp,
-      color: "text-orange-600",
-    },
-    {
-      title: "Quotations",
-      value: stats.quotations.toString(),
-      change: `${stats.pendingQuotations} pending approval`,
-      icon: FileText,
-      color: "text-cyan-600",
-    },
-  ]
-
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-        <p className="text-purple-100 mb-4">Here's what's happening with {tenant?.name} today.</p>
+        <p className="text-purple-100 mb-4">Here's what's happening today.</p>
         <div className="flex items-center space-x-4">
-          <Badge variant="secondary" className="bg-white/20 text-white">
+          <Badge variant="secondary" className="bg-white/20 text-white capitalize">
             {user?.role.replace("-", " ")}
           </Badge>
           <Badge variant="secondary" className="bg-white/20 text-white">
-            {tenant?.plan} Plan
+            {user?.subscriptionPlanId} Plan
           </Badge>
         </div>
       </div>

@@ -7,7 +7,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const bankAccounts = await db
     .collection(Collections.BANK_ACCOUNTS)
-    .find({ userId: user.userId })
+    .find({ userId: String(user.id) })
     .toArray()
 
   return NextResponse.json(bankAccounts)
