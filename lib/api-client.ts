@@ -216,7 +216,7 @@ export const api = {
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/receipts/${id}`)
-        return data.data
+        return data.receipt
       },
       create: async (receiptData: Omit<Receipt, "id" | "createdAt" | "updatedAt" | "receiptNumber">) => {
         const data = await fetchAPI("/api/receipts", {
@@ -224,14 +224,14 @@ export const api = {
           body: JSON.stringify(receiptData),
         })
         console.log("reciept created :::",data)
-        return data.data
+        return data.receipt
       },
       update: async (id: string, receiptData: Partial<Receipt>) => {
         const data = await fetchAPI(`/api/receipts/${id}`, {
           method: "PUT",
           body: JSON.stringify(receiptData),
         })
-        return data.data
+        return data.receipt
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/receipts/${id}`, {
