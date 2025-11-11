@@ -46,6 +46,7 @@ setCurrentPlan(currentPlan) // This is now the single plan object
           try {
             const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
             console.log("[PLANS] Fetched plan from API:", plan)
+            console.log("[PLANS] Current plan details:", { id: plan?.id, _id: plan?._id, name: plan?.name, price: plan?.price })
             if (plan && plan.price !== undefined) {
               setCurrentPlan(plan)
             } else {
@@ -95,9 +96,13 @@ setCurrentPlan(currentPlan) // This is now the single plan object
   }
 
   const isCurrentPlan = (plan: SubscriptionPlan): boolean => {
-    return (currentPlan?.id || currentPlan?._id?.toString()) === (plan.id || plan._id?.toString())
-    const result = (currentPlan?.id || currentPlan?._id?.toString()) === (plan.id || plan._id?.toString())
-    console.log("[PLANS] Comparing:", plan.name, "with current:", currentPlan?.name, "=>", result)
+    if (!currentPlan) return false
+    
+    const currentPlanId = (currentPlan.id || currentPlan._id?.toString() || "").toLowerCase()
+    const planId = (plan.id || plan._id?.toString() || "").toLowerCase()
+    
+    const result = currentPlanId === planId && currentPlanId !== ""
+    console.log("[PLANS] Comparing:", plan.name, "("+planId+")", "with current:", currentPlan.name, "("+currentPlanId+")", "=>", result)
     return result
   }
 
@@ -165,6 +170,7 @@ setCurrentPlan(currentPlan) // This is now the single plan object
             const isCurrent = isCurrentPlan(plan)
             const isUpgrade = isPlanUpgrade(plan)
             const isDowngrade = isPlanDowngrade(plan)
+            console.log("[PLANS] Plan card:", plan.name, "- isCurrent:", isCurrent, "- isUpgrade:", isUpgrade, "- isDowngrade:", isDowngrade)
 
             return (
               <Card

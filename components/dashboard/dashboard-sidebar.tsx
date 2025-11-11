@@ -56,6 +56,8 @@ const navigationItems: NavItem[] = [
       { name: "Receipt Categories", href: "/dashboard/settings/receipt-categories", permission: "tenant_settings" },
       { name: "Recipient Types", href: "/dashboard/settings/recipient-types", permission: "tenant_settings" },
       { name: "Activity Log", href: "/dashboard/settings/activity-log", permission: "tenant_settings" },
+      { name: "Asset Categories", href: "/dashboard/settings/asset-categories", permission: "tenant_settings" },
+      { name: "Asset Conditions", href: "/dashboard/settings/asset-conditions", permission: "tenant_settings" },
     ],
   },
   { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },

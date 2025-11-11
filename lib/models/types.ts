@@ -16,6 +16,7 @@ export interface User extends BaseDocument {
   subscriptionStatus?: "active" | "inactive" | "trial" | "expired"
   subscriptionStartDate?: Date
   subscriptionEndDate?: Date
+  trialEndsAt?: Date
   stripeCustomerId?: string
   isActive: boolean
 }

@@ -26,6 +26,7 @@ export default function DashboardPage() {
   })
 
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
+  const [currentPlan, setCurrentPlan] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -39,28 +40,40 @@ export default function DashboardPage() {
         quotations,
         receipts,
         payments,
-        users,
-        items
+        employees,
+        items,
+        plans
       ] = await Promise.all([
         api.quotations.getAll(),
         api.receipts.getAll(),
         api.payments.getAll(),
-        api.users.getAll(),
+        api.employees.getAll(),
         api.items.getAll(),
+        api.subscriptionPlans.getAll(),
       ])
 
+      // Fetch current plan details
+      if (user?.subscriptionPlanId) {
+        try {
+          const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
+          setCurrentPlan(plan)
+        } catch (err) {
+          console.error("Failed to fetch plan:", err)
+        }
+      }
+
       // ✅ cash in hand
-      const totalReceipts = receipts.reduce(
+      const totalReceipts = (receipts || []).reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),
         0
       )
-      const totalPayments = payments.data.reduce(
+      const totalPayments = (Array.isArray(payments) ? payments : (payments?.data || [])).reduce(
         (sum: number, p: any) => sum + (p.amount || 0),
         0
       )
       const cashInHand = totalReceipts - totalPayments
       // ✅ receivables = pending quotations
-      const pendingQuotations = quotations.filter(
+      const pendingQuotations = (quotations || []).filter(
         (q: any) => q.status === "pending" || q.status === "sent")
       const receivables = pendingQuotations.reduce(
         (sum: number, q: any) => sum + (q.grandTotal || 0),
@@ -69,7 +82,7 @@ export default function DashboardPage() {
       // ✅ payables (last 7 days)
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
-      const recentPayments = payments.data.filter((p: any) => {
+      const recentPayments = (Array.isArray(payments) ? payments : (payments?.data || [])).filter((p: any) => {
         const d = new Date(p.date)
         return d >= weekAgo
       })
@@ -79,7 +92,7 @@ export default function DashboardPage() {
       )
       // ✅ monthly revenue
       const now = new Date()
-      const monthlyReceipts = receipts.filter((r: any) => {
+      const monthlyReceipts = (receipts || []).filter((r: any) => {
         const date = new Date(r.date)
         return (
           date.getMonth() === now.getMonth() &&
@@ -97,7 +110,7 @@ export default function DashboardPage() {
 const lastMonth = new Date()
 lastMonth.setMonth(lastMonth.getMonth() - 1)
 
-const lastMonthReceipts = receipts.filter((r: any) => {
+const lastMonthReceipts = (receipts || []).filter((r: any) => {
   const date = new Date(r.date)
   return (
     date.getMonth() === lastMonth.getMonth() &&
@@ -120,7 +133,7 @@ if (lastMonthRevenue > 0) {
         cashInHand,
         receivables,
         payables,
-        activeUsers: users.length,
+        activeUsers: employees.length,
         monthlyRevenue,
         assetsManaged: items.length,
          growthRate: Number(growthRate.toFixed(2)), 
@@ -247,16 +260,29 @@ const financialOverview = [
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
-        <p className="text-purple-100 mb-4">Here's what's happening today.</p>
-        <div className="flex items-center space-x-4">
-          <Badge variant="secondary" className="bg-white/20 text-white capitalize">
-            {user?.role.replace("-", " ")}
-          </Badge>
-          <Badge variant="secondary" className="bg-white/20 text-white">
-            {user?.subscriptionPlanId} Plan
-          </Badge>
+      <div className="relative rounded-lg overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&q=80')",
+          }}
+        >
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative p-6 text-gray-900">
+          <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+          <p className="text-gray-700 mb-4">Here's what's happening today.</p>
+          <div className="flex items-center space-x-4">
+            <Badge variant="secondary" className="bg-gray-900/10 text-gray-900 font-medium capitalize">
+              {user?.role.replace("-", " ")}
+            </Badge>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-900 font-medium">
+              {currentPlan ? `${currentPlan.name}${user?.subscriptionStatus === 'trial' ? ' (Trial)' : ''}` : user?.subscriptionStatus === 'trial' ? 'Trial Plan' : 'No Active Plan'}
+            </Badge>
+          </div>
         </div>
       </div>
 

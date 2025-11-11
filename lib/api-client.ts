@@ -24,7 +24,6 @@ async function fetchAPI(url: string, options: RequestInit = {}) {
 
 //     const cookieStore = await cookies()
 // const token = cookieStore.get("accessToken")
-  console.log("access token",token);
   const response = await fetch(url, {
     ...options,
     credentials:"include",
@@ -224,7 +223,7 @@ export const api = {
           body: JSON.stringify(receiptData),
         })
         console.log("reciept created :::",data)
-        return data.receipt
+        return data.data
       },
       update: async (id: string, receiptData: Partial<Receipt>) => {
         const data = await fetchAPI(`/api/receipts/${id}`, {
@@ -764,6 +763,60 @@ receiptCategories: {
     return true
   },
 },
+  assetCategories: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/asset-categories")
+      return data || []
+    },
+    create: async (payload: { name: string; isActive?: boolean }) => {
+      const data = await fetchAPI("/api/asset-categories", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      })
+      return data
+    },
+    update: async (id: string, payload: Partial<{ name: string; isActive: boolean }>) => {
+      const data = await fetchAPI(`/api/asset-categories/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      })
+      return data
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/asset-categories/${id}`, {
+        method: "DELETE",
+      })
+      return true
+    },
+  },
+
+  assetConditions: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/asset-conditions")
+      return data || []
+    },
+    create: async (payload: { name: string; isActive?: boolean }) => {
+      const data = await fetchAPI("/api/asset-conditions", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      })
+      return data
+    },
+    update: async (id: string, payload: Partial<{ name: string; isActive: boolean }>) => {
+      const data = await fetchAPI(`/api/asset-conditions/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      })
+      return data
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/asset-conditions/${id}`, {
+        method: "DELETE",
+      })
+      return true
+    },
+  },
+
 activityLogs: {
   getAll: async () => {
     const data = await fetchAPI("/api/activity-logs")

@@ -86,7 +86,6 @@ export default function PaymentCategoriesPage() {
     setTimeout(() => setSaved(false), 3000)
     setIsDialogOpen(false)
           toast({ title: "Success", description: "Category Saved successfully" })
-      window.location.reload()
     resetForm()
   }
 
@@ -107,10 +106,9 @@ export default function PaymentCategoriesPage() {
       isActive: !category.isActive,
     })
     if (updated) {
-      setCategories(categories.map((cat) => (cat.id === updated.id ? updated : cat)))
+      setCategories(categories.map((cat) => (cat._id === updated._id ? updated : cat)))
     }
     toast({ title: "Success", description: "Category status updated successfully!" })
-    window.location.reload()
   }
 
   if (!hasPermission("tenant_settings")) {
@@ -163,7 +161,7 @@ export default function PaymentCategoriesPage() {
             <div className="space-y-2">
               {categories.map((category) => (
                 <div
-                  key={category?.id}
+                  key={category._id || category.id}
                   className={`flex items-center justify-between p-3 border rounded-lg ${category?.isActive ? "" : "opacity-50 bg-gray-50"}`}
                 >
                   <div className="flex items-center space-x-3">

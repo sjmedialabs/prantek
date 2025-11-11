@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    return NextResponse.json(payload.user)
+    // Return payload directly - it contains userId, email, role, etc.
+    // The payload IS the user object, not payload.user
+    return NextResponse.json(payload)
   } catch (error) {
     console.error("[v0] Error in /api/auth/me:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

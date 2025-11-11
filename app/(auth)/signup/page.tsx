@@ -23,7 +23,7 @@ export default function SignUpPage() {
     confirmPassword: "",
     phone: "",
     address: "",
-    freeTrial: false,
+    
   })
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([])
   const [selectedPlan, setSelectedPlan] = useState<string>("")
@@ -86,23 +86,16 @@ export default function SignUpPage() {
         phone: formData.phone || "",
         address: formData.address || "",
         subscriptionPlanId: selectedPlan,
-        freeTrial: formData.freeTrial,
       }
       localStorage.setItem("pending_signup", JSON.stringify(signupData))
 
-      // Redirect to payment page
-      if (formData.freeTrial) {
-        // Free trial flow: redirect to trial payment verification (₹1)
-        router.push(`/trial-payment?email=${encodeURIComponent(formData.email)}&plan=${selectedPlan}`)
-      } else {
-        // Paid plan flow: redirect to payment page with selected plan
-        router.push(
-          `/payment?plan=${plan.name.toLowerCase()}&planId=${selectedPlan}&email=${encodeURIComponent(formData.email)}&company=${encodeURIComponent(formData.name)}&amount=${plan.price}`,
-        )
-      }
+      // Redirect to payment page with selected plan
+      router.push(
+        `/payment?plan=${plan.name.toLowerCase()}&planId=${selectedPlan}&email=${encodeURIComponent(formData.email)}&company=${encodeURIComponent(formData.name)}&amount=${plan.price}`,
+      )
     } catch (err: any) {
-      console.error("Signup error:", err)
       setError(err?.message || "Failed to process signup. Please try again.")
+      console.error("Signup error:", err)
     } finally {
       setLoading(false)
     }
@@ -151,7 +144,7 @@ const completeSignup = async () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-2xl">
+      <Card className="w-full w-4/5 max-w-7xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xl">P</span>
@@ -169,7 +162,7 @@ const completeSignup = async () => {
 
             <div className="space-y-3">
               <Label className="text-base font-semibold">Select Your Plan</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {availablePlans.map((plan) => {
                   const isSelected = selectedPlan === (plan._id || plan.id)
                   const isPopular = plan.name === "Premium"
@@ -182,34 +175,34 @@ const completeSignup = async () => {
                       }`}
                       onClick={() => setSelectedPlan(plan._id || plan.id)}
                     >
-                      {isPopular && <Badge className="absolute -top-2 -right-2 bg-blue-600 text-white">Popular</Badge>}
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
+                      {isPopular && <Badge className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9px] px-1.5 py-0.5">Popular</Badge>}
+                      <CardContent className="p-2.5">
+                        <div className="flex items-start justify-between mb-0.5">
                           <div>
-                            <h3 className="font-semibold text-lg">{plan.name}</h3>
-                            <p className="text-sm text-gray-600">{plan.description}</p>
+                            <h3 className="font-semibold text-sm">{plan.name}</h3>
+                            <p className="text-[10px] text-gray-600">{plan.description}</p>
                           </div>
                           <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                               isSelected ? "border-blue-600 bg-blue-600" : "border-gray-300"
                             }`}
                           >
-                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                            {isSelected && <Check className="h-2.5 w-2.5 text-white" />}
                           </div>
                         </div>
-                        <div className="flex items-baseline space-x-1 mb-3">
-                          <span className="text-2xl font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
-                          <span className="text-gray-600 text-sm">/{plan.billingCycle}</span>
+                        <div className="flex items-baseline space-x-1 mb-1.5">
+                          <span className="text-lg font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
+                          <span className="text-gray-600 text-[10px]">/{plan.billingCycle}</span>
                         </div>
-                        <div className="space-y-1">
-                          {plan.features.slice(0, 3).map((feature, index) => (
+                        <div className="space-y-0.5">
+                          {plan.features.slice(0, 2).map((feature, index) => (
                             <div key={index} className="flex items-start space-x-2">
                               <Check className="h-3 w-3 text-green-600 mt-0.5 flex-shrink-0" />
-                              <span className="text-xs text-gray-700">{feature}</span>
+                              <span className="text-[11px] text-gray-700">{feature}</span>
                             </div>
                           ))}
                           {plan.features.length > 3 && (
-                            <p className="text-xs text-gray-500 mt-1">+{plan.features.length - 3} more features</p>
+                            <p className="text-[9px] text-gray-500 mt-1">+{plan.features.length - 2} more features</p>
                           )}
                         </div>
                       </CardContent>
@@ -219,24 +212,6 @@ const completeSignup = async () => {
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="freeTrial"
-                  checked={formData.freeTrial}
-                  onCheckedChange={(checked) => setFormData({ ...formData, freeTrial: checked as boolean })}
-                />
-                <div className="flex-1">
-                  <Label htmlFor="freeTrial" className="text-sm font-semibold cursor-pointer flex items-center">
-                    <Zap className="h-4 w-4 mr-1 text-blue-600" />
-                    Start with 14-day free trial (Optional)
-                  </Label>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Try all features free for 14 days. Only ₹1 verification required, refunded instantly.
-                  </p>
-                </div>
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
