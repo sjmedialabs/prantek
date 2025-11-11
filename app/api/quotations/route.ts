@@ -33,10 +33,22 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
-    if (!body.quotationNumber) {
-      body.quotationNumber = await generateNextNumber("quotations", "QT", user.userId)
+    // Get client name for generating unique number with client code
+    let clientName = "Unknown"
+    if (body.clientId) {
+      try {
+        const client = await mongoStore.getById("clients", body.clientId)
+        clientName = client?.name || "Unknown"
+      } catch (err) {
+        console.error("Error fetching client for number generation:", err)
+      }
     }
-   console.log("user id is :::",user.userId)
+
+    if (!body.quotationNumber) {
+      body.quotationNumber = await generateNextNumber("quotations", "QT", user.userId, clientName)
+    }
+
+    console.log("user id is :::",user.userId)
     const quotation = await mongoStore.create("quotations", { ...body, userId: user.userId })
 
     await logActivity(user.userId, "create", "quotation", quotation._id?.toString(), {
@@ -45,10 +57,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Notify admins about new quotation
     try {
-      // Get client info for notification
-      const client = await mongoStore.getById("clients", body.clientId)
-      const clientName = client?.name || "Unknown Client"
-      
       await notifyAdminsNewQuotation(
         quotation._id?.toString() || "",
         body.quotationNumber,

@@ -58,10 +58,10 @@ export default function PaymentsPage() {
 
   const filteredPayments = payments.filter((payment) => {
     const matchesSearch =
-      payment.paymentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.category.toLowerCase().includes(searchTerm.toLowerCase())
+      (payment.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (payment.recipientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (payment.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (payment.category || "").toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || payment.status === statusFilter
     const matchesCategory = categoryFilter === "all" || payment.category === categoryFilter

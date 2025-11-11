@@ -54,8 +54,8 @@ export default function ReceiptsPage() {
 
   const filteredReceipts = receipts.filter((receipt) => {
     const matchesSearch =
-      receipt.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (receipt.receiptNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (receipt.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (receipt.quotationNumber && receipt.quotationNumber.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesStatus = statusFilter === "all" || receipt.status === statusFilter
@@ -68,8 +68,9 @@ export default function ReceiptsPage() {
 
     const matchesPaymentMethod = paymentMethodFilter === "all" || receipt.paymentMethod === paymentMethodFilter
 
-    const matchesDateFrom = !dateFromFilter || new Date(receipt.date) >= new Date(dateFromFilter)
-    const matchesDateTo = !dateToFilter || new Date(receipt.date) <= new Date(dateToFilter)
+    const receiptDate = new Date(receipt.date || receipt.createdAt)
+    const matchesDateFrom = !dateFromFilter || receiptDate >= new Date(dateFromFilter)
+    const matchesDateTo = !dateToFilter || receiptDate <= new Date(dateToFilter)
 
     const matchesMinAmount = !minAmountFilter || (receipt.amountPaid || 0) >= Number.parseFloat(minAmountFilter)
     const matchesMaxAmount = !maxAmountFilter || (receipt.amountPaid || 0) <= Number.parseFloat(maxAmountFilter)
@@ -348,7 +349,7 @@ export default function ReceiptsPage() {
                 {filteredReceipts.map((receipt) => (
                   <TableRow key={receipt.id}>
                     <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
-                    <TableCell>{new Date(receipt.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(receipt.date || receipt.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>{receipt.clientName}</TableCell>
                     <TableCell>{receipt.quotationNumber || "-"}</TableCell>
                     <TableCell className="font-semibold">₹{(receipt.amountPaid || 0).toLocaleString()}</TableCell>

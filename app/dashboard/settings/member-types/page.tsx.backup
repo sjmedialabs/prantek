@@ -43,26 +43,18 @@ export default function MemberTypesPage() {
     setMemberTypes(types)
   }
 
-  
-  const generateUniqueCode = (name: string) => {
-    // Generate base code from name
-    let baseCode = name.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 20);
-    
-    // Add unique identifier (timestamp + random)
-    const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
-    return `${baseCode}_${uniqueId}`;
-  }
-
   const handleSubmit = async () => {
-    if (!form.name) {
-      toast.error("Missing Information", "Please fill in the name field")
+    if (!form.name || !form.code) {
+      toast.error("Missing Information", "Please fill in all required fields")
       return
     }
 
-    
+    // Check for duplicate code
+    const existingType = await api.memberTypes.getAll().then(types => types.find(t => t.code === form.code))
+    if (existingType && (!editingType || existingType.id !== editingType.id)) {
+      toast.error("Duplicate Code", "A member type with this code already exists")
+      return
+    }
 
     if (editingType) {
       console.log("editingType", editingType._id)
@@ -70,9 +62,7 @@ export default function MemberTypesPage() {
       await api.memberTypes.update(editingType._id, form)
       toast.success("Employment Type Updated", `${form.name} has been updated successfully`)
     } else {
-      // Auto-generate unique code for new member type
-      const codeToUse = generateUniqueCode(form.name);
-      await api.memberTypes.create({ ...form, code: codeToUse })
+      await api.memberTypes.create(form)
       toast.success("Employment Type Created", `${form.name} has been added to employment types`)
     }
 
@@ -164,13 +154,22 @@ export default function MemberTypesPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Code (Auto-generated)</Label>
+                <Label>Name *</Label>
                 <Input
-                  value={editingType ? form.code : "Will be auto-generated from name"}
-                  disabled
-                  className="bg-gray-100"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g., In-house Employee"
                 />
-                <p className="text-xs text-gray-500">Automatically generated unique identifier</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Code *</Label>
+                <Input
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
+                  placeholder="e.g., employee"
+                  disabled={!!editingType}
+                />
+                <p className="text-xs text-gray-500">Unique identifier (cannot be changed after creation)</p>
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>

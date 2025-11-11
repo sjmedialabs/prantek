@@ -174,36 +174,26 @@ export default function EmployeePage() {
     }
     console.log("Saving employee as editing employee:", editingEmployee)
     console.log("Saving employee:", formData)
-    
-    try {
-      if (editingEmployee?._id) {
-        const updated = await api.employees.update( editingEmployee?._id, formData)
-        if (updated) {
-          setEmployees(employees.map((emp) => (emp._id === editingEmployee._id ? updated : emp)))
-        }
-      } else {
-        const newEmployee = await api.employees.create( {
-          ...formData,
-          employeeNumber: generateEmployeeNumber(),
-        })
-        setEmployees([...employees, newEmployee])
+    if (editingEmployee?._id) {
+      const updated = await api.employees.update( editingEmployee?._id, formData)
+      if (updated) {
+        setEmployees(employees.map((emp) => (emp._id === editingEmployee._id ? updated : emp)))
       }
-
-      setIsDialogOpen(false)
-      setEditingEmployee(null)
-      resetForm()
-      setSaved(true)
-      toast({ title: "Success", description: "Employee saved successfully!" })
-      setTimeout(() => setSaved(false), 3000)
-      window.location.reload()
-    } catch (error) {
-      console.error("Error saving employee:", error)
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to save employee. Please try again.", 
-        variant: "destructive" 
+    } else {
+      const newEmployee = await api.employees.create( {
+        ...formData,
+        employeeNumber: generateEmployeeNumber(),
       })
+      setEmployees([...employees, newEmployee])
     }
+
+    setIsDialogOpen(false)
+    setEditingEmployee(null)
+    resetForm()
+    setSaved(true)
+    toast({ title: "Success", description: "Employee saved successfully!" })
+    setTimeout(() => setSaved(false), 3000)
+    window.location.reload()
   }
 
   const resetForm = () => {
