@@ -35,7 +35,6 @@ import {
   ArrowDownRight,
 } from "lucide-react"
 import { api } from "@/lib/api-client"
-import type { User as UserType, SubscriptionPlan, Client } from "@/lib/data-store"
 
 interface SalesMetric {
   name: string
@@ -88,7 +87,7 @@ export default function SalesDashboardPage() {
         const totalClients = adminUsers.length
         const activeSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "active").length
         const trialSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "trial").length
-        
+
         // Calculate total MRR from active subscriptions
         let totalMRR = 0
         adminUsers.forEach(user => {
@@ -99,7 +98,7 @@ export default function SalesDashboardPage() {
             }
           }
         })
-        
+
         const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalMRR / activeSubscriptions) : 0
         const churnedUsers = adminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
         const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
@@ -160,7 +159,7 @@ export default function SalesDashboardPage() {
             const userMonth = new Date(u.createdAt).getMonth()
             return userMonth === monthIndex
           }).length
-          
+
           return {
             month,
             newClients: usersInMonth,
@@ -176,28 +175,31 @@ export default function SalesDashboardPage() {
         // Calculate revenue by plan from real subscriptions
         const revenue = months.map((month, index) => {
           const result: any = { month, total: 0 }
-          
+
           plans.forEach(plan => {
             const planName = plan.name.toLowerCase()
-            const usersWithPlan = adminUsers.filter(u => 
-              (u._id || u.id) === plan._id || (u._id || u.id) === plan.id
+            console.log("Plan name is ", planName)
+            const usersWithPlan = adminUsers.filter(
+              (u) => u.subscriptionPlanId === (plan._id || plan.id)
             ).length
+
+            console.log("Users with plan is ", usersWithPlan)
             result[planName] = usersWithPlan * (plan.price || 0)
             result.total += result[planName]
           })
-          
+          console.log("Revenue is :", result)
           return result
         })
         setRevenueData(revenue)
 
         // Plan distribution from real subscription counts
         const distribution = plans.map((plan, index) => {
-          const subscriberCount = adminUsers.filter(u => 
+          const subscriberCount = adminUsers.filter(u =>
             (u.subscriptionPlanId === plan._id || u.subscriptionPlanId === plan.id)
           ).length
-          
+
           const colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"]
-          
+
           return {
             name: plan.name,
             value: subscriberCount,
@@ -453,7 +455,7 @@ export default function SalesDashboardPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
+        {/* client on boarding */}
         <TabsContent value="clients" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
@@ -510,27 +512,64 @@ export default function SalesDashboardPage() {
               <CardTitle>Client Onboarding Summary</CardTitle>
               <CardDescription>Key metrics for client acquisition and retention</CardDescription>
             </CardHeader>
+
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">24</div>
-                  <div className="text-sm text-gray-600">New Clients This Month</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">127</div>
-                  <div className="text-sm text-gray-600">Total Active Clients</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">18.2%</div>
-                  <div className="text-sm text-gray-600">Growth Rate</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">3.2%</div>
-                  <div className="text-sm text-gray-600">Churn Rate</div>
-                </div>
-              </div>
+              {clientOnboardingData?.length > 0 ? (
+                (() => {
+                  const latest = clientOnboardingData[clientOnboardingData.length - 1];
+                  const prev = clientOnboardingData[clientOnboardingData.length - 2];
+
+                  const newClientsThisMonth = latest?.newClients ?? 0;
+                  const churnRate = latest?.churnRate ?? 0;
+
+                  const totalActiveClients = clientOnboardingData.reduce(
+                    (acc, item) => acc + (item.newClients ?? 0),
+                    0
+                  );
+
+                  const growthRate =
+                    prev && prev.newClients
+                      ? (((latest.newClients - prev.newClients) / prev.newClients) * 100).toFixed(1)
+                      : "0";
+
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 border rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">
+                          {newClientsThisMonth}
+                        </div>
+                        <div className="text-sm text-gray-600">New Clients This Month</div>
+                      </div>
+
+                      <div className="text-center p-4 border rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {totalActiveClients}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Active Clients</div>
+                      </div>
+
+                      <div className="text-center p-4 border rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {growthRate}%
+                        </div>
+                        <div className="text-sm text-gray-600">Growth Rate</div>
+                      </div>
+
+                      <div className="text-center p-4 border rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {churnRate}%
+                        </div>
+                        <div className="text-sm text-gray-600">Churn Rate</div>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <p>No client data available</p>
+              )}
             </CardContent>
           </Card>
+
         </TabsContent>
 
         <TabsContent value="conversion" className="space-y-6">

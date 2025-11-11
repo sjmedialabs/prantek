@@ -206,10 +206,6 @@ export const api = {
       })
       return data.quotation
     },
-    getNextNumber: async () => {
-      const data = await fetchAPI("/api/quotations/next-number")
-      return data.data?.nextNumber || "QT000001"
-    },
   },
 
     // Receipts
@@ -242,10 +238,6 @@ export const api = {
           method: "DELETE",
         })
       },
-      getNextNumber: async () => {
-        const data = await fetchAPI("/api/receipts/next-number")
-        return data.data?.nextNumber || "RC000001"
-      },
     },
 
     // Payments
@@ -276,10 +268,6 @@ export const api = {
         await fetchAPI(`/api/payments/${id}`, {
           method: "DELETE",
         })
-      },
-      getNextNumber: async () => {
-        const data = await fetchAPI("/api/payments/next-number")
-        return data.data?.nextNumber || "PAY000001"
       },
     },
 
@@ -471,14 +459,13 @@ export const api = {
         })
         return data.data || data.content
       },
-update: async (id: string, contentData: any) => {
-  const res = await fetchAPI(`/api/website-content`, {
-    method: "PUT",
-    body: JSON.stringify({ id, contentData }),
-  })
-  return res.data || res.content
-},
-
+      update: async (id: string, contentData: any) => {
+        const data = await fetchAPI(`/api/website-content/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(contentData),
+        })
+        return data.data || data.content
+      },
       delete: async (id: string) => {
         await fetchAPI(`/api/website-content/${id}`, {
           method: "DELETE",
@@ -676,7 +663,7 @@ update: async (id: string, contentData: any) => {
           method: "POST",
           body: JSON.stringify(roleData),
         })
-        return data.data || data.role || data
+        return data.data || data.role
       },
       update: async (id: string, roleData: any) => {
         const data = await fetchAPI(`/api/roles/${id}`, {

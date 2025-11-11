@@ -108,16 +108,20 @@ export default function ClientAccountsPage() {
   const [clients, setClients] = useState<ClientAccount[]>([])
   const [loading, setLoading] = useState(true)
 
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch =
-      client.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase())
+const filteredClients = clients.filter((client) => {
+  const status = client.status?.toLowerCase() || "inactive"
 
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter
+  const matchesStatus =
+    statusFilter === "all" ? true : status === statusFilter
 
-    return matchesSearch && matchesStatus
-  })
+  const matchesSearch =
+    client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email?.toLowerCase().includes(searchTerm.toLowerCase())
+
+  return matchesStatus && matchesSearch
+})
+
 
   const totalClients = clients.length
   const activeClients = clients.filter((c) => c.status === "active").length
@@ -285,7 +289,7 @@ export default function ClientAccountsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="space-y-6">
+        <TabsContent value="active" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -315,7 +319,7 @@ export default function ClientAccountsPage() {
                     <TableHead>Revenue</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {/* <TableHead className="text-right">Actions</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -337,7 +341,7 @@ export default function ClientAccountsPage() {
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
-                      <TableCell className="text-right">
+                      {/* <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -376,7 +380,304 @@ export default function ClientAccountsPage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                      </TableCell> */}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+                <TabsContent value="all" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Client Accounts</CardTitle>
+                  <CardDescription>Manage all client accounts and subscriptions</CardDescription>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search clients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Users</TableHead>
+                    <TableHead>Revenue</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Last Activity</TableHead>
+                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{client.companyName}</div>
+                          <div className="text-sm text-gray-500">{client.contactName}</div>
+                          <div className="text-sm text-gray-500">{client.email}</div>
+                        </div>
                       </TableCell>
+                      <TableCell>{getPlanBadge(client.plan)}</TableCell>
+                      <TableCell>{getStatusBadge(client.status)}</TableCell>
+                      <TableCell>{client.userCount}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
+                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                      </TableCell>
+                      <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell>{client.lastActivity}</TableCell>
+                      {/* <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {client.status === "active" ? (
+                              <DropdownMenuItem
+                                onClick={() => handleSuspendAccount(client.id)}
+                                className="text-red-600"
+                                disabled={actionLoading === client.id}
+                              >
+                                <Pause className="mr-2 h-4 w-4" />
+                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
+                              </DropdownMenuItem>
+                            ) : client.status === "suspended" ? (
+                              <DropdownMenuItem
+                                onClick={() => handleReactivateAccount(client.id)}
+                                className="text-green-600"
+                                disabled={actionLoading === client.id}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell> */}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+                <TabsContent value="suspended" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Client Accounts</CardTitle>
+                  <CardDescription>Manage all client accounts and subscriptions</CardDescription>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search clients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Users</TableHead>
+                    <TableHead>Revenue</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Last Activity</TableHead>
+                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{client.companyName}</div>
+                          <div className="text-sm text-gray-500">{client.contactName}</div>
+                          <div className="text-sm text-gray-500">{client.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getPlanBadge(client.plan)}</TableCell>
+                      <TableCell>{getStatusBadge(client.status)}</TableCell>
+                      <TableCell>{client.userCount}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
+                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                      </TableCell>
+                      <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell>{client.lastActivity}</TableCell>
+                      {/* <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {client.status === "active" ? (
+                              <DropdownMenuItem
+                                onClick={() => handleSuspendAccount(client.id)}
+                                className="text-red-600"
+                                disabled={actionLoading === client.id}
+                              >
+                                <Pause className="mr-2 h-4 w-4" />
+                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
+                              </DropdownMenuItem>
+                            ) : client.status === "suspended" ? (
+                              <DropdownMenuItem
+                                onClick={() => handleReactivateAccount(client.id)}
+                                className="text-green-600"
+                                disabled={actionLoading === client.id}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell> */}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+                <TabsContent value="trial" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Client Accounts</CardTitle>
+                  <CardDescription>Manage all client accounts and subscriptions</CardDescription>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search clients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Users</TableHead>
+                    <TableHead>Revenue</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Last Activity</TableHead>
+                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{client.companyName}</div>
+                          <div className="text-sm text-gray-500">{client.contactName}</div>
+                          <div className="text-sm text-gray-500">{client.email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getPlanBadge(client.plan)}</TableCell>
+                      <TableCell>{getStatusBadge(client.status)}</TableCell>
+                      <TableCell>{client.userCount}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
+                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                      </TableCell>
+                      <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell>{client.lastActivity}</TableCell>
+                      {/* <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {client.status === "active" ? (
+                              <DropdownMenuItem
+                                onClick={() => handleSuspendAccount(client.id)}
+                                className="text-red-600"
+                                disabled={actionLoading === client.id}
+                              >
+                                <Pause className="mr-2 h-4 w-4" />
+                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
+                              </DropdownMenuItem>
+                            ) : client.status === "suspended" ? (
+                              <DropdownMenuItem
+                                onClick={() => handleReactivateAccount(client.id)}
+                                className="text-green-600"
+                                disabled={actionLoading === client.id}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuItem className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell> */}
                     </TableRow>
                   ))}
                 </TableBody>
