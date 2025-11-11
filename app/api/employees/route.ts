@@ -1,11 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
+import { logActivity } from "@/lib/mongodb-store"
 import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
-  const employees = await db.collection(Collections.EMPLOYEES).find({ userId: user.userId }).toArray()
+  
+  // Super admins can see all employees, others see only their own
+  const query = user.role === "super-admin" ? {} : { userId: user.userId }
+  const employees = await db.collection(Collections.EMPLOYEES).find(query).toArray()
 
   return NextResponse.json(employees)
 })
@@ -63,6 +67,11 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     }
 
     const result = await db.collection(Collections.EMPLOYEES).insertOne(employee)
+    
+    await logActivity(user.userId, "create", "employee", result.insertedId?.toString(), { 
+      name: `${employee.employeeName} ${employee.surname}`, 
+      employeeNumber: employee.employeeNumber 
+    })
 
     return NextResponse.json({ ...employee, _id: result.insertedId })
   } catch (error: any) {

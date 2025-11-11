@@ -109,12 +109,12 @@ const exportReport = () => {
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
-      transaction.transactionNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (transaction.transactionNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (transaction.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.referenceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.quotationNumber?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === "all" || transaction.type === filterType
-    const matchesStatus = filterStatus === "all" || transaction.status.toLowerCase() === filterStatus
+    const matchesStatus = filterStatus === "all" || (transaction.status || "").toLowerCase() === filterStatus
     return matchesSearch && matchesType && matchesStatus
   })
 

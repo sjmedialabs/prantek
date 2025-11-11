@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast"
 import { downloadCSV, downloadJSON, formatCurrencyForExport } from "@/lib/export-utils"
 import { generatePDF } from "@/lib/pdf-utils"
 import { api } from "@/lib/api-client"
+import { generateEnhancedPDF } from "@/lib/enhanced-pdf-utils"
 import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/data-store"
 
 export default function ReportsPage() {
@@ -83,6 +84,46 @@ export default function ReportsPage() {
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => new Date(p.date) >= getDateRangeFilter)
   }, [payments, getDateRangeFilter])
+
+  // Calculate compliance metrics
+  const complianceMetrics = useMemo(() => {
+    // Check if tax settings exist (simplified - you may need to add API call)
+    const hasTaxSettings = true // TODO: Check actual tax settings
+    const hasBankDetails = true // TODO: Check actual bank details
+    
+    // Calculate client data completeness
+    const clientsWithCompleteData = clients.filter(c => 
+      c.name && c.email && c.phone && c.address
+    ).length
+    const clientDataScore = clients.length > 0 
+      ? Math.round((clientsWithCompleteData / clients.length) * 100) 
+      : 0
+    
+    // Calculate items with tax configuration
+    const itemsWithTax = items.filter(i => i.tax && i.tax > 0).length
+    const itemTaxScore = items.length > 0 
+      ? Math.round((itemsWithTax / items.length) * 100) 
+      : 0
+    
+    // Calculate individual scores
+    const taxSettingsScore = hasTaxSettings ? 100 : 0
+    const bankDetailsScore = hasBankDetails ? 100 : 0
+    
+    // Calculate overall score
+    const overallScore = Math.round(
+      (taxSettingsScore + bankDetailsScore + clientDataScore + itemTaxScore) / 4
+    )
+    
+    return {
+      hasTaxSettings,
+      hasBankDetails,
+      clientDataScore,
+      itemTaxScore,
+      taxSettingsScore,
+      bankDetailsScore,
+      overallScore,
+    }
+  }, [clients, items])
 
   const financialData = useMemo(() => {
     const monthlyData: Record<string, { income: number; expenses: number; profit: number }> = {}
@@ -231,48 +272,6 @@ export default function ReportsPage() {
       .slice(0, 10)
   }, [filteredQuotations])
 
-  const complianceMetrics = useMemo(() => {
-    const checkCompliance = async () => {
-      // Check if tax settings are configured
-      const taxSettings = await dataStore.getAll("taxSettings")
-      const hasTaxSettings = taxSettings.length > 0
-
-      // Check if bank details are configured
-      const bankAccounts = await dataStore.getAll("bankAccounts")
-      const hasBankDetails = bankAccounts.length > 0
-
-      return { hasTaxSettings, hasBankDetails }
-    }
-
-    // For now, use synchronous fallback for useMemo
-    // In production, this should be moved to useEffect
-    const taxSettings = []
-    const hasTaxSettings = taxSettings.length > 0
-    const bankAccounts = []
-    const hasBankDetails = bankAccounts.length > 0
-
-    // Check client data completeness
-    const clientsWithCompleteData = clients.filter((c) => c.name && c.email && c.phone && c.address).length
-    const clientDataScore = clients.length > 0 ? (clientsWithCompleteData / clients.length) * 100 : 0
-
-    // Check if items have tax configuration
-    const itemsWithTax = items.filter((i) => i.taxType).length
-    const itemTaxScore = items.length > 0 ? (itemsWithTax / items.length) * 100 : 0
-
-    // Calculate overall compliance score
-    const scores = [hasTaxSettings ? 100 : 0, hasBankDetails ? 100 : 0, clientDataScore, itemTaxScore]
-    const overallScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-
-    return {
-      overallScore,
-      taxSettingsScore: hasTaxSettings ? 100 : 0,
-      bankDetailsScore: hasBankDetails ? 100 : 0,
-      clientDataScore: Math.round(clientDataScore),
-      itemTaxScore: Math.round(itemTaxScore),
-      hasTaxSettings,
-      hasBankDetails,
-    }
-  }, [clients, items])
 
   const handleExportFinancialData = () => {
     downloadCSV(`financial-report-${dateRange}-${new Date().toISOString().split("T")[0]}.csv`, financialData, [
@@ -337,10 +336,34 @@ export default function ReportsPage() {
 
   const handleExportPDF = async () => {
     try {
-      await generatePDF("reports-content", `report-${dateRange}-${new Date().toISOString().split("T")[0]}.pdf`)
+      const companyResponse = await fetch("/api/company")
+      const companyData = await companyResponse.json()
+      const company = companyData?.company
+
+      await generateEnhancedPDF({
+        title: `Financial Report - ${dateRange}`,
+        companyInfo: company ? {
+          name: company.companyName,
+          email: company.email,
+          phone: company.phone,
+          address: company.address,
+          logo: company.logo,
+          website: company.website,
+        } : undefined,
+        data: financialData,
+        columns: [
+          { header: "Month", dataKey: "month" },
+          { header: "Income", dataKey: "income" },
+          { header: "Expenses", dataKey: "expenses" },
+          { header: "Profit", dataKey: "profit" },
+        ],
+        filename: `financial-report-${dateRange}-${new Date().toISOString().split("T")[0]}.pdf`,
+      })
+
+      toast({ title: "Success", description: "PDF exported successfully" })
     } catch (error) {
       console.error("Failed to generate PDF:", error)
-      toast({ title: "Error", description: "Failed to generate PDF. Please try again.", variant: "destructive" })
+      toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" })
     }
   }
 

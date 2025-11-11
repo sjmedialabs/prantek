@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
+import { logActivity } from "@/lib/mongodb-store"
 
 
 export const GET = withAuth(async (request: NextRequest, user: any) => {
@@ -48,6 +49,11 @@ export const POST = withAuth(async (request: NextRequest, user: any) => {
     }
 
     const result = await db.collection(Collections.ITEMS).insertOne(newItem)
+    
+    await logActivity(user.userId, "create", "item", result.insertedId?.toString(), { 
+      name: body.name || body.description,
+      quantity: body.quantity 
+    })
 
     return NextResponse.json({
       success: true,

@@ -101,7 +101,7 @@ export default function RecipientTypesPage() {
       setIsDialogOpen(false)
       setFormData({ name: "", value: "" })
       setEditingType(null)
-      window.location.reload()
+      await loadRecipientTypes()
     } catch (error) {
       console.error("Failed to save recipient type:", error)
       toast({
@@ -133,7 +133,7 @@ export default function RecipientTypesPage() {
         title: "Success",
         description: `Recipient type ${type.isActive ? "deactivated" : "activated"} successfully`,
       })
-      window.location.reload()
+      await loadRecipientTypes()
     } catch (error) {
       console.error("Failed to toggle recipient type status:", error)
       toast({

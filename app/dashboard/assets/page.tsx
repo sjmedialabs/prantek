@@ -60,6 +60,8 @@ const COLORS = ["#8b5cf6", "#06b6d4", "##10b981", "#f59e0b", "#ef4444"]
 
 export default function AssetsPage() {
   const { hasPermission, user } = useUser()
+  const [categories, setCategories] = useState<any[]>([])
+  const [conditions, setConditions] = useState<any[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
   const [employees, setEmployees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,6 +88,13 @@ export default function AssetsPage() {
   }, [])
 
   const loadData = async () => {
+
+      // Load categories and conditions from API
+      const loadedCategories = await api.assetCategories.getAll()
+      setCategories(loadedCategories || [])
+      
+      const loadedConditions = await api.assetConditions.getAll()
+      setConditions(loadedConditions || [])
     try {
       // Load employees from API
       const loadedEmployees = await api.employees.getAll()
@@ -168,13 +177,13 @@ export default function AssetsPage() {
   const handleAssignAsset = () => {
     if (!selectedAssetForAssignment || !selectedEmployeeId) return
 
-    const employee = employees.find((e) => e.id === selectedEmployeeId)
+    const employee = employees.find((e) => String(e._id || e.id) === selectedEmployeeId)
     if (!employee) return
 
     const updatedAssets = assets.map((asset) => {
       if (asset.id === selectedAssetForAssignment.id) {
         const history: AssignmentHistory = {
-          employeeId: employee.id,
+          employeeId: String(employee._id || employee.id),
           employeeName: `${employee.employeeName} ${employee.surname}`,
           assignedDate: new Date().toISOString(),
           assignedBy: user?.email || "Admin",
@@ -182,7 +191,7 @@ export default function AssetsPage() {
 
         return {
           ...asset,
-          assignedTo: employee.id,
+          assignedTo: String(employee._id || employee.id),
           assignedToName: `${employee.employeeName} ${employee.surname}`,
           assignedDate: new Date().toISOString(),
           assignedBy: user?.email || "Admin",
@@ -338,11 +347,9 @@ export default function AssetsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="equipment">Equipment</SelectItem>
-                      <SelectItem value="vehicle">Vehicle</SelectItem>
-                      <SelectItem value="property">Property</SelectItem>
-                      <SelectItem value="software">Software</SelectItem>
-                      <SelectItem value="furniture">Furniture</SelectItem>
+                      {categories.filter(c => c.isActive).map(cat => (
+                        <SelectItem key={cat._id} value={cat.name.toLowerCase()}>{cat.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -379,10 +386,9 @@ export default function AssetsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="fair">Fair</SelectItem>
-                      <SelectItem value="poor">Poor</SelectItem>
+                      {conditions.filter(c => c.isActive).map(cond => (
+                        <SelectItem key={cond._id} value={cond.name.toLowerCase()}>{cond.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -447,7 +453,7 @@ export default function AssetsPage() {
                   {employees
                     .filter((emp) => emp.isActive)
                     .map((employee) => (
-                      <SelectItem key={employee.id} value={employee.id}>
+                      <SelectItem key={employee._id || employee.id} value={String(employee._id || employee.id)}>
                         {employee.employeeName} {employee.surname} - {employee.employeeNumber}
                       </SelectItem>
                     ))}
@@ -551,11 +557,9 @@ export default function AssetsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="equipment">Equipment</SelectItem>
-                      <SelectItem value="vehicle">Vehicle</SelectItem>
-                      <SelectItem value="property">Property</SelectItem>
-                      <SelectItem value="software">Software</SelectItem>
-                      <SelectItem value="furniture">Furniture</SelectItem>
+                      {categories.filter(c => c.isActive).map(cat => (
+                        <SelectItem key={cat._id} value={cat.name.toLowerCase()}>{cat.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Select value={filterStatus} onValueChange={setFilterStatus}>

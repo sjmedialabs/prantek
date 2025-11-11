@@ -36,8 +36,8 @@ export default function ReceiptCategoriesPage() {
 
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return
-    const created = await api.receiptCategories.create({ name: newCategory })
-    setCategories([created, ...categories])
+    await api.receiptCategories.create({ name: newCategory })
+    await loadCategories()
     setNewCategory("")
   }
 

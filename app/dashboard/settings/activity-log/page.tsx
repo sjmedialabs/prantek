@@ -184,7 +184,7 @@ const loadLogs = async () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  logs.map((log) => (
+                  filteredLogs.map((log) => (
                     <TableRow key={log?._id}>
                       <TableCell className="font-mono text-sm">{new Date(log.timestamp).toLocaleString()}</TableCell>
                       <TableCell>{log.userName}</TableCell>

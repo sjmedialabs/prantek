@@ -51,7 +51,6 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
         return NextResponse.json({ success: false, error: "Quotation not found" }, { status: 404 })
       }
 
-      await logActivity(user.userId, "update", "quotation", params.id)
 
       return NextResponse.json({ success: true, data: quotation })
     } catch (error) {
@@ -76,7 +75,6 @@ export async function DELETE(request: NextRequest, context: { params: { id: stri
         return NextResponse.json({ success: false, error: "Quotation not found" }, { status: 404 })
       }
 
-      await logActivity(user.userId, "delete", "quotation", params.id)
 
       return NextResponse.json({ success: true })
     } catch (error) {

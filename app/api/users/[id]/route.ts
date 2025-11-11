@@ -1,0 +1,112 @@
+import { NextResponse } from "next/server"
+import { NextRequest } from "next/server"
+import { connectDB } from "@/lib/mongodb"
+import { Collections } from "@/lib/db-config"
+import { ObjectId } from "mongodb"
+import bcrypt from "bcryptjs"
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const db = await connectDB()
+    const { id } = params
+    
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: "Invalid user ID" }, { status: 400 })
+    }
+    
+    const user = await db.collection(Collections.USERS).findOne({ _id: new ObjectId(id) })
+    
+    if (!user) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
+    }
+    
+    // Remove password from response
+    const { password, ...safeUser } = user
+    
+    return NextResponse.json({ 
+      success: true, 
+      data: safeUser,
+      user: safeUser
+    })
+  } catch (error) {
+    console.error("Error fetching user:", error)
+    return NextResponse.json({ success: false, error: "Failed to fetch user" }, { status: 500 })
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const db = await connectDB()
+    const { id } = params
+    const data = await request.json()
+    
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: "Invalid user ID" }, { status: 400 })
+    }
+    
+    const { password, _id, ...updateData } = data
+    
+    // Hash password if being updated
+    const finalUpdate: any = { ...updateData, updatedAt: new Date() }
+    if (password) {
+      finalUpdate.password = await bcrypt.hash(password, 10)
+    }
+    
+    const result = await db.collection(Collections.USERS).updateOne(
+      { _id: new ObjectId(id) },
+      { $set: finalUpdate }
+    )
+    
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
+    }
+    
+    const updatedUser = await db.collection(Collections.USERS).findOne({ _id: new ObjectId(id) })
+    
+    // Remove password from response
+    if (updatedUser) {
+      const { password: _, ...safeUser } = updatedUser
+      return NextResponse.json({ 
+        success: true, 
+        data: safeUser,
+        user: safeUser
+      })
+    }
+    
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error updating user:", error)
+    return NextResponse.json({ success: false, error: "Failed to update user" }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const db = await connectDB()
+    const { id } = params
+    
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, error: "Invalid user ID" }, { status: 400 })
+    }
+    
+    const result = await db.collection(Collections.USERS).deleteOne({ _id: new ObjectId(id) })
+    
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
+    }
+    
+    return NextResponse.json({ success: true, message: "User deleted successfully" })
+  } catch (error) {
+    console.error("Error deleting user:", error)
+    return NextResponse.json({ success: false, error: "Failed to delete user" }, { status: 500 })
+  }
+}

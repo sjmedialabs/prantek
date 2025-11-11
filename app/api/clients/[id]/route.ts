@@ -44,7 +44,6 @@ export async function PUT(request: NextRequest, context: { params: { id: string 
         return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
       }
 
-      await logActivity(user.userId, "update", "client", params.id, { name: body.name })
 
       return NextResponse.json({ success: true, data: client })
     } catch (error) {
@@ -64,7 +63,6 @@ export const DELETE = withAuth(async (request: NextRequest, user, { params }: { 
       return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
     }
 
-    await logActivity(user.userId, "delete", "client", params.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

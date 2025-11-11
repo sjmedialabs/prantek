@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, FileText, CheckCircle2 } from "lucide-react"
 import { tokenStorage } from "@/lib/token-storage"
 
-export default function SignInPage() {
+function SignInForm() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -110,7 +110,7 @@ export default function SignInPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full"
+                autoComplete="email"
               />
             </div>
 
@@ -139,6 +139,12 @@ export default function SignInPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing In..." : "Sign In"}
             </Button>
+
+            <div className="text-center">
+              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+                Forgot your password?
+              </Link>
+            </div>
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-600">
@@ -150,5 +156,13 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <SignInForm />
+    </Suspense>
   )
 }
