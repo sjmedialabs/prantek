@@ -56,7 +56,7 @@ export default function NewReceiptPage() {
   const [paymentMethods, setPaymentMethods] = useState<string[]>([])
   const [bankAccounts, setBankAccounts] = useState<string[]>([])
 
-  const [receiptNumber, setReceiptNumber] = useState("Loading...")
+  const [receiptNumber, setReceiptNumber] = useState("Auto-generated")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [description, setDescription] = useState("")
 
@@ -119,22 +119,17 @@ export default function NewReceiptPage() {
       const loadedQuotations = await api.quotations.getAll()
       const loadedItems = await api.items.getAll()
       const loadedBankDetails=await api.bankAccounts.getAll();
-      
-      // Fetch the next receipt number
-      const nextReceiptNumber = await api.receipts.getNextNumber()
 
       console.log("[v0] Loaded clients:", loadedClients)
       console.log("[v0] Loaded quotations:", loadedQuotations)
       console.log("[v0] Loaded items:", loadedItems)
       // console.log("[v0] Loaded BANK DETAILS:", loadedBankDetails)
-      console.log("[v0] Next receipt number:", nextReceiptNumber)
 
       setClients(loadedClients)
       setAllQuotations(loadedQuotations)
       setMasterItems(loadedItems)
       setBankDetails(loadedBankDetails)
 
-      setReceiptNumber(nextReceiptNumber)
       // Set default payment methods and bank accounts
       setPaymentMethods(["Cash", "Bank Transfer", "UPI", "Check", "Credit Card", "Debit Card"])
       setBankAccounts(["HDFC Bank - 1234567890", "ICICI Bank - 0987654321", "SBI - 5555666677"])
@@ -361,7 +356,7 @@ export default function NewReceiptPage() {
     try {
       console.log("[v0] Calling createReceiptWithQuotation...")
 
-      const receipt = await api.clients.create({
+      const receipt = await api.receipts.create({
         clientId: selectedClientId,
         clientName,
         clientEmail,

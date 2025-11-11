@@ -471,13 +471,14 @@ export const api = {
         })
         return data.data || data.content
       },
-      update: async (id: string, contentData: any) => {
-        const data = await fetchAPI(`/api/website-content/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(contentData),
-        })
-        return data.data || data.content
-      },
+update: async (id: string, contentData: any) => {
+  const res = await fetchAPI(`/api/website-content`, {
+    method: "PUT",
+    body: JSON.stringify({ id, contentData }),
+  })
+  return res.data || res.content
+},
+
       delete: async (id: string) => {
         await fetchAPI(`/api/website-content/${id}`, {
           method: "DELETE",
