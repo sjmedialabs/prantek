@@ -116,7 +116,6 @@ export default function MemberTypesPage() {
     
     )
     toast({ title: "Success", description: "status updated successfully!" })   // ✅ ADDED
-    window.location.reload()
   } catch (err: any) {
     toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
   }

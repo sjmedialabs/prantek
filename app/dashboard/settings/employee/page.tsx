@@ -254,7 +254,6 @@ export default function EmployeePage() {
       )
     )
     toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
-    window.location.reload()
   } catch (err: any) {
     toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
   }

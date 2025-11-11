@@ -19,8 +19,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    // Check if user already exists
-    const existingUser = await db.collection(Collections.USERS).findOne({ email: data.email })
+    // Normalize email to lowercase
+    const normalizedEmail = data.email.toLowerCase()
+    
+    // Check if user already exists (case-insensitive)
+    const existingUser = await db.collection(Collections.USERS).findOne({ 
+      email: { $regex: new RegExp(`^${data.email}$`, 'i') }
+    })
     if (existingUser) {
       return NextResponse.json({ 
         success: false, 
@@ -31,17 +36,37 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10)
     
-    // Create new user
+    // Handle trial registration - Always give 14-day trial when a plan is selected
+    let subscriptionStatus = "inactive"
+    let trialEndsAt = null
+    let subscriptionStartDate = null
+    let subscriptionEndDate = null
+    
+    if (data.subscriptionPlanId) {
+      // User selected a plan - automatically start 14-day trial
+      subscriptionStatus = "trial"
+      subscriptionStartDate = new Date()
+      
+      // Set trial end date to 14 days from now
+      const trialEndDate = new Date()
+      trialEndDate.setDate(trialEndDate.getDate() + 14)
+      trialEndsAt = trialEndDate
+      subscriptionEndDate = trialEndDate
+    }
+    
+    // Create new user with normalized email
     const newUser = {
-      email: data.email,
+      email: normalizedEmail,
       password: hashedPassword,
       name: data.name,
       role: data.role || "admin",
       phone: data.phone || "",
       address: data.address || "",
       subscriptionPlanId: data.subscriptionPlanId || "",
-      subscriptionStatus: data.subscriptionStatus || "inactive",
-      trialEndsAt: data.trialEndsAt || null,
+      subscriptionStatus,
+      trialEndsAt,
+      subscriptionStartDate,
+      subscriptionEndDate,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -60,55 +85,61 @@ export async function POST(request: NextRequest) {
       // Don't fail the registration if notification fails
     }
     
-    // Generate JWT tokens
-    const tokenPayload = {
-      userId: result.insertedId.toString(),
-      email: newUser.email,
-      role: newUser.role as "user" | "admin" | "super-admin",
-    }
-    
-    const accessToken = await generateAccessToken(tokenPayload)
-    const refreshToken = await generateRefreshToken(tokenPayload)
-    
     // Remove password from response
-    const { password: _, ...safeUser } = newUser
+    const { password: _, ...userWithoutPassword } = newUser
+    
+    // Generate tokens
+    const accessToken = await generateAccessToken({ 
+      userId: result.insertedId.toString(), 
+      email: newUser.email, 
+      role: newUser.role 
+    })
+    const refreshToken = await generateRefreshToken({ 
+      userId: result.insertedId.toString(), 
+      email: newUser.email, 
+      role: newUser.role 
+    })
+    
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        ...userWithoutPassword,
+        _id: result.insertedId,
+        id: result.insertedId.toString()
+      },
+      accessToken,
+      refreshToken
+    })
     
     // Set cookies
-    const response = NextResponse.json({ 
-      success: true, 
-      user: { ...safeUser, _id: result.insertedId, id: result.insertedId.toString() },
-      accessToken,
-      refreshToken,
+    const isProduction = process.env.NODE_ENV === 'production'
+    response.cookies.set('auth_token', accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 // 7 days
     })
     
-    // Set HTTP-only cookies
-    response.cookies.set("auth_token", accessToken, {
+    response.cookies.set('accessToken', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 15 * 60 // 15 minutes
     })
     
-    response.cookies.set("accessToken", accessToken, {
+    response.cookies.set('refreshToken', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 15, // 15 minutes
-    })
-    
-    response.cookies.set("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 // 7 days
     })
     
     return response
   } catch (error) {
     console.error("Error registering user:", error)
-    return NextResponse.json({ 
-      success: false, 
-      error: "Failed to create account" 
-    }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: "Failed to create account" },
+      { status: 500 }
+    )
   }
 }

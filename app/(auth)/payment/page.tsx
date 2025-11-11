@@ -65,11 +65,11 @@ export default function PaymentPage() {
       // For now, we'll use test mode with the provided credentials
       const options = {
         key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
-        amount: selectedPlan.price * 100, // Amount in paise (₹49 = 4900 paise)
+        amount: selectedPlan.price, // Amount already in paise (₹49 = 4900 paise)
         currency: "INR",
         name: "SaaS Platform",
         description: `${selectedPlan.name} Subscription`,
-        image: "/images/prantek-logo.png",
+        image: "https://31.97.224.169:9080/images/prantek-logo.png",
         prefill: {
           name: companyName,
           email: email,

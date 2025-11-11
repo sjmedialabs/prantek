@@ -18,7 +18,7 @@ export async function authenticate(email: string, password: string): Promise<Aut
   console.log('[AUTH-SERVER] authenticate() called for:', email)
   
   const db = await connectDB()
-  const user = await db.collection("users").findOne({ email })
+  const user = await db.collection("users").findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } })
 
   if (!user) {
     console.log('[AUTH-SERVER] User not found')

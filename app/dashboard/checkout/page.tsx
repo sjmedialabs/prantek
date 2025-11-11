@@ -91,7 +91,7 @@ export default function CheckoutPage() {
         currency: "INR",
         name: "SaaS Platform",
         description: `${plan.name} Plan Subscription`,
-        image: "/images/prantek-logo.png",
+        image: "https://31.97.224.169:9080/images/prantek-logo.png",
         prefill: {
           name: user?.name || "",
           email: user?.email || "",

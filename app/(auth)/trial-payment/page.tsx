@@ -65,7 +65,7 @@ export default function TrialPaymentPage() {
         currency: "INR",
         name: "SaaS Platform",
         description: "Trial Verification Payment (Refunded Instantly)",
-        image: "/images/prantek-logo.png",
+        image: "https://31.97.224.169:9080/images/prantek-logo.png",
         prefill: {
           email: email || "",
         },

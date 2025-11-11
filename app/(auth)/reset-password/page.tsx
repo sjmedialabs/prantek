@@ -1,17 +1,18 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, Eye, EyeOff } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { api } from "@/lib/api-client"
+import { Eye, EyeOff, CheckCircle, Lock } from "lucide-react"
+import Link from "next/link"
 
 export default function ResetPasswordPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -19,61 +20,61 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const email = searchParams.get("email")
+  const [email, setEmail] = useState("")
+  const [token, setToken] = useState("")
 
   useEffect(() => {
-    if (!email) {
-      setError("Invalid reset link")
+    const emailParam = searchParams.get("email")
+    const tokenParam = searchParams.get("token")
+
+    if (!emailParam) {
+      setError("Invalid reset link. Please request a new password reset.")
+      return
     }
-  }, [email])
+
+    setEmail(emailParam)
+    setToken(tokenParam || "")
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError("")
 
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters")
+      return
+    }
+
+    setLoading(true)
+
     try {
-      if (password !== confirmPassword) {
-        setError("Passwords do not match")
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, token, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Failed to reset password")
         return
       }
 
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters")
-        return
-      }
-
-      if (!email) {
-        setError("Invalid reset link")
-        return
-      }
-
-      // Find user and update password
-      const users = api.users.getAll()
-      const user = users.find((u) => u.email === email)
-
-      if (!user) {
-        setError("User not found")
-        return
-      }
-
-      // Update password
-      api.users.update(user.id, { password })
-
-      // Clear reset token
-      localStorage.removeItem(`password_reset_${email}`)
-
-      console.log("[v0] Password reset successful for:", email)
+      console.log("[RESET-PASSWORD] Success:", data)
       setSuccess(true)
 
-      // Redirect to signin after 2 seconds
+      // Redirect to sign in after 2 seconds
       setTimeout(() => {
         router.push("/signin")
       }, 2000)
-    } catch (err) {
-      console.error("[v0] Reset password error:", err)
+    } catch (err: any) {
+      console.error("[RESET-PASSWORD] Error:", err)
       setError("An error occurred. Please try again.")
     } finally {
       setLoading(false)
@@ -82,29 +83,41 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-white" />
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle className="text-2xl font-bold">Password reset successful!</CardTitle>
-            <CardDescription>Redirecting you to sign in...</CardDescription>
+            <CardTitle>Password Reset Successful!</CardTitle>
+            <CardDescription>
+              Your password has been updated successfully
+            </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                Redirecting to sign in page...
+              </AlertDescription>
+            </Alert>
+          </CardContent>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">P</span>
+        <CardHeader>
+          <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+            <Lock className="h-6 w-6 text-purple-600" />
           </div>
-          <CardTitle className="text-2xl font-bold">Reset your password</CardTitle>
-          <CardDescription>Enter your new password</CardDescription>
+          <CardTitle>Reset Your Password</CardTitle>
+          <CardDescription>
+            Enter your new password for <strong>{email}</strong>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -124,8 +137,6 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
-                  className="pr-10"
                 />
                 <button
                   type="button"
@@ -138,7 +149,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -147,7 +158,6 @@ export default function ResetPasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="pr-10"
                 />
                 <button
                   type="button"
@@ -162,6 +172,12 @@ export default function ResetPasswordPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Resetting..." : "Reset Password"}
             </Button>
+
+            <div className="text-center pt-4">
+              <Link href="/signin" className="text-sm text-gray-600 hover:text-gray-900">
+                Back to Sign In
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

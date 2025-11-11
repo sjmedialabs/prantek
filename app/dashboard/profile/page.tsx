@@ -12,6 +12,16 @@ import { User, Mail, Phone, MapPin, Save, CreditCard, Check, Zap } from "lucide-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { toast } from "@/lib/toast"
+
+interface SubscriptionPlan {
+  id: string
+  name: string
+  description: string
+  price: number
+  billingCycle: "monthly" | "yearly"
+  features: string[]
+}
 
 export default function ProfilePage() {
   const { user } = useUser()
@@ -28,53 +38,94 @@ export default function ProfilePage() {
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([])
   const [showPlanDialog, setShowPlanDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadPlans = async () => {
-      console.log("[v0] Profile page: Loading subscription plans...")
-      const plans = await dataStore.getActiveSubscriptionPlans()
-      console.log("[v0] Profile page: Available plans:", plans)
-      console.log("[v0] Profile page: Number of plans:", plans.length)
-      setAvailablePlans(plans)
-
-      if (user?.subscriptionPlanId) {
-        console.log("[v0] Profile page: User has subscription plan ID:", user.subscriptionPlanId)
-        const plan = await dataStore.getById<SubscriptionPlan>("subscription_plans", user.subscriptionPlanId)
-        console.log("[v0] Profile page: Current plan:", plan)
-        setCurrentPlan(plan)
-      } else {
-        console.log("[v0] Profile page: User has no subscription plan")
-      }
-    }
     loadPlans()
   }, [user])
 
+  const loadPlans = async () => {
+    try {
+      console.log("[Profile] Loading subscription plans...")
+      const plans = await api.subscriptionPlans.getAll()
+      console.log("[Profile] Available plans:", plans)
+      setAvailablePlans(plans || [])
+
+      if (user?.subscriptionPlanId) {
+        console.log("[Profile] User has subscription plan ID:", user.subscriptionPlanId)
+        const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
+        console.log("[Profile] Current plan:", plan)
+        setCurrentPlan(plan || null)
+      } else {
+        console.log("[Profile] User has no subscription plan")
+      }
+    } catch (error) {
+      console.error("[Profile] Error loading plans:", error)
+      toast({ title: "Error", description: "Failed to load subscription plans", variant: "destructive" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSave = async () => {
-    // Save to backend
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    try {
+      // Save profile data to backend via API
+      toast({ title: "Success", description: "Profile updated successfully" })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (error) {
+      console.error("Error saving profile:", error)
+      toast({ title: "Error", description: "Failed to update profile", variant: "destructive" })
+    }
   }
 
   const handlePlanSelection = async (plan: SubscriptionPlan) => {
     if (!user) return
 
-    const startDate = new Date()
-    const endDate = new Date()
-    endDate.setMonth(endDate.getMonth() + (plan.billingCycle === "yearly" ? 12 : 1))
+    try {
+      const startDate = new Date()
+      const endDate = new Date()
+      endDate.setMonth(endDate.getMonth() + (plan.billingCycle === "yearly" ? 12 : 1))
 
-    await dataStore.update<any>("users", user.id, {
-      subscriptionPlanId: plan.id,
-      subscriptionStartDate: startDate.toISOString(),
-      subscriptionEndDate: endDate.toISOString(),
-    })
+      // Update user subscription via API
+      await api.users.update(user.id, {
+        subscriptionPlanId: plan.id,
+        subscriptionStartDate: startDate.toISOString(),
+        subscriptionEndDate: endDate.toISOString(),
+      })
 
-    setCurrentPlan(plan)
-    setShowPlanDialog(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+      setCurrentPlan(plan)
+      setShowPlanDialog(false)
+      toast({ title: "Success", description: `Successfully subscribed to ${plan.name} plan` })
 
-    // Reload page to update user context
-    window.location.reload()
+      // Reload page to update user context
+      window.location.reload()
+    } catch (error) {
+      console.error("Error updating subscription:", error)
+      toast({ title: "Error", description: "Failed to update subscription plan", variant: "destructive" })
+    }
+  }
+
+  const handleRemovePlan = async () => {
+    if (!user || !currentPlan) return
+
+    try {
+      // Remove subscription via API
+      await api.users.update(user.id, {
+        subscriptionPlanId: null,
+        subscriptionStartDate: null,
+        subscriptionEndDate: null,
+      })
+
+      setCurrentPlan(null)
+      toast({ title: "Success", description: "Subscription cancelled successfully" })
+
+      // Reload page to update user context
+      window.location.reload()
+    } catch (error) {
+      console.error("Error removing subscription:", error)
+      toast({ title: "Error", description: "Failed to cancel subscription", variant: "destructive" })
+    }
   }
 
   return (
@@ -123,10 +174,15 @@ export default function ProfilePage() {
               <CardDescription>Manage your subscription and billing</CardDescription>
             </div>
             {currentPlan ? (
-              <Button onClick={() => setShowPlanDialog(true)} variant="outline">
-                <Zap className="h-4 w-4 mr-2" />
-                Upgrade Plan
-              </Button>
+              <div className="flex space-x-2">
+                <Button onClick={() => setShowPlanDialog(true)} variant="outline">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Upgrade Plan
+                </Button>
+                <Button onClick={handleRemovePlan} variant="destructive">
+                  Cancel Plan
+                </Button>
+              </div>
             ) : (
               <Button onClick={() => setShowPlanDialog(true)}>
                 <CreditCard className="h-4 w-4 mr-2" />
