@@ -11,6 +11,7 @@ import { api } from "@/lib/api-client"
 import { Save, Plus, Trash2 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { WebsiteContent } from "@/lib/models/types"
 
 export default function CMSPage() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
@@ -23,25 +24,25 @@ export default function CMSPage() {
         const websiteContent = data && data.length > 0 ? data[0] : null
         
         // If no content exists, create default content
-        if (!websiteContent) {
-          const defaultContent = {
-            heroTitle: "Welcome to Prantek",
-            heroSubtitle: "Your Business Solution",
-            heroDescription: "Manage your business efficiently",
-            ctaButtonText: "Get Started",
-            ctaButtonLink: "/signup",
-            trustedByLogos: [],
-            features: [],
-            industries: [],
-            showcaseFeatures: [],
-            testimonials: [],
-            faqs: [],
-            ctaFeatures: [],
-          }
-          setContent(defaultContent)
-          setLoading(false)
-          return
-        }
+        // if (!websiteContent) {
+        //   const defaultContent = {
+        //     heroTitle: "Welcome to Prantek",
+        //     heroSubtitle: "Your Business Solution",
+        //     heroDescription: "Manage your business efficiently",
+        //     ctaButtonText: "Get Started",
+        //     ctaButtonLink: "/signup",
+        //     trustedByLogos: [],
+        //     features: [],
+        //     industries: [],
+        //     showcaseFeatures: [],
+        //     testimonials: [],
+        //     faqs: [],
+        //     ctaFeatures: [],
+        //   }
+        //   setContent(defaultContent)
+        //   setLoading(false)
+        //   return
+        // }
         
         const normalizedContent = {
           ...websiteContent,
@@ -63,27 +64,29 @@ export default function CMSPage() {
     loadContent()
   }, [])
 
-  const handleSave = async () => {
-    if (!content) return
+const handleSave = async () => {
+  if (!content) return
 
-    try {
-      const { updatedAt, _id, id, ...contentToSave } = content as any
-      
-      if (_id || id) {
-        // Update existing content
-        await api.websiteContent.update(_id || id, contentToSave)
-      } else {
-        // Create new content
-        const result = await api.websiteContent.create(contentToSave)
-        setContent({ ...contentToSave, _id: result._id || result.id })
-      }
-      
-      toast.success("Website content updated successfully")
-    } catch (error) {
-      console.error("Failed to save content:", error)
-      toast.error("Failed to save content")
+  try {
+    const { _id, id, updatedAt, ...payload } = content as any
+
+    let saved
+    if (_id || id) {
+      // ✅ Update
+      saved = await api.websiteContent.update(_id || id, payload)
+    } else {
+      // ✅ Create
+      saved = await api.websiteContent.create(payload)
     }
+
+    setContent(saved)
+    toast.success("Website content updated successfully!")
+  } catch (error) {
+    console.error("Failed to save content:", error)
+    toast.error("Failed to save content")
   }
+}
+
 
   const updateContent = (field: keyof WebsiteContent, value: any) => {
     if (!content) return

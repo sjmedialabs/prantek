@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
-import type { Receipt } from "@/lib/data-store"
+import type { Receipt } from "@/lib/models/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +35,31 @@ export default function ReconciliationPage() {
 
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
+const exportReport = () => {
+  if (!receipts || receipts.length === 0) {
+    alert("No data available to export")
+    return
+  }
+
+  const csvRows = []
+  const headers = Object.keys(receipts[0])
+  csvRows.push(headers.join(","))
+
+  receipts.forEach((row) => {
+    const values = headers.map((header) => JSON.stringify(row[header] ?? ""))
+    csvRows.push(values.join(","))
+  })
+
+  const csvString = csvRows.join("\n")
+  const blob = new Blob([csvString], { type: "text/csv" })
+  const url = window.URL.createObjectURL(blob)
+
+  const a = document.createElement("a")
+  a.href = url
+  a.download = "report.csv"
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
 
   useEffect(() => {
     loadReceipts()
@@ -42,7 +67,7 @@ export default function ReconciliationPage() {
 
   const loadReceipts = async () => {
     try {
-      const allReceipts = await dataStore.getAll<Receipt>("receipts")
+      const allReceipts = await api.receipts.getAll()
       setReceipts(allReceipts)
     } catch (error) {
       console.error("[v0] Error loading receipts:", error)
@@ -53,7 +78,7 @@ export default function ReconciliationPage() {
   }
 
   const transactions = receipts.map((receipt) => ({
-    id: receipt.id,
+    id: receipt._id,
     type: "Receipt" as const,
     transactionNumber: receipt.receiptNumber,
     quotationNumber: receipt.quotationNumber,
@@ -63,7 +88,7 @@ export default function ReconciliationPage() {
     paymentMethod: receipt.paymentMethod,
     referenceNumber: receipt.referenceNumber,
     amount: receipt.amountPaid || 0, // Default to 0 if undefined
-    status: receipt.status === "cleared" ? "Cleared" : "Received",
+    status: receipt.status === "cleared" ? "Cleared" : "Paid",
   }))
 
   const filteredTransactions = transactions.filter((transaction) => {
@@ -81,9 +106,9 @@ export default function ReconciliationPage() {
     try {
       if (currentStatus === "Cleared") {
         // Mark as received (uncleared)
-        const receipt = receipts.find((r) => r.id === id)
+        const receipt = receipts.find((r) => r._id === id)
         if (receipt) {
-          await dataStore.update("receipts", id, { status: "received" })
+          await api.receipts.update( id, { status: "paid" })
           toast.success(`Receipt ${receipt.receiptNumber} marked as received`)
           await loadReceipts()
         }
@@ -122,7 +147,7 @@ export default function ReconciliationPage() {
           <h1 className="text-2xl font-bold text-gray-900">Reconciliation</h1>
           <p className="text-gray-600">Reconcile receipts and payments with bank statements</p>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" onClick={exportReport}>
           <Download className="h-4 w-4 mr-2" />
           Export Report
         </Button>

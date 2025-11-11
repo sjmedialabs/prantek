@@ -48,42 +48,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Failed to create content" }, { status: 500 })
   }
 }
-
 // PUT - update content
 export async function PUT(req: NextRequest) {
   try {
     const db = await connectDB()
-    const data = await req.json()
-    const { _id, id, ...updateData } = data
-    
-    const contentId = _id || id
+    const body = await req.json()
+    const { id, updateData } = body
+
+    const contentId = id
     if (!contentId) {
-      return NextResponse.json({ success: false, error: "Content ID required" }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: "Content ID required" },
+        { status: 400 }
+      )
     }
 
     const { ObjectId } = await import("mongodb")
+
     const result = await db
-      .collection(Collections.WEBSITE_CONTENT || "website_content")
-      .updateOne(
+      .collection(Collections.WEBSITE_CONTENT)
+      .findOneAndUpdate(
         { _id: new ObjectId(contentId) },
-        { $set: { ...updateData, updatedAt: new Date() } }
+        { $set: { ...updateData, updatedAt: new Date() } },
+        { returnDocument: "after" }   // ✅ returns updated doc
       )
 
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ success: false, error: "Content not found" }, { status: 404 })
-    }
+    // if (!result || !result.value) {
+    //   return NextResponse.json(
+    //     { success: false, error: "Content not found" },
+    //     { status: 404 }
+    //   )
+    // }
 
-    const updatedContent = await db
-      .collection(Collections.WEBSITE_CONTENT || "website_content")
-      .findOne({ _id: new ObjectId(contentId) })
-
-    return NextResponse.json({ 
-      success: true, 
-      data: updatedContent,
-      content: updatedContent
+    return NextResponse.json({
+      success: true,
+      data: result?.value,
+      content: result?.value,
     })
   } catch (error) {
     console.error("Error updating website content:", error)
-    return NextResponse.json({ success: false, error: "Failed to update content" }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: "Failed to update content" },
+      { status: 500 }
+    )
   }
 }
+

@@ -70,7 +70,114 @@ export interface Item extends BaseDocument {
   taxRate?: number
 }
 
+export interface WebsiteContent {
+  // Branding
+  companyName: string
+  tagline: string
+  logo: string
 
+  // Hero Section
+  heroTitle: string
+  heroSubtitle: string
+  heroCtaText: string
+  heroCtaLink: string
+  heroRightImage: string
+  heroBackgroundImage: string
+  heroSecondaryCtaText: string
+  heroSecondaryCtaLink: string
+  heroDemoVideoUrl: string // Added YouTube demo video URL field
+
+  // Trusted By Section
+  trustedByTitle: string
+  trustedByLogos: Array<{
+    id: string
+    name: string
+    logo: string
+  }>
+
+  // About Section
+  aboutTitle: string
+  aboutDescription: string
+
+  // Features (up to 9)
+  featuresTitle: string
+  featuresSubtitle: string
+  features: Array<{
+    id: string
+    title: string
+    description: string
+    icon: string
+  }>
+
+  // Industries Section
+  industriesTitle: string
+  industriesSubtitle: string
+  industries: Array<{
+    id: string
+    title: string
+    description: string
+    icon: string
+    gradient: string
+  }>
+
+  // Dashboard Showcase Section
+  showcaseTitle: string
+  showcaseSubtitle: string
+  showcaseDescription: string
+  showcaseFeatures: string[]
+
+  // Testimonials Section
+  testimonialsTitle: string
+  testimonialsSubtitle: string
+  testimonials: Array<{
+    id: string
+    company: string
+    logo: string
+    author: string
+    role: string
+    content: string
+    rating: number
+  }>
+
+  // Pricing Section
+  pricingTitle: string
+  pricingSubtitle: string
+  pricingFooterText: string
+
+  // FAQ Section
+  faqTitle: string
+  faqSubtitle: string
+  faqs: Array<{
+    id: string
+    question: string
+    answer: string
+  }>
+
+  // CTA Section
+  ctaTitle: string
+  ctaSubtitle: string
+  ctaPrimaryText: string
+  ctaPrimaryLink: string
+  ctaSecondaryText: string
+  ctaSecondaryLink: string
+  ctaFeatures: string[]
+
+  // Contact Info
+  contactEmail: string
+  contactPhone: string
+  contactAddress: string
+
+  // Social Media
+  socialFacebook?: string
+  socialTwitter?: string
+  socialLinkedin?: string
+  socialInstagram?: string
+
+  // Footer
+  footerText: string
+
+  updatedAt: string
+}
 export interface ReceiptItem {
   itemId: string
   name: string
