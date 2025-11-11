@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
-import type { Receipt } from "@/lib/data-store"
+import { dataStore, type Receipt } from "@/lib/data-store"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,9 +43,12 @@ export default function ReconciliationPage() {
   const loadReceipts = async () => {
     try {
       const allReceipts = await dataStore.getAll<Receipt>("receipts")
-      setReceipts(allReceipts)
+      console.log("[v0] Loading receipts for reconciliation...")
+      setReceipts(Array.isArray(allReceipts) ? allReceipts : [])
+      console.log("[v0] Loaded receipts:", allReceipts)
     } catch (error) {
-      console.error("[v0] Error loading receipts:", error)
+      console.error("[v0] Failed to load dashboard data:", error)
+      setReceipts([])
       toast.error("Failed to load receipts")
     } finally {
       setLoading(false)

@@ -361,7 +361,7 @@ export default function NewReceiptPage() {
     try {
       console.log("[v0] Calling createReceiptWithQuotation...")
 
-      const receipt = await api.clients.create({
+      const receipt = await api.receipts.create({
         clientId: selectedClientId,
         clientName,
         clientEmail,
