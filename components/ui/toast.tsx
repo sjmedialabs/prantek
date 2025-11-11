@@ -127,3 +127,12 @@ export {
   ToastClose,
   ToastAction,
 }
+
+export const ToastContainer = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <ToastProvider>
+      {children}
+      <ToastViewport />
+    </ToastProvider>
+  )
+}

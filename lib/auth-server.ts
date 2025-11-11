@@ -31,13 +31,18 @@ export async function authenticate(email: string, password: string): Promise<Aut
   
   if (!isPasswordValid) {
     return null
+  console.log("[AUTH-SERVER] User subscription data:", { subscriptionPlanId: user.subscriptionPlanId, subscriptionStatus: user.subscriptionStatus })
   }
 
   const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
     userId: user._id.toString(),
     email: user.email,
     role: user.role || "user",
+    subscriptionPlanId: user.subscriptionPlanId,
+    subscriptionStatus: user.subscriptionStatus,
+    subscriptionEndDate: user.subscriptionEndDate,
   }
+  console.log("[AUTH-SERVER] Token payload:", JSON.stringify(tokenPayload))
 
   const accessToken = await generateAccessToken(tokenPayload, "1d") 
   const refreshToken = await generateRefreshToken(tokenPayload, "7d")
@@ -50,7 +55,10 @@ export async function authenticate(email: string, password: string): Promise<Aut
       email: user.email, 
       name: user.name,
       role: user.role || "user",
-      clientId: user.clientId
+      clientId: user.clientId,
+      subscriptionPlanId: user.subscriptionPlanId,
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionEndDate: user.subscriptionEndDate,
     },
   }
 }

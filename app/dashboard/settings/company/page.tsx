@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "@/lib/toast"
 import { useEffect, useState } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
 import { Building, Save } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -15,7 +15,6 @@ import { CompanySetting } from "@/lib/models/types"
 
 export default function CompanyDetailsPage() {
 const { user, hasPermission } = useUser()
-  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
 
   // ✅ ADDED error message state

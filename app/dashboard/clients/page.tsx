@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Edit, Trash2, Users, Eye } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import type { Client } from "@/lib/data-store"
 import { toast } from "@/lib/toast"
@@ -30,7 +29,6 @@ import { Switch } from "@/components/ui/switch"
 
 export default function ClientsPage() {
   const { hasPermission } = useUser()
-  const { toast } = useToast()
   const [clients, setClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
