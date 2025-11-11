@@ -1,5 +1,6 @@
 import { BaseModel } from "./models/base.model"
 import { UserModel } from "./models/user.model"
+import { counterModel } from "./models/counter.model"
 import { COLLECTIONS } from "./db-config"
 import type {
   Client,
@@ -118,7 +119,7 @@ export class MongoDBStore {
   }
 
   // Get the appropriate model for a collection
-  private getModel(collection: string): BaseModel<any> | typeof UserModel | null {
+  getModel(collection: string): BaseModel<any> | typeof UserModel | null {
     const modelMap: Record<string, any> = {
       users: models.users,
       clients: models.clients,
@@ -167,11 +168,61 @@ export async function logActivity(
   }
 }
 
-export async function generateNextNumber(collection: string, prefix: string, userId: string): Promise<string> {
-  const model = mongoStore.getModel(collection) as any
-  if (!model) throw new Error(`Collection ${collection} not found`)
+/**
+ * Generate globally unique sequential numbers for receipts, payments, quotations, etc.
+ * This function uses atomic operations to ensure no duplicates across all users.
+ * 
+ * @param collection - The collection type ('receipts', 'payments', 'quotations')
+ * @param prefix - The prefix for the number ('RC', 'PAY', 'QT')
+ * @param userId - User ID (not used in global counter but kept for backward compatibility)
+ * @returns Promise<string> - The generated number (e.g., 'RC000001')
+ */
+export async function generateNextNumber(collection: string, prefix: string, userId?: string): Promise<string> {
+  try {
+    // Map collection name to counter type
+    const counterType = collection === 'receipts' ? 'receipt' : 
+                       collection === 'quotations' ? 'quotation' : 
+                       collection === 'payments' ? 'payment' : collection
+    
+    // Use the counter model to get the next globally unique sequence
+    const nextNumber = await counterModel.getNextSequence(counterType, prefix)
+    
+    console.log(`[Counter] Generated ${counterType} number: ${nextNumber}`)
+    
+    return nextNumber
+  } catch (error) {
+    console.error(`[Counter] Error generating number for ${collection}:`, error)
+    throw new Error(`Failed to generate unique number for ${collection}`)
+  }
+}
 
-  const count = await model.count({ userId })
-  const nextNumber = count + 1
-  return `${prefix}${String(nextNumber).padStart(6, "0")}`
+/**
+ * Get the next number without incrementing (for display purposes)
+ * 
+ * @param collection - The collection type
+ * @param prefix - The prefix for the number
+ * @returns Promise<string> - The next number that will be generated
+ */
+export async function peekNextNumber(collection: string, prefix: string): Promise<string> {
+  try {
+    const counterType = collection === 'receipts' ? 'receipt' : 
+                       collection === 'quotations' ? 'quotation' : 
+                       collection === 'payments' ? 'payment' : collection
+    
+    const counter = await counterModel.getCounter(counterType)
+    const currentYear = new Date().getFullYear()
+    
+    if (!counter) {
+      // Counter doesn't exist yet, return the first number
+      return `${prefix}-${currentYear}-${String(1).padStart(3, '0')}`
+    }
+    
+    // Return the next number that will be generated
+    const nextSequence = counter.sequence + 1
+    return `${prefix}-${currentYear}-${String(nextSequence).padStart(3, '0')}`
+  } catch (error) {
+    console.error(`[Counter] Error peeking next number for ${collection}:`, error)
+    const currentYear = new Date().getFullYear()
+    return `${prefix}-${currentYear}-${String(1).padStart(3, '0')}`
+  }
 }

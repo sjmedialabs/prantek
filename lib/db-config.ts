@@ -23,6 +23,7 @@ export const COLLECTIONS = {
   ROLES: "roles",
   ACTIVITY_LOGS: "activity_logs",
   WEBSITE_CONTENT: "website_content",
+  COUNTERS: "counters", // New collection for global sequences
 } as const
 
 export const INDEXES = {
@@ -62,6 +63,7 @@ export const INDEXES = {
   SUBSCRIPTION_PLANS: [{ key: { name: 1 }, unique: true }, { key: { price: 1 } }],
   TEAM_MEMBERS: [{ key: { userId: 1 } }, { key: { email: 1 } }, { key: { createdAt: -1 } }],
   ACTIVITY_LOGS: [{ key: { userId: 1 } }, { key: { action: 1 } }, { key: { timestamp: -1 } }],
+  COUNTERS: [{ key: { _id: 1 }, unique: true }], // Index for counters collection
 }
 
 // Alias for backward compatibility
