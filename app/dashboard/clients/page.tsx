@@ -56,7 +56,7 @@ const [errors, setErrors] = useState({
 
   const loadClients = async () => {
     const data = await api.clients.getAll()
-    console.log("loaded clienyts",data);
+    console.log("loaded clienyts from cliemts page:::",data);
     setClients(data)
   }
 
