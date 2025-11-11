@@ -21,36 +21,55 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-import { Plus, Search, Package, Laptop, Car, Building, Wrench, TrendingDown, AlertTriangle } from "lucide-react"
+import { Plus, Search, Package, Laptop, Car, Building, Wrench, TrendingDown, AlertTriangle, UserPlus, UserX, UserCheck } from "lucide-react"
+import { api } from "@/lib/api-client"
+
+interface AssignmentHistory {
+  employeeId: string
+  employeeName: string
+  assignedDate: string
+  submittedDate?: string
+  assignedBy: string
+}
 
 interface Asset {
   id: string
-  name: string
-  category: "equipment" | "vehicle" | "property" | "software" | "furniture"
-  purchasePrice: number
-  currentValue: number
-  purchaseDate: string
-  condition: "excellent" | "good" | "fair" | "poor"
-  location: string
+  name?: string
+  category?: "equipment" | "vehicle" | "property" | "software" | "furniture"
+  purchasePrice?: number
+  currentValue?: number
+  purchaseDate?: string
+  condition?: "excellent" | "good" | "fair" | "poor"
+  location?: string
   serialNumber?: string
   warranty?: string
   maintenanceSchedule?: string
   lastMaintenance?: string
   nextMaintenance?: string
   depreciationRate?: number
-  status: "active" | "maintenance" | "retired" | "sold"
+  status: "active" | "maintenance" | "retired" | "sold" | "assigned" | "available"
+  assignedTo?: string
+  assignedToName?: string
+  assignedDate?: string
+  assignedBy?: string
+  submittedDate?: string
+  assignmentHistory?: AssignmentHistory[]
 }
 
-const COLORS = ["#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"]
+const COLORS = ["#8b5cf6", "#06b6d4", "##10b981", "#f59e0b", "#ef4444"]
 
 export default function AssetsPage() {
-  const { hasPermission } = useUser()
+  const { hasPermission, user } = useUser()
   const [assets, setAssets] = useState<Asset[]>([])
+  const [employees, setEmployees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false)
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [selectedAssetForAssignment, setSelectedAssetForAssignment] = useState<Asset | null>(null)
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("")
   const [newAsset, setNewAsset] = useState({
     name: "",
     category: "equipment" as const,
@@ -63,57 +82,24 @@ export default function AssetsPage() {
   })
 
   useEffect(() => {
-    loadAssets()
+    loadData()
   }, [])
 
-  const loadAssets = () => {
+  const loadData = async () => {
     try {
+      // Load employees from API
+      const loadedEmployees = await api.employees.getAll()
+      setEmployees(loadedEmployees || [])
+
+      // Load assets from localStorage
       const storedAssets = localStorage.getItem("assets")
       if (storedAssets) {
         setAssets(JSON.parse(storedAssets))
       } else {
-        // Initialize with demo data if no assets exist
-        const demoAssets: Asset[] = [
-          {
-            id: "1",
-            name: "MacBook Pro 16-inch",
-            category: "equipment",
-            purchasePrice: 250000,
-            currentValue: 180000,
-            purchaseDate: "2023-06-15",
-            condition: "excellent",
-            location: "Office - Desk 1",
-            serialNumber: "MBP2023001",
-            warranty: "2025-06-15",
-            maintenanceSchedule: "Annual",
-            lastMaintenance: "2024-01-10",
-            nextMaintenance: "2025-01-10",
-            depreciationRate: 20,
-            status: "active",
-          },
-          {
-            id: "2",
-            name: "Company Vehicle - Toyota Camry",
-            category: "vehicle",
-            purchasePrice: 2800000,
-            currentValue: 2200000,
-            purchaseDate: "2022-03-20",
-            condition: "good",
-            location: "Parking Lot A",
-            serialNumber: "TC2022VIN123",
-            warranty: "2025-03-20",
-            maintenanceSchedule: "Every 6 months",
-            lastMaintenance: "2024-01-05",
-            nextMaintenance: "2024-07-05",
-            depreciationRate: 15,
-            status: "active",
-          },
-        ]
-        localStorage.setItem("assets", JSON.stringify(demoAssets))
-        setAssets(demoAssets)
+        setAssets([])
       }
     } catch (error) {
-      console.error("Error loading assets:", error)
+      console.error("Error loading data:", error)
     } finally {
       setLoading(false)
     }
@@ -128,13 +114,8 @@ export default function AssetsPage() {
   const totalAssetValue = assets.reduce((sum, asset) => sum + (asset.currentValue || 0), 0)
   const totalPurchaseValue = assets.reduce((sum, asset) => sum + (asset.purchasePrice || 0), 0)
   const totalDepreciation = totalPurchaseValue - totalAssetValue
-  const assetsNeedingMaintenance = assets.filter((asset) => {
-    if (!asset.nextMaintenance) return false
-    const nextDate = new Date(asset.nextMaintenance)
-    const today = new Date()
-    const daysUntil = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    return daysUntil <= 30
-  }).length
+  const assignedAssets = assets.filter((asset) => asset.assignedTo && !asset.submittedDate).length
+  const availableAssets = assets.filter((asset) => !asset.assignedTo || asset.submittedDate).length
 
   const categoryData = [
     { name: "Equipment", value: assets.filter((a) => a.category === "equipment").length, fill: COLORS[0] },
@@ -144,18 +125,12 @@ export default function AssetsPage() {
     { name: "Furniture", value: assets.filter((a) => a.category === "furniture").length, fill: COLORS[4] },
   ].filter((item) => item.value > 0)
 
-  const depreciationData = assets.map((asset) => ({
-    name: asset.name.substring(0, 15) + (asset.name.length > 15 ? "..." : ""),
-    original: asset.purchasePrice || 0,
-    current: asset.currentValue || 0,
-    depreciation: (asset.purchasePrice || 0) - (asset.currentValue || 0),
-  }))
-
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+      asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.assignedToName?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = filterCategory === "all" || asset.category === filterCategory
     const matchesStatus = filterStatus === "all" || asset.status === filterStatus
     return matchesSearch && matchesCategory && matchesStatus
@@ -164,10 +139,17 @@ export default function AssetsPage() {
   const handleAddAsset = () => {
     const asset: Asset = {
       id: Date.now().toString(),
-      ...newAsset,
-      purchasePrice: Number.parseFloat(newAsset.purchasePrice),
-      currentValue: Number.parseFloat(newAsset.purchasePrice), // Initially same as purchase price
-      status: "active",
+      name: newAsset.name || undefined,
+      category: newAsset.category || undefined,
+      purchasePrice: newAsset.purchasePrice ? Number.parseFloat(newAsset.purchasePrice) : undefined,
+      currentValue: newAsset.purchasePrice ? Number.parseFloat(newAsset.purchasePrice) : undefined,
+      purchaseDate: newAsset.purchaseDate || undefined,
+      condition: newAsset.condition || undefined,
+      location: newAsset.location || undefined,
+      serialNumber: newAsset.serialNumber || undefined,
+      warranty: newAsset.warranty || undefined,
+      status: "available",
+      assignmentHistory: [],
     }
     saveAssets([asset, ...assets])
     setNewAsset({
@@ -183,7 +165,72 @@ export default function AssetsPage() {
     setIsAddAssetOpen(false)
   }
 
-  const getCategoryIcon = (category: string) => {
+  const handleAssignAsset = () => {
+    if (!selectedAssetForAssignment || !selectedEmployeeId) return
+
+    const employee = employees.find((e) => e.id === selectedEmployeeId)
+    if (!employee) return
+
+    const updatedAssets = assets.map((asset) => {
+      if (asset.id === selectedAssetForAssignment.id) {
+        const history: AssignmentHistory = {
+          employeeId: employee.id,
+          employeeName: `${employee.employeeName} ${employee.surname}`,
+          assignedDate: new Date().toISOString(),
+          assignedBy: user?.email || "Admin",
+        }
+
+        return {
+          ...asset,
+          assignedTo: employee.id,
+          assignedToName: `${employee.employeeName} ${employee.surname}`,
+          assignedDate: new Date().toISOString(),
+          assignedBy: user?.email || "Admin",
+          submittedDate: undefined,
+          status: "assigned" as const,
+          assignmentHistory: [...(asset.assignmentHistory || []), history],
+        }
+      }
+      return asset
+    })
+
+    saveAssets(updatedAssets)
+    setIsAssignDialogOpen(false)
+    setSelectedAssetForAssignment(null)
+    setSelectedEmployeeId("")
+  }
+
+  const handleSubmitAsset = (assetId: string) => {
+    const updatedAssets = assets.map((asset) => {
+      if (asset.id === assetId && asset.assignedTo) {
+        // Update the last assignment history entry with submission date
+        const updatedHistory = asset.assignmentHistory?.map((history, index) => {
+          if (index === asset.assignmentHistory!.length - 1 && !history.submittedDate) {
+            return { ...history, submittedDate: new Date().toISOString() }
+          }
+          return history
+        })
+
+        return {
+          ...asset,
+          submittedDate: new Date().toISOString(),
+          status: "available" as const,
+          assignmentHistory: updatedHistory,
+        }
+      }
+      return asset
+    })
+
+    saveAssets(updatedAssets)
+  }
+
+  const handleReassignAsset = (asset: Asset) => {
+    setSelectedAssetForAssignment(asset)
+    setSelectedEmployeeId("")
+    setIsAssignDialogOpen(true)
+  }
+
+  const getCategoryIcon = (category?: string) => {
     switch (category) {
       case "equipment":
         return <Laptop className="h-4 w-4" />
@@ -198,7 +245,7 @@ export default function AssetsPage() {
     }
   }
 
-  const getConditionColor = (condition: string) => {
+  const getConditionColor = (condition?: string) => {
     switch (condition) {
       case "excellent":
         return "bg-green-100 text-green-800"
@@ -216,13 +263,16 @@ export default function AssetsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
+      case "available":
         return "bg-green-100 text-green-800"
+      case "assigned":
+        return "bg-blue-100 text-blue-800"
       case "maintenance":
         return "bg-orange-100 text-orange-800"
       case "retired":
         return "bg-gray-100 text-gray-800"
       case "sold":
-        return "bg-blue-100 text-blue-800"
+        return "bg-purple-100 text-purple-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -265,7 +315,7 @@ export default function AssetsPage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Asset</DialogTitle>
-              <DialogDescription>Register a new asset in your inventory</DialogDescription>
+              <DialogDescription>Register a new asset in your inventory (all fields optional)</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -273,7 +323,7 @@ export default function AssetsPage() {
                   <Label htmlFor="name">Asset Name</Label>
                   <Input
                     id="name"
-                    placeholder="Asset name"
+                    placeholder="Asset name (optional)"
                     value={newAsset.name}
                     onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
                   />
@@ -303,7 +353,7 @@ export default function AssetsPage() {
                   <Input
                     id="purchasePrice"
                     type="number"
-                    placeholder="0.00"
+                    placeholder="0.00 (optional)"
                     value={newAsset.purchasePrice}
                     onChange={(e) => setNewAsset({ ...newAsset, purchasePrice: e.target.value })}
                   />
@@ -340,7 +390,7 @@ export default function AssetsPage() {
                   <Label htmlFor="location">Location</Label>
                   <Input
                     id="location"
-                    placeholder="Asset location"
+                    placeholder="Asset location (optional)"
                     value={newAsset.location}
                     onChange={(e) => setNewAsset({ ...newAsset, location: e.target.value })}
                   />
@@ -377,6 +427,52 @@ export default function AssetsPage() {
         </Dialog>
       </div>
 
+      {/* Assignment Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Asset to Employee</DialogTitle>
+            <DialogDescription>
+              {selectedAssetForAssignment?.name || "Asset"} - Select an employee to assign this asset
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="employee">Select Employee</Label>
+              <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees
+                    .filter((emp) => emp.isActive)
+                    .map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        {employee.employeeName} {employee.surname} - {employee.employeeNumber}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAssignDialogOpen(false)
+                  setSelectedAssetForAssignment(null)
+                  setSelectedEmployeeId("")
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAssignAsset} disabled={!selectedEmployeeId}>
+                Assign Asset
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Asset Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
@@ -386,43 +482,40 @@ export default function AssetsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{assets.length}</div>
-            <p className="text-xs text-gray-600 mt-1">Active inventory items</p>
+            <p className="text-xs text-gray-600 mt-1">Total inventory items</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Current Value</CardTitle>
-            <TrendingDown className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">Assigned Assets</CardTitle>
+            <UserCheck className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₹{(totalAssetValue || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-blue-600">{assignedAssets}</div>
+            <p className="text-xs text-gray-600 mt-1">Currently with employees</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Available Assets</CardTitle>
+            <Package className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{availableAssets}</div>
+            <p className="text-xs text-gray-600 mt-1">Ready for assignment</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
+            <TrendingDown className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">₹{(totalAssetValue || 0).toLocaleString()}</div>
             <p className="text-xs text-gray-600 mt-1">Current market value</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Depreciation</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">₹{(totalDepreciation || 0).toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">
-              {totalPurchaseValue > 0 ? ((totalDepreciation / totalPurchaseValue) * 100).toFixed(1) : 0}% total
-              depreciation
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Maintenance Due</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{assetsNeedingMaintenance}</div>
-            <p className="text-xs text-gray-600 mt-1">Assets need attention</p>
           </CardContent>
         </Card>
       </div>
@@ -430,9 +523,8 @@ export default function AssetsPage() {
       <Tabs defaultValue="inventory" className="space-y-6">
         <TabsList>
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-          <TabsTrigger value="depreciation">Depreciation</TabsTrigger>
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-6">
@@ -472,7 +564,8 @@ export default function AssetsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="assigned">Assigned</SelectItem>
                       <SelectItem value="maintenance">Maintenance</SelectItem>
                       <SelectItem value="retired">Retired</SelectItem>
                       <SelectItem value="sold">Sold</SelectItem>
@@ -490,9 +583,8 @@ export default function AssetsPage() {
                     <TableHead>Location</TableHead>
                     <TableHead>Condition</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Purchase Price</TableHead>
-                    <TableHead>Current Value</TableHead>
-                    <TableHead>Depreciation</TableHead>
+                    <TableHead>Assigned To</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -502,7 +594,7 @@ export default function AssetsPage() {
                         <div className="flex items-center space-x-2">
                           {getCategoryIcon(asset.category)}
                           <div>
-                            <div className="font-medium">{asset.name}</div>
+                            <div className="font-medium">{asset.name || "Unnamed Asset"}</div>
                             {asset.serialNumber && (
                               <div className="text-sm text-gray-500">SN: {asset.serialNumber}</div>
                             )}
@@ -510,32 +602,111 @@ export default function AssetsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{asset.category}</Badge>
+                        {asset.category && <Badge variant="outline">{asset.category}</Badge>}
                       </TableCell>
-                      <TableCell>{asset.location}</TableCell>
+                      <TableCell>{asset.location || "-"}</TableCell>
                       <TableCell>
-                        <Badge className={getConditionColor(asset.condition)}>{asset.condition}</Badge>
+                        {asset.condition && (
+                          <Badge className={getConditionColor(asset.condition)}>{asset.condition}</Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
                       </TableCell>
-                      <TableCell>₹{(asset.purchasePrice || 0).toLocaleString()}</TableCell>
-                      <TableCell>₹{(asset.currentValue || 0).toLocaleString()}</TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-red-600">
-                            -₹{((asset.purchasePrice || 0) - (asset.currentValue || 0)).toLocaleString()}
-                          </span>
-                          <Progress
-                            value={((asset.purchasePrice - asset.currentValue) / asset.purchasePrice) * 100}
-                            className="w-16 h-2"
-                          />
+                        {asset.assignedTo && !asset.submittedDate ? (
+                          <div>
+                            <div className="font-medium">{asset.assignedToName}</div>
+                            <div className="text-xs text-gray-500">
+                              Since: {new Date(asset.assignedDate!).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          {asset.assignedTo && !asset.submittedDate ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSubmitAsset(asset.id)}
+                            >
+                              <UserX className="h-4 w-4 mr-1" />
+                              Submit
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReassignAsset(asset)}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Assign
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignments" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assignment History</CardTitle>
+              <CardDescription>Track asset assignments and submissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {assets
+                  .filter((asset) => asset.assignmentHistory && asset.assignmentHistory.length > 0)
+                  .map((asset) => (
+                    <div key={asset.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          {getCategoryIcon(asset.category)}
+                          <div>
+                            <h4 className="font-medium">{asset.name || "Unnamed Asset"}</h4>
+                            <p className="text-sm text-gray-600">
+                              {asset.serialNumber && `SN: ${asset.serialNumber}`}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Assignment History:</p>
+                        {asset.assignmentHistory?.map((history, index) => (
+                          <div key={index} className="ml-4 p-3 bg-gray-50 rounded text-sm">
+                            <div className="flex justify-between">
+                              <span className="font-medium">{history.employeeName}</span>
+                              <span className="text-gray-600">
+                                {new Date(history.assignedDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {history.submittedDate && (
+                              <div className="text-green-600 mt-1">
+                                Submitted: {new Date(history.submittedDate).toLocaleDateString()}
+                              </div>
+                            )}
+                            {!history.submittedDate && index === asset.assignmentHistory!.length - 1 && (
+                              <div className="text-blue-600 mt-1">Currently assigned</div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-1">
+                              Assigned by: {history.assignedBy}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -579,168 +750,47 @@ export default function AssetsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Asset Value vs Depreciation</CardTitle>
-                <CardDescription>Current value compared to purchase price</CardDescription>
+                <CardTitle>Assignment Status</CardTitle>
+                <CardDescription>Current assignment statistics</CardDescription>
               </CardHeader>
               <CardContent>
-                {depreciationData.length > 0 ? (
-                  <ChartContainer
-                    config={{
-                      original: {
-                        label: "Purchase Price",
-                        color: "#8b5cf6",
-                      },
-                      current: {
-                        label: "Current Value",
-                        color: "#10b981",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={depreciationData}>
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="original" fill="#8b5cf6" />
-                        <Bar dataKey="current" fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-gray-500">
-                    No asset data available
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <UserCheck className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <p className="font-medium">Assigned Assets</p>
+                        <p className="text-sm text-gray-600">Currently with employees</p>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-blue-600">{assignedAssets}</div>
                   </div>
-                )}
+                  <div className="flex justify-between items-center p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Package className="h-8 w-8 text-green-600" />
+                      <div>
+                        <p className="font-medium">Available Assets</p>
+                        <p className="text-sm text-gray-600">Ready for assignment</p>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-green-600">{availableAssets}</div>
+                  </div>
+                  <div className="flex justify-between items-center p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <AlertTriangle className="h-8 w-8 text-orange-600" />
+                      <div>
+                        <p className="font-medium">Total Assignments</p>
+                        <p className="text-sm text-gray-600">All-time assignments made</p>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-orange-600">
+                      {assets.reduce((sum, asset) => sum + (asset.assignmentHistory?.length || 0), 0)}
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="maintenance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Wrench className="h-5 w-5 mr-2" />
-                Maintenance Schedule
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {assets
-                  .filter((asset) => asset.nextMaintenance)
-                  .sort((a, b) => new Date(a.nextMaintenance!).getTime() - new Date(b.nextMaintenance!).getTime())
-                  .map((asset) => {
-                    const nextDate = new Date(asset.nextMaintenance!)
-                    const today = new Date()
-                    const daysUntil = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-                    const isOverdue = daysUntil < 0
-                    const isDueSoon = daysUntil <= 30 && daysUntil >= 0
-
-                    return (
-                      <div
-                        key={asset.id}
-                        className={`p-4 border rounded-lg ${
-                          isOverdue
-                            ? "border-red-200 bg-red-50"
-                            : isDueSoon
-                              ? "border-orange-200 bg-orange-50"
-                              : "border-gray-200"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            {getCategoryIcon(asset.category)}
-                            <div>
-                              <h4 className="font-medium">{asset.name}</h4>
-                              <p className="text-sm text-gray-600">{asset.location}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div
-                              className={`font-medium ${
-                                isOverdue ? "text-red-600" : isDueSoon ? "text-orange-600" : "text-gray-900"
-                              }`}
-                            >
-                              {isOverdue
-                                ? `${Math.abs(daysUntil)} days overdue`
-                                : isDueSoon
-                                  ? `Due in ${daysUntil} days`
-                                  : `Due in ${daysUntil} days`}
-                            </div>
-                            <p className="text-sm text-gray-600">Next: {nextDate.toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <div className="mt-3 flex justify-end">
-                          <Button size="sm" variant={isOverdue ? "destructive" : isDueSoon ? "default" : "outline"}>
-                            {isOverdue ? "Schedule Now" : "Schedule Maintenance"}
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="depreciation" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingDown className="h-5 w-5 mr-2" />
-                Depreciation Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {assets.map((asset) => {
-                  const depreciationAmount = (asset.purchasePrice || 0) - (asset.currentValue || 0)
-                  const depreciationPercent = (depreciationAmount / (asset.purchasePrice || 1)) * 100
-                  const yearsOwned = Math.floor(
-                    (new Date().getTime() - new Date(asset.purchaseDate).getTime()) / (1000 * 60 * 60 * 24 * 365),
-                  )
-
-                  return (
-                    <div key={asset.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          {getCategoryIcon(asset.category)}
-                          <div>
-                            <h4 className="font-medium">{asset.name}</h4>
-                            <p className="text-sm text-gray-600">
-                              Purchased: {new Date(asset.purchaseDate).toLocaleDateString()} ({yearsOwned} years ago)
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-semibold text-red-600">
-                            -₹{(depreciationAmount || 0).toLocaleString()}
-                          </div>
-                          <p className="text-sm text-gray-600">{depreciationPercent.toFixed(1)}% depreciation</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Purchase Price:</span>
-                          <div className="font-medium">₹{(asset.purchasePrice || 0).toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Current Value:</span>
-                          <div className="font-medium">₹{(asset.currentValue || 0).toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Annual Rate:</span>
-                          <div className="font-medium">{asset.depreciationRate || "N/A"}%</div>
-                        </div>
-                      </div>
-                      <Progress value={depreciationPercent} className="mt-3" />
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

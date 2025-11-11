@@ -445,7 +445,10 @@ class DataStore {
         params.append("tenantId", tenantId || "")
       }
 
-      const response = await fetch(`/api/${entity}?${params.toString()}`)
+      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null
+      const headers: HeadersInit = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
+      const response = await fetch(`/api/${entity}?${params.toString()}`, { headers, credentials: "include" })
       if (!response.ok) {
         console.error(`[v0] Failed to fetch ${entity}:`, response.statusText)
         return []
