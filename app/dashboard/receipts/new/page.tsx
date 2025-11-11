@@ -56,7 +56,7 @@ export default function NewReceiptPage() {
   const [paymentMethods, setPaymentMethods] = useState<string[]>([])
   const [bankAccounts, setBankAccounts] = useState<string[]>([])
 
-  const [receiptNumber, setReceiptNumber] = useState("Auto-generated")
+  const [receiptNumber, setReceiptNumber] = useState(`REC-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`)
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [description, setDescription] = useState("")
 
@@ -519,7 +519,7 @@ console.log("bankDetails are:::",bankDetails)
                 <div>
                   <Label htmlFor="receiptNumber">Receipt Number *</Label>
                   <Input id="receiptNumber" value={receiptNumber} disabled className="bg-gray-50" />
-                  <p className="text-xs text-gray-500 mt-1">Will be auto-generated on submit (RC000XXX)</p>
+                  <p className="text-xs text-gray-500 mt-1">Auto-generated: REC-Year-Number</p>
                 </div>
                 <div>
                   <Label htmlFor="date">Date *</Label>
