@@ -70,9 +70,7 @@ interface MasterItem {
 export default function NewQuotationPage() {
   const router = useRouter()
 
-  const [quotationNumber, setQuotationNumber] = useState(
-    `QT-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
-  )
+  const [quotationNumber, setQuotationNumber] = useState("Loading...")
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [validityDate, setValidityDate] = useState("")
   const [note, setNote] = useState("")
@@ -129,8 +127,10 @@ export default function NewQuotationPage() {
       console.log("loaded clients  for the Quatations",loadedClients)
       const loadedItems = await api.items.getAll()
       console.log("LOADED iTEMS ARE",loadedItems);
+      const nextQuotationNumber = await api.quotations.getNextNumber()
       setClients(loadedClients)
       setMasterItems(loadedItems)
+      setQuotationNumber(nextQuotationNumber)
     }
     loadData()
   }, [])

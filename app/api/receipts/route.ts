@@ -32,8 +32,19 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
+    // Get client name for generating unique number with client code
+    let clientName = "Unknown"
+    if (body.clientId || body.selectedClientId) {
+      try {
+        const client = await mongoStore.getById("clients", body.clientId || body.selectedClientId)
+        clientName = client?.name || "Unknown"
+      } catch (err) {
+        console.error("Error fetching client for number generation:", err)
+      }
+    }
+
     if (!body.receiptNumber) {
-      body.receiptNumber = await generateNextNumber("receipts", "RC", user.userId)
+      body.receiptNumber = await generateNextNumber("receipts", "RC", user.userId, clientName)
     }
 
     const receipt = await mongoStore.create("receipts", { ...body, userId: user.userId })
@@ -42,10 +53,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Notify admins about new receipt
     try {
-      // Get client info for notification
-      const client = await mongoStore.getById("clients", body.clientId || body.selectedClientId)
-      const clientName = client?.name || "Unknown Client"
-      
       await notifyAdminsNewReceipt(
         receipt._id?.toString() || "",
         body.receiptNumber,
@@ -53,12 +60,17 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         user.userId
       )
     } catch (notifError) {
-      console.error("Failed to send notification:", notifError); console.error("Receipt creation error details:", error)
+      console.error("Failed to send notification:", notifError)
       // Don't fail the request if notification fails
     }
 
     return NextResponse.json({ success: true, data: receipt })
   } catch (error) {
-    console.error("Receipt creation error:", error); return NextResponse.json({ success: false, error: "Failed to create receipt", details: error instanceof Error ? error.message : String(error) }, { status: 500 })
+    console.error("Receipt creation error:", error)
+    return NextResponse.json({ 
+      success: false, 
+      error: "Failed to create receipt", 
+      details: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 })
   }
 })

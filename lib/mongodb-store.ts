@@ -1,5 +1,6 @@
 import { BaseModel } from "./models/base.model"
 import { UserModel } from "./models/user.model"
+import { counterModel } from "./models/counter.model"
 import { COLLECTIONS } from "./db-config"
 import type {
   Client,
@@ -167,28 +168,72 @@ export async function logActivity(
   }
 }
 
-export async function generateNextNumber(collection: string, prefix: string, userId: string): Promise<string> {
-  const model = mongoStore.getModel(collection) as any
-  if (!model) throw new Error(`Collection ${collection} not found`)
-
-  // Find the highest existing number for this prefix and userId
-  const fieldName = collection === 'receipts' ? 'receiptNumber' : 
-                    collection === 'quotations' ? 'quotationNumber' : 
-                    collection === 'payments' ? 'paymentNumber' : 'number'
-  
-  const existingDocs = await model.findAll(
-    { userId, [fieldName]: { $regex: `^${prefix}` } },
-    { sort: { [fieldName]: -1 }, limit: 1 }
-  )
-  
-  let nextNumber = 1
-  if (existingDocs && existingDocs.length > 0) {
-    const lastNumber = existingDocs[0][fieldName]
-    if (lastNumber) {
-      const numPart = lastNumber.replace(prefix, '')
-      nextNumber = parseInt(numPart, 10) + 1
-    }
+/**
+ * Generate globally unique sequential numbers for receipts, payments, quotations, etc.
+ * This function uses atomic operations to ensure no duplicates across all users.
+ * 
+ * @param collection - The collection type ('receipts', 'payments', 'quotations')
+ * @param prefix - The prefix for the number ('RC', 'PAY', 'QT')
+ * @param userId - User ID (not used in global counter but kept for backward compatibility)
+ * @returns Promise<string> - The generated number (e.g., 'RC000001')
+ */
+export async function generateNextNumber(collection: string, prefix: string, userId?: string, clientName?: string): Promise<string> {
+  try {
+    // Map collection name to counter type
+    const counterType = collection === 'receipts' ? 'receipt' : 
+                       collection === 'quotations' ? 'quotation' : 
+                       collection === 'payments' ? 'payment' : collection
+    
+    // Use the counter model to get the next globally unique sequence
+    const nextNumber = await counterModel.getNextSequence(counterType, prefix, clientName)
+    
+    console.log(`[Counter] Generated ${counterType} number: ${nextNumber}`)
+    
+    return nextNumber
+  } catch (error) {
+    console.error(`[Counter] Error generating number for ${collection}:`, error)
+    throw new Error(`Failed to generate unique number for ${collection}`)
   }
-  
-  return `${prefix}${String(nextNumber).padStart(6, "0")}`
+}
+
+
+/**
+ * Get the next number without incrementing (for display purposes)
+ * 
+ * @param collection - The collection type
+ * @param prefix - The prefix for the number
+ * @param clientName - Optional client name for generating the code
+ * @returns Promise<string> - The next number that will be generated
+ */
+export async function peekNextNumber(collection: string, prefix: string, clientName?: string): Promise<string> {
+  try {
+    const counterType = collection === 'receipts' ? 'receipt' : 
+                       collection === 'quotations' ? 'quotation' : 
+                       collection === 'payments' ? 'payment' : collection
+    
+    const counter = await counterModel.getCounter(counterType)
+    const currentYear = new Date().getFullYear()
+    
+    // Extract client code
+    const getClientCode = (name?: string): string => {
+      if (!name || name.length === 0) return 'XX'
+      const cleaned = name.replace(/[^a-zA-Z]/g, '').toUpperCase()
+      return cleaned.length >= 2 ? cleaned.substring(0, 2) : cleaned.padEnd(2, 'X')
+    }
+    const clientCode = getClientCode(clientName)
+    
+    if (!counter) {
+      // Counter doesn't exist yet, return the first number
+      return `${prefix}-${clientCode}-${currentYear}-${String(1).padStart(3, '0')}`
+    }
+    
+    // Return the next number that will be generated
+    const nextSequence = counter.sequence + 1
+    return `${prefix}-${clientCode}-${currentYear}-${String(nextSequence).padStart(3, '0')}`
+  } catch (error) {
+    console.error(`[Counter] Error peeking next number for ${collection}:`, error)
+    const currentYear = new Date().getFullYear()
+    const clientCode = 'XX'
+    return `${prefix}-${clientCode}-${currentYear}-${String(1).padStart(3, '0')}`
+  }
 }

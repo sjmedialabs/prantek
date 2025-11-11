@@ -149,9 +149,9 @@ const [errors, setErrors] = useState({
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone.toLowerCase().includes(searchTerm.toLowerCase())
+      (client.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (client.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (client.phone?.toLowerCase() || "").includes(searchTerm.toLowerCase())
 
    // Date filtering
 let matchesDate = true
