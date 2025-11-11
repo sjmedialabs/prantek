@@ -52,6 +52,7 @@ export default function SubscriptionPlansPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [users,setUsers]=useState<any>([]);
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -60,9 +61,29 @@ export default function SubscriptionPlansPage() {
 
   const loadPlans = async () => {
     const data = await api.subscriptionPlans.getAll()
+    const loadusers=await api.users.getAll()
+    //console.log("users:::",users)
     setPlans(data)
+    setUsers(loadusers)
     setLoading(false)
   }
+  const calculateTotalRevenue = () => {
+  if (!plans.length || !users.length) return 0;
+
+  const usersExcludingFirst = users.slice(1); // skip first object
+
+  let total = 0;
+
+  usersExcludingFirst.forEach((user: any) => {
+    const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
+    if (userPlan && userPlan.price) {
+      total += Number(userPlan.price);
+    }
+  });
+
+  return total;
+};
+
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -169,8 +190,10 @@ export default function SubscriptionPlansPage() {
       plan.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const totalRevenue = plans.reduce((sum, plan) => sum + (plan.revenue || 0), 0)
-  const totalSubscribers = plans.reduce((sum, plan) => sum + (plan.subscriberCount || 0), 0)
+  const totalRevenue = calculateTotalRevenue()
+
+  const totalSubscribers = users.slice(1).filter((user: any) => user.subscriptionPlanId).length;
+
   const activePlans = plans.filter((plan) => plan.isActive).length
 
   if (loading) {
@@ -441,42 +464,48 @@ export default function SubscriptionPlansPage() {
             </Table>
           </Card>
         </TabsContent>
-        <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Plan Performance</CardTitle>
-              <CardDescription>Revenue and subscriber distribution across plans</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {plans.map((plan) => (
-                  <div key={plan._id || plan.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">{plan.name}</div>
-                        <div className="text-sm text-gray-500">{plan.subscriberCount || 0} subscribers</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">₹{(plan.revenue || 0).toLocaleString()}</div>
-                        <div className="text-sm text-gray-500">
-                          {totalSubscribers > 0 ? Math.round(((plan.subscriberCount || 0) / totalSubscribers) * 100) : 0}% of total
-                        </div>
-                      </div>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${totalSubscribers > 0 ? ((plan.subscriberCount || 0) / totalSubscribers) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {plans.map((plan) => {
+  // Count subscribers for this plan (excluding the first user)
+  const subscribers = users.slice(1).filter(
+    (user: any) => user.subscriptionPlanId === plan._id
+  );
+
+  const subscriberCount = subscribers.length;
+  const revenue = subscriberCount * Number(plan.price || 0);
+
+  const totalPercentage =
+    totalSubscribers > 0
+      ? Math.round((subscriberCount / totalSubscribers) * 100)
+      : 0;
+
+  return (
+    <div key={plan._id || plan.id} className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-medium">{plan.name}</div>
+          <div className="text-sm text-gray-500">
+            {subscriberCount} subscribers
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="font-medium">₹{revenue.toLocaleString()}</div>
+          <div className="text-sm text-gray-500">{totalPercentage}% of total</div>
+        </div>
+      </div>
+
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className="bg-blue-600 h-2 rounded-full"
+          style={{
+            width: `${totalPercentage}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+})}
+
       </Tabs>
     </div>
   )

@@ -25,6 +25,8 @@ export default function SuperAdminDashboard() {
     systemHealth: "99.9%",
   })
   const [loading, setLoading] = useState(true)
+   const [users,setUsers]=useState<any>([]);
+   const [plans, setPlans] = useState<any[]>([])
 
   useEffect(() => {
     loadDashboardData()
@@ -34,13 +36,18 @@ export default function SuperAdminDashboard() {
     try {
       // Fetch all users and filter for admins
       const allUsers = await api.users.getAll()
+      setUsers(allUsers);
       const adminUsers = allUsers.filter((u: any) => u.role === "admin")
       const activeClients = adminUsers.filter((u: any) => u.subscriptionStatus === "active").length
 
       // Fetch subscription plans to calculate revenue and subscriptions
-      const plans = await api.subscriptionPlans.getAll()
-      const totalSubscriptions = plans.reduce((sum: number, plan: any) => sum + (plan.subscriberCount || 0), 0)
-      const totalRevenue = plans.reduce((sum: number, plan: any) => sum + (plan.revenue || 0), 0)
+      const loadedplans = await api.subscriptionPlans.getAll()
+      setPlans(loadedplans)
+      const totalSubscriptions = loadedplans.filter(
+        (eachItem: any) => eachItem.isActive === true
+      ).length;
+
+      const totalRevenue = loadedplans.reduce((sum: number, plan: any) => sum + (plan.revenue || 0), 0)
 
       setStats({
         totalRevenue,
@@ -54,6 +61,24 @@ export default function SuperAdminDashboard() {
       setLoading(false)
     }
   }
+  const calculateTotalRevenue = () => {
+      if (!plans.length || !users.length) return 0;
+
+      const usersExcludingFirst = users.slice(1); // skip first object
+
+      let total = 0;
+
+      usersExcludingFirst.forEach((user: any) => {
+        const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
+        if (userPlan && userPlan.price) {
+          total += Number(userPlan.price);
+        }
+      });
+
+  return total;
+  };
+  const totalRevenueGenerated=calculateTotalRevenue();
+   const totalSubscribers = users.slice(1).filter((user: any) => user.subscriptionPlanId).length;
 
   if (loading) {
     return (
@@ -84,7 +109,7 @@ export default function SuperAdminDashboard() {
               <DollarSign className="h-5 w-5 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">${stats.totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-slate-900">₹{totalRevenueGenerated.toLocaleString()}</div>
               <p className="text-xs text-slate-500 mt-1">Across all subscriptions</p>
             </CardContent>
           </Card>
