@@ -66,10 +66,17 @@ interface PlanDistribution {
   color: string
 }
 
+export interface ConversionFunnelStage {
+  stage: string
+  count: number
+  percentage: number
+}
+
+
 export default function SalesDashboardPage() {
   const { hasPermission } = useUser()
   const [selectedPeriod, setSelectedPeriod] = useState("6months")
-
+const [conversionFunnel, setConversionFunnel] = useState([])
   const [salesMetrics, setSalesMetrics] = useState<SalesMetric[]>([])
   const [clientOnboardingData, setClientOnboardingData] = useState<ClientOnboardingData[]>([])
   const [revenueData, setRevenueData] = useState<RevenueData[]>([])
@@ -149,6 +156,38 @@ export default function SalesDashboardPage() {
         ]
         setSalesMetrics(metrics)
 
+        // ✅ Dynamic conversion funnel
+const visitors = allUsers.length
+const signups = adminUsers.length
+const trials = trialSubscriptions
+const paid = activeSubscriptions
+
+const conversionFunnelData = [
+  {
+    stage: "Visitors",
+    count: visitors,
+    percentage: visitors > 0 ? 100 : 0,
+  },
+  {
+    stage: "Signups",
+    count: signups,
+    percentage: visitors > 0 ? ((signups / visitors) * 100).toFixed(2) : 0,
+  },
+  {
+    stage: "Trials",
+    count: trials,
+    percentage: signups > 0 ? ((trials / signups) * 100).toFixed(2) : 0,
+  },
+  {
+    stage: "Paid",
+    count: paid,
+    percentage: signups > 0 ? ((paid / signups) * 100).toFixed(2) : 0,
+  },
+]
+
+setConversionFunnel(conversionFunnelData)
+
+
         // Generate onboarding data from real user creation dates
         const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         const currentMonth = new Date().getMonth()
@@ -216,12 +255,12 @@ export default function SalesDashboardPage() {
     loadRealData()
   }, [])
 
-  const conversionFunnelData = [
-    { stage: "Visitors", count: 12500, percentage: 100 },
-    { stage: "Signups", count: 1875, percentage: 15 },
-    { stage: "Trials", count: 750, percentage: 6 },
-    { stage: "Paid", count: 127, percentage: 1.02 },
-  ]
+  // const conversionFunnelData = [
+  //   { stage: "Visitors", count: 12500, percentage: 100 },
+  //   { stage: "Signups", count: 1875, percentage: 15 },
+  //   { stage: "Trials", count: 750, percentage: 6 },
+  //   { stage: "Paid", count: 127, percentage: 1.02 },
+  // ]
 
   const getTrendIcon = (trend: "up" | "down" | "neutral") => {
     switch (trend) {
@@ -580,7 +619,7 @@ export default function SalesDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {conversionFunnelData.map((stage, index) => (
+                {conversionFunnel.map((stage, index) => (
                   <div key={stage.stage} className="relative">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
@@ -588,7 +627,7 @@ export default function SalesDashboardPage() {
                           {index + 1}
                         </div>
                         <div>
-                          <div className="font-medium">{stage.stage}</div>
+                          <div className="font-medium">{stage.stage || "Unknown Stage"}</div>
                           <div className="text-sm text-gray-500">{stage.percentage}% conversion rate</div>
                         </div>
                       </div>
@@ -597,13 +636,13 @@ export default function SalesDashboardPage() {
                         <div className="text-sm text-gray-500">
                           {index > 0 && (
                             <span className="text-red-600">
-                              -{(conversionFunnelData[index - 1].count - stage.count).toLocaleString()} lost
+                              -{(conversionFunnel[index - 1].count - stage.count).toLocaleString()} lost
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    {index < conversionFunnelData.length - 1 && (
+                    {index < conversionFunnel.length - 1 && (
                       <div className="flex justify-center mt-2">
                         <div className="w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-gray-300"></div>
                       </div>

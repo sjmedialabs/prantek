@@ -67,23 +67,9 @@ const exportReport = () => {
 
   const loadReceipts = async () => {
     try {
-      console.log("[v0] Loading receipts for reconciliation...")
-      // Inline fetch with auth header
-      const token = localStorage.getItem("accessToken")
-      const headers: Record<string, string> = { "Content-Type": "application/json" }
-      if (token) headers.Authorization = `Bearer ${token}`
-      
-      const response = await fetch("/api/receipts?", { headers, credentials: "include" })
-      if (!response.ok) {
-        console.error("[v0] Failed to fetch receipts:", response.statusText)
-        setReceipts([])
-        return
-      }
-      
-      const data = await response.json()
-      const allReceipts = data.data || data || []
-      console.log("[v0] Loaded receipts:", allReceipts)
-      setReceipts(Array.isArray(allReceipts) ? allReceipts : [])
+      const loadedRecipts = await api.receipts.getAll()
+      setReceipts(loadedRecipts)
+      console.log(loadedRecipts)
     } catch (error) {
       console.error("[v0] Failed to load dashboard data:", error)
       setReceipts([])
@@ -104,7 +90,7 @@ const exportReport = () => {
     paymentMethod: receipt.paymentMethod,
     referenceNumber: receipt.referenceNumber,
     amount: receipt.amountPaid || 0, // Default to 0 if undefined
-    status: receipt.status === "cleared" ? "Cleared" : "Paid",
+    status: receipt.status === "cleared" ? "Cleared" : "Pending",
   }))
 
   const filteredTransactions = transactions.filter((transaction) => {
