@@ -42,10 +42,23 @@ export default function ReconciliationPage() {
 
   const loadReceipts = async () => {
     try {
-      const allReceipts = await dataStore.getAll<Receipt>("receipts")
       console.log("[v0] Loading receipts for reconciliation...")
-      setReceipts(Array.isArray(allReceipts) ? allReceipts : [])
+      // Inline fetch with auth header
+      const token = localStorage.getItem("accessToken")
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (token) headers.Authorization = `Bearer ${token}`
+      
+      const response = await fetch("/api/receipts?", { headers, credentials: "include" })
+      if (!response.ok) {
+        console.error("[v0] Failed to fetch receipts:", response.statusText)
+        setReceipts([])
+        return
+      }
+      
+      const data = await response.json()
+      const allReceipts = data.data || data || []
       console.log("[v0] Loaded receipts:", allReceipts)
+      setReceipts(Array.isArray(allReceipts) ? allReceipts : [])
     } catch (error) {
       console.error("[v0] Failed to load dashboard data:", error)
       setReceipts([])
