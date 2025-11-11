@@ -24,14 +24,29 @@ export default function PlansPage() {
         setPlans(activePlans)
 
         // Only fetch current plan if user has a subscription
+        console.log("[PLANS] User subscriptionPlanId:", user?.subscriptionPlanId)
         if (user?.subscriptionPlanId) {
-          const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
-          setCurrentPlan(plan)
+          try {
+            const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
+            console.log("[PLANS] Fetched plan from API:", plan)
+            if (plan && plan.price !== undefined) {
+              setCurrentPlan(plan)
+            } else {
+              console.error("[PLANS] Invalid plan data:", plan)
+              const freePlan = activePlans.find(p => p.price === 0)
+              setCurrentPlan(freePlan || null)
+            }
+          } catch (err) {
+            console.error("[PLANS] Error fetching plan:", err)
+            const freePlan = activePlans.find(p => p.price === 0)
+            setCurrentPlan(freePlan || null)
+          }
         } else {
           // User has no subscription - find and set the free plan as current
+          console.log("[PLANS] No subscriptionPlanId, using free plan")
           const freePlan = activePlans.find(p => p.price === 0)
           if (freePlan) {
-        console.log("[PLANS] Current plan set:", freePlan ? `${freePlan.name} (${freePlan._id || freePlan.id})` : "none")
+            console.log("[PLANS] Current plan set:", freePlan ? `${freePlan.name} (${freePlan._id || freePlan.id})` : "none")
             setCurrentPlan(freePlan)
           }
         }

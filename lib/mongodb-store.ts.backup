@@ -118,7 +118,7 @@ export class MongoDBStore {
   }
 
   // Get the appropriate model for a collection
-  getModel(collection: string): BaseModel<any> | typeof UserModel | null {
+  private getModel(collection: string): BaseModel<any> | typeof UserModel | null {
     const modelMap: Record<string, any> = {
       users: models.users,
       clients: models.clients,
@@ -171,24 +171,7 @@ export async function generateNextNumber(collection: string, prefix: string, use
   const model = mongoStore.getModel(collection) as any
   if (!model) throw new Error(`Collection ${collection} not found`)
 
-  // Find the highest existing number for this prefix and userId
-  const fieldName = collection === 'receipts' ? 'receiptNumber' : 
-                    collection === 'quotations' ? 'quotationNumber' : 
-                    collection === 'payments' ? 'paymentNumber' : 'number'
-  
-  const existingDocs = await model.findAll(
-    { userId, [fieldName]: { $regex: `^${prefix}` } },
-    { sort: { [fieldName]: -1 }, limit: 1 }
-  )
-  
-  let nextNumber = 1
-  if (existingDocs && existingDocs.length > 0) {
-    const lastNumber = existingDocs[0][fieldName]
-    if (lastNumber) {
-      const numPart = lastNumber.replace(prefix, '')
-      nextNumber = parseInt(numPart, 10) + 1
-    }
-  }
-  
+  const count = await model.count({ userId })
+  const nextNumber = count + 1
   return `${prefix}${String(nextNumber).padStart(6, "0")}`
 }

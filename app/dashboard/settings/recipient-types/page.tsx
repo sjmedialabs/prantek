@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "@/lib/toast"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -34,7 +35,6 @@ export default function RecipientTypesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingType, setEditingType] = useState<RecipientType | null>(null)
   const [formData, setFormData] = useState({ name: "", value: "" })
-  const { toast } = useToast()
 
   useEffect(() => {
     loadRecipientTypes()

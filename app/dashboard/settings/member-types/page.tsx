@@ -17,13 +17,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Edit, Trash2, Power, PowerOff } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { MemberType } from "@/lib/models/types"
 
 export default function MemberTypesPage() {
-  const { toast } = useToast()
   const [memberTypes, setMemberTypes] = useState<MemberType[]>([])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingType, setEditingType] = useState<MemberType | null>(null)

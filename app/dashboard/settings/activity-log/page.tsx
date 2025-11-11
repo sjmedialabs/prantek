@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, Download, Trash2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 import { toast } from "@/lib/toast"
 import api from "@/lib/api-client"
 
@@ -23,7 +22,6 @@ type ActivityLog = {
 }
 
 export default function ActivityLogPage() {
-  const { toast } = useToast()
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [filteredLogs, setFilteredLogs] = useState<ActivityLog[]>([])
   const [searchTerm, setSearchTerm] = useState("")

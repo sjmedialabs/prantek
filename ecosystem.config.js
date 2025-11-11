@@ -1,8 +1,7 @@
 module.exports = {
   apps: [{
     name: 'prantek-app',
-    script: 'node_modules/next/dist/bin/next',
-    args: 'start -p 9080',
+    script: '.next/standalone/server.js',
     cwd: '/www/wwwroot/prantek',
     instances: 1,
     exec_mode: 'cluster',

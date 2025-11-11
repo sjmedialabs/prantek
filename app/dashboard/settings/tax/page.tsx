@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "@/lib/toast"
 
 import type React from "react"
 
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
 import { FileText, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
 import { api } from "@/lib/api-client"
 import {
@@ -28,7 +28,6 @@ import { tokenStorage } from "@/lib/token-storage"
 
 export default function TaxDetailsPage() {
   const { hasPermission } = useUser()
-  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [taxSettings, setTaxSettings] = useState<TaxSetting>({
     tan: "",

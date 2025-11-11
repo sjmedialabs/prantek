@@ -1,4 +1,5 @@
 "use client"
+import { toast } from "@/lib/toast"
 
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
 import { CreditCard, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -31,7 +31,6 @@ interface Category {
 
 export default function PaymentCategoriesPage() {
   const { hasPermission } = useUser()
-  const { toast } = useToast()
   const [saved, setSaved] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
