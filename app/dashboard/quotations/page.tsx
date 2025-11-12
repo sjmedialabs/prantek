@@ -274,7 +274,7 @@ const matchesMaxAmount =
 
           <div className="space-y-4">
             {filteredQuotations.map((quotation) => (
-              <div key={quotation.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              <div key={quotation._id || quotation.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
