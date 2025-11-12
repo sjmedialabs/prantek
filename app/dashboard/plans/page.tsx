@@ -209,7 +209,7 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                   {isCurrent ? (
                     <Button disabled className="w-full bg-gray-400 text-white" size="lg">
                       Current Plan
-                    </Button>
+                    </Button> 
                   ) : isDowngrade ? (
                     <Button
                       onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}

@@ -30,6 +30,7 @@ export default function CheckoutPage() {
     const loadPlan = async () => {
       if (typeof window !== "undefined") {
         const planId = localStorage.getItem("selected_plan_id")
+        console.log("local stored plan ")
         if (!planId) {
           router.push("/dashboard/plans")
           return

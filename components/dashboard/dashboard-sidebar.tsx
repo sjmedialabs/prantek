@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useUser } from "@/components/auth/user-context"
@@ -25,13 +25,9 @@ import {
 interface NavItem {
   name: string
   href?: string
-  icon: any
+  icon?: any
   permission: string | null
-  submenu?: {
-    name: string
-    href: string
-    permission: string | null
-  }[]
+  submenu?: NavItem[]
 }
 
 const navigationItems: NavItem[] = [
@@ -41,23 +37,53 @@ const navigationItems: NavItem[] = [
     icon: Settings,
     permission: "tenant_settings",
     submenu: [
-      { name: "Company Details", href: "/dashboard/settings/company", permission: "tenant_settings" },
-      { name: "Roles", href: "/dashboard/roles", permission: "manage_roles" },
-      { name: "Employment Type", href: "/dashboard/settings/member-types", permission: "tenant_settings" },
-      { name: "Employee Management", href: "/dashboard/settings/employee", permission: "tenant_settings" },
-      { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
+      {
+        name: "Company Settings",
+        permission: "tenant_settings",
+        submenu: [
+          { name: "Company Details", href: "/dashboard/settings/company", permission: "tenant_settings" },
+          { name: "Bank Details", href: "/dashboard/settings/bank", permission: "tenant_settings" },
+        ],
+      },
+      {
+        name: "Product Settings",
+        permission: "tenant_settings",
+        submenu: [
+          { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
+          { name: "Tax Settings", href: "/dashboard/settings/tax", permission: "tenant_settings" },
+        ],
+      },
+      {
+        name: "Payment Settings",
+        permission: "tenant_settings",
+        submenu: [
+          { name: "Ledger Heads", href: "/dashboard/settings/payment-categories", permission: "tenant_settings" },
+          { name: "Payment Methods", href: "/dashboard/settings/payment-methods", permission: "tenant_settings" },
+          { name: "Receipt Categories", href: "/dashboard/settings/receipt-categories", permission: "tenant_settings" },
+          { name: "Recipient Types", href: "/dashboard/settings/recipient-types", permission: "tenant_settings" },
+        ],
+      },
+      {
+        name: "Asset Settings",
+        permission: "tenant_settings",
+        submenu: [
+          { name: "Asset Categories", href: "/dashboard/settings/asset-categories", permission: "tenant_settings" },
+          { name: "Asset Conditions", href: "/dashboard/settings/asset-conditions", permission: "tenant_settings" },
+        ],
+      },
+      {
+        name: "HR Settings",
+        permission: "tenant_settings",
+        submenu: [
+          { name: "Roles", href: "/dashboard/roles", permission: "manage_roles" },
+          { name: "Employment Type", href: "/dashboard/settings/member-types", permission: "tenant_settings" },
+          { name: "Employee Management", href: "/dashboard/settings/employee", permission: "tenant_settings" },
+        ],
+      },
       { name: "Plans", href: "/dashboard/plans", permission: null },
-      { name: "Security", href: "/dashboard/settings/security", permission: "tenant_settings" },
       { name: "Notifications", href: "/dashboard/settings/notifications", permission: "tenant_settings" },
-      { name: "Bank Details", href: "/dashboard/settings/bank", permission: "tenant_settings" },
-      { name: "Tax Settings", href: "/dashboard/settings/tax", permission: "tenant_settings" },
-      { name: "Payment Categories", href: "/dashboard/settings/payment-categories", permission: "tenant_settings" },
-      { name: "Payment Methods", href: "/dashboard/settings/payment-methods", permission: "tenant_settings" },
-      { name: "Receipt Categories", href: "/dashboard/settings/receipt-categories", permission: "tenant_settings" },
-      { name: "Recipient Types", href: "/dashboard/settings/recipient-types", permission: "tenant_settings" },
       { name: "Activity Log", href: "/dashboard/settings/activity-log", permission: "tenant_settings" },
-      { name: "Asset Categories", href: "/dashboard/settings/asset-categories", permission: "tenant_settings" },
-      { name: "Asset Conditions", href: "/dashboard/settings/asset-conditions", permission: "tenant_settings" },
+      { name: "Security", href: "/dashboard/settings/security", permission: "tenant_settings" },
     ],
   },
   { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
@@ -75,22 +101,91 @@ export default function DashboardSidebar() {
   const pathname = usePathname()
   const { user, tenant, hasPermission } = useUser()
 
+  // ✅ Helper to check if a menu (or any of its children) is active
+  const isMenuActive = (item: NavItem): boolean => {
+    if (item.href && pathname === item.href) return true
+    if (item.submenu) return item.submenu.some((sub) => isMenuActive(sub))
+    return false
+  }
+
+  // ✅ Auto-expand parents of active route
+  useEffect(() => {
+    const openParents: string[] = []
+
+    const findActiveParents = (items: NavItem[]) => {
+      items.forEach((item) => {
+        if (item.submenu && item.submenu.length > 0) {
+          if (item.submenu.some((sub) => isMenuActive(sub))) {
+            openParents.push(item.name)
+          }
+          findActiveParents(item.submenu)
+        }
+      })
+    }
+
+    findActiveParents(navigationItems)
+    setExpandedMenus(openParents)
+  }, [pathname])
+
   const toggleSubmenu = (menuName: string) => {
-    setExpandedMenus((prev) => {
-      // If the menu is already expanded, collapse it
-      if (prev.includes(menuName)) {
-        return prev.filter((name) => name !== menuName)
+    setExpandedMenus((prev) =>
+      prev.includes(menuName) ? prev.filter((name) => name !== menuName) : [...prev, menuName]
+    )
+  }
+
+  const closeAllSubmenus = () => setExpandedMenus([])
+
+  const filteredNavigation = navigationItems.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  )
+
+  // ✅ Recursive menu renderer
+  const renderMenuItems = (items: NavItem[], level = 0) => {
+    return items.map((item) => {
+      const Icon = item.icon
+      const hasSubmenu = item.submenu && item.submenu.length > 0
+      const isExpanded = expandedMenus.includes(item.name)
+      const isActive = isMenuActive(item)
+
+      if (hasSubmenu) {
+        return (
+          <div key={item.name} className={`${level > 0 ? "ml-4" : ""}`}>
+            <button
+              onClick={() => toggleSubmenu(item.name)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive ? "bg-purple-100 text-purple-700" : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+                {!collapsed && <span>{item.name}</span>}
+              </div>
+              {!collapsed && (
+                <span>{isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</span>
+              )}
+            </button>
+            {!collapsed && isExpanded && (
+              <div className="mt-1 space-y-1">{renderMenuItems(item.submenu!, level + 1)}</div>
+            )}
+          </div>
+        )
       }
-      // Otherwise, close all other menus and open this one
-      return [menuName]
+
+      return (
+        <Link
+          key={item.name}
+          href={item.href!}
+          onClick={closeAllSubmenus}
+          className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            isActive ? "bg-purple-50 text-purple-700 font-medium" : "text-gray-600 hover:bg-gray-50"
+          } ${level > 0 ? "ml-4" : ""}`}
+        >
+          {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
+          {!collapsed && <span>{item.name}</span>}
+        </Link>
+      )
     })
   }
-
-  const closeAllSubmenus = () => {
-    setExpandedMenus([])
-  }
-
-  const filteredNavigation = navigationItems.filter((item) => !item.permission || hasPermission(item.permission))
 
   return (
     <div
@@ -99,6 +194,7 @@ export default function DashboardSidebar() {
       }`}
     >
       <div className="flex flex-col h-full">
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {!collapsed && (
             <div className="flex items-center space-x-3">
@@ -116,11 +212,14 @@ export default function DashboardSidebar() {
           </Button>
         </div>
 
+        {/* User Info */}
         {!collapsed && (
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">{user?.name.charAt(0).toUpperCase()}</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {user?.name.charAt(0).toUpperCase()}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
@@ -137,74 +236,8 @@ export default function DashboardSidebar() {
           </div>
         )}
 
-        <nav className="flex-1 p-4 space-y-1">
-          {filteredNavigation.map((item) => {
-            const Icon = item.icon
-            const hasSubmenu = item.submenu && item.submenu.length > 0
-            const isExpanded = expandedMenus.includes(item.name)
-            const isActive = item.href
-              ? pathname === item.href
-              : pathname.startsWith(`/dashboard/${item.name.toLowerCase()}`)
-
-            if (hasSubmenu) {
-              return (
-                <div key={item.name}>
-                  <button
-                    onClick={() => toggleSubmenu(item.name)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive ? "bg-purple-100 text-purple-700" : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Icon className="h-5 w-5 flex-shrink-0" />
-                      {!collapsed && <span>{item.name}</span>}
-                    </div>
-                    {!collapsed && (
-                      <span>
-                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </span>
-                    )}
-                  </button>
-                  {!collapsed && isExpanded && (
-                    <div className="ml-8 mt-1 space-y-1">
-                      {item.submenu?.map((subitem) => {
-                        if (subitem.permission && !hasPermission(subitem.permission)) return null
-                        const isSubActive = pathname === subitem.href
-                        return (
-                          <Link
-                            key={subitem.name}
-                            href={subitem.href}
-                            className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                              isSubActive
-                                ? "bg-purple-50 text-purple-700 font-medium"
-                                : "text-gray-600 hover:bg-gray-50"
-                            }`}
-                          >
-                            {subitem.name}
-                          </Link>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            }
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href!}
-                onClick={closeAllSubmenus}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? "bg-purple-100 text-purple-700" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span>{item.name}</span>}
-              </Link>
-            )
-          })}
-        </nav>
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1">{renderMenuItems(filteredNavigation)}</nav>
       </div>
     </div>
   )
