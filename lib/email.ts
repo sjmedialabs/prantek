@@ -181,3 +181,121 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<boolea
     return false
   }
 }
+
+/**
+ * Send employee login credentials
+ */
+export async function sendEmployeeCredentials(
+  to: string,
+  employeeName: string,
+  tempPassword: string,
+  companyName?: string
+): Promise<boolean> {
+  try {
+    const transporter = createTransporter()
+    
+    if (!transporter) {
+      console.log("[EMAIL] Skipping employee credentials email - SMTP not configured")
+      console.log(`[EMAIL] Employee credentials would be sent to: ${to}`)
+      console.log(`[EMAIL] Temporary password: ${tempPassword}`)
+      console.log(`[EMAIL] Login URL: ${APP_URL}/signin`)
+      return false
+    }
+
+    const loginUrl = `${APP_URL}/signin`
+
+    const mailOptions = {
+      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+      to,
+      subject: `Your ${APP_NAME} Account Credentials${companyName ? ` - ${companyName}` : ''}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your Account Credentials</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">${APP_NAME}</h1>
+          </div>
+          
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-top: 0;">Welcome to the Team, ${employeeName}!</h2>
+            
+            <p>Hello ${employeeName},</p>
+            
+            <p>An account has been created for you${companyName ? ` at <strong>${companyName}</strong>` : ''} with access to ${APP_NAME}. You can now log in to your dashboard to access the features assigned to your role.</p>
+            
+            <div style="background: white; border: 2px solid #667eea; border-radius: 8px; padding: 20px; margin: 25px 0;">
+              <h3 style="color: #667eea; margin-top: 0;">Your Login Credentials:</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #555;">Email:</td>
+                  <td style="padding: 8px 0; color: #333;">${to}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #555;">Temporary Password:</td>
+                  <td style="padding: 8px 0; color: #333; font-family: monospace; background: #f0f0f0; padding: 4px 8px; border-radius: 4px;">${tempPassword}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginUrl}" 
+                 style="background: #667eea; color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Login to Dashboard
+              </a>
+            </div>
+            
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; font-size: 14px; color: #856404;">
+                <strong>⚠️ Important:</strong> Please change your password after logging in for the first time. Go to Profile Settings to update your password.
+              </p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; margin-top: 30px;">
+              If you have any questions or need assistance, please contact your administrator or our support team.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+            
+            <p style="color: #999; font-size: 12px; text-align: center;">
+              This is an automated email from ${APP_NAME}. Please do not reply to this email.
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Welcome to ${APP_NAME}!
+
+Hello ${employeeName},
+
+An account has been created for you${companyName ? ` at ${companyName}` : ''} with access to ${APP_NAME}.
+
+Your Login Credentials:
+Email: ${to}
+Temporary Password: ${tempPassword}
+
+Login URL: ${loginUrl}
+
+IMPORTANT: Please change your password after logging in for the first time.
+Go to Profile Settings to update your password.
+
+If you have any questions, please contact your administrator.
+
+---
+This is an automated email from ${APP_NAME}.
+      `,
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+    console.log("[EMAIL] Employee credentials email sent:", info.messageId)
+    return true
+  } catch (error) {
+    console.error("[EMAIL] Failed to send employee credentials email:", error)
+    return false
+  }
+}

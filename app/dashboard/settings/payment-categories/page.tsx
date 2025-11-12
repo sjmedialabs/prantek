@@ -159,7 +159,7 @@ export default function PaymentCategoriesPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {categories.map((category) => (
+              {categories.filter(cat => cat && (cat._id || cat.id)).map((category) => (
                 <div
                   key={category._id || category.id}
                   className={`flex items-center justify-between p-3 border rounded-lg ${category?.isActive ? "" : "opacity-50 bg-gray-50"}`}

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { DollarSign, Users, Package, TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft, FileText } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { formatCurrency } from "@/lib/currency-utils"
+import DateFilter, { type DateFilterType, type DateRange } from "@/components/dashboard/date-filter"
 
 export default function DashboardPage() {
   const { user } = useUser()
@@ -28,15 +29,25 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
   const [currentPlan, setCurrentPlan] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [dateFilter, setDateFilter] = useState<DateFilterType>("monthly")
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = new Date()
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999)
+    return { from: startOfMonth, to: endOfMonth }
+  })
 
   useEffect(() => {
     console.log('[DASHBOARD] User data:', user)
     console.log('[DASHBOARD] subscriptionPlanId:', user?.subscriptionPlanId)
-    loadDashboardData()
-  }, [user])
+    if (user) {
+      loadDashboardData()
+    }
+  }, [user, dateRange])
 
   /** ✅ Rewritten — fetches real DB data using API */
   const loadDashboardData = async () => {
+    console.log('[DASHBOARD] Loading data with date range:', { from: dateRange.from, to: dateRange.to })
     try {
       const [
         quotations,
@@ -74,39 +85,41 @@ export default function DashboardPage() {
         0
       )
       const cashInHand = totalReceipts - totalPayments
-      // ✅ receivables = pending quotations
+      // ✅ receivables = pending quotations (filtered by date range)
       const pendingQuotations = (quotations || []).filter(
-        (q: any) => q.status === "pending" || q.status === "sent")
+        (q: any) => {
+          const qDate = new Date(q.date)
+          return (q.status === "pending" || q.status === "sent") && 
+                 qDate >= dateRange.from && qDate <= dateRange.to
+        })
       const receivables = pendingQuotations.reduce(
         (sum: number, q: any) => sum + (q.grandTotal || 0),
         0
       )
-      // ✅ payables (last 7 days)
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 7)
+      // ✅ payables (filtered by date range)
       const recentPayments = (Array.isArray(payments) ? payments : (payments?.data || [])).filter((p: any) => {
         const d = new Date(p.date)
-        return d >= weekAgo
+        return d >= dateRange.from && d <= dateRange.to
       })
       const payables = recentPayments.reduce(
         (sum: number, p: any) => sum + (p.amount || 0),
         0
       )
-      // ✅ monthly revenue
-      const now = new Date()
-      const monthlyReceipts = (receipts || []).filter((r: any) => {
+      // ✅ revenue for selected date range
+      const filteredReceipts = (receipts || []).filter((r: any) => {
         const date = new Date(r.date)
-        return (
-          date.getMonth() === now.getMonth() &&
-          date.getFullYear() === now.getFullYear()
-        )
+        return date >= dateRange.from && date <= dateRange.to
       })
-      console.log("Monthly receipts:", monthlyReceipts)
-      const monthlyRevenue = monthlyReceipts.reduce(
+      console.log('[DASHBOARD] Filtered data counts:', {
+        receipts: filteredReceipts.length,
+        payments: recentPayments.length,
+        quotations: pendingQuotations.length
+      })
+      const monthlyRevenue = filteredReceipts.reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),
         0
       )
-      console.log("Monthly revenue:", monthlyRevenue)
+      console.log('[DASHBOARD] Period revenue:', monthlyRevenue)
 
       // ✅ Calculate last month revenue
 const lastMonth = new Date()
@@ -145,16 +158,16 @@ if (lastMonthRevenue > 0) {
         billsDue: recentPayments.length,
       })
 
-      // ✅ Recent Transactions
+      // ✅ Recent Transactions (filtered by date range)
       const allTransactions = [
-        ...receipts.map((r: any) => ({
+        ...filteredReceipts.map((r: any) => ({
           type: "Income",
           amount: r.amountPaid || 0,
           description: `Receipt #${r.receiptNumber} - ${r.clientName}`,
           time: new Date(r.date).toLocaleDateString(),
           date: new Date(r.date),
         })),
-        ...payments.map((p: any) => ({
+        ...recentPayments.map((p: any) => ({
           type: "Expense",
           category: "Salary",
           amount: p.amount || 0,
@@ -177,6 +190,12 @@ if (lastMonthRevenue > 0) {
       console.error("Failed to load dashboard data:", error)
       setLoading(false)
     }
+  }
+
+  const handleDateFilterChange = (type: DateFilterType, range: DateRange) => {
+    console.log('[DASHBOARD] Date filter changed:', { type, from: range.from, to: range.to })
+    setDateFilter(type)
+    setDateRange(range)
   }
   const statCards = [
   {
@@ -288,9 +307,14 @@ const financialOverview = [
         </div>
       </div>
 
+      {/* Date Filter */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-900">Financial Overview</h2>
+        <DateFilter onFilterChange={handleDateFilterChange} selectedFilter={dateFilter} />
+      </div>
+
       {/* Primary Financial Metrics */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Financial Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((stat) => {
             const Icon = stat.icon
