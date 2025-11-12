@@ -149,7 +149,7 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
 
   return null
 }
-const handleAddRole = async () => {
+  const handleAddRole = async () => {
   const error = validateRole(newRole, roles)
   if (error) {
     toast({ title: "Notification", description: error, variant: "destructive" })
@@ -180,7 +180,7 @@ const handleAddRole = async () => {
     })
   }
 }
-const handleEditRole = (role: Role) => {
+  const handleEditRole = (role: Role) => {
   setEditingRole(role)
   setNewRole({
     name: role.name,
@@ -188,10 +188,10 @@ const handleEditRole = (role: Role) => {
   })
   setIsAddRoleOpen(true)
 }
-const handleUpdateRole = async () => {
+  const handleUpdateRole = async () => {
   if (!editingRole || !editingRole._id) return
 
-  const error = validateRole(newRole, roles, editingRole._id)
+  const error = validateRole(newRole)
   if (error) {
     toast({ title: "Notification", description: error, variant: "destructive" })
     return
