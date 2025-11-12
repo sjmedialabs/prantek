@@ -25,19 +25,64 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const [error, setError] = useState("")
+  const[amountFromPreviousSubscription,setAmountFromPreviousSubscription]=useState(0);
+   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+
+  const loginedUserLocalStorage = loginedUserLocalStorageString
+  ? JSON.parse(loginedUserLocalStorageString)
+  : null;
 
   useEffect(() => {
     const loadPlan = async () => {
       if (typeof window !== "undefined") {
         const planId = localStorage.getItem("selected_plan_id")
-        console.log("local stored plan ")
+        // console.log("local stored planId is",loginedUserLocalStorage.subscriptionPlanId)
         if (!planId) {
           router.push("/dashboard/plans")
           return
         }
 
         try {
-          const selectedPlan = await api.subscriptionPlans.getById( planId)
+          const selectedPlan = await api.subscriptionPlans.getById(planId)
+          const previousPlan=await api.subscriptionPlans.getById(loginedUserLocalStorage.subscriptionPlanId)
+          console.log("Current Plan is:::",selectedPlan)
+          if(loginedUserLocalStorage.subscriptionStatus!="trial"){
+            // 2️⃣ Parse dates
+            const subscriptionEndDate = new Date(loginedUserLocalStorage.subscriptionEndDate);
+            const subscriptionStartDate = new Date(loginedUserLocalStorage.subscriptionStartDate);
+            const currentDate = new Date();
+
+            // 3️⃣ Calculate total days based on billingCycle (for fallback)
+            let totalDays;
+            if (previousPlan.billingCycle === "monthly") {
+              totalDays = 30;
+            } else if (previousPlan.billingCycle === "yearly") {
+              totalDays = 365;
+            } else {
+              // default fallback
+              totalDays = Math.ceil(
+                (subscriptionEndDate - subscriptionStartDate) / (1000 * 60 * 60 * 24)
+              );
+            }
+
+            // 4️⃣ Calculate days left in current plan
+            const daysLeft = Math.max(
+              Math.ceil((subscriptionEndDate - currentDate) / (1000 * 60 * 60 * 24)),
+              0
+            );
+
+            console.log("Days that are left from the current plan:::",daysLeft)
+            // 5️⃣ Calculate remaining balance
+            const remainingBalance = Math.ceil((previousPlan.price * daysLeft) / totalDays);
+            console.log("Saved amount from the previous plan:::",remainingBalance);
+            setAmountFromPreviousSubscription(remainingBalance);
+            // 6️⃣ Fetch new plan details
+            // const newPlan = await api.subscriptionPlans.getById(selectedNewPlanId);
+
+            // // 7️⃣ Final payable amount (cannot be negative)
+            // const finalPayableAmount = Math.max(newPlan.price - remainingBalance, 0);
+
+          }
           if (selectedPlan) {
             setPlan(selectedPlan)
           }
@@ -215,9 +260,13 @@ export default function CheckoutPage() {
                   <span className="text-gray-600">Tax (18% GST)</span>
                   <span className="font-semibold">₹{Math.round(plan.price * 0.18).toLocaleString()}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Previous plan Amount</span>
+                  <span className="font-semibold">-₹{amountFromPreviousSubscription}</span>
+                </div>
                 <div className="border-t pt-2 flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>₹{Math.round(plan.price * 1.18).toLocaleString()}</span>
+                  <span>₹{Math.round((plan.price * 1.18)-amountFromPreviousSubscription).toLocaleString()}</span>
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">

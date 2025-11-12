@@ -17,9 +17,9 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
-   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+  const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
-const loginedUserLocalStorage = loginedUserLocalStorageString
+  const loginedUserLocalStorage = loginedUserLocalStorageString
   ? JSON.parse(loginedUserLocalStorageString)
   : null;
 
