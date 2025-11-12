@@ -43,14 +43,14 @@ export default function MemberTypesPage() {
     setMemberTypes(types)
   }
 
-  
+
   const generateUniqueCode = (name: string) => {
     // Generate base code from name
     let baseCode = name.toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
       .replace(/\s+/g, '_')
       .substring(0, 20);
-    
+
     // Add unique identifier (timestamp + random)
     const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
     return `${baseCode}_${uniqueId}`;
@@ -62,7 +62,7 @@ export default function MemberTypesPage() {
       return
     }
 
-    
+
 
     if (editingType) {
       console.log("editingType", editingType._id)
@@ -106,19 +106,19 @@ export default function MemberTypesPage() {
 
   const toggleActive = async (id: string, isActive: boolean) => {
     console.log("toggleActive", id, isActive)
-      try {
-    const updated = await api.memberTypes.toggle(id, isActive)
+    try {
+      const updated = await api.memberTypes.toggle(id, isActive)
 
-    setMemberTypes((prev) =>
-      prev.map((type) =>
-        type.id === id ? { ...type, isActive } : type
+      setMemberTypes((prev) =>
+        prev.map((type) =>
+          type.id === id ? { ...type, isActive } : type
+        )
+
       )
-    
-    )
-    toast({ title: "Success", description: "status updated successfully!" })   // ✅ ADDED
-  } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
-  }
+      toast({ title: "Success", description: "status updated successfully!" })   // ✅ ADDED
+    } catch (err: any) {
+      toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
+    }
   }
 
 
@@ -251,7 +251,7 @@ export default function MemberTypesPage() {
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                    {/* <Button
+                      {/* <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleActive(type?.id || "")}
@@ -263,11 +263,11 @@ export default function MemberTypesPage() {
                         <PowerOff className="h-4 w-4 text-red-500" />
                       )}
                     </Button> */}
-<Switch
-  checked={!!type.isActive}   // ✅ ensures boolean
-  onCheckedChange={(checked) => toggleActive(type?._id, checked)}
-  // disabled={type.isSystem || type.userCount > 0}
-/>
+                      <Switch
+                        checked={!!type.isActive}   // ✅ ensures boolean
+                        onCheckedChange={(checked) => toggleActive(type?._id, checked)}
+                      // disabled={type.isSystem || type.userCount > 0}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

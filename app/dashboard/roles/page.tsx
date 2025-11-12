@@ -96,15 +96,33 @@ export default function RolesPage() {
     permissions: [] as string[],
   })
 
-  // ✅ Load from DB — NO DATASTORE
-  useEffect(() => {
-    const loadRoles = async () => {
+useEffect(() => {
+  const loadRolesAndUsers = async () => {
+    try {
+      // 1️⃣ Load roles from DB
       const loadedRoles = await api.roles.getAll()
-      setRoles(loadedRoles)   // ✅ Always use DB roles
-      console.log("Loaded roles from DB:", loadedRoles)
+
+      // 2️⃣ Load employees from DB
+      const loadedUsers = await api.employees.getAll()
+
+      // 3️⃣ Count how many users match each role
+      const rolesWithUserCount = loadedRoles.map((role: any) => {
+        const count = loadedUsers.filter((u: any) => u.role === role._id).length
+        return { ...role, userCount: count }
+      })
+
+      // 4️⃣ Save result
+      setRoles(rolesWithUserCount)
+
+      console.log("Roles with user count:", rolesWithUserCount)
+    } catch (err) {
+      console.error("Error loading roles/users", err)
     }
-    loadRoles()
-  }, [])
+  }
+
+  loadRolesAndUsers()
+}, [])
+
   const filteredRoles = (roles || [])
     .filter((role) => role?.name)
     .filter((role) =>
@@ -376,7 +394,7 @@ const handleUpdateRole = async () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {/* <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div> */}
+            <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div>
             <p className="text-xs text-muted-foreground">Across all roles</p>
           </CardContent>
         </Card>
