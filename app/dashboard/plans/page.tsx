@@ -145,10 +145,17 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                   <Crown className="h-6 w-6 text-blue-600" />
                   <div>
                     <CardTitle className="text-xl">Your Current Plan</CardTitle>
-                    <CardDescription>You are currently subscribed to {currentPlan.name}</CardDescription>
+                    <CardDescription>
+                      You are currently subscribed to {currentPlan.name}
+                      {user?.subscriptionStatus === 'trial' && ' (Trial Period)'}
+                    </CardDescription>
                   </div>
                 </div>
-                <Badge className="bg-blue-600 text-white">Active</Badge>
+                {user?.subscriptionStatus === 'trial' ? (
+                  <Badge className="bg-emerald-600 text-white">Trial</Badge>
+                ) : (
+                  <Badge className="bg-blue-600 text-white">Active</Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -156,11 +163,15 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                 <span className="text-3xl font-bold text-gray-900">₹{currentPlan.price.toLocaleString()}</span>
                 <span className="text-gray-600">/{currentPlan.billingCycle}</span>
               </div>
-              {user?.subscriptionEndDate && (
+              {user?.subscriptionStatus === 'trial' && user?.trialEndsAt ? (
+                <p className="text-sm text-amber-700 mt-2 font-medium">
+                  Trial expires on {new Date(user.trialEndsAt).toLocaleDateString()}
+                </p>
+              ) : user?.subscriptionEndDate ? (
                 <p className="text-sm text-gray-600 mt-2">
                   Renews on {new Date(user.subscriptionEndDate).toLocaleDateString()}
                 </p>
-              )}
+              ) : null}
             </CardContent>
           </Card>
         )}
@@ -178,15 +189,13 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                 className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${isCurrent ? "border-2 border-blue-500 shadow-lg" : "border-gray-200"}`}
               >
                 <div className="flex gap-2 absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-10">
-                  {!isCurrent && (
-                    <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-md text-xs px-3 py-1">
-                      14-Day Free Trial
-                    </Badge>
-                  )}
                   {plan.name === "Premium" && !isCurrent && (
                     <Badge className="bg-blue-600 hover:bg-blue-700 text-white shadow-md text-xs px-3 py-1">Most Popular</Badge>
                   )}
-                  {isCurrent && (
+                  {isCurrent && user?.subscriptionStatus === 'trial' && (
+                    <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md text-xs px-3 py-1">Trial Plan</Badge>
+                  )}
+                  {isCurrent && user?.subscriptionStatus !== 'trial' && (
                     <Badge className="bg-green-600 hover:bg-green-700 text-white shadow-md text-xs px-3 py-1">Current Plan</Badge>
                   )}
                   {isUpgrade && !isCurrent && (

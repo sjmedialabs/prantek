@@ -259,13 +259,20 @@ export interface Payment extends BaseDocument {
 }
 
 export interface SubscriptionPlan extends BaseDocument {
+  id?: string
   name: string
   price: number
   duration: number
+  billingCycle: "monthly" | "yearly"
   features: string[]
   maxUsers: number
   maxClients: number
   maxReceipts: number
+  isActive: boolean
+  description?: string
+  maxStorage?: string
+  subscriberCount?: number
+  revenue?: number
 }
 
 export interface PaymentMethod extends BaseDocument {
