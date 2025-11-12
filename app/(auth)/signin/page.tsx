@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, FileText, CheckCircle2 } from "lucide-react"
 import { tokenStorage } from "@/lib/token-storage"
+import { FeaturesSidebar } from "@/components/auth/features-sidebar"
 
 function SignInForm() {
   const searchParams = useSearchParams()
@@ -66,9 +67,14 @@ function SignInForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-xl p-8">
+    <div className="min-h-screen flex">
+      <FeaturesSidebar />
+      
+      {/* Right Side - Sign In Form */}
+      <div className="w-full lg:w-1/2 lg:ml-[50%] overflow-y-auto bg-white">
+        <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+        <div className="bg-white rounded-lg p-8">
           <div className="flex items-center justify-center mb-6">
             <FileText className="h-10 w-10 text-blue-600 mr-2" />
             <h1 className="text-3xl font-bold text-gray-900">Prantek Fin App</h1>
@@ -153,6 +159,8 @@ function SignInForm() {
               Sign Up
             </Link>
           </div>
+        </div>
+        </div>
         </div>
       </div>
     </div>

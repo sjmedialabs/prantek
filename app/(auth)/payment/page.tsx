@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2, Loader2 } from "lucide-react"
+import { FeaturesSidebar } from "@/components/auth/features-sidebar"
 
 declare global {
   interface Window {
@@ -21,15 +22,22 @@ export default function PaymentPage() {
   const [scriptLoaded, setScriptLoaded] = useState(false)
 
   const plan = searchParams.get("plan") || "standard"
+  const planId = searchParams.get("planId") || ""
   const email = searchParams.get("email") || ""
   const companyName = searchParams.get("company") || ""
+  const planAmount = searchParams.get("amount") || "0"
+  const billingCycle = searchParams.get("billingCycle") || "monthly"
 
-  const planDetails = {
-    standard: { name: "Standard Plan", price: 4900, displayPrice: "₹49" },
-    premium: { name: "Premium Plan", price: 9900, displayPrice: "₹99" },
+  // For trial period: charge only ₹1, but store the actual plan amount
+  const trialAmount = 1 // ₹1 for trial
+  const selectedPlan = {
+    name: plan.charAt(0).toUpperCase() + plan.slice(1) + " Plan",
+    trialPrice: trialAmount * 100, // ₹1 in paise for trial
+    actualPrice: parseInt(planAmount) * 100, // Actual plan price in paise
+    displayTrialPrice: `₹${trialAmount}`,
+    displayActualPrice: `₹${planAmount}`,
+    billingCycle: billingCycle === 'yearly' ? 'year' : 'month'
   }
-
-  const selectedPlan = planDetails[plan as keyof typeof planDetails] || planDetails.standard
 
   // Load Razorpay script
   useEffect(() => {
@@ -61,14 +69,13 @@ export default function PaymentPage() {
     setError("")
 
     try {
-      // In production, you would create an order on your backend
-      // For now, we'll use test mode with the provided credentials
+      // Charge only ₹1 for trial period
       const options = {
         key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
-        amount: selectedPlan.price, // Amount already in paise (₹49 = 4900 paise)
+        amount: selectedPlan.trialPrice, // ₹1 in paise (100 paise)
         currency: "INR",
-        name: "SaaS Platform",
-        description: `${selectedPlan.name} Subscription`,
+        name: "Prantek Academy",
+        description: `${selectedPlan.name} - 14 Day Trial (₹1)`,
         image: "https://31.97.224.169:9080/images/prantek-logo.png",
         prefill: {
           name: companyName,
@@ -120,6 +127,10 @@ export default function PaymentPage() {
       const signupData = JSON.parse(pendingSignupStr)
       console.log("[v0] Found pending signup data:", { email: signupData.email })
 
+      // Calculate trial end date (14 days from now)
+      const trialEndDate = new Date()
+      trialEndDate.setDate(trialEndDate.getDate() + 14)
+
       // Call the account creation API
       const createAccountResponse = await fetch("/api/payment/verify-and-create-account", {
         method: "POST",
@@ -131,6 +142,9 @@ export default function PaymentPage() {
           paymentId: response.razorpay_payment_id,
           razorpayOrderId: response.razorpay_order_id || "",
           razorpaySignature: response.razorpay_signature || "",
+          trialAmount: selectedPlan.trialPrice,
+          planAmount: selectedPlan.actualPrice,
+          trialEndDate: trialEndDate.toISOString(),
         }),
       })
 
@@ -161,7 +175,8 @@ export default function PaymentPage() {
         JSON.stringify({
           paymentId: response.razorpay_payment_id,
           plan: plan,
-          amount: selectedPlan.price,
+          trialAmount: selectedPlan.trialPrice,
+          planAmount: selectedPlan.actualPrice,
           timestamp: new Date().toISOString(),
         }),
       )
@@ -177,7 +192,12 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex">
+      <FeaturesSidebar />
+      
+      {/* Right Side - Payment Form */}
+      <div className="w-full lg:w-1/2 lg:ml-[50%] overflow-y-auto bg-white">
+        <div className="min-h-screen flex items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
@@ -194,7 +214,7 @@ export default function PaymentPage() {
           )}
 
           {/* Plan Details */}
-          <div className="bg-purple-50 rounded-lg p-4 space-y-2">
+          <div className="bg-blue-50 rounded-lg p-4 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Plan</span>
               <span className="font-semibold">{selectedPlan.name}</span>
@@ -207,10 +227,28 @@ export default function PaymentPage() {
               <span className="text-sm text-gray-600">Email</span>
               <span className="font-semibold text-sm">{email}</span>
             </div>
-            <div className="border-t border-purple-200 pt-2 mt-2">
+            <div className="border-t border-blue-200 pt-3 mt-2">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-semibold text-green-800">Trial Payment (Today)</span>
+                  <span className="text-xl font-bold text-green-600">{selectedPlan.displayTrialPrice}</span>
+                </div>
+                <p className="text-xs text-green-700">Start your 14-day free trial with just ₹1</p>
+              </div>
               <div className="flex justify-between items-center">
-                <span className="font-semibold">Total Amount</span>
-                <span className="text-2xl font-bold text-purple-600">{selectedPlan.displayPrice}/month</span>
+                <div>
+                  <span className="text-sm font-semibold text-gray-700">Plan Amount</span>
+                  <p className="text-xs text-gray-500">Auto-debit after trial ends</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg font-bold text-gray-900">{selectedPlan.displayActualPrice}</span>
+                  <p className="text-xs text-gray-500">/{selectedPlan.billingCycle}</p>
+                  {billingCycle === 'yearly' && (
+                    <p className="text-xs text-green-600 font-semibold">
+                      ₹{Math.round(parseInt(planAmount) / 12)}/month
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -230,7 +268,7 @@ export default function PaymentPage() {
             ) : (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Pay {selectedPlan.displayPrice}
+                Pay {selectedPlan.displayTrialPrice} - Start Trial
               </>
             )}
           </Button>
@@ -243,12 +281,14 @@ export default function PaymentPage() {
 
           {/* Back Link */}
           <div className="text-center text-sm">
-            <button onClick={() => router.back()} className="text-purple-600 hover:underline">
-              ← Back to signup
+            <button onClick={() => router.push('/signup')} className="text-purple-600 hover:underline">
+              ← Back to plan selection
             </button>
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   )
 }

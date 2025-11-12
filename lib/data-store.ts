@@ -944,7 +944,7 @@ class DataStore {
       pricingTitle: "Choose the Perfect Plan to Suit Your Needs",
       pricingSubtitle:
         "Start with our Standard plan and upgrade as your business grows. All plans include core features with 14-day free trial.",
-      pricingFooterText: "All plans include 14-day free trial • No credit card required • Cancel anytime",
+      pricingFooterText: "All plans include 14-day free trial • Cancel anytime",
 
       faqTitle: "FAQs",
       faqSubtitle: "Got questions? We've got answers",
@@ -993,7 +993,7 @@ class DataStore {
       ctaPrimaryLink: "/signin",
       ctaSecondaryText: "Schedule a Demo",
       ctaSecondaryLink: "#demo",
-      ctaFeatures: ["14-day free trial", "No credit card required", "Cancel anytime"],
+      ctaFeatures: ["14-day free trial", "Cancel anytime"],
 
       contactEmail: "info@yourcompany.com",
       contactPhone: "+91 12345 67890",
