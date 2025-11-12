@@ -17,9 +17,9 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
-   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+  const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
-const loginedUserLocalStorage = loginedUserLocalStorageString
+  const loginedUserLocalStorage = loginedUserLocalStorageString
   ? JSON.parse(loginedUserLocalStorageString)
   : null;
 
@@ -165,7 +165,7 @@ setCurrentPlan(currentPlan) // This is now the single plan object
           </Card>
         )}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan)
             const isUpgrade = isPlanUpgrade(plan)
@@ -175,59 +175,68 @@ setCurrentPlan(currentPlan) // This is now the single plan object
             return (
               <Card
                 key={plan.id || plan._id?.toString()}
-                className={`relative hover:shadow-xl transition-shadow ${isCurrent ? "border-2 border-blue-500" : ""}`}
+                className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${isCurrent ? "border-2 border-blue-500 shadow-lg" : "border-gray-200"}`}
               >
-                {plan.name === "Premium" && !isCurrent && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600">Most Popular</Badge>
-                )}
-                {isCurrent && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600">Current Plan</Badge>
-                )}
-                {isUpgrade && !isCurrent && (
-                  <Badge className="absolute -top-3 right-4 bg-purple-600 flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    Upgrade
-                  </Badge>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
-                    <span className="text-gray-600">/{plan.billingCycle}</span>
+                <div className="flex gap-2 absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-10">
+                  {!isCurrent && (
+                    <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-md text-xs px-3 py-1">
+                      14-Day Free Trial
+                    </Badge>
+                  )}
+                  {plan.name === "Premium" && !isCurrent && (
+                    <Badge className="bg-blue-600 hover:bg-blue-700 text-white shadow-md text-xs px-3 py-1">Most Popular</Badge>
+                  )}
+                  {isCurrent && (
+                    <Badge className="bg-green-600 hover:bg-green-700 text-white shadow-md text-xs px-3 py-1">Current Plan</Badge>
+                  )}
+                  {isUpgrade && !isCurrent && (
+                    <Badge className="bg-purple-600 hover:bg-purple-700 text-white shadow-md text-xs px-3 py-1 flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      Upgrade
+                    </Badge>
+                  )}
+                </div>
+                <CardHeader className="pb-3 pt-6">
+                  <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
+                  <CardDescription className="text-sm">{plan.description}</CardDescription>
+                  <div className="mt-3">
+                    <span className="text-3xl font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
+                    <span className="text-gray-500 text-sm">/{plan.billingCycle}</span>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
+                <CardContent className="space-y-3 pt-0">
+                  <ul className="space-y-2">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700">{feature}</span>
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-gray-600 text-xs leading-relaxed">{feature}</span>
                       </li>
                     ))}
                   </ul>
-                  {isCurrent ? (
-                    <Button disabled className="w-full bg-gray-400 text-white" size="lg">
-                      Current Plan
-                    </Button> 
-                  ) : isDowngrade ? (
-                    <Button
-                      onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
-                      variant="outline"
-                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
-                      size="lg"
-                    >
-                      Downgrade to {plan.name}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                      size="lg"
-                    >
-                      {isUpgrade ? `Upgrade to ${plan.name}` : `Select ${plan.name}`}
-                    </Button>
-                  )}
+                  <div className="pt-2">
+                    {isCurrent ? (
+                      <Button disabled className="w-full bg-gray-400 text-white" size="default">
+                        Current Plan
+                      </Button> 
+                    ) : isDowngrade ? (
+                      <Button
+                        onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
+                        variant="outline"
+                        className="w-full border-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                        size="default"
+                      >
+                        Downgrade to {plan.name}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors"
+                        size="default"
+                      >
+                        {isUpgrade ? `Upgrade to ${plan.name}` : `Select ${plan.name}`}
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { useUser } from "@/components/auth/user-context"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { api } from "@/lib/api-client"
 import {
   LayoutDashboard,
   Users,
@@ -80,10 +81,16 @@ const navigationItems: NavItem[] = [
           { name: "Employee Management", href: "/dashboard/settings/employee", permission: "tenant_settings" },
         ],
       },
-      { name: "Plans", href: "/dashboard/plans", permission: null },
-      { name: "Notifications", href: "/dashboard/settings/notifications", permission: "tenant_settings" },
-      { name: "Activity Log", href: "/dashboard/settings/activity-log", permission: "tenant_settings" },
-      { name: "Security", href: "/dashboard/settings/security", permission: "tenant_settings" },
+      {
+        name: "Security Settings",
+        permission: "tenant_settings",
+        submenu:[
+         { name: "Notifications", href: "/dashboard/settings/notifications", permission: "tenant_settings" },
+         { name: "Activity Log", href: "/dashboard/settings/activity-log", permission: "tenant_settings" },
+         { name: "Security", href: "/dashboard/settings/security", permission: "tenant_settings" },
+        ]
+      },
+      { name: "Plans", href: "/dashboard/plans", permission: null }
     ],
   },
   { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
@@ -100,6 +107,12 @@ export default function DashboardSidebar() {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
   const pathname = usePathname()
   const { user, tenant, hasPermission } = useUser()
+  const [currentPlan, setCurrentPlan] = useState<any>(null)
+  const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+
+  const loginedUserLocalStorage = loginedUserLocalStorageString
+  ? JSON.parse(loginedUserLocalStorageString)
+  : null;
 
   // ✅ Helper to check if a menu (or any of its children) is active
   const isMenuActive = (item: NavItem): boolean => {
@@ -107,6 +120,17 @@ export default function DashboardSidebar() {
     if (item.submenu) return item.submenu.some((sub) => isMenuActive(sub))
     return false
   }
+
+  useEffect(()=>{
+    const loadData= async()=>{
+       try{
+        const loadedPlans=await await api.subscriptionPlans.getById(loginedUserLocalStorage.subscriptionPlanId)
+        setCurrentPlan(loadedPlans);
+       }catch(error){
+         console.error("Failed to load dashboard data:", error)
+       }
+    }
+  },[])
 
   // ✅ Auto-expand parents of active route
   useEffect(() => {
@@ -211,7 +235,7 @@ export default function DashboardSidebar() {
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
-
+ 
         {/* User Info */}
         {!collapsed && (
           <div className="p-4 border-b border-gray-200">
@@ -227,9 +251,9 @@ export default function DashboardSidebar() {
                   <Badge variant="secondary" className="text-xs">
                     {user?.role.replace("_", " ")}
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {tenant?.plan}
-                  </Badge>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-900 font-medium">
+              {currentPlan ? `${currentPlan.name}${user?.subscriptionStatus === 'trial' ? ' (Trial)' : ''}` : user?.subscriptionStatus === 'trial' ? 'Trial Plan' : 'No Active Plan'}
+            </Badge>
                 </div>
               </div>
             </div>
