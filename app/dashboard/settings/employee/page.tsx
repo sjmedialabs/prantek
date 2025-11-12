@@ -32,10 +32,13 @@ interface Employee {
   _id: string
   employeeNumber: string
   employeeName: string
+  middleName: string
   surname: string
   photo: string
   mobileNo: string
   email: string
+  emergencyName: string
+  emergencyNo: string
   address: string
   aadharNo: string
   aadharUpload: string
@@ -46,7 +49,13 @@ interface Employee {
   role: string
   resume?: string
   panCard?: string
-  bankAccountDetails?: string
+  bankAccountDetails?: {
+    bankName: string
+    branchName: string
+    accountNumber: string
+    accountName: string
+    ifscCode: string
+  }
   educationCertificates: DocumentItem[]
   experienceCertificates: DocumentItem[]
   isActive: boolean
@@ -67,10 +76,13 @@ export default function EmployeePage() {
     _id: "",
     employeeNumber: "",
     employeeName: "",
+    middleName: "",
     surname: "",
     photo: "",
     mobileNo: "",
     email: "",
+    emergencyName: "",
+    emergencyNo: "",
     address: "",
     aadharNo: "",
     aadharUpload: "",
@@ -83,7 +95,13 @@ export default function EmployeePage() {
     role: "",
     resume: "",
     panCard: "",
-    bankAccountDetails: "",
+    bankAccountDetails: {
+      bankName: "",
+      branchName: "",
+      accountNumber: "",
+      accountName: "",
+      ifscCode: "",
+    },
     educationCertificates: [],
     experienceCertificates: [],
     isActive: true,
@@ -99,7 +117,7 @@ export default function EmployeePage() {
       console.log("loadedMemberTypes", loadedMemberTypes)
       const loadedRoles = await api.roles.getAll()
       console.log("loadedRoles", loadedRoles)
-        setRoles(loadedRoles)
+      setRoles(loadedRoles)
       setEmployees(loadedEmployees)
       setMemberTypes(loadedMemberTypes)
     }
@@ -117,100 +135,125 @@ export default function EmployeePage() {
     return /^\d{12}$/.test(cleaned)
   }
 
-  const handleSave = async () => {
-    console.log("Saving employee:", formData)
-    if (!formData.employeeName.trim()) {
-      toast({ title: "Validation Error", description: "Please enter employee name", variant: "destructive" })
-      return
-    }
-    if (!formData.surname.trim()) {
-      toast({ title: "Validation Error", description: "Please enter surname", variant: "destructive" })
-      return
-    }
-    if (!formData.photo) {
-      toast({ title: "Validation Error", description: "Please upload employee photo", variant: "destructive" })
-      return
-    }
-    if (!formData.memberType) {
-      toast({ title: "Validation Error", description: "Please select employment type", variant: "destructive" })
-      return
-    }
-    if (!formData.role) {
-      toast({ title: "Validation Error", description: "Please select role", variant: "destructive" })
-      return
-    }
-    if (!formData.mobileNo.trim()) {
-      toast({ title: "Validation Error", description: "Please enter mobile number", variant: "destructive" })
-      return
-    }
-    if (!formData.email.trim()) {
-      toast({ title: "Validation Error", description: "Please enter email address", variant: "destructive" })
-      return
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      toast({ title: "Validation Error", description: "Please enter a valid email address", variant: "destructive" })
-      return
-    }
-    if (!formData.address.trim()) {
-      toast({ title: "Validation Error", description: "Please enter address", variant: "destructive" })
-      return
-    }
-    if (!formData.aadharNo.trim()) {
-      toast({ title: "Validation Error", description: "Please enter Aadhar number", variant: "destructive" })
-      return
-    }
-    if (!validateAadhar(formData.aadharNo)) {
-      toast({ title: "Validation Error", description: "Please enter a valid 12-digit Aadhar number", variant: "destructive" })
-      return
-    }
-    if (!formData.aadharUpload) {
-      toast({ title: "Validation Error", description: "Please upload Aadhar document", variant: "destructive" })
-      return
-    }
-    if (!formData.joiningDate) {
-      toast({ title: "Validation Error", description: "Please select joining date", variant: "destructive" })
-      return
-    }
-    console.log("Saving employee as editing employee:", editingEmployee)
-    console.log("Saving employee:", formData)
-    
-    try {
-      if (editingEmployee?._id) {
-        const updated = await api.employees.update( editingEmployee?._id, formData)
-        if (updated) {
-          setEmployees(employees.map((emp) => (emp._id === editingEmployee._id ? updated : emp)))
-        }
-      } else {
-        const newEmployee = await api.employees.create( {
-          ...formData,
-          employeeNumber: generateEmployeeNumber(),
-        })
-        setEmployees([...employees, newEmployee])
-      }
+const handleSave = async () => {
+  console.log("Saving employee:", formData)
 
-      setIsDialogOpen(false)
-      setEditingEmployee(null)
-      resetForm()
-      setSaved(true)
-      toast({ title: "Success", description: "Employee saved successfully!" })
-      setTimeout(() => setSaved(false), 3000)
-      window.location.reload()
-    } catch (error) {
-      console.error("Error saving employee:", error)
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to save employee. Please try again.", 
-        variant: "destructive" 
-      })
-    }
+  // ✅ Basic field validations
+  if (!formData.employeeName.trim()) {
+    toast({ title: "Validation Error", description: "Please enter employee name", variant: "destructive" })
+    return
   }
+  if (!formData.surname.trim()) {
+    toast({ title: "Validation Error", description: "Please enter surname", variant: "destructive" })
+    return
+  }
+  if (!formData.photo) {
+    toast({ title: "Validation Error", description: "Please upload employee photo", variant: "destructive" })
+    return
+  }
+  if (!formData.memberType) {
+    toast({ title: "Validation Error", description: "Please select employment type", variant: "destructive" })
+    return
+  }
+  if (!formData.role) {
+    toast({ title: "Validation Error", description: "Please select role", variant: "destructive" })
+    return
+  }
+  if (!formData.mobileNo.trim()) {
+    toast({ title: "Validation Error", description: "Please enter mobile number", variant: "destructive" })
+    return
+  }
+  if (!formData.email.trim()) {
+    toast({ title: "Validation Error", description: "Please enter email address", variant: "destructive" })
+    return
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(formData.email)) {
+    toast({ title: "Validation Error", description: "Please enter a valid email address", variant: "destructive" })
+    return
+  }
+
+  // ✅ Check email uniqueness
+  const emailExists = employees.some(
+    (emp) =>
+      emp.email?.trim().toLowerCase() === formData.email.trim().toLowerCase() &&
+      emp._id !== editingEmployee?._id
+  )
+
+  if (emailExists) {
+    toast({
+      title: "Duplicate Email",
+      description: "This email is already registered for another employee.",
+      variant: "destructive"
+    })
+    return
+  }
+
+  if (!formData.address.trim()) {
+    toast({ title: "Validation Error", description: "Please enter address", variant: "destructive" })
+    return
+  }
+  if (!formData.aadharNo.trim()) {
+    toast({ title: "Validation Error", description: "Please enter Aadhar number", variant: "destructive" })
+    return
+  }
+  if (!validateAadhar(formData.aadharNo)) {
+    toast({ title: "Validation Error", description: "Please enter a valid 12-digit Aadhar number", variant: "destructive" })
+    return
+  }
+  if (!formData.aadharUpload) {
+    toast({ title: "Validation Error", description: "Please upload Aadhar document", variant: "destructive" })
+    return
+  }
+  if (!formData.joiningDate) {
+    toast({ title: "Validation Error", description: "Please select joining date", variant: "destructive" })
+    return
+  }
+
+  console.log("Saving employee as editing employee:", editingEmployee)
+  console.log("Saving employee:", formData)
+
+  try {
+    if (editingEmployee?._id) {
+      const updated = await api.employees.update(editingEmployee._id, formData)
+      if (updated) {
+        setEmployees(employees.map((emp) => (emp._id === editingEmployee._id ? updated : emp)))
+      }
+    } else {
+      const newEmployee = await api.employees.create({
+        ...formData,
+        employeeNumber: generateEmployeeNumber(),
+      })
+      setEmployees([...employees, newEmployee])
+    }
+
+    setIsDialogOpen(false)
+    setEditingEmployee(null)
+    resetForm()
+    setSaved(true)
+
+    toast({ title: "Success", description: "Employee saved successfully!" })
+    setTimeout(() => setSaved(false), 3000)
+
+    window.location.reload()
+  } catch (error: any) {
+    console.error("Error saving employee:", error)
+    toast({
+      title: "Error",
+      description: error?.message || "Failed to save employee. Please try again.",
+      variant: "destructive",
+    })
+  }
+}
+
 
   const resetForm = () => {
     setFormData({
       id: "",
       employeeNumber: "",
       employeeName: "",
+      middleName: "",
       surname: "",
       photo: "",
       _id: "",
@@ -218,6 +261,8 @@ export default function EmployeePage() {
       userCount: 0,
       mobileNo: "",
       email: "",
+      emergencyName: "",
+      emergencyNo: "",
       address: "",
       aadharNo: "",
       aadharUpload: "",
@@ -228,7 +273,13 @@ export default function EmployeePage() {
       role: "",
       resume: "",
       panCard: "",
-      bankAccountDetails: "",
+      bankAccountDetails: {
+        bankName: "",
+        branchName: "",
+        accountNumber: "",
+        ifscCode: "",
+        accountName: "",
+      },
       educationCertificates: [],
       experienceCertificates: [],
       isActive: true,
@@ -245,18 +296,19 @@ export default function EmployeePage() {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     console.log("Toggling  for employee:", id)
-      try {
-    const updated = await api.employees.toggle(id, isActive)
+    try {
+      const updated = await api.employees.toggle(id, isActive)
 
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        emp.id === id ? { ...emp, isActive } : emp
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === id ? { ...emp, isActive } : emp
+        )
       )
-    )
-    toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
-  } catch (err: any) {
-    toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
-  }
+      toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
+      window.location.reload()
+    } catch (err: any) {
+      toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
+    }
   }
 
   if (!hasPermission("tenant_settings")) {
@@ -322,7 +374,7 @@ export default function EmployeePage() {
                     <CardTitle className="text-lg font-semibold">Basic Information</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Employee Number *</Label>
                         <Input
@@ -347,6 +399,18 @@ export default function EmployeePage() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="employeeName" className="text-sm font-medium">
+                          Middle Name *
+                        </Label>
+                        <Input
+                          id="employeeName"
+                          value={formData.middleName}
+                          onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                          placeholder="Middle name"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="surname" className="text-sm font-medium">
                           Surname *
                         </Label>
@@ -365,47 +429,50 @@ export default function EmployeePage() {
                         <Label htmlFor="memberType" className="text-sm font-medium">
                           Employment Type *
                         </Label>
-<Select
-  value={formData.memberType ?? ""}
-  onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
->
-  <SelectTrigger>
-    <SelectValue/>
-  </SelectTrigger>
-  <SelectContent>
-    {memberTypes.map((type) => (
-      <SelectItem key={type._id} value={String(type._id)}>
-        {type.name}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                        <Select
+                          value={formData.memberType ?? ""}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {memberTypes.map((type) => (
+                              <SelectItem key={type._id} value={String(type._id)}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="role" className="text-sm font-medium">
                           Role *
                         </Label>
-<Select
-  value={formData.role ?? ""}
-  onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select role" />
-  </SelectTrigger>
-  <SelectContent>
-    {roles.length === 0 ? (
-      <SelectItem value="no-roles" disabled>
-        No roles available. Please create roles first.
-      </SelectItem>
-    ) : (
-      roles.map((role) => (
-        <SelectItem key={role._id} value={String(role._id)}>
-          {role.name}
-        </SelectItem>
-      ))
-    )}
-  </SelectContent>
-</Select>
+                        <Select
+                          value={formData.role ?? ""}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.filter((r) => r.isActive === true).length === 0 ? (
+                              <SelectItem value="no-roles" disabled>
+                                No active roles available. Please create roles first.
+                              </SelectItem>
+                            ) : (
+                              roles
+                                .filter((role) => role.isActive === true)   // ✅ only active
+                                .map((role) => (
+                                  <SelectItem key={role._id} value={String(role._id)}>
+                                    {role.name}
+                                  </SelectItem>
+                                ))
+                            )}
+                          </SelectContent>
+
+                        </Select>
                       </div>
                     </div>
                   </CardContent>
@@ -445,6 +512,7 @@ export default function EmployeePage() {
                         />
                       </div>
                     </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="address" className="text-sm font-medium">
                         Address *
@@ -457,6 +525,34 @@ export default function EmployeePage() {
                         rows={3}
                         required
                       />
+                    </div>
+                                        {/* //emergency contact */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium">
+                          Emergency Contact Name *
+                        </Label>
+                        <Input
+                          id="emergencyName"
+                          value={formData.emergencyName}
+                          onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
+                          placeholder="Emergency Contact Name"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="Emergency No." className="text-sm font-medium">
+                        Emergency Mobile No *
+                        </Label>
+                        <Input
+                          id="emergenrcyNo"
+                          type="tel"
+                          value={formData.emergencyNo}
+                          onChange={(e) => setFormData({ ...formData, emergencyNo: e.target.value })}
+                          placeholder="+91 12345 67890"
+                          required
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -473,6 +569,8 @@ export default function EmployeePage() {
                           label="Employee Photo *"
                           value={formData.photo}
                           onChange={(value) => setFormData({ ...formData, photo: value })}
+                            maxSizeMB={1}
+                            allowedTypes={["image/*"]}
                           previewClassName="w-32 h-32 rounded-lg"
                         />
                       </div>
@@ -481,7 +579,8 @@ export default function EmployeePage() {
                           label="Aadhar Document *"
                           value={formData.aadharUpload}
                           onChange={(value) => setFormData({ ...formData, aadharUpload: value })}
-                          accept="image/*,application/pdf"
+                          allowedTypes={["image/*", "application/pdf"]}
+                          maxSizeMB={1}
                           previewClassName="w-32 h-32 rounded-lg"
                         />
                       </div>
@@ -490,7 +589,8 @@ export default function EmployeePage() {
                           label="Resume"
                           value={formData.resume || ""}
                           onChange={(value) => setFormData({ ...formData, resume: value })}
-                          accept="application/pdf,.doc,.docx"
+                          allowedTypes={["application/pdf"]}
+                          maxSizeMB={3}
                           previewClassName="w-32 h-32 rounded-lg"
                         />
                       </div>
@@ -499,7 +599,8 @@ export default function EmployeePage() {
                           label="PAN Card"
                           value={formData.panCard || ""}
                           onChange={(value) => setFormData({ ...formData, panCard: value })}
-                          accept="image/*,application/pdf"
+                          allowedTypes={["image/*", "application/pdf"]}
+                          maxSizeMB={1}
                           previewClassName="w-32 h-32 rounded-lg"
                         />
                       </div>
@@ -523,42 +624,105 @@ export default function EmployeePage() {
                   placeholder="e.g., ABC Company - Offer Letter, XYZ Corp - Relieving Letter"
                 />
 
-                {/* Identity & Banking Section */}
+                {/* Banking Section */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Identity & Banking Details</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Banking Details</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="aadharNo" className="text-sm font-medium">
-                          Aadhar No * (12 digits)
+                        <Label htmlFor="accountName" className="text-sm font-medium">
+                          Account Holder Name
                         </Label>
                         <Input
-                          id="aadharNo"
-                          value={formData.aadharNo}
-                          onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
+                          id="accountName"
+                          value={formData.bankAccountDetails?.accountName || ""}
+                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, accountName: e.target.value }})}
                           placeholder="XXXX XXXX XXXX"
                           maxLength={14}
                           required
                         />
                       </div>
+                    </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="bankAccountDetails" className="text-sm font-medium">
-                          Bank Account Details
+                        <Label htmlFor="bankName" className="text-sm font-medium">
+                          Bank Name
                         </Label>
-                        <Textarea
-                          id="bankAccountDetails"
-                          value={formData.bankAccountDetails || ""}
-                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: e.target.value })}
-                          placeholder="Account number, IFSC code, bank name"
-                          rows={3}
+                        <Input
+                          id="bankName"
+                          value={formData.bankAccountDetails?.bankName}
+                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, bankName: e.target.value }})}
+                          placeholder="Example Bank"
+                          required
+                        />
+                      </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="branchName" className="text-sm font-medium">
+                          Branch Name
+                        </Label>
+                        <Input
+                          id="bankName"
+                          value={formData.bankAccountDetails?.branchName}
+                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, branchName: e.target.value }})}
+                          placeholder="Branch Name"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="accountNumber" className="text-sm font-medium">
+                          Account Number
+                        </Label>
+                        <Input
+                          id="accountNumber"
+                          value={formData.bankAccountDetails?.accountNumber}
+                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, accountNumber: e.target.value }})}
+                          placeholder="XXXX XXXX XXXX"
+                          maxLength={14}
+                          required
+                        />
+                      </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="ifsc" className="text-sm font-medium">
+                          IFSC
+                        </Label>
+                        <Input
+                          id="ifsc"
+                          value={formData.bankAccountDetails?.ifscCode}
+                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, ifscCode: e.target.value }})}
+                          placeholder="XXXX XXXX XXXX"
+                          maxLength={14}
+                          required
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
+                {/* Identity Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">Identity Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="adharNo" className="text-sm font-medium">
+                          Aadhar Number *
+                        </Label>
+                        <Input
+                          id="adharNo"
+                          value={formData.aadharNo}
+                          onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
                 {/* Employment Dates Section */}
                 <Card>
                   <CardHeader>
@@ -660,24 +824,23 @@ export default function EmployeePage() {
               {employees.map((employee) => (
                 <div
                   key={employee.id}
-                  className={`flex items-center justify-between p-4 border rounded-lg ${
-                    !employee?.isActive ? "bg-gray-50 opacity-60" : ""
-                  }`}
+                  className={`flex items-center justify-between p-4 border rounded-lg ${!employee?.isActive ? "bg-gray-50 opacity-60" : ""
+                    }`}
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
                       <span className="font-semibold">{employee.employeeNumber}</span>
                       <span className="font-medium">
-                        {employee.employeeName} {employee.surname}
+                        {employee.employeeName} {employee.middleName} {employee.surname}
                       </span>
                       {employee.memberType && (
                         <Badge variant="secondary" className="text-xs">
-                          {memberTypes.find((t) => t.id === employee.memberType)?.name || employee.memberType}
+                          {memberTypes.find((t) => t._id === employee.memberType)?.name}
                         </Badge>
                       )}
                       {employee.role && (
                         <Badge variant="outline" className="text-xs">
-                          {roles.find((r) => r.id === employee.role)?.name || employee.role}
+                          {roles.find((r) => r._id === employee.role)?.name || employee.role}
                         </Badge>
                       )}
                       {!employee.isActive && (
@@ -699,11 +862,11 @@ export default function EmployeePage() {
                       <Label htmlFor={`active-${employee.id}`} className="text-sm">
                         {employee.isActive ? "Active" : "Inactive"}
                       </Label>
-<Switch
-  checked={!!employee.isActive}   // ✅ ensures boolean
-  onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
-  disabled={employee.isSystem || employee.userCount > 0}
-/>
+                      <Switch
+                        checked={!!employee.isActive}   // ✅ ensures boolean
+                        onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
+                        disabled={employee.isSystem || employee.userCount > 0}
+                      />
                     </div>
                   </div>
                 </div>

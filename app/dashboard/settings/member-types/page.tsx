@@ -51,30 +51,54 @@ export default function MemberTypesPage() {
     return `${baseCode}_${uniqueId}`;
   }
 
-  const handleSubmit = async () => {
-    if (!form.name) {
-      toast.error("Missing Information", "Please fill in the name field")
-      return
-    }
+const handleSubmit = async () => {
+  if (!form.name) {
+    toast.error("Missing Information", "Please fill in the name field")
+    return
+  }
 
+  // ✅ Check duplicate name
+  const isDuplicate = memberTypes.some(
+    (t) =>
+      t.name.trim().toLowerCase() === form.name.trim().toLowerCase() &&
+      (!editingType || editingType._id !== t._id) // allow same name for the one being edited
+  )
 
+  if (isDuplicate) {
+    toast.error("Duplicate Type", "A member type with this name already exists")
+    return
+  }
 
+  try {
     if (editingType) {
-      console.log("editingType", editingType._id)
-      console.log("form data", form)
+      // ✅ UPDATE
       await api.memberTypes.update(editingType._id, form)
-      toast.success("Employment Type Updated", `${form.name} has been updated successfully`)
+
+      toast.success(
+        "Employment Type Updated",
+        `${form.name} has been updated successfully`
+      )
     } else {
+      // ✅ CREATE
       await api.memberTypes.create(form)
-      await api.memberTypes.create(form)
-      await api.memberTypes.create({ ...form, code: codeToUse })
-      toast.success("Employment Type Created", `${form.name} has been added to employment types`)
+
+      toast.success(
+        "Employment Type Created",
+        `${form.name} has been added to employment types`
+      )
     }
 
     await loadMemberTypes()
     resetForm()
     setIsAddDialogOpen(false)
+  } catch (err: any) {
+    toast.error(
+      "Error",
+      err?.message || "Failed to save employment type"
+    )
   }
+}
+
 
   const handleEdit = (type: MemberType) => {
     setEditingType(type)
@@ -199,11 +223,11 @@ export default function MemberTypesPage() {
                         <PowerOff className="h-4 w-4 text-red-500" />
                       )}
                     </Button> */}
-                      <Switch
+                      {/* <Switch
                         checked={!!type.isActive}   // ✅ ensures boolean
                         onCheckedChange={(checked) => toggleActive(type?._id, checked)}
-                      // disabled={type.isSystem || type.userCount > 0}
-                      />
+                      disabled={type.isSystem || type.userCount > 0}
+                      /> */}
                     </div>
                   </TableCell>
                 </TableRow>

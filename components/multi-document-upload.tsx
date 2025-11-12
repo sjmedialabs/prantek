@@ -107,15 +107,15 @@ export function MultiDocumentUpload({
         ) : (
           <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Document Label *</Label>
+              <Label className="text-sm font-medium">Document Name</Label>
               <Input value={newDocLabel} onChange={(e) => setNewDocLabel(e.target.value)} placeholder={placeholder} />
             </div>
             <div className="space-y-2">
               <ImageUpload
-                label="Upload Document *"
+                label="Upload Document"
                 value={newDocUrl}
                 onChange={setNewDocUrl}
-                accept="image/*,application/pdf,.doc,.docx"
+                allowedTypes={["image/*", "application/pdf", ".doc", ".docx"]}
                 previewClassName="w-32 h-32 rounded-lg"
               />
             </div>
