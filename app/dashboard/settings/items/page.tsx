@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Package, Save, Plus, Edit, Power, PowerOff } from "lucide-react"
+import { Package, Save, Plus, Edit, Power, PowerOff, Search } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
@@ -30,6 +30,8 @@ export default function ItemsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Item | null>(null)
   const [taxRates, setTaxRates] = useState<any[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [typeFilter, setTypeFilter] = useState<"all" | "product" | "service">("all")
   const [formData, setFormData] = useState({
     type: "" as "product" | "service",
     unitType: "",
@@ -419,21 +421,67 @@ const handleSave = async () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Package className="h-5 w-5 mr-2" />
-            Product/Service List ({items.length})
-          </CardTitle>
-          <CardDescription>All products and services in your catalog</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <Package className="h-5 w-5 mr-2" />
+                Product/Service List ({items.filter(item => {
+                  const matchesSearch = searchQuery === "" || 
+                    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
+                  const matchesType = typeFilter === "all" || item.type === typeFilter
+                  return matchesSearch && matchesType
+                }).length})
+              </CardTitle>
+              <CardDescription>All products and services in your catalog</CardDescription>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by name, description, or HSN code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={typeFilter} onValueChange={(value: "all" | "product" | "service") => setTypeFilter(value)}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="product">Products Only</SelectItem>
+                <SelectItem value="service">Services Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          {items.length === 0 ? (
+          {items.filter(item => {
+            const matchesSearch = searchQuery === "" || 
+              item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
+            const matchesType = typeFilter === "all" || item.type === typeFilter
+            return matchesSearch && matchesType
+          }).length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p>No products/services added yet. Click "Add Product/Service" to get started.</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {items.map((item) => (
+              {items.filter(item => {
+                const matchesSearch = searchQuery === "" || 
+                  item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
+                const matchesType = typeFilter === "all" || item.type === typeFilter
+                return matchesSearch && matchesType
+              }).map((item) => (
                 <div
                   key={item.id}
                   className={`flex items-center justify-between p-4 border rounded-lg ${item.isActive === false ? "opacity-50 bg-gray-50" : ""}`}
