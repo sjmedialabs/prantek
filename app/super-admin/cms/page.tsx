@@ -68,15 +68,15 @@ const handleSave = async () => {
   if (!content) return
 
   try {
-    const { _id, id, updatedAt, ...payload } = content as any
+    const { _id, id, updatedAt, ...contentData } = content as any
 
     let saved
     if (_id || id) {
       // ✅ Update
-      saved = await api.websiteContent.update(_id || id, payload)
+      saved = await api.websiteContent.update(_id || id, contentData)
     } else {
       // ✅ Create
-      saved = await api.websiteContent.create(payload)
+      saved = await api.websiteContent.create(contentData)
     }
 
     setContent(saved)
