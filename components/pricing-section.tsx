@@ -82,7 +82,6 @@ export function PricingSection() {
                     }`}>
                       {plan.name}
                     </CardTitle>
-                    <p className="text-sm text-gray-500 font-medium">{plan.description}</p>
                   </div>
 
                   {/* Price - Prominently Displayed */}

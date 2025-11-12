@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { SubscriptionPlan } from "@/lib/data-store";
 import { FeaturesSidebar } from "@/components/auth/features-sidebar";
+import { tokenStorage } from "@/lib/token-storage";
 
 export default function SignUpPage() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -64,6 +65,16 @@ export default function SignUpPage() {
   const [phoneDebounceTimer, setPhoneDebounceTimer] =
     useState<NodeJS.Timeout | null>(null);
   const router = useRouter();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const accessToken = tokenStorage.getAccessToken(false);
+    if (accessToken) {
+      // Show alert before redirecting
+      alert("You are already logged in. Redirecting to dashboard...");
+      router.replace("/dashboard");
+    }
+  }, [router]);
 
   // Restore signup state from sessionStorage on mount
   useEffect(() => {
@@ -538,7 +549,7 @@ export default function SignUpPage() {
                     htmlFor="name"
                     className="text-xs font-medium text-gray-700"
                   >
-                    Full Name
+                    Company Name / Full Name
                   </Label>
                   <Input
                     id="name"
@@ -845,7 +856,6 @@ export default function SignUpPage() {
           currentSelectedPlan
             ? {
                 name: currentSelectedPlan.name,
-                description: currentSelectedPlan.description,
                 price: currentSelectedPlan.price,
                 billingCycle: currentSelectedPlan.billingCycle,
                 features: currentSelectedPlan.features,
@@ -977,9 +987,6 @@ export default function SignUpPage() {
                               {plan.name}
                             </h3>
                           </div>
-                          <p className="text-sm text-gray-500 leading-relaxed">
-                            {plan.description}
-                          </p>
                         </div>
 
                         {/* Price - Responsive sizing */}

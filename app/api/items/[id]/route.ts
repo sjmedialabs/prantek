@@ -22,7 +22,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
       return NextResponse.json({ success: false, error: "Invalid ID" }, { status: 400 })
     }
 
-    const result = await db
+    const updated = await db
       .collection(Collections.ITEMS)
       .findOneAndUpdate(
         { _id: new ObjectId(id), userId: String(user.userId) },
@@ -35,10 +35,9 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
         { returnDocument: "after" }
       )
 
-    const updated = result?.value
-    // if (!updated) {
-    //   return NextResponse.json({ success: false, error: "Item not found" }, { status: 404 })
-    // }
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "Item not found" }, { status: 404 })
+    }
 
     return NextResponse.json({ success: true, data: updated }, { status: 200 })
   } catch (error) {

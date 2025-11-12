@@ -10,8 +10,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, FileText, CheckCircle2 } from "lucide-react"
 import { tokenStorage } from "@/lib/token-storage"
 import { FeaturesSidebar } from "@/components/auth/features-sidebar"
+import { useRouter } from "next/navigation"
 
 function SignInForm() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -20,6 +22,16 @@ function SignInForm() {
   const [error, setError] = useState("")
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const accessToken = tokenStorage.getAccessToken(false)
+    if (accessToken) {
+      // Show alert before redirecting
+      alert("You are already logged in. Redirecting to dashboard...")
+      router.replace("/dashboard")
+    }
+  }, [router])
 
   useEffect(() => {
     if (searchParams.get("payment") === "success") {

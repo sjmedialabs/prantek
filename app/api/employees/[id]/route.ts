@@ -41,7 +41,11 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
       { returnDocument: "after" }
     )
 
-  return NextResponse.json({ data: result?.value }, { status: 200 })
+  if (!result) {
+    return NextResponse.json({ error: "Employee not found" }, { status: 404 })
+  }
+
+  return NextResponse.json({ data: result }, { status: 200 })
 })
 
 

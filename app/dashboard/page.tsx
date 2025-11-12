@@ -30,8 +30,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    console.log('[DASHBOARD] User data:', user)
+    console.log('[DASHBOARD] subscriptionPlanId:', user?.subscriptionPlanId)
     loadDashboardData()
-  }, [])
+  }, [user])
 
   /** ✅ Rewritten — fetches real DB data using API */
   const loadDashboardData = async () => {

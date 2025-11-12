@@ -37,7 +37,11 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
     { returnDocument: "after" }
   )
 
-  return NextResponse.json({ data: updated?.value })
+  if (!updated) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
+  return NextResponse.json({ data: updated })
 })
 
 export const DELETE = withAuth(async (req: NextRequest, user: any) => {

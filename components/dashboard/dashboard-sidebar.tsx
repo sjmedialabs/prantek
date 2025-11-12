@@ -152,9 +152,45 @@ export default function DashboardSidebar() {
   }, [pathname])
 
   const toggleSubmenu = (menuName: string) => {
-    setExpandedMenus((prev) =>
-      prev.includes(menuName) ? prev.filter((name) => name !== menuName) : [...prev, menuName]
-    )
+    setExpandedMenus((prev) => {
+      // If clicking on an already open menu, close it
+      if (prev.includes(menuName)) {
+        return prev.filter((name) => name !== menuName)
+      }
+      // Otherwise, close all at this level and open the clicked one
+      // Keep only parent menus and add the new one
+      const item = findMenuByName(navigationItems, menuName)
+      const level = getMenuLevel(navigationItems, menuName)
+      const filtered = prev.filter((name) => {
+        const existingLevel = getMenuLevel(navigationItems, name)
+        return existingLevel < level // Keep parent levels open
+      })
+      return [...filtered, menuName]
+    })
+  }
+
+  // Helper to find menu item by name
+  const findMenuByName = (items: NavItem[], name: string): NavItem | null => {
+    for (const item of items) {
+      if (item.name === name) return item
+      if (item.submenu) {
+        const found = findMenuByName(item.submenu, name)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  // Helper to get menu depth level
+  const getMenuLevel = (items: NavItem[], name: string, level = 0): number => {
+    for (const item of items) {
+      if (item.name === name) return level
+      if (item.submenu) {
+        const found = getMenuLevel(item.submenu, name, level + 1)
+        if (found !== -1) return found
+      }
+    }
+    return -1
   }
 
   const closeAllSubmenus = () => setExpandedMenus([])

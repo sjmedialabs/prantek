@@ -59,15 +59,15 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
       { returnDocument: "after" }
     )
 
-//   if (!updated?.value) {
-//     return NextResponse.json(
-//       { error: "Payment not found or update failed" },
-//       { status: 404 }
-//     )
-//   }
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Payment not found or update failed" },
+      { status: 404 }
+    )
+  }
 
   return NextResponse.json(
-    { payment: updated?.value, message: "Payment updated successfully" },
+    { payment: updated, message: "Payment updated successfully" },
     { status: 200 }
   )
 })

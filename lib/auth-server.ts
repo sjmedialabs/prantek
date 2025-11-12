@@ -31,8 +31,9 @@ export async function authenticate(email: string, password: string): Promise<Aut
   
   if (!isPasswordValid) {
     return null
-  console.log("[AUTH-SERVER] User subscription data:", { subscriptionPlanId: user.subscriptionPlanId, subscriptionStatus: user.subscriptionStatus })
   }
+  
+  console.log("[AUTH-SERVER] User subscription data:", { subscriptionPlanId: user.subscriptionPlanId, subscriptionStatus: user.subscriptionStatus })
 
   const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
     userId: user._id.toString(),

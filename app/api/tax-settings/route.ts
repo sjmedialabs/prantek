@@ -100,5 +100,5 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
       { upsert: true, returnDocument: "after" }
     )
 
-  return NextResponse.json({ company: updated?.value })
+  return NextResponse.json({ company: updated })
 })
