@@ -121,12 +121,14 @@ setCurrentPlan(currentPlan) // This is now the single plan object
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <Link href="/dashboard/profile">
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Profile
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            className="mb-4"
+            onClick={() => router.push('/dashboard/profile')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Profile
+          </Button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             {currentPlan ? "Upgrade Your Plan" : "Choose Your Plan"}
           </h1>
