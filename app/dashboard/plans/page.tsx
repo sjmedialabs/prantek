@@ -9,6 +9,7 @@ import { Check, ArrowLeft, Crown, TrendingUp } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { useUser } from "@/components/auth/user-context"
 import Link from "next/link"
+import { json } from "node:stream/consumers"
 
 export default function PlansPage() {
   const router = useRouter()
@@ -16,12 +17,28 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
+   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+
+const loginedUserLocalStorage = loginedUserLocalStorageString
+  ? JSON.parse(loginedUserLocalStorageString)
+  : null;
+
+
+
 
   useEffect(() => {
     const loadPlans = async () => {
       try {
-        const activePlans = await api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive))
-        setPlans(activePlans)
+        const plans = await api.subscriptionPlans.getAll()
+
+const activePlans = plans.filter((p: any) => p.isActive)
+
+const currentPlan = plans.find((eachItem: any) =>
+  eachItem._id.toString() === loginedUserLocalStorage.subscriptionPlanId
+)
+
+setPlans(activePlans)
+setCurrentPlan(currentPlan) // This is now the single plan object
 
         // Only fetch current plan if user has a subscription
         console.log("[PLANS] User subscriptionPlanId:", user?.subscriptionPlanId)
