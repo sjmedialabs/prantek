@@ -4,10 +4,11 @@ import { useEffect, useState } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { DollarSign, Users, Package, TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft, FileText } from "lucide-react"
+import { DollarSign, Users, Package, TrendingUp, Wallet, ArrowUpRight, ArrowDownLeft, FileText, AlertCircle } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { formatCurrency } from "@/lib/currency-utils"
 import DateFilter, { type DateFilterType, type DateRange } from "@/components/dashboard/date-filter"
+import Link from "next/link"
 
 export default function DashboardPage() {
   const { user } = useUser()
@@ -278,8 +279,43 @@ const financialOverview = [
       </div>
     )
   }
+  // Debug logging for trial data
+  console.log('[DASHBOARD] User trial data:', {
+    subscriptionStatus: user?.subscriptionStatus,
+    trialEndsAt: user?.trialEndsAt,
+    rawTrialEndsAt: user?.trialEndsAt,
+    typeOfTrialEndsAt: typeof user?.trialEndsAt
+  })
+
   return (
     <div className="space-y-6">
+      {/* Trial Expiry Alert */}
+      {user?.subscriptionStatus === "trial" && user?.trialEndsAt ? (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-1">Trial Period Expiring Soon</h3>
+                <p className="text-sm text-amber-800">
+                  Your trial expires on <strong>{new Date(user.trialEndsAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}</strong> ({Math.ceil((new Date(user.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining).
+                </p>
+                <Link 
+                  href="/dashboard/plans" 
+                  className="inline-block mt-3 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Upgrade Now
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Welcome Section */}
       <div className="relative rounded-lg overflow-hidden">
         {/* Background Image with Overlay */}
