@@ -51,7 +51,7 @@ export function SearchableSelectV2({
           type="button"
           variant="outline"
           role="combobox"
-          className={cn("w-full justify-between", className)}
+          className={cn("h-12 w-full justify-between", className)}
         >
           <span className="truncate text-left">
             {selectedOption ? selectedOption.label : placeholder}
