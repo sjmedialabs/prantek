@@ -6,6 +6,7 @@ import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
+import TrialAlert from "@/components/dashboard/trial-alert"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function DashboardLayout({
@@ -20,6 +21,7 @@ export default function DashboardLayout({
           <DashboardSidebar />
           <div className="lg:pl-64">
             <DashboardHeader />
+            <TrialAlert />
             <main className="p-6">{children}</main>
           </div>
         </div>

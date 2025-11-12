@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, Save, Plus, Edit, X } from "lucide-react"
+import { Users, Save, Plus, Edit, X, Send, AlertCircle, Shield, UserCheck, UserX, TrendingUp, Calendar, Copy, CheckCircle2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -64,13 +64,25 @@ interface Employee {
 }
 
 export default function EmployeePage() {
-  const { hasPermission } = useUser()
+  const { hasPermission, user } = useUser()
   const [saved, setSaved] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [memberTypes, setMemberTypes] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
+  const [canManageRoles, setCanManageRoles] = useState(true)
+  const [sendingCredentials, setSendingCredentials] = useState<string | null>(null)
+  const [isCredentialsDialogOpen, setIsCredentialsDialogOpen] = useState(false)
+  const [generatedCredentials, setGeneratedCredentials] = useState<{
+    email: string
+    password: string
+    employeeName: string
+  } | null>(null)
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all")
+  const [filterRole, setFilterRole] = useState<string>("all")
+  const [filterMemberType, setFilterMemberType] = useState<string>("all")
+  const [searchQuery, setSearchQuery] = useState<string>("")
   const [formData, setFormData] = useState<Employee>({
     id: "",
     _id: "",
@@ -120,9 +132,27 @@ export default function EmployeePage() {
       setRoles(loadedRoles)
       setEmployees(loadedEmployees)
       setMemberTypes(loadedMemberTypes)
+
+      // Check if user's plan allows role management
+      await checkPlanPermissions()
     }
     loadData()
   }, [])
+
+  const checkPlanPermissions = async () => {
+    try {
+      // Fetch user's subscription plan details
+      const response = await fetch('/api/subscription/check-permissions')
+      if (response.ok) {
+        const data = await response.json()
+        setCanManageRoles(data.canManagePermissions)
+      }
+    } catch (error) {
+      console.error('Error checking plan permissions:', error)
+      // Default to true to avoid blocking if check fails
+      setCanManageRoles(true)
+    }
+  }
 
   const generateEmployeeNumber = () => {
     const year = new Date().getFullYear()
@@ -155,9 +185,15 @@ const handleSave = async () => {
     toast({ title: "Validation Error", description: "Please select employment type", variant: "destructive" })
     return
   }
-  if (!formData.role) {
-    toast({ title: "Validation Error", description: "Please select role", variant: "destructive" })
-    return
+  // Only validate role if plan allows it
+  if (canManageRoles) {
+    if (!formData.role) {
+      toast({ title: "Validation Error", description: "Please select role", variant: "destructive" })
+      return
+    }
+  } else {
+    // For Plan 1, clear role field to avoid validation issues
+    formData.role = ""
   }
   if (!formData.mobileNo.trim()) {
     toast({ title: "Validation Error", description: "Please enter mobile number", variant: "destructive" })
@@ -304,10 +340,49 @@ const handleSave = async () => {
           emp.id === id ? { ...emp, isActive } : emp
         )
       )
-      toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
+      toast({ title: "Success", description: "Status updated successfully!" })
       window.location.reload()
     } catch (err: any) {
-      toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
+      toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })
+    }
+  }
+
+  const handleSendCredentials = async (employeeId: string) => {
+    setSendingCredentials(employeeId)
+    try {
+      const result = await api.employees.sendCredentials(employeeId)
+      
+      if (result.success) {
+        if (result.emailSent) {
+          toast({
+            title: "Credentials Sent!",
+            description: result.message || "Login credentials have been sent to the employee's email."
+          })
+        } else {
+          // SMTP not configured - show password for manual sharing in dialog
+          const employee = employees.find(e => (e._id || e.id) === employeeId)
+          setGeneratedCredentials({
+            email: employee?.email || "",
+            password: result.tempPassword || "",
+            employeeName: `${employee?.employeeName} ${employee?.surname}` || ""
+          })
+          setIsCredentialsDialogOpen(true)
+        }
+      } else if (result.accountExists) {
+        toast({
+          title: "Account Exists",
+          description: result.error,
+          variant: "default"
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to Send Credentials",
+        description: error?.message || "Unable to send credentials. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setSendingCredentials(null)
     }
   }
 
@@ -318,6 +393,51 @@ const handleSave = async () => {
         <p className="text-gray-600">You don't have permission to access this page.</p>
       </div>
     )
+  }
+
+  // Filter employees based on selected filters
+  const filteredEmployees = employees.filter(employee => {
+    // Status filter
+    if (filterStatus === "active" && !employee.isActive) return false
+    if (filterStatus === "inactive" && employee.isActive) return false
+    
+    // Role filter
+    if (filterRole !== "all" && employee.role !== filterRole) return false
+    
+    // Member type filter
+    if (filterMemberType !== "all" && employee.memberType !== filterMemberType) return false
+    
+    // Search query filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const fullName = `${employee.employeeName} ${employee.middleName} ${employee.surname}`.toLowerCase()
+      const employeeNumber = employee.employeeNumber.toLowerCase()
+      const email = employee.email.toLowerCase()
+      
+      if (!fullName.includes(query) && !employeeNumber.includes(query) && !email.includes(query)) {
+        return false
+      }
+    }
+    
+    return true
+  })
+
+  // Calculate statistics
+  const totalEmployees = employees.length
+  const activeEmployees = employees.filter(emp => emp.isActive).length
+  const inactiveEmployees = employees.filter(emp => !emp.isActive).length
+  
+  // Get employees joined this month
+  const currentMonth = new Date().getMonth()
+  const currentYear = new Date().getFullYear()
+  const joinedThisMonth = employees.filter(emp => {
+    const joinDate = new Date(emp.joiningDate)
+    return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear
+  }).length
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast({ title: "Copied", description: "Copied to clipboard" })
   }
 
   return (
@@ -447,32 +567,40 @@ const handleSave = async () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="role" className="text-sm font-medium">
-                          Role *
+                          Role * {!canManageRoles && <Badge variant="outline" className="ml-2 text-xs"><Shield className="h-3 w-3 mr-1" />Plan Upgrade Required</Badge>}
                         </Label>
-                        <Select
-                          value={formData.role ?? ""}
-                          onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roles.filter((r) => r.isActive === true).length === 0 ? (
-                              <SelectItem value="no-roles" disabled>
-                                No active roles available. Please create roles first.
-                              </SelectItem>
-                            ) : (
-                              roles
-                                .filter((role) => role.isActive === true)   // ✅ only active
-                                .map((role) => (
-                                  <SelectItem key={role._id} value={String(role._id)}>
-                                    {role.name}
-                                  </SelectItem>
-                                ))
-                            )}
-                          </SelectContent>
-
-                        </Select>
+                        {!canManageRoles ? (
+                          <Alert className="mt-2">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              Role and permission management is not available in your current plan (Plan 1). Please upgrade to Plan 2 or Plan 3 to assign roles to employees.
+                            </AlertDescription>
+                          </Alert>
+                        ) : (
+                          <Select
+                            value={formData.role ?? ""}
+                            onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {roles.filter((r) => r.isActive === true).length === 0 ? (
+                                <SelectItem value="no-roles" disabled>
+                                  No active roles available. Please create roles first.
+                                </SelectItem>
+                              ) : (
+                                roles
+                                  .filter((role) => role.isActive === true)
+                                  .map((role) => (
+                                    <SelectItem key={role._id} value={String(role._id)}>
+                                      {role.name}
+                                    </SelectItem>
+                                  ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -799,11 +927,250 @@ const handleSave = async () => {
         </Dialog>
       </div>
 
+      {/* Credentials Dialog */}
+      <Dialog open={isCredentialsDialogOpen} onOpenChange={setIsCredentialsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>Login Credentials Generated</DialogTitle>
+          <DialogDescription>
+            Login credentials for {generatedCredentials?.employeeName}
+          </DialogDescription>
+          {generatedCredentials && (
+            <div className="space-y-4">
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800 text-sm">
+                  Email service is not configured. Please share these credentials manually.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-600">Email / Username</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      value={generatedCredentials.email} 
+                      readOnly 
+                      className="bg-white text-sm" 
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => copyToClipboard(generatedCredentials.email)}
+                      title="Copy to clipboard"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-gray-600">Temporary Password</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      value={generatedCredentials.password} 
+                      readOnly 
+                      className="bg-white font-mono text-sm" 
+                    />
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => copyToClipboard(generatedCredentials.password)}
+                      title="Copy to clipboard"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <Alert className="bg-blue-50 border-blue-200">
+                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 text-xs">
+                  Make sure to save these credentials. The password cannot be retrieved later.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsCredentialsDialogOpen(false)
+                    setGeneratedCredentials(null)
+                  }}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {saved && (
         <Alert>
           <AlertDescription>Employee saved successfully!</AlertDescription>
         </Alert>
       )}
+
+      {/* Statistics Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("all")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalEmployees}</div>
+            <p className="text-xs text-gray-500 mt-1">All registered employees</p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("active")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Active Employees</CardTitle>
+            <UserCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{activeEmployees}</div>
+            <p className="text-xs text-gray-500 mt-1">{((activeEmployees/totalEmployees)*100 || 0).toFixed(0)}% of total</p>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => setFilterStatus("inactive")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Inactive Employees</CardTitle>
+            <UserX className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{inactiveEmployees}</div>
+            <p className="text-xs text-gray-500 mt-1">{((inactiveEmployees/totalEmployees)*100 || 0).toFixed(0)}% of total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Joined This Month</CardTitle>
+            <TrendingUp className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{joinedThisMonth}</div>
+            <p className="text-xs text-gray-500 mt-1">New hires in {new Date().toLocaleDateString('en-US', { month: 'long' })}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Filters</CardTitle>
+          <CardDescription>Filter and search employees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search Input */}
+            <div className="space-y-2">
+              <Label htmlFor="search" className="text-sm font-medium">
+                Search
+              </Label>
+              <Input
+                id="search"
+                placeholder="Name, email, or employee #"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="statusFilter" className="text-sm font-medium">
+                Status
+              </Label>
+              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+                <SelectTrigger id="statusFilter">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="active">Active Only</SelectItem>
+                  <SelectItem value="inactive">Inactive Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Role Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="roleFilter" className="text-sm font-medium">
+                Role
+              </Label>
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger id="roleFilter">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  {roles.filter(r => r.isActive).map((role) => (
+                    <SelectItem key={role._id} value={String(role._id)}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Member Type Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="memberTypeFilter" className="text-sm font-medium">
+                Employment Type
+              </Label>
+              <Select value={filterMemberType} onValueChange={setFilterMemberType}>
+                <SelectTrigger id="memberTypeFilter">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {memberTypes.map((type) => (
+                    <SelectItem key={type._id} value={String(type._id)}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Clear Filters Button */}
+          {(searchQuery || filterStatus !== "all" || filterRole !== "all" || filterMemberType !== "all") && (
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("")
+                  setFilterStatus("all")
+                  setFilterRole("all")
+                  setFilterMemberType("all")
+                }}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear All Filters
+              </Button>
+              <span className="ml-3 text-sm text-gray-600">
+                Showing {filteredEmployees.length} of {totalEmployees} employees
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -814,14 +1181,14 @@ const handleSave = async () => {
           <CardDescription>All employees in your organization</CardDescription>
         </CardHeader>
         <CardContent>
-          {employees.length === 0 ? (
+          {filteredEmployees.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>No employees added yet. Click "Add Employee" to get started.</p>
+              <p>{employees.length === 0 ? "No employees added yet. Click 'Add Employee' to get started." : "No employees match your current filters."}</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {employees.map((employee) => (
+              {filteredEmployees.map((employee) => (
                 <div
                   key={employee.id}
                   className={`flex items-center justify-between p-4 border rounded-lg ${!employee?.isActive ? "bg-gray-50 opacity-60" : ""
@@ -855,6 +1222,26 @@ const handleSave = async () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleSendCredentials(employee._id || employee.id)}
+                      disabled={sendingCredentials === (employee._id || employee.id) || !employee.isActive}
+                      title="Send login credentials to employee"
+                      className="text-xs"
+                    >
+                      {sendingCredentials === (employee._id || employee.id) ? (
+                        <>
+                          <span className="animate-spin mr-1">⏳</span>
+                          <span className="text-xs">Sending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Send Credentials</span>
+                        </>
+                      )}
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -863,7 +1250,7 @@ const handleSave = async () => {
                         {employee.isActive ? "Active" : "Inactive"}
                       </Label>
                       <Switch
-                        checked={!!employee.isActive}   // ✅ ensures boolean
+                        checked={!!employee.isActive}
                         onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
                         disabled={employee.isSystem || employee.userCount > 0}
                       />

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       secure: false, // Set to true for HTTPS
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 15, // 15 minutes
+      maxAge: 60 * 30, // 30 minutes to match inactivity timeout
     })
 
     response.cookies.set("accessToken", result.accessToken, {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       secure: false, // Set to true for HTTPS
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 15, // 15 minutes
+      maxAge: 60 * 30, // 30 minutes to match inactivity timeout
     })
 
     response.cookies.set("refreshToken", result.refreshToken, {

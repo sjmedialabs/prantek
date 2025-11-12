@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'lax',
-      maxAge: 15 * 60 // 15 minutes
+      maxAge: 30 * 60 // 30 minutes to match inactivity timeout
     })
     
     response.cookies.set('refreshToken', refreshToken, {

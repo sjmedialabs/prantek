@@ -574,14 +574,14 @@ export const api = {
           method: "POST",
           body: JSON.stringify(categoryData),
         })
-        return data.data || data.category
+        return data
       },
       update: async (id: string, categoryData: any) => {
         const data = await fetchAPI(`/api/payment-categories/${id}`, {
           method: "PUT",
           body: JSON.stringify(categoryData),
         })
-        return data.Data || data.data || data.category
+        return data
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/payment-categories/${id}`, {
@@ -637,12 +637,19 @@ export const api = {
         })
         return data.data 
       },
-            toggle: async (id: string, isActive: boolean) => {
+      toggle: async (id: string, isActive: boolean) => {
         const data = await fetchAPI(`/api/employees/${id}`, {
           method: "PUT",
           body: JSON.stringify({ isActive }),
         })
         return data.data
+      },
+      sendCredentials: async (employeeId: string) => {
+        const data = await fetchAPI("/api/employees/send-credentials", {
+          method: "POST",
+          body: JSON.stringify({ employeeId }),
+        })
+        return data
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/employees/${id}`, {
