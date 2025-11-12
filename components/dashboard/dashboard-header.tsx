@@ -113,7 +113,7 @@ export default function DashboardHeader() {
       <div className="flex items-center justify-end">
         <div className="flex items-center space-x-4">
           <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
-            <DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
               <button className="relative px-2 py-2 rounded hover:bg-gray-100 transition-colors">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
