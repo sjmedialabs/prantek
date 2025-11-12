@@ -23,9 +23,9 @@ export default function AdminPage() {
   useEffect(() => {
     const loadTenantData = async () => {
       const users = await api.users.getAll()
-      const quotations = await dataStore.getAll<Quotation>("quotations")
-      const receipts = await dataStore.getAll<Receipt>("receipts")
-      const payments = await dataStore.getAll<Payment>("payments")
+      const quotations = await api.quotations.getAll()
+      const receipts = await api.receipts.getAll()
+      const payments = await api.payments.getAll()
 
       const totalRevenue = receipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0)
 

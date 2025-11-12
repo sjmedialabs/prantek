@@ -61,7 +61,7 @@ export default function TeamManagementPage() {
   const handleDeleteMember = async (id: string) => {
     const member = teamMembers.find((m) => m.id === id)
     if (member) {
-      await dataStore.delete<TeamMember>("team_members", id)
+      await api.teamMembers.delete(id)
       toast.success("Member Removed", `${member.name} has been removed from your team`)
       loadData()
     }
@@ -120,13 +120,14 @@ export default function TeamManagementPage() {
 
   const loadData = async () => {
     const members = await api.teamMembers.getAll()
-    const payments = await dataStore.getAll<TeamPayment>("team_payments")
+    const payments = await api.teamPayments.getAll()
     setTeamMembers(members)
     setTeamPayments(payments)
   }
 
   const loadMemberTypes = async () => {
-    const types = await dataStore.getActiveMemberTypes()
+    const allTypes = await api.memberTypes.getAll()
+        const types = allTypes.filter((t: any) => t.isActive)
     setMemberTypes(types)
   }
 

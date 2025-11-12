@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "@/components/ui/use-toast"   // ✅ ADDED
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
@@ -21,9 +19,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Search, Edit, Trash2, Plus, Shield, Users } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { api } from "@/lib/api-client" // Fixed import path from dataStore to data-store
-
+import { api } from "@/lib/api-client"
 
 interface Permission {
   id: string
@@ -33,14 +29,12 @@ interface Permission {
 }
 
 interface Role {
-  _id: any
   id: string
   name: string
   description: string
   permissions: string[]
   userCount: number
   isSystem: boolean
-  isActive: boolean
   createdAt: string
 }
 
@@ -85,7 +79,6 @@ const availablePermissions: Permission[] = [
 
 export default function RolesPage() {
   const { hasPermission } = useUser()
-  const { toast } = useToast()
   const [roles, setRoles] = useState<Role[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isAddRoleOpen, setIsAddRoleOpen] = useState(false)
@@ -96,126 +89,146 @@ export default function RolesPage() {
     permissions: [] as string[],
   })
 
- // ✅ Load from DB — NO DATASTORE
   useEffect(() => {
     const loadRoles = async () => {
       const loadedRoles = await api.roles.getAll()
-      setRoles(loadedRoles)   // ✅ Always use DB roles
-      console.log("Loaded roles from DB:", loadedRoles)
+      if (loadedRoles.length > 0) {
+        setRoles(loadedRoles)
+      } else {
+        // Initialize with default roles if none exist
+        const defaultRoles: Role[] = [
+          {
+            id: "1",
+            name: "Super Admin",
+            description: "Full system access with all permissions",
+            permissions: availablePermissions.map((p) => p.id),
+            userCount: 1,
+            isSystem: true,
+            createdAt: "2024-01-01",
+          },
+          {
+            id: "2",
+            name: "Admin",
+            description: "Administrative access with most permissions",
+            permissions: [
+              "view_dashboard",
+              "view_financials",
+              "manage_financials",
+              "view_quotations",
+              "manage_quotations",
+              "manage_users",
+              "manage_assets",
+              "view_reports",
+              "tenant_settings",
+            ],
+            userCount: 2,
+            isSystem: true,
+            createdAt: "2024-01-01",
+          },
+          {
+            id: "3",
+            name: "Manager",
+            description: "Management level access to core features",
+            permissions: [
+              "view_dashboard",
+              "view_financials",
+              "manage_financials",
+              "view_quotations",
+              "manage_quotations",
+              "view_reports",
+            ],
+            userCount: 3,
+            isSystem: false,
+            createdAt: "2024-01-05",
+          },
+          {
+            id: "4",
+            name: "Employee",
+            description: "Standard employee access",
+            permissions: ["view_dashboard", "view_financials", "view_quotations", "view_reports"],
+            userCount: 8,
+            isSystem: false,
+            createdAt: "2024-01-10",
+          },
+          {
+            id: "5",
+            name: "Viewer",
+            description: "Read-only access to basic information",
+            permissions: ["view_dashboard", "view_financials", "view_reports"],
+            userCount: 5,
+            isSystem: true,
+            createdAt: "2024-01-01",
+          },
+        ]
+        setRoles(defaultRoles)
+      }
     }
     loadRoles()
   }, [])
-const filteredRoles = (roles || [])
-  .filter((role) => role?.name)
-  .filter((role) =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (role.description ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+
+
+  const filteredRoles = roles.filter(
+    (role) =>
+      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      role.description.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const validateRole = (role: { name: string; description: string; permissions: string[] }) => {
-  if (!role.name || role.name.trim().length < 3) {
-    return "Role name must be at least 3 characters."
-  }
-
-  if (!role.description || role.description.trim().length < 5) {
-    return "Description must be at least 5 characters."
-  }
-
-  if (!role.permissions || role.permissions.length === 0) {
-    return "Select at least 1 permission."
-  }
-
-  return null // ✅ passes
-}
-
-// ✅ CREATE ROLE IN DB
-const handleAddRole = async () => {
-  const error = validateRole(newRole)
-  if (error) {
-    toast({ title: "Notification", description: error, variant: "default" })
-    return
-  }
-
-  try {
-    const payload = {
-      name: newRole.name.trim(),
-      description: newRole.description.trim(),
-      permissions: newRole.permissions,
-      isSystem: false,
-      userCount: 0,
+  const handleAddRole = async () => {
+    try {
+      await api.roles.create(newRole)
+      const loadedRoles = await api.roles.getAll()
+      setRoles(loadedRoles)
+      setNewRole({ name: "", description: "", permissions: [] })
+      setIsAddRoleOpen(false)
+    } catch (error) {
+      console.error("Failed to create role:", error)
+      alert("Failed to create role")
     }
-
-    const saved = await api.roles.create(payload)
-
-    setRoles((prev) => [...prev, saved])
-    setNewRole({ name: "", description: "", permissions: [] })
-    setIsAddRoleOpen(false)
-
-    toast({ title: "Success", description: "Role created successfully!" }) // ✅
-
-  } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to create role: " + (err.message || "Something went wrong"), variant: "default" })
-  }
-}
-
-// ✅ START EDIT — works same + popup added
-const handleEditRole = (role: Role) => {
-  setEditingRole(role)
-  setNewRole({
-    name: role.name,
-    description: role.description,
-    permissions: [...role.permissions],
-  })
-  setIsAddRoleOpen(true)
-}
-
-// ✅ UPDATE ROLE IN DB
-const handleUpdateRole = async () => {
-  if (!editingRole || !editingRole._id) return
-
-  const error = validateRole(newRole)
-  if (error) {
-    toast({ title: "Notification", description: error, variant: "default" })
-    return
   }
 
-  try {
-    const updated = await api.roles.update(editingRole._id, newRole)
-
-    setRoles((prev) =>
-      prev.map((r) => (r._id === editingRole._id ? updated : r))
-    )
-
-    toast({ title: "Success", description: "Role updated successfully!" }) // ✅
-
-    setEditingRole(null)
-    setNewRole({ name: "", description: "", permissions: [] })
-    setIsAddRoleOpen(false)
-
-  } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to update role: " + (err.message || "Something went wrong"), variant: "default" })
+  const handleEditRole = (role: Role) => {
+    setEditingRole(role)
+    setNewRole({
+      name: role.name,
+      description: role.description,
+      permissions: [...role.permissions],
+    })
+    setIsAddRoleOpen(true)
   }
-}
 
-
-
-const handleToggleRoleActive = async (id: string, isActive: boolean) => {
-  try {
-    const updated = await api.roles.toggle(id, isActive)
-
-    setRoles((prev) =>
-      prev.map((role) =>
-        role.id === id ? { ...role, isActive } : role
-      )
-    )
-    toast({ title: "Success", description: "Role status updated successfully!" })   // ✅ ADDED
-
-  } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
+  const handleUpdateRole = async () => {
+    if (!editingRole) return
+    try {
+      await api.roles.update(editingRole.id, newRole)
+      const loadedRoles = await api.roles.getAll()
+      setRoles(loadedRoles)
+      setEditingRole(null)
+      setNewRole({ name: "", description: "", permissions: [] })
+      setIsAddRoleOpen(false)
+    } catch (error) {
+      console.error("Failed to update role:", error)
+      alert("Failed to update role")
+    }
   }
-}
 
-
+  const handleDeleteRole = async (roleId: string) => {
+    const role = roles.find((r) => r.id === roleId)
+    if (role?.isSystem) {
+      alert("Cannot delete system roles")
+      return
+    }
+    if (role?.userCount > 0) {
+      alert("Cannot delete roles that are assigned to users")
+      return
+    }
+    try {
+      // For now, just remove from local state
+      setRoles(roles.filter((role) => role.id !== roleId))
+    } catch (error) {
+      console.error("Failed to delete role:", error)
+      alert("Failed to delete role")
+    }
+  }
 
   const handlePermissionToggle = (permissionId: string) => {
     setNewRole((prev) => ({
@@ -236,7 +249,6 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
     })
     return categories
   }
-
 
   if (!hasPermission("manage_roles")) {
     return (
@@ -363,7 +375,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{roles.length}</div>
-            {/* <p className="text-xs text-muted-foreground">{roles.filter((r) => !r.isSystem).length} custom roles</p> */}
+            <p className="text-xs text-muted-foreground">{roles.filter((r) => !r.isSystem).length} custom roles</p>
           </CardContent>
         </Card>
 
@@ -373,7 +385,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {/* <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div> */}
+            <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div>
             <p className="text-xs text-muted-foreground">Across all roles</p>
           </CardContent>
         </Card>
@@ -449,11 +461,15 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)} disabled={role.isSystem}>
                         <Edit className="h-4 w-4" />
                       </Button>
-<Switch
-  checked={!!role.isActive}   // ✅ ensures boolean
-  onCheckedChange={(checked) => handleToggleRoleActive(role._id, checked)}
-  disabled={role.isSystem || role.userCount > 0}
-/>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteRole(role.id)}
+                        className="text-red-600 hover:text-red-700"
+                        disabled={role.isSystem || role.userCount > 0}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
