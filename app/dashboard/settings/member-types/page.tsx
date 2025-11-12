@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
 import { Plus, Edit, Trash2, Power, PowerOff } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
@@ -28,10 +27,6 @@ export default function MemberTypesPage() {
 
   const [form, setForm] = useState({
     name: "",
-    code: "",
-    description: "",
-    requiresSalary: false,
-    isActive: true,
   })
 
   useEffect(() => {
@@ -44,18 +39,6 @@ export default function MemberTypesPage() {
   }
 
   
-  const generateUniqueCode = (name: string) => {
-    // Generate base code from name
-    let baseCode = name.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 20);
-    
-    // Add unique identifier (timestamp + random)
-    const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
-    return `${baseCode}_${uniqueId}`;
-  }
-
   const handleSubmit = async () => {
     if (!form.name) {
       toast.error("Missing Information", "Please fill in the name field")
@@ -70,8 +53,8 @@ export default function MemberTypesPage() {
       await api.memberTypes.update(editingType._id, form)
       toast.success("Employment Type Updated", `${form.name} has been updated successfully`)
     } else {
-      // Auto-generate unique code for new member type
-      const codeToUse = generateUniqueCode(form.name);
+      await api.memberTypes.create(form)
+      await api.memberTypes.create(form)
       await api.memberTypes.create({ ...form, code: codeToUse })
       toast.success("Employment Type Created", `${form.name} has been added to employment types`)
     }
@@ -85,10 +68,6 @@ export default function MemberTypesPage() {
     setEditingType(type)
     setForm({
       name: type.name,
-      code: type.code,
-      description: type.description || "",
-      requiresSalary: type.requiresSalary || false,
-      isActive: type.isActive,
     })
     setIsAddDialogOpen(true)
   }
@@ -104,32 +83,10 @@ export default function MemberTypesPage() {
     }
   }
 
-  const toggleActive = async (id: string, isActive: boolean) => {
-    console.log("toggleActive", id, isActive)
-      try {
-    const updated = await api.memberTypes.toggle(id, isActive)
-
-    setMemberTypes((prev) =>
-      prev.map((type) =>
-        type.id === id ? { ...type, isActive } : type
-      )
-    
-    )
-    toast({ title: "Success", description: "status updated successfully!" })   // ✅ ADDED
-  } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
-  }
-  }
-
-
 
   const resetForm = () => {
     setForm({
       name: "",
-      code: "",
-      description: "",
-      requiresSalary: false,
-      isActive: true,
     })
     setEditingType(null)
   }
@@ -163,40 +120,11 @@ export default function MemberTypesPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Code (Auto-generated)</Label>
+                <Label>Employment Type Name</Label>
                 <Input
-                  value={editingType ? form.code : "Will be auto-generated from name"}
-                  disabled
-                  className="bg-gray-100"
-                />
-                <p className="text-xs text-gray-500">Automatically generated unique identifier</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Brief description of this employment type"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Requires Salary</Label>
-                  <p className="text-xs text-gray-500">Show salary field for this employment type</p>
-                </div>
-                <Switch
-                  checked={form.requiresSalary}
-                  onCheckedChange={(checked) => setForm({ ...form, requiresSalary: checked })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Active</Label>
-                  <p className="text-xs text-gray-500">Make this employment type available</p>
-                </div>
-                <Switch
-                  checked={form.isActive}
-                  onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Full-time, Part-time, Contract"
                 />
               </div>
             </div>
@@ -217,10 +145,6 @@ export default function MemberTypesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Requires Salary</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -228,24 +152,6 @@ export default function MemberTypesPage() {
               {memberTypes.map((type) => (
                 <TableRow key={type.id}>
                   <TableCell className="font-medium">{type.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{type.code}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600">{type.description}</TableCell>
-                  <TableCell>
-                    {type.requiresSalary ? (
-                      <Badge className="bg-green-100 text-green-800">Yes</Badge>
-                    ) : (
-                      <Badge variant="secondary">No</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={type.isActive ? "default" : "secondary"}>
-                        {type.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
@@ -263,11 +169,6 @@ export default function MemberTypesPage() {
                         <PowerOff className="h-4 w-4 text-red-500" />
                       )}
                     </Button> */}
-<Switch
-  checked={!!type.isActive}   // ✅ ensures boolean
-  onCheckedChange={(checked) => toggleActive(type?._id, checked)}
-  // disabled={type.isSystem || type.userCount > 0}
-/>
                     </div>
                   </TableCell>
                 </TableRow>

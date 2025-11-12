@@ -68,7 +68,16 @@ export default function AddExpenseDialog({ open, onOpenChange, onAddTransaction 
   const [categories, setCategories] = useState<Category[]>([])
 
   useEffect(() => {
-    const loadedVendors = dataStore.getAll<Vendor>("vendors")
+    const loadVendors = async () => {
+      try {
+        const loadedVendors = await api.vendors.getAll()
+        setVendors(loadedVendors)
+      } catch (error) {
+        console.error("Failed to load vendors:", error)
+      }
+    }
+
+    loadVendors()
 
     const defaultCategories: Category[] = [
       { id: "1", name: "Office Expenses", type: "expense" },
@@ -80,7 +89,6 @@ export default function AddExpenseDialog({ open, onOpenChange, onAddTransaction 
       { id: "7", name: "Equipment & Supplies", type: "expense" },
     ]
 
-    setVendors(loadedVendors)
     setCategories(defaultCategories)
   }, [])
 
@@ -94,19 +102,23 @@ export default function AddExpenseDialog({ open, onOpenChange, onAddTransaction 
     (c) => c.type === "expense" && c.name.toLowerCase().includes(categorySearch.toLowerCase()),
   )
 
-  const handleAddVendor = () => {
-    const vendor = dataStore.create<Vendor>("vendors", {
-      name: newVendor.name,
-      email: newVendor.email,
-      phone: newVendor.phone,
-      address: newVendor.address,
-      category: "Supplier", // Default category
-    })
+  const handleAddVendor = async () => {
+    try {
+      const vendor = await api.vendors.create({
+        name: newVendor.name,
+        email: newVendor.email,
+        phone: newVendor.phone,
+        address: newVendor.address,
+        category: "Supplier", // Default category
+      })
 
-    setVendors([...vendors, vendor])
-    setFormData((prev) => ({ ...prev, vendorId: vendor.id }))
-    setNewVendor({ name: "", gst: "", email: "", phone: "", address: "" })
-    setShowNewVendorDialog(false)
+      setVendors([...vendors, vendor])
+      setFormData((prev) => ({ ...prev, vendorId: vendor.id }))
+      setNewVendor({ name: "", gst: "", email: "", phone: "", address: "" })
+      setShowNewVendorDialog(false)
+    } catch (error) {
+      console.error("Failed to create vendor:", error)
+    }
   }
 
   const handleAddCategory = () => {

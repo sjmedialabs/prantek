@@ -83,20 +83,28 @@ export default function AddIncomeDialog({ open, onOpenChange, onAddTransaction }
   const [quotations, setQuotations] = useState<Quotation[]>([])
 
   useEffect(() => {
-    const loadedClients = dataStore.getAll<Client>("clients")
-    const loadedQuotations = dataStore.getAll<Quotation>("quotations")
+    const loadData = async () => {
+      try {
+        const loadedClients = await api.clients.getAll()
+        const loadedQuotations = await api.quotations.getAll()
 
-    const defaultCategories: Category[] = [
-      { id: "1", name: "Client Payments", type: "income" },
-      { id: "2", name: "Service Revenue", type: "income" },
-      { id: "3", name: "Consulting", type: "income" },
-      { id: "4", name: "Product Sales", type: "income" },
-      { id: "5", name: "Subscription Revenue", type: "income" },
-    ]
+        const defaultCategories: Category[] = [
+          { id: "1", name: "Client Payments", type: "income" },
+          { id: "2", name: "Service Revenue", type: "income" },
+          { id: "3", name: "Consulting", type: "income" },
+          { id: "4", name: "Product Sales", type: "income" },
+          { id: "5", name: "Subscription Revenue", type: "income" },
+        ]
 
-    setClients(loadedClients)
-    setQuotations(loadedQuotations)
-    setCategories(defaultCategories)
+        setClients(loadedClients)
+        setQuotations(loadedQuotations)
+        setCategories(defaultCategories)
+      } catch (error) {
+        console.error("Failed to load data:", error)
+      }
+    }
+
+    loadData()
   }, [])
 
   const filteredQuotations = quotations.filter(
@@ -133,18 +141,22 @@ export default function AddIncomeDialog({ open, onOpenChange, onAddTransaction }
     setStep("details")
   }
 
-  const handleAddClient = () => {
-    const client = dataStore.create<Client>("clients", {
-      name: newClient.name,
-      email: newClient.email,
-      phone: newClient.phone,
-      address: newClient.address,
-    })
+  const handleAddClient = async () => {
+    try {
+      const client = await api.clients.create({
+        name: newClient.name,
+        email: newClient.email,
+        phone: newClient.phone,
+        address: newClient.address,
+      })
 
-    setClients([...clients, client])
-    setFormData((prev) => ({ ...prev, clientId: client.id }))
-    setNewClient({ name: "", email: "", phone: "", address: "" })
-    setShowNewClientDialog(false)
+      setClients([...clients, client])
+      setFormData((prev) => ({ ...prev, clientId: client.id }))
+      setNewClient({ name: "", email: "", phone: "", address: "" })
+      setShowNewClientDialog(false)
+    } catch (error) {
+      console.error("Failed to create client:", error)
+    }
   }
 
   const handleAddCategory = () => {

@@ -36,7 +36,7 @@ interface Role {
   _id: any
   id: string
   name: string
-  description: string
+  // description: string
   permissions: string[]
   userCount: number
   isSystem: boolean
@@ -92,11 +92,11 @@ export default function RolesPage() {
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [newRole, setNewRole] = useState({
     name: "",
-    description: "",
+    // description: "",
     permissions: [] as string[],
   })
 
- // ✅ Load from DB — NO DATASTORE
+  // ✅ Load from DB — NO DATASTORE
   useEffect(() => {
     const loadRoles = async () => {
       const loadedRoles = await api.roles.getAll()
@@ -105,41 +105,42 @@ export default function RolesPage() {
     }
     loadRoles()
   }, [])
-const filteredRoles = (roles || [])
-  .filter((role) => role?.name)
-  .filter((role) =>
-    role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (role.description ?? "").toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredRoles = (roles || [])
+    .filter((role) => role?.name)
+    .filter((role) =>
+      role.name.toLowerCase().includes(searchTerm.toLowerCase())
+      // (role.description ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
-  const validateRole = (role: { name: string; description: string; permissions: string[] }) => {
+const validateRole = (role: { name: string; permissions: string[] }, roles: Role[], editingId?: string) => {
   if (!role.name || role.name.trim().length < 3) {
     return "Role name must be at least 3 characters."
   }
 
-  if (!role.description || role.description.trim().length < 5) {
-    return "Description must be at least 5 characters."
+  // ✅ DUPLICATE CHECK → exclude current editing role
+  const duplicate = roles.some(
+    (r) => r.name.trim().toLowerCase() === role.name.trim().toLowerCase() && r._id !== editingId
+  )
+  if (duplicate) {
+    return "Duplicate role name is not allowed."
   }
 
   if (!role.permissions || role.permissions.length === 0) {
     return "Select at least 1 permission."
   }
 
-  return null // ✅ passes
+  return null
 }
-
-// ✅ CREATE ROLE IN DB
 const handleAddRole = async () => {
-  const error = validateRole(newRole)
+  const error = validateRole(newRole, roles)
   if (error) {
-    toast({ title: "Notification", description: error, variant: "default" })
+    toast({ title: "Notification", description: error, variant: "destructive" })
     return
   }
 
   try {
     const payload = {
       name: newRole.name.trim(),
-      description: newRole.description.trim(),
       permissions: newRole.permissions,
       isSystem: false,
       userCount: 0,
@@ -148,34 +149,33 @@ const handleAddRole = async () => {
     const saved = await api.roles.create(payload)
 
     setRoles((prev) => [...prev, saved])
-    setNewRole({ name: "", description: "", permissions: [] })
+    setNewRole({ name: "", permissions: [] })
     setIsAddRoleOpen(false)
 
-    toast({ title: "Success", description: "Role created successfully!" }) // ✅
-
+    toast({ title: "Success", description: "Role created successfully!" })
+    window.location.reload()
   } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to create role: " + (err.message || "Something went wrong"), variant: "default" })
+    toast({
+      title: "Notification",
+      description: "Failed to create role: " + (err.message || "Something went wrong"),
+      variant: "destructive",
+    })
   }
 }
-
-// ✅ START EDIT — works same + popup added
 const handleEditRole = (role: Role) => {
   setEditingRole(role)
   setNewRole({
     name: role.name,
-    description: role.description,
     permissions: [...role.permissions],
   })
   setIsAddRoleOpen(true)
 }
-
-// ✅ UPDATE ROLE IN DB
 const handleUpdateRole = async () => {
   if (!editingRole || !editingRole._id) return
 
-  const error = validateRole(newRole)
+  const error = validateRole(newRole, roles, editingRole._id)
   if (error) {
-    toast({ title: "Notification", description: error, variant: "default" })
+    toast({ title: "Notification", description: error, variant: "destructive" })
     return
   }
 
@@ -186,34 +186,37 @@ const handleUpdateRole = async () => {
       prev.map((r) => (r._id === editingRole._id ? updated : r))
     )
 
-    toast({ title: "Success", description: "Role updated successfully!" }) // ✅
+    toast({ title: "Success", description: "Role updated successfully!" })
+    window.location.reload()
 
     setEditingRole(null)
-    setNewRole({ name: "", description: "", permissions: [] })
+    setNewRole({ name: "", permissions: [] })
     setIsAddRoleOpen(false)
 
   } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to update role: " + (err.message || "Something went wrong"), variant: "default" })
+    toast({
+      title: "Notification",
+      description: "Failed to update role: " + (err.message || "Something went wrong"),
+      variant: "destructive",
+    })
   }
 }
 
+  const handleToggleRoleActive = async (id: string, isActive: boolean) => {
+    try {
+      const updated = await api.roles.toggle(id, isActive)
 
-
-const handleToggleRoleActive = async (id: string, isActive: boolean) => {
-  try {
-    const updated = await api.roles.toggle(id, isActive)
-
-    setRoles((prev) =>
-      prev.map((role) =>
-        role.id === id ? { ...role, isActive } : role
+      setRoles((prev) =>
+        prev.map((role) =>
+          role.id === id ? { ...role, isActive } : role
+        )
       )
-    )
-    toast({ title: "Success", description: "Role status updated successfully!" })   // ✅ ADDED
-
-  } catch (err: any) {
-    toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
+      toast({ title: "Success", description: "Role status updated successfully!" })   // ✅ ADDED
+      window.location.reload()
+    } catch (err: any) {
+      toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
+    }
   }
-}
 
 
 
@@ -260,7 +263,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
             setIsAddRoleOpen(open)
             if (!open) {
               setEditingRole(null)
-              setNewRole({ name: "", description: "", permissions: [] })
+              setNewRole({ name: "", permissions: [] })
             }
           }}
         >
@@ -278,7 +281,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="">
                 <div className="space-y-2">
                   <Label htmlFor="roleName">Role Name</Label>
                   <Input
@@ -288,16 +291,16 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
                     placeholder="Enter role name"
                   />
                 </div>
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label>Users with this role</Label>
                   <div className="flex items-center space-x-2 p-2 border rounded">
                     <Users className="h-4 w-4 text-gray-500" />
                     <span className="text-sm text-gray-600">{editingRole ? editingRole.userCount : 0} users</span>
                   </div>
-                </div>
+                </div> */}
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="roleDescription">Description</Label>
                 <Textarea
                   id="roleDescription"
@@ -306,7 +309,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
                   placeholder="Describe this role and its purpose"
                   rows={2}
                 />
-              </div>
+              </div> */}
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
@@ -355,7 +358,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Roles</CardTitle>
@@ -377,7 +380,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
             <p className="text-xs text-muted-foreground">Across all roles</p>
           </CardContent>
         </Card>
-
+{/* 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Permissions</CardTitle>
@@ -387,7 +390,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
             <div className="text-2xl font-bold">{availablePermissions.length}</div>
             <p className="text-xs text-muted-foreground">Available permissions</p>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       <Card>
@@ -415,7 +418,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
                 <TableHead>Role</TableHead>
                 <TableHead>Users</TableHead>
                 <TableHead>Permissions</TableHead>
-                <TableHead>Type</TableHead>
+                {/* <TableHead>Type</TableHead> */}
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -426,7 +429,7 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
                   <TableCell>
                     <div>
                       <div className="font-medium">{role.name}</div>
-                      <div className="text-sm text-gray-500">{role.description}</div>
+                      {/* <div className="text-sm text-gray-500">{role.description}</div> */}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -438,22 +441,22 @@ const handleToggleRoleActive = async (id: string, isActive: boolean) => {
                   <TableCell>
                     <Badge variant="outline">{role.permissions.length} permissions</Badge>
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     <Badge variant={role.isSystem ? "default" : "secondary"}>
                       {role.isSystem ? "System" : "Custom"}
                     </Badge>
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell>{new Date(role.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-2">
                       <Button variant="ghost" size="sm" onClick={() => handleEditRole(role)} disabled={role.isSystem}>
                         <Edit className="h-4 w-4" />
                       </Button>
-<Switch
-  checked={!!role.isActive}   // ✅ ensures boolean
-  onCheckedChange={(checked) => handleToggleRoleActive(role._id, checked)}
-  disabled={role.isSystem || role.userCount > 0}
-/>
+                      <Switch
+                        checked={!!role.isActive}   // ✅ ensures boolean
+                        onCheckedChange={(checked) => handleToggleRoleActive(role._id, checked)}
+                        disabled={role.userCount > 0}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

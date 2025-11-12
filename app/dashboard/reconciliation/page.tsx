@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
-import { dataStore, type Receipt } from "@/lib/data-store"
+import type { Receipt } from "@/lib/data-store"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -116,7 +116,7 @@ const exportReport = () => {
         }
       } else {
         // Mark as cleared
-        const clearedReceipt = await dataStore.clearReceipt(id)
+        const clearedReceipt = await api.receipts.update(id, { status: "cleared" })
         if (clearedReceipt) {
           toast.success(`Receipt ${clearedReceipt.receiptNumber} marked as cleared`)
           await loadReceipts()

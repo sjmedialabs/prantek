@@ -36,19 +36,9 @@ export function InactivityTracker() {
   }
 
   const handleLogout = () => {
+    // Activity logging is handled by the logout API endpoint
     const userType = isSuperAdmin ? "super-admin" : "admin"
-    const user = dataStore.getCurrentUser(userType)
-
-    if (user) {
-      dataStore.logActivity({
-        userId: user.id,
-        userName: user.name,
-        userRole: user.role,
-        action: "auto_logout",
-        description: `${user.name} was automatically logged out due to inactivity`,
-      })
-    }
-
+    
     api.auth.logout(userType)
     toast.error("You have been logged out due to inactivity")
 

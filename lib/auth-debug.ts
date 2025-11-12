@@ -1,10 +1,10 @@
-import { dataStore } from "@/lib/data-store"
+import { api } from "@/lib/api-client"
 import bcrypt from "bcryptjs"
 
 export async function testAuth(email: string, password: string) {
   console.log('[AUTH DEBUG] Starting auth test for:', email)
   
-  const users = await dataStore.getAll<any>("users")
+  const users = await api.users.getAll()
   console.log('[AUTH DEBUG] Total users fetched:', users.length)
   
   users.forEach((u: any) => {
