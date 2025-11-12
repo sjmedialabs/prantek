@@ -208,8 +208,8 @@ const handleSave = async () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* ✅ COMPANY NAME */}
             <div className="space-y-2">
-              <Label htmlFor="name">
-                Company Name <span className="text-red-500">*</span>
+              <Label htmlFor="name" required>
+                Company Name
               </Label>
               <Input
                 id="name"
@@ -222,8 +222,8 @@ const handleSave = async () => {
 
             {/* ✅ EMAIL */}
             <div className="space-y-2">
-              <Label htmlFor="email">
-                Email <span className="text-red-500">*</span>
+              <Label htmlFor="email" required>
+                Email
               </Label>
               <Input
                 id="email"
@@ -238,8 +238,8 @@ const handleSave = async () => {
 
           {/* ✅ ADDRESS */}
           <div className="space-y-2">
-            <Label htmlFor="address">
-              Address <span className="text-red-500">*</span>
+            <Label htmlFor="address" required>
+              Address
             </Label>
             <Textarea
               id="address"
@@ -253,7 +253,7 @@ const handleSave = async () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
   {/* ✅ City */}
   <div className="space-y-2">
-    <Label htmlFor="city">City</Label>
+    <Label htmlFor="city" required>City</Label>
     <Input
       id="city"
       value={companyData.city}
@@ -264,7 +264,7 @@ const handleSave = async () => {
 
   {/* ✅ State */}
   <div className="space-y-2">
-    <Label htmlFor="state">State</Label>
+    <Label htmlFor="state" required>State</Label>
     <Input
       id="state"
       value={companyData.state}
@@ -275,7 +275,7 @@ const handleSave = async () => {
 
   {/* ✅ Pincode */}
   <div className="space-y-2">
-    <Label htmlFor="pincode">Pincode</Label>
+    <Label htmlFor="pincode" required>Pincode</Label>
     <Input
       id="pincode"
       value={companyData.pincode}
@@ -289,8 +289,8 @@ const handleSave = async () => {
 
             {/* ✅ PHONE */}
             <div className="space-y-2">
-              <Label htmlFor="phone">
-                Phone <span className="text-red-500">*</span>
+              <Label htmlFor="phone" required>
+                Phone
               </Label>
               <Input
                 id="phone"
@@ -317,7 +317,7 @@ const handleSave = async () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
   {/* ✅ GSTIN */}
   <div className="space-y-2">
-    <Label htmlFor="gstin">GSTIN</Label>
+    <Label htmlFor="gstin" required>GSTIN</Label>
     <Input
       id="gstin"
       value={companyData.gstin}
@@ -328,7 +328,7 @@ const handleSave = async () => {
 
   {/* ✅ PAN */}
   <div className="space-y-2">
-    <Label htmlFor="pan">PAN</Label>
+    <Label htmlFor="pan" required>PAN</Label>
     <Input
       id="pan"
       value={companyData.pan}
