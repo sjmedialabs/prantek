@@ -10,7 +10,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.08 0.02 250);
+  --primary: oklch(0.15 0 0); /* #222 dark gray */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.96 0.01 250);
   --secondary-foreground: oklch(0.145 0 0);
@@ -22,21 +22,21 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.08 0.02 250);
-  --chart-1: oklch(0.08 0.02 250);
-  --chart-2: oklch(0.15 0.03 250);
-  --chart-3: oklch(0.25 0.04 250);
-  --chart-4: oklch(0.35 0.05 250);
-  --chart-5: oklch(0.45 0.06 250);
+  --ring: oklch(0.15 0 0); /* #222 dark gray */
+  --chart-1: oklch(0.15 0 0);
+  --chart-2: oklch(0.25 0 0);
+  --chart-3: oklch(0.35 0 0);
+  --chart-4: oklch(0.45 0 0);
+  --chart-5: oklch(0.55 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.08 0.02 250);
+  --sidebar-primary: oklch(0.15 0 0); /* #222 dark gray */
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.145 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.08 0.02 250);
+  --sidebar-ring: oklch(0.15 0 0); /* #222 dark gray */
 }
 
 .dark {
@@ -131,5 +131,13 @@
   .space-y-2 > label[data-slot="label"],
   .space-y-4 > label[data-slot="label"] {
     @apply mb-2.5;
+  }
+
+  /* Cursor pointer for all interactive elements */
+  button:not(:disabled),
+  a,
+  [role="button"],
+  [data-slot="button"]:not(:disabled) {
+    @apply cursor-pointer;
   }
 }

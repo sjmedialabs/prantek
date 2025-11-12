@@ -461,7 +461,7 @@ export const api = {
       update: async (id: string, contentData: any) => {
         const data = await fetchAPI(`/api/website-content`, {
           method: "PUT",
-          body: JSON.stringify(contentData),
+          body: JSON.stringify({ id, updateData: contentData }),
         })
         return data.data || data.content
       },

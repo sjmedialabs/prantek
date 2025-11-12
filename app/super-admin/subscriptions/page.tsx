@@ -40,7 +40,6 @@ export default function SubscriptionPlansPage() {
   const [editingPlan, setEditingPlan] = useState<any>(null)
   const [newPlan, setNewPlan] = useState({
     name: "",
-    description: "",
     price: 0,
     billingCycle: "monthly",
     maxUsers: 0,
@@ -89,7 +88,6 @@ export default function SubscriptionPlansPage() {
     const newErrors: Record<string, string> = {}
     
     if (!newPlan.name.trim()) newErrors.name = "Plan name is required"
-    if (!newPlan.description.trim()) newErrors.description = "Description is required"
     if (!newPlan.price || newPlan.price <= 0) newErrors.price = "Price must be greater than 0"
     if (!newPlan.billingCycle) newErrors.billingCycle = "Billing cycle is required"
     if (!newPlan.maxUsers || newPlan.maxUsers <= 0) newErrors.maxUsers = "Max users must be greater than 0"
@@ -121,7 +119,6 @@ export default function SubscriptionPlansPage() {
     setEditingPlan(plan)
     setNewPlan({
       name: plan.name,
-      description: plan.description,
       price: plan.price,
       billingCycle: plan.billingCycle,
       maxUsers: plan.maxUsers,
@@ -159,7 +156,6 @@ export default function SubscriptionPlansPage() {
   const resetForm = () => {
     setNewPlan({
       name: "",
-      description: "",
       price: 0,
       billingCycle: "monthly",
       maxUsers: 0,
@@ -186,8 +182,7 @@ export default function SubscriptionPlansPage() {
 
   const filteredPlans = plans.filter(
     (plan) =>
-      plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      plan.description.toLowerCase().includes(searchTerm.toLowerCase())
+      plan.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const totalRevenue = calculateTotalRevenue()
@@ -231,16 +226,6 @@ export default function SubscriptionPlansPage() {
                   className={errors.name ? "border-red-500" : ""}
                 />
                 {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
-              </div>
-              <div>
-                <Label>Description *</Label>
-                <Input
-                  placeholder="Description"
-                  value={newPlan.description}
-                  onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
-                  className={errors.description ? "border-red-500" : ""}
-                />
-                {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description}</p>}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -400,10 +385,7 @@ export default function SubscriptionPlansPage() {
                 {filteredPlans.map((plan) => (
                   <TableRow key={plan._id || plan.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{plan.name}</div>
-                        <div className="text-sm text-gray-500">{plan.description}</div>
-                      </div>
+                      <div className="font-medium">{plan.name}</div>
                     </TableCell>
                     <TableCell>
                       <div>₹{plan.price}</div>

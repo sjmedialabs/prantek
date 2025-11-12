@@ -198,7 +198,6 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                 </div>
                 <CardHeader className="pb-3 pt-6">
                   <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
-                  <CardDescription className="text-sm">{plan.description}</CardDescription>
                   <div className="mt-3">
                     <span className="text-3xl font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
                     <span className="text-gray-500 text-sm">/{plan.billingCycle}</span>

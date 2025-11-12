@@ -45,6 +45,14 @@ export async function GET(request: NextRequest) {
         name: user.name,
         role: user.role,
         clientId: user.clientId,
+        phone: user.phone,
+        address: user.address,
+        profilePicture: user.profilePicture,
+        subscriptionPlanId: user.subscriptionPlanId,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate,
+        trialEndsAt: user.trialEndsAt,
       },
     })
   } catch (error) {

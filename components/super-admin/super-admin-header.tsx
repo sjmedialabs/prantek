@@ -124,7 +124,7 @@ export default function SuperAdminHeader() {
 
         <div className="flex items-center space-x-4">
           <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
-            <DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
               <button className="relative px-2 py-2 rounded hover:bg-slate-100 transition-colors">
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (

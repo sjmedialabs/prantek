@@ -20,7 +20,6 @@ import {
 interface FeaturesSidebarProps {
   selectedPlan?: {
     name: string;
-    description?: string;
     price: number;
     billingCycle?: string;
     features: string[];

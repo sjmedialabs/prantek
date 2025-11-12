@@ -79,7 +79,20 @@ const handleSave = async () => {
       saved = await api.websiteContent.create(contentData)
     }
 
-    setContent(saved)
+    // Ensure we preserve the content with proper normalization
+    if (saved) {
+      const normalizedContent = {
+        ...saved,
+        trustedByLogos: saved.trustedByLogos || [],
+        features: saved.features || [],
+        industries: saved.industries || [],
+        showcaseFeatures: saved.showcaseFeatures || [],
+        testimonials: saved.testimonials || [],
+        faqs: saved.faqs || [],
+        ctaFeatures: saved.ctaFeatures || [],
+      }
+      setContent(normalizedContent)
+    }
     toast.success("Website content updated successfully!")
   } catch (error) {
     console.error("Failed to save content:", error)
@@ -100,7 +113,9 @@ const handleSave = async () => {
       id: Date.now().toString(),
       title: "New Feature",
       description: "Feature description",
-      icon: "Star",
+      image: "",
+      learnMoreText: "Learn More",
+      learnMoreUrl: "",
     }
     setContent({
       ...content,
@@ -318,11 +333,12 @@ const handleSave = async () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
+                <Label htmlFor="companyName">Company Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="companyName"
                   value={content.companyName}
                   onChange={(e) => updateContent("companyName", e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -361,11 +377,12 @@ const handleSave = async () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="heroTitle">Hero Title</Label>
+                <Label htmlFor="heroTitle">Hero Title <span className="text-red-500">*</span></Label>
                 <Input
                   id="heroTitle"
                   value={content.heroTitle}
                   onChange={(e) => updateContent("heroTitle", e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -379,19 +396,21 @@ const handleSave = async () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="heroCtaText">Primary CTA Text</Label>
+                  <Label htmlFor="heroCtaText">Primary CTA Text <span className="text-red-500">*</span></Label>
                   <Input
                     id="heroCtaText"
                     value={content.heroCtaText}
                     onChange={(e) => updateContent("heroCtaText", e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="heroCtaLink">Primary CTA Link</Label>
+                  <Label htmlFor="heroCtaLink">Primary CTA Link <span className="text-red-500">*</span></Label>
                   <Input
                     id="heroCtaLink"
                     value={content.heroCtaLink}
                     onChange={(e) => updateContent("heroCtaLink", e.target.value)}
+                    required
                   />
                 </div>
               </div>
@@ -541,22 +560,12 @@ const handleSave = async () => {
                     <CardContent className="pt-6 space-y-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Feature Title</Label>
-                              <Input
-                                value={feature.title}
-                                onChange={(e) => updateFeature(feature.id, "title", e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Icon Name</Label>
-                              <Input
-                                value={feature.icon}
-                                onChange={(e) => updateFeature(feature.id, "icon", e.target.value)}
-                                placeholder="e.g., FileText, Users, CreditCard"
-                              />
-                            </div>
+                          <div className="space-y-2">
+                            <Label>Feature Title</Label>
+                            <Input
+                              value={feature.title}
+                              onChange={(e) => updateFeature(feature.id, "title", e.target.value)}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label>Description</Label>
@@ -565,6 +574,31 @@ const handleSave = async () => {
                               onChange={(e) => updateFeature(feature.id, "description", e.target.value)}
                               rows={2}
                             />
+                          </div>
+                          <ImageUpload
+                            label="Feature Image"
+                            value={feature.image || feature.icon || ""}
+                            onChange={(value) => updateFeature(feature.id, "image", value)}
+                            description="Upload an image or provide a URL"
+                            previewClassName="w-24 h-24"
+                          />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Learn More Text</Label>
+                              <Input
+                                value={feature.learnMoreText || "Learn More"}
+                                onChange={(e) => updateFeature(feature.id, "learnMoreText", e.target.value)}
+                                placeholder="e.g., Learn More, Explore, View Details"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Learn More URL</Label>
+                              <Input
+                                value={feature.learnMoreUrl || ""}
+                                onChange={(e) => updateFeature(feature.id, "learnMoreUrl", e.target.value)}
+                                placeholder="e.g., /features/financial-management"
+                              />
+                            </div>
                           </div>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => deleteFeature(feature.id)} className="ml-2">
@@ -1018,12 +1052,13 @@ const handleSave = async () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="contactEmail">Email</Label>
+                <Label htmlFor="contactEmail">Email <span className="text-red-500">*</span></Label>
                 <Input
                   id="contactEmail"
                   type="email"
                   value={content.contactEmail}
                   onChange={(e) => updateContent("contactEmail", e.target.value)}
+                  required
                 />
               </div>
               <div className="space-y-2">

@@ -73,17 +73,17 @@ export async function PUT(req: NextRequest) {
         { returnDocument: "after" }   // ✅ returns updated doc
       )
 
-    // if (!result || !result.value) {
-    //   return NextResponse.json(
-    //     { success: false, error: "Content not found" },
-    //     { status: 404 }
-    //   )
-    // }
+    if (!result) {
+      return NextResponse.json(
+        { success: false, error: "Content not found" },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      data: result?.value,
-      content: result?.value,
+      data: result,
+      content: result,
     })
   } catch (error) {
     console.error("Error updating website content:", error)
