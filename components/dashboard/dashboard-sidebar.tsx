@@ -41,12 +41,6 @@ const navigationItems: NavItem[] = [
   { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "manage_assets" },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "view_reports" },
   {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    permission: null,
-  },
-  {
     name: "Settings",
     icon: Settings,
     permission: "tenant_settings",
@@ -74,16 +68,7 @@ const navigationItems: NavItem[] = [
           { name: "Tax Settings", href: "/dashboard/settings/tax", permission: "tenant_settings" },
           { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
          
-          {
-            name: "Product Management",
-            href: "/dashboard/settings/items",
-            permission: "tenant_settings",
-          },
-          {
-            name: "Tax Settings",
-            href: "/dashboard/settings/tax",
-            permission: "tenant_settings",
-          },
+          
         ],
       },
       {
@@ -182,48 +167,11 @@ const navigationItems: NavItem[] = [
     ],
   },
 
-  {
-    name: "Client",
-    href: "/dashboard/clients",
-    icon: Users,
-    permission: "view_clients",
-  },
-  {
-    name: "Quotation",
-    href: "/dashboard/quotations",
-    icon: FileText,
-    permission: "view_quotations",
-  },
-  {
-    name: "Receipts",
-    href: "/dashboard/receipts",
-    icon: Receipt,
-    permission: "view_receipts",
-  },
-  {
-    name: "Payments",
-    href: "/dashboard/payments",
-    icon: CreditCard,
-    permission: "view_payments",
-  },
-  {
-    name: "Reconciliation",
-    href: "/dashboard/reconciliation",
-    icon: RefreshCw,
-    permission: "view_reconciliation",
-  },
-  {
-    name: "Assets",
-    href: "/dashboard/assets",
-    icon: Package,
-    permission: "manage_assets",
-  },
-  {
-    name: "Reports",
-    href: "/dashboard/reports",
-    icon: BarChart3,
-    permission: "view_reports",
-  },
+  
+  
+ 
+
+ 
 ];
 
 export default function DashboardSidebar() {

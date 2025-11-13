@@ -190,7 +190,7 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                 key={plan.id || plan._id?.toString()}
                 className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${isCurrent ? "border-2 border-blue-500 shadow-lg" : "border-gray-200"}`}
               >
-                <div className="flex gap-2 absolute -top-2.5 left-1/2 transform -translate-x-1/2 z-10">
+                <div className="flex gap-2 absolute top-0 left-1/2 transform -translate-x-1/2 z-10">
                   {plan.name === "Premium" && !isCurrent && (
                     <Badge className="bg-blue-600 hover:bg-blue-700 text-white shadow-md text-xs px-3 py-1">Most Popular</Badge>
                   )}
