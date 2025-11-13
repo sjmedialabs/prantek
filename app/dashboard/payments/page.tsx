@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api-client"
 
 interface Payment {
+  _id: string
   id: string
   paymentNumber: string
   date: string
@@ -127,15 +128,7 @@ export default function PaymentsPage() {
   const pendingAmount = filteredPayments.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0)
   const failedAmount = filteredPayments.filter((p) => p.status === "failed").reduce((sum, p) => sum + p.amount, 0)
 
-  if (!hasPermission("view_payments")) {
-    return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-        <p className="text-gray-600">You don't have permission to view payments.</p>
-      </div>
-    )
-  }
-
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -146,6 +139,15 @@ export default function PaymentsPage() {
       </div>
     )
   }
+  if (!hasPermission("view_payments")) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+        <p className="text-gray-600">You don't have permission to view payments.</p>
+      </div>
+    )
+  }
+
 
   return (
     <div className="space-y-6">
@@ -224,10 +226,10 @@ export default function PaymentsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Payment History</CardTitle>
+              <CardTitle>Payment History ({filteredPayments.length})</CardTitle>
               <CardDescription>View and manage all payment transactions</CardDescription>
             </div>
-            <div className="relative">
+            {/* <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search payments..."
@@ -235,7 +237,7 @@ export default function PaymentsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-64"
               />
-            </div>
+            </div> */}
           </div>
         </CardHeader>
         <CardContent>
@@ -439,7 +441,7 @@ export default function PaymentsPage() {
             </TableHeader>
             <TableBody>
               {filteredPayments.map((payment) => (
-                <TableRow key={payment.id}>
+                <TableRow key={payment.id || payment._id}>
                   <TableCell className="font-medium">{payment.paymentNumber}</TableCell>
                   <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString() : "N/A"}</TableCell>
                   <TableCell>

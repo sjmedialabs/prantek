@@ -64,7 +64,7 @@ interface Employee {
 }
 
 export default function EmployeePage() {
-  const { hasPermission, user } = useUser()
+  const { loading, hasPermission, user } = useUser()
   const [saved, setSaved] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -385,7 +385,16 @@ const handleSave = async () => {
       setSendingCredentials(null)
     }
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -1208,7 +1217,7 @@ const handleSave = async () => {
           <tbody>
             {filteredEmployees.map((employee) => (
               <tr
-                key={employee.id}
+                key={employee.id || employee._id}
                 className={`border-b ${
                   !employee.isActive ? "bg-gray-50 opacity-60" : ""
                 }`}

@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bell, Save } from "lucide-react"
 
 export default function NotificationsPage() {
-  const { hasPermission, user } = useUser()
+  const { loading, hasPermission, user } = useUser()
   const [saved, setSaved] = useState(false)
   const [settings, setSettings] = useState({
     quotationAlerts: true,
@@ -22,7 +22,16 @@ export default function NotificationsPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
-
+        if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">

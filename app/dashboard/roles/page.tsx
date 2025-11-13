@@ -84,7 +84,7 @@ const availablePermissions: Permission[] = [
 ]
 
 export default function RolesPage() {
-  const { hasPermission } = useUser()
+  const { loading, hasPermission } = useUser()
   const { toast } = useToast()
   const [roles, setRoles] = useState<Role[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -257,7 +257,16 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
     })
     return categories
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!hasPermission("manage_roles")) {
     return (
@@ -443,7 +452,7 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
             </TableHeader>
             <TableBody>
               {filteredRoles.map((role) => (
-                <TableRow key={role.id}>
+                <TableRow key={role.id || role.name}>
                   <TableCell>
                     <div>
                       <div className="font-medium">{role.name}</div>
