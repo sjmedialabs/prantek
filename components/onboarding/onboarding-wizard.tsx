@@ -9,13 +9,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronLeft, ChevronRight, Check, Building2, Users, Settings, Package } from "lucide-react"
+import { ChevronLeft, ChevronRight, Check, Building2, Users, Settings, Package, Sparkles, PartyPopper, Trophy } from "lucide-react"
 import { useOnboarding } from "./onboarding-context"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { PhoneInput, validatePhoneNumber } from "@/components/ui/phone-input"
 
 const STEPS = [
   {
@@ -49,9 +50,11 @@ const STEPS = [
 ]
 
 export function OnboardingWizard() {
-  const { currentStep, setCurrentStep, updateProgress, completeOnboarding } = useOnboarding()
+  const { currentStep, setCurrentStep, updateProgress, completeOnboarding, progress } = useOnboarding()
   const { user } = useUser()
   const [loading, setLoading] = useState(false)
+  const [showCongrats, setShowCongrats] = useState(false)
+  const [completedStepTitle, setCompletedStepTitle] = useState("")
 
   // Step 1: Company Information
   const [companyData, setCompanyData] = useState({
@@ -149,8 +152,8 @@ export function OnboardingWizard() {
         await api.company.create({ ...companyData, userId: user?.id })
       }
       updateProgress("companyInfo", true)
-      toast({ title: "Success", description: "Company information saved!" })
-      setCurrentStep(2)
+      setCompletedStepTitle("Company Information")
+      setShowCongrats(true)
     } catch (error) {
       toast({ title: "Error", description: "Failed to save company information", variant: "destructive" })
     }
@@ -162,11 +165,39 @@ export function OnboardingWizard() {
       return
     }
 
+    // Validate phone number format
+    const phoneError = validatePhoneNumber(clientData.phone)
+    if (phoneError) {
+      toast({ title: "Invalid Phone", description: phoneError, variant: "destructive" })
+      return
+    }
+
     try {
+      // Check for duplicate email and phone
+      const allClients = await api.clients.getAll()
+      const duplicateEmail = allClients.find((c: any) => 
+        c.email.toLowerCase() === clientData.email.toLowerCase() && c.userId === user?.id
+      )
+      const duplicatePhone = allClients.find((c: any) => 
+        c.phone === clientData.phone && c.userId === user?.id
+      )
+
+      if (duplicateEmail) {
+        toast({ title: "Duplicate Email", description: "A client with this email already exists", variant: "destructive" })
+        return
+      }
+
+      if (duplicatePhone) {
+        toast({ title: "Duplicate Phone", description: "A client with this phone number already exists", variant: "destructive" })
+        return
+      }
+
       await api.clients.create({ ...clientData, userId: user?.id, status: "active" })
       updateProgress("clients", true)
-      toast({ title: "Success", description: "Client added successfully!" })
-      setCurrentStep(3)
+      setCompletedStepTitle("Client Creation")
+      setShowCongrats(true)
+      // Clear form
+      setClientData({ name: "", email: "", phone: "", address: "" })
     } catch (error) {
       toast({ title: "Error", description: "Failed to add client", variant: "destructive" })
     }
@@ -204,8 +235,10 @@ export function OnboardingWizard() {
       }
 
       updateProgress("basicSettings", true)
-      toast({ title: "Success", description: "Settings configured successfully!" })
-      setCurrentStep(4)
+      setCompletedStepTitle("Basic Settings")
+      setShowCongrats(true)
+      // Clear form
+      setSettingsData({ category: "", taxType: "CGST", taxRate: "", taxDescription: "", paymentMethod: "" })
     } catch (error) {
       toast({ title: "Error", description: "Failed to save settings", variant: "destructive" })
     }
@@ -228,16 +261,24 @@ export function OnboardingWizard() {
         isActive: true,
       })
       updateProgress("products", true)
-      toast({ title: "Success", description: "Product/Service added successfully!" })
-      completeOnboarding()
+      setCompletedStepTitle("Products/Services Setup")
+      setShowCongrats(true)
     } catch (error) {
       toast({ title: "Error", description: "Failed to add product/service", variant: "destructive" })
     }
   }
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+    // Disable going back - sequential flow only
+    return
+  }
+
+  const handleContinue = () => {
+    setShowCongrats(false)
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1)
+    } else {
+      completeOnboarding()
     }
   }
 
@@ -257,12 +298,21 @@ export function OnboardingWizard() {
   const currentStepData = STEPS[currentStep - 1]
   const StepIcon = currentStepData.icon
   const progressPercent = (currentStep / STEPS.length) * 100
+  
+  // Check if user can access current step (must complete previous steps)
+  const canAccessStep = (step: number): boolean => {
+    if (step === 1) return true
+    if (step === 2) return progress.companyInfo
+    if (step === 3) return progress.companyInfo && progress.clients
+    if (step === 4) return progress.companyInfo && progress.clients && progress.basicSettings
+    return false
+  }
 
   return (
     <Dialog open={currentStep > 0} onOpenChange={() => {}}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[100vw] w-full h-[100vh] max-h-[100vh] p-0 gap-0 overflow-hidden flex flex-col">
         {/* Progress Bar */}
-        <div className="px-6 pt-6 pb-3 border-b bg-gray-50">
+        <div className="px-6 pt-6 pb-3 border-b bg-gray-50 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <StepIcon className="h-5 w-5 text-blue-600" />
@@ -277,9 +327,9 @@ export function OnboardingWizard() {
 
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Side - Image/Video (40%) */}
+          {/* Left Side - Image/Video (40%) - Fixed, No Scroll */}
           <div
-            className="hidden lg:block lg:w-[40%] bg-cover bg-center relative"
+            className="hidden lg:block lg:w-[40%] bg-cover bg-center relative flex-shrink-0"
             style={{ backgroundImage: `url('${currentStepData.image}')` }}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-blue-600/90 to-purple-600/90 flex flex-col justify-center items-center text-white p-8">
@@ -305,9 +355,9 @@ export function OnboardingWizard() {
             </div>
           </div>
 
-          {/* Right Side - Form (60%) */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6 lg:p-8 max-w-2xl mx-auto">
+          {/* Right Side - Form (60%) - Scrollable */}
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            <div className="p-6 lg:p-8 max-w-2xl mx-auto w-full flex-1">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">{currentStepData.title}</h3>
                 <p className="text-gray-600">{currentStepData.description}</p>
@@ -357,11 +407,10 @@ export function OnboardingWizard() {
                           Phone
                           <InfoTooltip content="Contact number for your business" />
                         </Label>
-                        <Input
-                          id="phone"
+                        <PhoneInput
                           value={companyData.phone}
-                          onChange={(e) => setCompanyData({ ...companyData, phone: e.target.value })}
-                          placeholder="+91 98765 43210"
+                          onChange={(value) => setCompanyData({ ...companyData, phone: value })}
+                          placeholder="Enter 10-digit number"
                         />
                       </div>
                     </div>
@@ -483,11 +532,11 @@ export function OnboardingWizard() {
                         Phone <span className="text-red-500">*</span>
                         <InfoTooltip content="Contact number (10 digits)" />
                       </Label>
-                      <Input
-                        id="clientPhone"
+                      <PhoneInput
                         value={clientData.phone}
-                        onChange={(e) => setClientData({ ...clientData, phone: e.target.value })}
-                        placeholder="+91 98765 43210"
+                        onChange={(value) => setClientData({ ...clientData, phone: value })}
+                        placeholder="Enter 10-digit number"
+                        required
                       />
                     </div>
 
@@ -697,30 +746,113 @@ export function OnboardingWizard() {
           </div>
         </div>
 
+            </div>
+          </div>
+        </div>
+
         {/* Footer Actions */}
-        <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-between">
+        <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <Button variant="ghost" onClick={handleSkipStep} className="text-gray-600">
             Skip This Step
           </Button>
 
           <div className="flex gap-2">
-            {currentStep > 1 && (
-              <Button variant="outline" onClick={handlePrevious} disabled={loading}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-            )}
-            <Button onClick={handleNext} disabled={loading}>
-              {loading ? "Saving..." : currentStep === 4 ? "Complete Setup" : "Next"}
-              {currentStep === 4 ? (
-                <Check className="h-4 w-4 ml-1" />
+            <Button 
+              onClick={handleNext} 
+              disabled={loading}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving...
+                </>
               ) : (
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <>
+                  {currentStep === 4 ? "Complete Setup" : "Continue"}
+                  {currentStep === 4 ? (
+                    <Check className="h-4 w-4 ml-2" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  )}
+                </>
               )}
             </Button>
           </div>
         </div>
       </DialogContent>
+
+      {/* Congratulations Modal */}
+      <Dialog open={showCongrats} onOpenChange={setShowCongrats}>
+        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+          <div className="relative">
+            {/* Animated Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 opacity-10 animate-pulse"></div>
+            
+            <div className="relative p-8 text-center">
+              {/* Trophy Animation */}
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mb-4 animate-bounce shadow-lg">
+                <Trophy className="h-10 w-10 text-white" />
+              </div>
+              
+              {/* Sparkles */}
+              <div className="flex justify-center gap-2 mb-4">
+                <Sparkles className="h-6 w-6 text-amber-500 animate-pulse" />
+                <PartyPopper className="h-6 w-6 text-purple-500 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <Sparkles className="h-6 w-6 text-pink-500 animate-pulse" style={{ animationDelay: '0.4s' }} />
+              </div>
+
+              {/* Congratulations Text */}
+              <h2 className="text-3xl font-bold text-gray-900 mb-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                Congratulations! 🎉
+              </h2>
+              
+              <p className="text-lg text-gray-700 mb-1 font-medium animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '0.1s' }}>
+                {completedStepTitle} Complete!
+              </p>
+              
+              <p className="text-sm text-gray-600 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '0.2s' }}>
+                {currentStep < 4 
+                  ? "Great job! You're making excellent progress. Let's continue to the next step." 
+                  : "Amazing! You've completed the entire setup process. Your account is ready to go!"}
+              </p>
+
+              {/* Progress Info */}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-6 animate-in fade-in zoom-in duration-500" style={{ animationDelay: '0.3s' }}>
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-gray-700">
+                  <Check className="h-5 w-5 text-green-600" />
+                  Step {currentStep} of {STEPS.length} Completed
+                </div>
+                <div className="mt-2">
+                  <Progress value={progressPercent} className="h-2" />
+                </div>
+                <p className="text-xs text-gray-600 mt-2">
+                  {Math.round(progressPercent)}% of setup complete
+                </p>
+              </div>
+
+              {/* Continue Button */}
+              <Button 
+                onClick={handleContinue}
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium py-6 text-lg shadow-lg animate-in fade-in zoom-in duration-500"
+                style={{ animationDelay: '0.4s' }}
+              >
+                {currentStep < 4 ? (
+                  <>
+                    Continue to Next Step
+                    <ChevronRight className="h-5 w-5 ml-2" />
+                  </>
+                ) : (
+                  <>
+                    Finish & Start Using App
+                    <Sparkles className="h-5 w-5 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

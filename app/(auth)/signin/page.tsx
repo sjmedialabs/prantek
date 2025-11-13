@@ -23,7 +23,6 @@ function SignInForm() {
   const [error, setError] = useState("")
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
-  const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
 
   // Check for session expired error
@@ -33,23 +32,20 @@ function SignInForm() {
     }
   }, [searchParams])
 
-  // Redirect if already logged in and session is still valid
+  // Check session validity and clear expired tokens
   useEffect(() => {
     const accessToken = tokenStorage.getAccessToken(false)
-    if (accessToken && isSessionValid()) {
-      // Show UI alert and redirect
-      setAlreadyLoggedIn(true)
-      const timer = setTimeout(() => {
-        router.replace("/dashboard")
-      }, 2000)
-      return () => clearTimeout(timer)
-    } else if (accessToken && !isSessionValid()) {
-      // Session expired, clear tokens
+    
+    // If token exists but session is expired, clear everything
+    if (accessToken && !isSessionValid()) {
       tokenStorage.clearTokens(false)
       localStorage.removeItem('last_activity')
       localStorage.removeItem('loginedUser')
+      setSessionExpired(true)
     }
-  }, [router])
+    // If token exists and session is valid, middleware will handle redirect
+    // No need to do anything here to avoid redirect loops
+  }, [])
 
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
@@ -126,15 +122,6 @@ function SignInForm() {
                 <Info className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-800">
                   Your session has expired due to inactivity. Please sign in again.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {alreadyLoggedIn && (
-              <Alert className="bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                  You are already logged in. Redirecting to dashboard...
                 </AlertDescription>
               </Alert>
             )}

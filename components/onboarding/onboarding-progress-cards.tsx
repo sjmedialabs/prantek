@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { Building2, Users, Settings, Package, CheckCircle2, ArrowRight, Loader2, Sparkles } from "lucide-react"
+import { Building2, Users, Settings, Package, CheckCircle2, ArrowRight, Loader2, Sparkles, Lock } from "lucide-react"
 import { useOnboarding } from "./onboarding-context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -101,6 +101,15 @@ export function OnboardingProgressCards() {
   const completionPercentage = getCompletionPercentage()
   const completedCount = Object.values(progress).filter((v) => v).length
 
+  // Sequential access control
+  const canAccessCard = (card: any) => {
+    if (card.title === "Company Profile") return true
+    if (card.title === "Basic Settings") return progress.companyInfo
+    if (card.title === "Clients") return progress.companyInfo && progress.basicSettings
+    if (card.title === "Products/Services") return progress.companyInfo && progress.basicSettings && progress.clients
+    return false
+  }
+
   const cards = [
     {
       title: "Company Profile",
@@ -191,15 +200,27 @@ export function OnboardingProgressCards() {
           const Icon = card.icon
           const colors = colorClasses[card.color as keyof typeof colorClasses]
 
+          const isLocked = !canAccessCard(card)
+
           return (
             <Card
               key={card.title}
-              className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
+              className={`relative overflow-hidden transition-all duration-300 ${
                 card.completed 
-                  ? "border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 animate-in fade-in zoom-in duration-500" 
-                  : `border ${colors.border} ${colors.bg}`
+                  ? "border-2 border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 animate-in fade-in zoom-in duration-500 hover:shadow-lg" 
+                  : isLocked
+                  ? "border border-gray-200 bg-gray-50 opacity-60"
+                  : `border ${colors.border} ${colors.bg} hover:shadow-lg`
               }`}
             >
+              {/* Locked Overlay */}
+              {isLocked && !card.completed && (
+                <div className="absolute top-2 right-2 z-10">
+                  <div className="bg-gray-500 text-white p-1.5 rounded-full shadow-md">
+                    <Lock className="h-3 w-3" />
+                  </div>
+                </div>
+              )}
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between mb-2">
                   <div className={`rounded-xl ${card.completed ? "bg-green-500 shadow-lg shadow-green-500/50" : "bg-white shadow-sm"} p-3 transition-all duration-300`}>
@@ -211,6 +232,11 @@ export function OnboardingProgressCards() {
                     <div className="flex items-center gap-1 animate-in slide-in-from-right duration-500">
                       <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    </div>
+                  ) : isLocked ? (
+                    <div className="flex items-center gap-1">
+                      <Lock className="h-4 w-4 text-gray-400" />
+                      <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Locked</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1">
@@ -250,15 +276,32 @@ export function OnboardingProgressCards() {
                         <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                       </div>
                     ) : (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className={`w-full text-xs h-8 bg-gradient-to-r ${colors.progress} hover:opacity-90`}
-                        onClick={card.action}
-                      >
-                        {card.buttonText}
-                        <ArrowRight className="h-3 w-3 ml-1" />
-                      </Button>
+                      <>
+                        {isLocked && (
+                          <p className="text-[10px] text-gray-500 text-center mb-2">
+                            Complete previous steps to unlock
+                          </p>
+                        )}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className={`w-full text-xs h-8 bg-gradient-to-r ${colors.progress} hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          onClick={card.action}
+                          disabled={isLocked}
+                        >
+                          {isLocked ? (
+                            <>
+                              <Lock className="h-3 w-3 mr-1" />
+                              Locked
+                            </>
+                          ) : (
+                            <>
+                              {card.buttonText}
+                              <ArrowRight className="h-3 w-3 ml-1" />
+                            </>
+                          )}
+                        </Button>
+                      </>
                     )}
                   </div>
                 )}
