@@ -223,22 +223,82 @@ export function OnboardingWizard() {
     applyTax: false,
   });
 
-  const [taxRates, setTaxRates] = useState<any[]>([]);
+  const [taxRates, setTaxRates] = useState<any[]>([])
 
+  // Load existing data when component mounts or step changes
   useEffect(() => {
-    if (currentStep === 3) {
-      loadTaxRates();
+    loadExistingData()
+  }, [currentStep])
+
+  // Validate progress against real data on mount
+  useEffect(() => {
+    validateProgressWithRealData()
+  }, [])
+
+  const validateProgressWithRealData = async () => {
+    try {
+      const [company, clients, categories, taxRates, paymentMethods, items] = await Promise.all([
+        api.company.get().catch(() => null),
+        api.clients.getAll().catch(() => []),
+        api.paymentCategories.getAll().catch(() => []),
+        api.taxRates.getAll().catch(() => []),
+        api.paymentMethods.getAll().catch(() => []),
+        api.items.getAll().catch(() => []),
+      ])
+
+      // Update progress based on real data
+      if (company?.companyName) updateProgress("companyInfo", true)
+      if (clients?.length > 0) updateProgress("clients", true)
+      if ((categories?.length > 0) || (taxRates?.length > 0) || (paymentMethods?.length > 0)) {
+        updateProgress("basicSettings", true)
+      }
+      if (items?.length > 0) updateProgress("products", true)
+    } catch (err) {
+      console.error("Failed to validate progress:", err)
     }
-  }, [currentStep]);
+  }
+
+  const loadExistingData = async () => {
+    try {
+      switch (currentStep) {
+        case 1:
+          // Load company data
+          const companyInfo = await api.company.get()
+          if (companyInfo) {
+            setCompanyData({
+              companyName: companyInfo.companyName || "",
+              email: companyInfo.email || "",
+              phone: companyInfo.phone || "",
+              address: companyInfo.address || "",
+              city: companyInfo.city || "",
+              state: companyInfo.state || "",
+              pincode: companyInfo.pincode || "",
+              gstin: companyInfo.gstin || "",
+              pan: companyInfo.pan || "",
+              logo: companyInfo.logo || "",
+              website: companyInfo.website || "",
+            })
+          }
+          break
+        case 3:
+          // Load tax rates for reference
+          const rates = await api.taxRates.getAll()
+          setTaxRates(Array.isArray(rates) ? rates : [])
+          break
+      }
+    } catch (err) {
+      console.error("Failed to load existing data:", err)
+    }
+  }
 
   const loadTaxRates = async () => {
     try {
-      const rates = await api.taxRates.getAll();
-      setTaxRates(Array.isArray(rates) ? rates : []);
+      const rates = await api.taxRates.getAll()
+      setTaxRates(Array.isArray(rates) ? rates : [])
     } catch (err) {
-      console.error("Failed to load tax rates:", err);
+      console.error("Failed to load tax rates:", err)
     }
-  };
+  }
 
   const handleNext = async () => {
     setLoading(true);
@@ -362,6 +422,8 @@ export function OnboardingWizard() {
   };
 
   const saveSettings = async () => {
+    let anythingSaved = false;
+    
     try {
       // Save category
       if (settingsData.category) {
@@ -370,6 +432,7 @@ export function OnboardingWizard() {
           name: settingsData.category,
           isEnabled: true,
         });
+        anythingSaved = true;
       }
 
       // Save tax rate
@@ -382,6 +445,7 @@ export function OnboardingWizard() {
             settingsData.taxDescription || `${settingsData.taxType} Rate`,
           isActive: true,
         });
+        anythingSaved = true;
       }
 
       // Save payment method
@@ -391,19 +455,28 @@ export function OnboardingWizard() {
           name: settingsData.paymentMethod,
           isEnabled: true,
         });
+        anythingSaved = true;
       }
 
-      updateProgress("basicSettings", true);
-      setCompletedStepTitle("Basic Settings");
-      setShowCongrats(true);
-      // Clear form
-      setSettingsData({
-        category: "",
-        taxType: "CGST",
-        taxRate: "",
-        taxDescription: "",
-        paymentMethod: "",
-      });
+      if (anythingSaved) {
+        updateProgress("basicSettings", true);
+        setCompletedStepTitle("Basic Settings");
+        setShowCongrats(true);
+        // Clear form
+        setSettingsData({
+          category: "",
+          taxType: "CGST",
+          taxRate: "",
+          taxDescription: "",
+          paymentMethod: "",
+        });
+      } else {
+        toast({
+          title: "No Data Entered",
+          description: "Please enter at least one setting to continue",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -460,11 +533,7 @@ export function OnboardingWizard() {
   };
 
   const handleSkipStep = () => {
-    const progressKey = ["companyInfo", "clients", "basicSettings", "products"][
-      currentStep - 1
-    ];
-    updateProgress(progressKey as any, true);
-
+    // Don't mark as complete when skipping - just move to next step
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -476,7 +545,9 @@ export function OnboardingWizard() {
 
   const currentStepData = STEPS[currentStep - 1];
   const StepIcon = currentStepData.icon;
-  const progressPercent = (currentStep / STEPS.length) * 100;
+  // Calculate progress based on actual completed steps, not current step number
+  const completedCount = Object.values(progress).filter((v) => v === true).length;
+  const progressPercent = (completedCount / Object.keys(progress).length) * 100;
 
   // Check if user can access current step (must complete previous steps)
   const canAccessStep = (step: number): boolean => {
@@ -490,7 +561,7 @@ export function OnboardingWizard() {
 
   return (
     <Dialog open={currentStep > 0} onOpenChange={() => {}}>
-      <DialogContent className="!max-w-[90vw] !w-[90vw] !min-w-[80vw] !h-[90vh] !min-h-[90vh] !max-h-[90vh] !p-0 !gap-0 overflow-hidden flex flex-col rounded-xl">
+      <DialogContent showCloseButton={false} className="!max-w-[90vw] !w-[90vw] !min-w-[80vw] !h-[90vh] !min-h-[90vh] !max-h-[90vh] !p-0 !gap-0 overflow-hidden flex flex-col rounded-xl">
         <DialogTitle className="sr-only">
           Onboarding Setup - Step {currentStep} of {STEPS.length}:{" "}
           {currentStepData.title}
