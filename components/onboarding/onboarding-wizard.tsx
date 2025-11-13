@@ -746,10 +746,10 @@ export function OnboardingWizard() {
           </div>
         </div>
 
-            </div>
+            {/* </div>
           </div>
-        </div>
-
+        </div> */}
+                
         {/* Footer Actions */}
         <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <Button variant="ghost" onClick={handleSkipStep} className="text-gray-600">

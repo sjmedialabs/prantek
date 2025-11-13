@@ -18,7 +18,7 @@ interface PaymentMethod {
 }
 
 export default function PaymentMethodsPage() {
-  const { hasPermission } = useUser()
+  const { loading, hasPermission } = useUser()
 
   const [saved, setSaved] = useState(false)
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
@@ -119,7 +119,16 @@ const handleSaveEdit = async (id: string) => {
     setEditingId(null)
     setEditingName("")
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -148,7 +157,7 @@ const handleSaveEdit = async (id: string) => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <CreditCard className="h-5 w-5 mr-2" />
-            Payment Methods
+            Payment Methods List ({paymentMethods.length})
           </CardTitle>
           <CardDescription>Add and manage accepted payment methods</CardDescription>
         </CardHeader>

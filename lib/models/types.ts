@@ -327,6 +327,7 @@ export interface CompanySetting extends BaseDocument {
   state?: string
   pincode?: string
   gstin?: string
+  tan?: string
   pan?: string
   logo?: string
   website?: string
