@@ -14,7 +14,7 @@ import { ImageUpload } from "@/components/ui/image-upload"
 import { CompanySetting } from "@/lib/models/types"
 
 export default function CompanyDetailsPage() {
-const { user, hasPermission } = useUser()
+const { user, loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
 
   // ✅ ADDED error message state
@@ -31,6 +31,7 @@ const { user, hasPermission } = useUser()
     pincode: "",
     gstin: "",
     pan: "",
+    tan: "",
     logo: "",
     website: "",
     createdAt: new Date(),
@@ -64,6 +65,7 @@ const { user, hasPermission } = useUser()
     if (!(companyData.pincode ?? "").trim()) newErrors.push("Pincode is required")
     if (!(companyData.gstin ?? "").trim()) newErrors.push("GSTIN is required")
     if (!(companyData.pan ?? "").trim()) newErrors.push("PAN is required")
+    if (!(companyData.tan ?? "").trim()) newErrors.push("TAN is required")
 
     // ✅ Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -84,7 +86,8 @@ const { user, hasPermission } = useUser()
     // ✅ GSTIN validation
     const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
     if (!gstRegex.test(companyData.gstin ?? "")) newErrors.push("Invalid GSTIN format")
-
+        const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
+    if (!tanRegex.test(companyData.tan ?? "")) newErrors.push("Invalid TAN format")
     setErrors(newErrors)
     return newErrors.length === 0
   }
@@ -114,6 +117,7 @@ const handleSave = async () => {
         pincode: companyData.pincode,
         gstin: companyData.gstin,
         pan: companyData.pan,
+        tan: companyData.tan,
         logo: companyData.logo,
         website: companyData.website,
       })
@@ -135,6 +139,7 @@ const handleSave = async () => {
         pincode: companyData.pincode,
         gstin: companyData.gstin,
         pan: companyData.pan,
+        tan: companyData.tan,
         logo: companyData.logo,
         website: companyData.website,
       })
@@ -157,7 +162,16 @@ const handleSave = async () => {
     toast({ title: "Error", description: "Something went wrong while saving company details.", variant: "destructive" })
   }
 }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading company details...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -334,6 +348,16 @@ const handleSave = async () => {
       value={companyData.pan}
       onChange={(e) => setCompanyData({ ...companyData, pan: e.target.value })}
       placeholder="Enter PAN"
+    />
+  </div>
+    {/* ✅ TAN */}
+  <div className="space-y-2">
+    <Label htmlFor="tan" required>TAN</Label>
+    <Input
+      id="tan"
+      value={companyData.tan}
+      onChange={(e) => setCompanyData({ ...companyData, tan: e.target.value })}
+      placeholder="Enter TAN"
     />
   </div>
 </div>

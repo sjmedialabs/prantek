@@ -33,7 +33,8 @@ export interface Client extends BaseDocument {
   city?: string
   state?: string
   pincode?: string
-  gstin?: string
+  companyName?:string
+  gst?: string
   pan?: string
   notes?: string
 }
@@ -327,6 +328,7 @@ export interface CompanySetting extends BaseDocument {
   state?: string
   pincode?: string
   gstin?: string
+  tan?: string
   pan?: string
   logo?: string
   website?: string

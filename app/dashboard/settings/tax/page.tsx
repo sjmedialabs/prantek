@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { FileText, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
+import { FileText, Save, Plus, Edit2, Power, PowerOff, Search } from "lucide-react"
 import { api } from "@/lib/api-client"
 import {
   Dialog,
@@ -27,7 +27,7 @@ import { TaxRate, TaxSetting } from "@/lib/models/types"
 import { tokenStorage } from "@/lib/token-storage"
 
 export default function TaxDetailsPage() {
-  const { hasPermission } = useUser()
+  const { loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [taxSettings, setTaxSettings] = useState<TaxSetting>({
     tan: "",
@@ -46,6 +46,9 @@ export default function TaxDetailsPage() {
     rate: "",
     description: "",
   })
+  const [searchTerm, setSearchTerm] = useState("")
+const [statusFilter, setStatusFilter] = useState("all") // all | active | inactive
+
 
   useEffect(() => {
     const loadTaxData = async () => {
@@ -57,77 +60,92 @@ export default function TaxDetailsPage() {
     }
     loadTaxData()
   }, [])
+const filteredRates = taxRates
+  .filter((rate) => {
+    const term = searchTerm.toLowerCase()
 
-const handleSaveSettings = async () => {
-  const token = tokenStorage.getAccessToken()
+    return (
+      rate.type.toLowerCase().includes(term) ||
+      rate.rate.toString().toLowerCase().includes(term) ||
+      rate.description.toLowerCase().includes(term)
+    )
+  })
+  .filter((rate) => {
+    if (statusFilter === "active") return rate.isActive
+    if (statusFilter === "inactive") return !rate.isActive
+    return true
+  })
 
-  // ✅ Regex
-  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
-  const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
+// const handleSaveSettings = async () => {
+//   const token = tokenStorage.getAccessToken()
 
-  // ✅ Trim
-  const gst = taxSettings.gst.trim().toUpperCase()
-  const tan = taxSettings.tan.trim().toUpperCase()
+//   // ✅ Regex
+//   const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
+//   const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
 
-  // ✅ Validation
-  if (!tanRegex.test(tan)) {
-    toast({ title: "Invalid TAN Format", description: "Example: ABCD12345E", variant: "destructive" })
-    return
-  }
+//   // ✅ Trim
+//   const gst = taxSettings.gst.trim().toUpperCase()
+//   const tan = taxSettings.tan.trim().toUpperCase()
 
-  if (!gstRegex.test(gst)) {
-    toast({ title: "Invalid GST Format", description: "Example: 22ABCDE1234F1Z5", variant: "destructive" })
-    return
-  }
+//   // ✅ Validation
+//   if (!tanRegex.test(tan)) {
+//     toast({ title: "Invalid TAN Format", description: "Example: ABCD12345E", variant: "destructive" })
+//     return
+//   }
 
-  try {
-    const payload = {
-      tan,
-      tanUrl: taxSettings.tanUrl,
-      gst,
-      gstUrl: taxSettings.gstUrl,
-    }
+//   if (!gstRegex.test(gst)) {
+//     toast({ title: "Invalid GST Format", description: "Example: 22ABCDE1234F1Z5", variant: "destructive" })
+//     return
+//   }
 
-    const existing = await api.taxSetting.get()
+//   try {
+//     const payload = {
+//       tan,
+//       tanUrl: taxSettings.tanUrl,
+//       gst,
+//       gstUrl: taxSettings.gstUrl,
+//     }
 
-    let response
+//     const existing = await api.taxSetting.get()
 
-    if (existing) {
-      // ✅ UPDATE
-      response = await fetch("/api/tax-settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      })
-    } else {
-      // ✅ CREATE
-      response = await fetch("/api/tax-settings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      })
-    }
+//     let response
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
-    }
+//     if (existing) {
+//       // ✅ UPDATE
+//       response = await fetch("/api/tax-settings", {
+//         method: "PUT",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${token}`,
+//         },
+//         body: JSON.stringify(payload),
+//       })
+//     } else {
+//       // ✅ CREATE
+//       response = await fetch("/api/tax-settings", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Bearer ${token}`,
+//         },
+//         body: JSON.stringify(payload),
+//       })
+//     }
 
-    const data = await response.json()
-    console.log("Tax settings saved:", data)
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! Status: ${response.status}`)
+//     }
 
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
-  } catch (error) {
-    console.error("Failed to save tax settings", error)
-    toast({ title: "Error", description: "Failed to save tax settings", variant: "destructive" })
-  }
-}
+//     const data = await response.json()
+//     console.log("Tax settings saved:", data)
+
+//     setSaved(true)
+//     setTimeout(() => setSaved(false), 3000)
+//   } catch (error) {
+//     console.error("Failed to save tax settings", error)
+//     toast({ title: "Error", description: "Failed to save tax settings", variant: "destructive" })
+//   }
+// }
   const handleTanDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -209,6 +227,16 @@ const handleSaveSettings = async () => {
     toast({ title: "Success", description: "Rate status toggled successfully!" })
     window.location.reload()
   }
+        if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!hasPermission("tenant_settings")) {
     return (
@@ -223,13 +251,22 @@ const handleSaveSettings = async () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tax Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Tax Settings ({filteredRates.length})</h1>
           <p className="text-gray-600">Manage your tax registration and rates</p>
         </div>
-        <Button onClick={handleSaveSettings}>
+        {/* <Button onClick={handleSaveSettings}>
           <Save className="h-4 w-4 mr-2" />
           Save Settings
-        </Button>
+        </Button> */}
+                    <Button
+              onClick={() => {
+                resetRateForm()
+                setIsDialogOpen(true)
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Tax Rate
+            </Button>
       </div>
 
       {saved && (
@@ -237,7 +274,7 @@ const handleSaveSettings = async () => {
           <AlertDescription>Tax settings saved successfully!</AlertDescription>
         </Alert>
       )}
-
+{/* 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -283,28 +320,46 @@ const handleSaveSettings = async () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <div>
               <CardTitle>Tax Rates</CardTitle>
               <CardDescription>Manage CGST, SGST, and IGST rates</CardDescription>
             </div>
-            <Button
-              onClick={() => {
-                resetRateForm()
-                setIsDialogOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Tax Rate
-            </Button>
-          </div>
+
+          </div> */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 my-4">
+
+  {/* Search Bar */}
+  <div className="relative">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+    <Input
+      placeholder="Search type, rate, description..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="pl-10 w-72"
+    />
+  </div>
+
+  {/* Status Filter */}
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="border rounded-lg p-3 text-sm"
+  >
+    <option value="all">All Status</option>
+    <option value="active">Active</option>
+    <option value="inactive">Inactive</option>
+  </select>
+
+</div>
+
         </CardHeader>
         <CardContent>
-          {taxRates.length === 0 ? (
+          {filteredRates.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No tax rates configured. Click "Add Tax Rate" to get started.
             </div>
@@ -320,8 +375,8 @@ const handleSaveSettings = async () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {taxRates.map((rate) => (
-                  <TableRow key={rate?.id}>
+                {filteredRates.map((rate) => (
+                  <TableRow key={rate?._id || rate?.id}>
                     <TableCell>
                       <Badge variant="outline">{rate?.type}</Badge>
                     </TableCell>

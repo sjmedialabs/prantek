@@ -67,6 +67,8 @@ const navigationItems: NavItem[] = [
         submenu: [
           { name: "Tax Settings", href: "/dashboard/settings/tax", permission: "tenant_settings" },
           { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
+         
+          
         ],
       },
       {
@@ -156,6 +158,12 @@ const navigationItems: NavItem[] = [
       { name: "Plans", href: "/dashboard/plans", permission: null },
     ],
   },
+
+  
+  
+ 
+
+ 
 ];
 
 export default function DashboardSidebar() {
