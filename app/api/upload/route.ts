@@ -1,7 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
+import { uploadToGridFS } from "@/lib/gridfs-storage"
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,30 +13,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    console.log("[Upload] File received:", file.name, file.size, file.type)
-
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads")
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
+    console.log("[Upload] File received:", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    })
 
     // Generate unique filename to avoid collisions
     const timestamp = Date.now()
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
     const filename = `${timestamp}_${sanitizedName}`
-    const filepath = join(uploadsDir, filename)
 
-    // Convert File to Buffer and save
+    // Convert File to Buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filepath, buffer)
 
-    const url = `/uploads/${filename}`
-    console.log("[Upload] File saved successfully:", url)
+    // Upload to MongoDB GridFS
+    const { fileId, url } = await uploadToGridFS(buffer, filename, file.type)
+
+    console.log("[Upload] File saved to GridFS successfully:", { fileId, url })
 
     return NextResponse.json({
       url,
+      fileId,
       filename: file.name,
       size: file.size,
       type: file.type,

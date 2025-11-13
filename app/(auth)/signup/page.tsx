@@ -365,7 +365,8 @@ export default function SignUpPage() {
       }
 
       localStorage.removeItem("pending_signup");
-      router.push("/signin");
+      // Mark as new user for onboarding
+      router.push("/signin?registered=true");
     } catch (err) {
       console.error("Signup error:", err);
       setError("Signup failed. Try again.");
