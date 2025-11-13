@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Activity, Save, Plus, Edit2, Power, PowerOff, Trash2 } from "lucide-react"
+import { Activity, Save, Plus, Edit2, Power, PowerOff, Trash2, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -29,12 +29,14 @@ interface Condition {
 }
 
 export default function AssetConditionsPage() {
-  const { hasPermission } = useUser()
+  const { loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [conditions, setConditions] = useState<Condition[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCondition, setEditingCondition] = useState<Condition | null>(null)
   const [conditionName, setConditionName] = useState("")
+const [searchTerm, setSearchTerm] = useState("")
+const [statusFilter, setStatusFilter] = useState("all")
 
   useEffect(() => {
     loadConditions()
@@ -54,6 +56,15 @@ export default function AssetConditionsPage() {
       setConditions(data)
     }
   }
+  const filteredConditions = conditions
+  .filter((cond) =>
+    cond.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  .filter((cond) => {
+    if (statusFilter === "active") return cond.isActive
+    if (statusFilter === "inactive") return !cond.isActive
+    return true
+  })
 
   const handleSave = async () => {
     if (!conditionName.trim()) {
@@ -104,6 +115,16 @@ export default function AssetConditionsPage() {
       toast({ title: "Success", description: "Condition deleted successfully" })
     }
   }
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading Asset Conditions...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!hasPermission("tenant_settings")) {
     return (
@@ -117,20 +138,13 @@ export default function AssetConditionsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
+    <div className="space-y-6">
+      <div className="flex justify-between">
+        <div>
         <h1 className="text-2xl font-bold text-gray-900">Asset Conditions</h1>
         <p className="text-gray-600">Manage condition statuses for asset tracking</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Condition List</CardTitle>
-              <CardDescription>Create and manage asset condition statuses</CardDescription>
-            </div>
-            <Button
+        </div>
+                    <Button
               onClick={() => {
                 resetForm()
                 setIsDialogOpen(true)
@@ -139,18 +153,51 @@ export default function AssetConditionsPage() {
               <Plus className="h-4 w-4 mr-2" />
               Add Condition
             </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Condition List ({filteredConditions.length})</CardTitle>
+              <CardDescription>Create and manage asset condition statuses</CardDescription>
+            </div>
+            
+    <div className="flex items-center gap-3">
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search conditions..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 w-72"
+        />
+      </div>
+
+      {/* Status Filter */}
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="border rounded-lg px-2  py-3 text-sm"
+      >
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {conditions.length === 0 ? (
+            {filteredConditions.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p>No asset conditions found</p>
                 <p className="text-sm">Click "Add Condition" to create one</p>
               </div>
             ) : (
-              conditions.map((condition) => (
+              filteredConditions.map((condition) => (
                 <div key={condition._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                   <div className="flex items-center space-x-3">
                     <Activity className="h-5 w-5 text-blue-600" />
@@ -175,9 +222,9 @@ export default function AssetConditionsPage() {
                     >
                       {condition.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(condition)}>
+                    {/* <Button variant="ghost" size="sm" onClick={() => handleDelete(condition)}>
                       <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               ))
