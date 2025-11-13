@@ -3,7 +3,6 @@ import { NextRequest } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
-import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
 
 export async function POST(request: NextRequest) {
@@ -88,53 +87,17 @@ export async function POST(request: NextRequest) {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = newUser
     
-    // Generate tokens
-    const accessToken = await generateAccessToken({ 
-      userId: result.insertedId.toString(), 
-      email: newUser.email, 
-      role: newUser.role 
-    })
-    const refreshToken = await generateRefreshToken({ 
-      userId: result.insertedId.toString(), 
-      email: newUser.email, 
-      role: newUser.role 
-    })
-    
-    const response = NextResponse.json({
+    // Return success without auto-login
+    // User needs to sign in manually after registration
+    return NextResponse.json({
       success: true,
+      message: "Account created successfully. Please sign in to continue.",
       user: {
         ...userWithoutPassword,
         _id: result.insertedId,
         id: result.insertedId.toString()
-      },
-      accessToken,
-      refreshToken
+      }
     })
-    
-    // Set cookies
-    const isProduction = process.env.NODE_ENV === 'production'
-    response.cookies.set('auth_token', accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 // 7 days
-    })
-    
-    response.cookies.set('accessToken', accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 30 * 60 // 30 minutes to match inactivity timeout
-    })
-    
-    response.cookies.set('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 // 7 days
-    })
-    
-    return response
   } catch (error) {
     console.error("Error registering user:", error)
     return NextResponse.json(
