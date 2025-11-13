@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CreditCard, Save, Plus, Edit2, Power, PowerOff } from "lucide-react"
+import { CreditCard, Save, Plus, Edit2, Power, PowerOff, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -30,64 +30,89 @@ interface Category {
 }
 
 export default function PaymentCategoriesPage() {
-  const { hasPermission } = useUser()
+  const { loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [categoryName, setCategoryName] = useState("")
+const [searchTerm, setSearchTerm] = useState("")
+const [statusFilter, setStatusFilter] = useState("all") // all | active | inactive
 
   useEffect(() => {
     loadCategories()
   }, [])
-
-  const loadCategories = async () => {
-    const data = await api.paymentCategories.getAll()
-    if (data.length === 0) {
-      // Initialize with default categories
-      const defaultCategories = ["Miscellaneous", "Refund", "Other", "Salary", "Rent", "Stationary"]
-      for (const name of defaultCategories) {
-        await api.paymentCategories.create( {
-          name,
-          isActive: true,
-        })
-      }
-      const newData = await api.paymentCategories.getAll()
-      setCategories(newData)
-    } else {
-      setCategories(data)
-    }
+const validateCategoryName = (name: string, list: Category[], editingId?: string) => {
+  if (!name || name.trim().length < 2) {
+    return "Category name must be at least 2 characters."
   }
 
-  const handleSave = async () => {
-    if (!categoryName.trim()) {
-      toast({ title: "Validation Error", description: "Please enter a category name", variant: "destructive" })
-      return
-    }
-    console.log("Editing category:", editingCategory?._id)
-    if (editingCategory) {
-      // Update existing category
-      const updated = await api.paymentCategories.update( editingCategory._id, {
-        name: categoryName,
-      })
-      if (updated) {
-        setCategories(categories.map((cat) => (cat._id === updated._id ? updated : cat)))
-      }
-    } else {
-      // Create new category
-      const newCategory = await api.paymentCategories.create( {
-        name: categoryName,
-        isActive: true,
-      })
-      setCategories([...categories, newCategory])
-    }
+  const duplicate = list.some(
+    (cat) =>
+      cat.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+      cat._id !== editingId
+  )
 
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
-    setIsDialogOpen(false)
-          toast({ title: "Success", description: "Category Saved successfully" })
-    resetForm()
+  if (duplicate) return "Category name already exists."
+
+  return null
+}
+
+const loadCategories = async () => {
+  const data = await api.paymentCategories.getAll()
+
+  // ✅ Always load only what exists in DB
+  setCategories(data ?? [])
+}
+
+const filteredCategories = categories
+  .filter((cat) =>
+    cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  .filter((cat) => {
+    if (statusFilter === "active") return cat.isActive
+    if (statusFilter === "inactive") return !cat.isActive
+    return true
+  })
+
+const handleSave = async () => {
+  const trimmedName = categoryName.trim()
+
+  // 🔥 Validate before saving
+  const error = validateCategoryName(trimmedName, categories, editingCategory?._id)
+  if (error) {
+    toast({ title: "Validation Error", description: error, variant: "destructive" })
+    return
   }
+
+  console.log("Editing category:", editingCategory?._id)
+
+  if (editingCategory) {
+    // Update existing category
+    const updated = await api.paymentCategories.update(editingCategory._id, {
+      name: trimmedName,
+    })
+
+    if (updated) {
+      setCategories(categories.map((cat) => (cat._id === updated._id ? updated : cat)))
+    }
+  } else {
+    // Create new category
+    const newCategory = await api.paymentCategories.create({
+      name: trimmedName,
+      isActive: true,
+    })
+
+    setCategories([...categories, newCategory])
+  }
+
+  setSaved(true)
+  setTimeout(() => setSaved(false), 3000)
+  setIsDialogOpen(false)
+  toast({ title: "Success", description: "Category saved successfully" })
+  resetForm()
+}
+
 
   const resetForm = () => {
     setCategoryName("")
@@ -110,7 +135,16 @@ export default function PaymentCategoriesPage() {
     }
     toast({ title: "Success", description: "Category status updated successfully!" })
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading Asset Conditions...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -124,7 +158,7 @@ export default function PaymentCategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payment Categories</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Ledger Heads</h1>
           <p className="text-gray-600">Manage categories for payment classification</p>
         </div>
         <Button
@@ -145,21 +179,47 @@ export default function PaymentCategoriesPage() {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <CreditCard className="h-5 w-5 mr-2" />
-            Payment Categories ({categories.length})
-          </CardTitle>
-          <CardDescription>Add and manage payment categories for your organization</CardDescription>
-        </CardHeader>
+<CardHeader>
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <CardTitle>Categories List ({filteredCategories.length})</CardTitle>
+      <CardDescription>Manage payment categories used inside the application</CardDescription>
+    </div>
+
+    <div className="flex items-center gap-3">
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search category..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 w-72"
+        />
+      </div>
+
+      {/* Status Filter */}
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="border rounded-lg p-3 text-sm"
+      >
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+  </div>
+</CardHeader>
+
         <CardContent className="space-y-4">
-          {categories.length === 0 ? (
+          {filteredCategories.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No payment categories added yet. Click "Add Category" to get started.
             </div>
           ) : (
             <div className="space-y-2">
-              {categories.filter(cat => cat && (cat._id || cat.id)).map((category) => (
+              {filteredCategories.filter(cat => cat && (cat._id || cat.id)).map((category) => (
                 <div
                   key={category._id || category.id}
                   className={`flex items-center justify-between p-3 border rounded-lg ${category?.isActive ? "" : "opacity-50 bg-gray-50"}`}

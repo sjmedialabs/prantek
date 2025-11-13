@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useUser } from "@/components/auth/user-context"
-import { Button } from "@/components/ui/button"
-import { tokenStorage } from "@/lib/token-storage"
+import { useEffect, useState } from "react";
+import { useUser } from "@/components/auth/user-context";
+import { Button } from "@/components/ui/button";
+import { tokenStorage } from "@/lib/token-storage";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,108 +11,113 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Bell, User, LogOut, UserCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
-import type { Notification } from "@/lib/models/types"
+} from "@/components/ui/dropdown-menu";
+import { Bell, User, LogOut, UserCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { Notification } from "@/lib/models/types";
 
 export default function DashboardHeader() {
-  const { user, logout, hasPermission } = useUser()
-  const router = useRouter()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [notificationOpen, setNotificationOpen] = useState(false)
+  const { user, logout, hasPermission } = useUser();
+  const router = useRouter();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const handleLogout = () => {
-    logout()
-  }
+    logout();
+  };
 
   // Fetch notifications
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const token = tokenStorage.getAccessToken()
+        const token = tokenStorage.getAccessToken();
         const response = await fetch("/api/notifications", {
           credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        })
+        });
         if (response.ok) {
-          const data = await response.json()
-          setNotifications(data)
-          setUnreadCount(data.filter((n: Notification) => !n.isRead).length)
+          const data = await response.json();
+          setNotifications(data);
+          setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
         }
       } catch (error) {
-        console.error("Failed to fetch notifications:", error)
+        console.error("Failed to fetch notifications:", error);
       }
-    }
+    };
 
     if (user) {
-      fetchNotifications()
+      fetchNotifications();
       // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000)
-      return () => clearInterval(interval)
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
     }
-  }, [user])
+  }, [user]);
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read
     if (!notification.isRead) {
       try {
-        const token = tokenStorage.getAccessToken()
+        const token = tokenStorage.getAccessToken();
         await fetch("/api/notifications", {
           method: "PATCH",
           credentials: "include",
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json" 
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify({ 
-            notificationId: notification._id?.toString(), 
-            isRead: true 
+          body: JSON.stringify({
+            notificationId: notification._id?.toString(),
+            isRead: true,
           }),
-        })
-        
+        });
+
         // Update local state
-        setNotifications(prev => 
-          prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
-        )
-        setUnreadCount(prev => Math.max(0, prev - 1))
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n._id === notification._id ? { ...n, isRead: true } : n
+          )
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (error) {
-        console.error("Failed to mark notification as read:", error)
+        console.error("Failed to mark notification as read:", error);
       }
     }
 
     // Close dropdown before navigation
-    setNotificationOpen(false)
+    setNotificationOpen(false);
 
     // Navigate to link if provided
     if (notification.link) {
-      router.push(notification.link)
+      router.push(notification.link);
     }
-  }
+  };
 
   const formatNotificationTime = (date: Date) => {
-    const now = new Date()
-    const notifDate = new Date(date)
-    const diffMs = now.getTime() - notifDate.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
+    const now = new Date();
+    const notifDate = new Date(date);
+    const diffMs = now.getTime() - notifDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Just now"
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return notifDate.toLocaleDateString()
-  }
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return notifDate.toLocaleDateString();
+  };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-200 px-6 py-2">
       <div className="flex items-center justify-end">
         <div className="flex items-center space-x-4">
-          <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
+          <DropdownMenu
+            open={notificationOpen}
+            onOpenChange={setNotificationOpen}
+          >
             <DropdownMenuTrigger asChild>
               <button className="relative px-2 py-2 rounded hover:bg-gray-100 transition-colors">
                 <Bell className="h-5 w-5" />
@@ -166,8 +171,16 @@ export default function DashboardHeader() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-primary" />
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-4 w-4 text-primary" />
+                  )}
                 </div>
                 <span className="text-sm font-medium">{user?.name}</span>
               </button>
@@ -175,7 +188,9 @@ export default function DashboardHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/profile")}
+              >
                 <UserCircle className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
@@ -189,5 +204,5 @@ export default function DashboardHeader() {
         </div>
       </div>
     </header>
-  )
+  );
 }

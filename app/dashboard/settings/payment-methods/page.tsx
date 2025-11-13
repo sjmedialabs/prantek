@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { Save, Plus, Trash2, Edit2, Check, X, CreditCard } from "lucide-react"
 import { api } from "@/lib/api-client"
+import { toast } from "@/lib/toast"
 
 interface PaymentMethod {
   _id?: string
@@ -34,21 +35,42 @@ export default function PaymentMethodsPage() {
     }
     loadData()
   }, [])
+  const validateMethodName = (name: string, list: PaymentMethod[], editingId?: string) => {
+  if (!name || name.trim().length < 2) return "Name must be at least 2 characters."
+
+  const exists = list.some(
+    (m) =>
+      m.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+      m._id !== editingId
+  )
+
+  if (exists) return "A payment method with this name already exists."
+
+  return null
+}
+
 
   // ✅ Add New Method → DB
-  const handleAddMethod = async () => {
-    if (!newMethod.trim()) return
+const handleAddMethod = async () => {
+  const trimmed = newMethod.trim()
 
-    const created = await api.paymentMethods.create({
-      name: newMethod.trim(),
-      isEnabled: true,
-    })
-
-    if (created) {
-      setPaymentMethods([...paymentMethods, created])
-      setNewMethod("")
-    }
+  const error = validateMethodName(trimmed, paymentMethods)
+  if (error) {
+    toast({ title: "Validation Error", description: error, variant: "destructive" })
+    return
   }
+
+  const created = await api.paymentMethods.create({
+    name: trimmed,
+    isEnabled: true,
+  })
+
+  if (created) {
+    setPaymentMethods([...paymentMethods, created])
+    setNewMethod("")
+  }
+}
+
 
   // ✅ Delete Method → DB
   const handleDeleteMethod = async (id: string) => {
@@ -71,20 +93,27 @@ export default function PaymentMethodsPage() {
   }
 
   // ✅ Edit name → DB
-  const handleSaveEdit = async (id: string) => {
-    if (!editingName.trim()) return
+const handleSaveEdit = async (id: string) => {
+  const trimmed = editingName.trim()
 
-    const updated = await api.paymentMethods.update(id, {
-      name: editingName.trim(),
-    })
-
-    if (updated) {
-      setPaymentMethods(paymentMethods.map((m) => (m._id === id ? updated : m)))
-    }
-
-    setEditingId(null)
-    setEditingName("")
+  const error = validateMethodName(trimmed, paymentMethods, id)
+  if (error) {
+    toast({ title: "Validation Error", description: error, variant: "destructive" })
+    return
   }
+
+  const updated = await api.paymentMethods.update(id, {
+    name: trimmed,
+  })
+
+  if (updated) {
+    setPaymentMethods(paymentMethods.map((m) => (m._id === id ? updated : m)))
+  }
+
+  setEditingId(null)
+  setEditingName("")
+}
+
 
   const handleCancelEdit = () => {
     setEditingId(null)

@@ -12,6 +12,9 @@ export interface User extends BaseDocument {
   name: string
   companyId?: string
   role: "user" | "super-admin"
+  phone?: string
+  address?: string
+  avatar?: string
   subscriptionPlanId?: string
   subscriptionStatus?: "active" | "inactive" | "trial" | "expired"
   subscriptionStartDate?: Date

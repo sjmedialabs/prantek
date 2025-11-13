@@ -13,7 +13,7 @@ interface User {
   role: "super-admin" | "admin" | "employee"
   phone?: string
   address?: string
-  profilePicture?: string
+  avatar?: string
   subscriptionPlanId?: string
   subscriptionStatus?: "active" | "inactive" | "trial" | "cancelled"
   subscriptionStartDate?: string

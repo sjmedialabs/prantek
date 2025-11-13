@@ -49,7 +49,7 @@ export function PricingSection() {
 
             return (
               <Card
-                key={plan.id}
+                key={plan.id || `plan-${index}`}
                 className={`relative overflow-hidden group hover:shadow-2xl transition-all duration-500 ${
                   isPopular 
                     ? "border-2 border-primary bg-gradient-to-br from-blue-50 via-white to-indigo-50 shadow-xl scale-105" 

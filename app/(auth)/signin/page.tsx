@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, FileText, CheckCircle2 } from "lucide-react"
+import { Eye, EyeOff, FileText, CheckCircle2, Info } from "lucide-react"
 import { tokenStorage } from "@/lib/token-storage"
 import { FeaturesSidebar } from "@/components/auth/features-sidebar"
 import { useRouter } from "next/navigation"
+import { isSessionValid } from "@/lib/session-timeout"
 
 function SignInForm() {
   const router = useRouter()
@@ -22,16 +23,29 @@ function SignInForm() {
   const [error, setError] = useState("")
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
 
-  // Redirect if already logged in
+  // Check for session expired error
+  useEffect(() => {
+    if (searchParams.get('error') === 'session_expired') {
+      setSessionExpired(true)
+    }
+  }, [searchParams])
+
+  // Check session validity and clear expired tokens
   useEffect(() => {
     const accessToken = tokenStorage.getAccessToken(false)
-    if (accessToken) {
-      // Show alert before redirecting
-      alert("You are already logged in. Redirecting to dashboard...")
-      router.replace("/dashboard")
+    
+    // If token exists but session is expired, clear everything
+    if (accessToken && !isSessionValid()) {
+      tokenStorage.clearTokens(false)
+      localStorage.removeItem('last_activity')
+      localStorage.removeItem('loginedUser')
+      setSessionExpired(true)
     }
-  }, [router])
+    // If token exists and session is valid, middleware will handle redirect
+    // No need to do anything here to avoid redirect loops
+  }, [])
 
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
@@ -65,6 +79,14 @@ function SignInForm() {
         tokenStorage.setAccessToken(authResult.accessToken, false)
         tokenStorage.setRefreshToken(authResult.refreshToken, false)
 
+        // Set last activity timestamp for session tracking
+        localStorage.setItem('last_activity', Date.now().toString())
+
+        // Check if this is a new user (from registration redirect)
+        if (searchParams.get("registered") === "true" || authResult.isNewUser) {
+          localStorage.setItem(`new_user_${authResult.user.id}`, "true")
+        }
+
         // Redirect with full page reload
         window.location.href = "/dashboard"
       } else {
@@ -95,6 +117,15 @@ function SignInForm() {
           <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">Sign In to Your Account</h2>
 
           <form onSubmit={handleSignIn} className="space-y-4">
+            {sessionExpired && (
+              <Alert className="bg-amber-50 border-amber-200">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  Your session has expired due to inactivity. Please sign in again.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {registrationSuccess && (
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />

@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PhoneInput, validatePhoneNumber } from "@/components/ui/phone-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -66,15 +67,8 @@ export default function SignUpPage() {
     useState<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
-  // Redirect if already logged in
-  useEffect(() => {
-    const accessToken = tokenStorage.getAccessToken(false);
-    if (accessToken) {
-      // Show alert before redirecting
-      alert("You are already logged in. Redirecting to dashboard...");
-      router.replace("/dashboard");
-    }
-  }, [router]);
+  // Middleware handles redirect if already logged in
+  // No need to check here to avoid redirect loops
 
   // Restore signup state from sessionStorage on mount
   useEffect(() => {
@@ -131,12 +125,7 @@ export default function SignUpPage() {
     return "";
   };
 
-  const validatePhone = (value: string) => {
-    if (value && !/^[0-9+\s()-]{10,}$/.test(value)) {
-      return "Please enter a valid phone number";
-    }
-    return "";
-  };
+  // Using validatePhoneNumber from phone-input component
 
   // Async validation for email availability
   const checkEmailAvailability = async (email: string): Promise<boolean> => {
@@ -154,11 +143,20 @@ export default function SignUpPage() {
       if (data.emailExists) {
         setFieldErrors((prev) => ({
           ...prev,
-          email: "This email is already registered",
+          email: "This email is already registered. Would you like to login instead?",
         }));
+        setError(
+          <div className="flex items-center justify-between">
+            <span>Email already registered</span>
+            <Link href="/signin" className="text-blue-600 hover:underline font-medium">
+              Go to Login
+            </Link>
+          </div> as any
+        );
         return true; // Email exists
       } else {
         setFieldErrors((prev) => ({ ...prev, email: "" }));
+        setError("");
         return false; // Email available
       }
     } catch (error) {
@@ -171,7 +169,7 @@ export default function SignUpPage() {
 
   // Async validation for phone availability
   const checkPhoneAvailability = async (phone: string): Promise<boolean> => {
-    if (!phone || validatePhone(phone)) return false;
+    if (!phone || validatePhoneNumber(phone)) return false;
 
     setCheckingPhone(true);
     try {
@@ -185,11 +183,20 @@ export default function SignUpPage() {
       if (data.phoneExists) {
         setFieldErrors((prev) => ({
           ...prev,
-          phone: "This phone number is already registered",
+          phone: "This phone number is already registered. Would you like to login instead?",
         }));
+        setError(
+          <div className="flex items-center justify-between">
+            <span>Phone already registered</span>
+            <Link href="/signin" className="text-blue-600 hover:underline font-medium">
+              Go to Login
+            </Link>
+          </div> as any
+        );
         return true; // Phone exists
       } else {
         setFieldErrors((prev) => ({ ...prev, phone: "" }));
+        setError("");
         return false; // Phone available
       }
     } catch (error) {
@@ -230,7 +237,7 @@ export default function SignUpPage() {
       const errors = {
         name: validateName(formData.name),
         email: validateEmail(formData.email),
-        phone: validatePhone(formData.phone),
+        phone: validatePhoneNumber(formData.phone),
         password: validatePassword(formData.password),
         confirmPassword: validateConfirmPassword(formData.confirmPassword),
       };
@@ -365,7 +372,8 @@ export default function SignUpPage() {
       }
 
       localStorage.removeItem("pending_signup");
-      router.push("/signin");
+      // Mark as new user for onboarding
+      router.push("/signin?registered=true");
     } catch (err) {
       console.error("Signup error:", err);
       setError("Signup failed. Try again.");
@@ -650,15 +658,11 @@ export default function SignUpPage() {
                     Phone (Optional)
                   </Label>
                   <div className="relative">
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+91 98765 43210"
+                    <PhoneInput
                       value={formData.phone}
-                      onChange={(e) => {
-                        const value = e.target.value;
+                      onChange={(value) => {
                         setFormData({ ...formData, phone: value });
-                        const error = validatePhone(value);
+                        const error = validatePhoneNumber(value);
                         setFieldErrors({ ...fieldErrors, phone: error });
 
                         // Clear existing timer
@@ -673,19 +677,15 @@ export default function SignUpPage() {
                           setPhoneDebounceTimer(timer);
                         }
                       }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        const error = validatePhone(value);
+                      onBlur={() => {
+                        const error = validatePhoneNumber(formData.phone);
                         setFieldErrors({ ...fieldErrors, phone: error });
-                        if (!error && value) {
-                          checkPhoneAvailability(value);
+                        if (!error && formData.phone) {
+                          checkPhoneAvailability(formData.phone);
                         }
                       }}
-                      className={`h-10 ${
-                        fieldErrors.phone || checkingPhone
-                          ? "border-red-500 focus-visible:ring-red-500/20"
-                          : ""
-                      }`}
+                      error={!!fieldErrors.phone || checkingPhone}
+                      placeholder="Enter 10-digit number"
                     />
                     {checkingPhone && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
