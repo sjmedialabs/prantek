@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { connectDB } from "@/lib/db-config"
+import { connectDB } from "@/lib/mongodb"
 import { chargeCustomerToken, getPaymentDetails } from "@/lib/razorpay"
 import { ObjectId } from "mongodb"
 

@@ -85,7 +85,9 @@ export default function SignUpPage() {
           // Call logout API to clear cookies
           await fetch("/api/auth/logout", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
+            body: JSON.stringify({}),
           }).catch(() => {});
         }
       } catch (err) {
@@ -458,7 +460,9 @@ export default function SignUpPage() {
       try {
         await fetch("/api/auth/logout", {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
+          body: JSON.stringify({}),
         });
       } catch (logoutErr) {
         console.error("Error clearing session:", logoutErr);
@@ -1053,7 +1057,7 @@ export default function SignUpPage() {
 
                   return (
                     <Card
-                      key={plan.id}
+                      key={plan._id || plan.id}
                       className={`relative cursor-pointer overflow-hidden transition-all duration-300 flex flex-col max-h-[200px] md:max-h-[260px] xl:max-h-[270px] ${
                         isSelected
                           ? "border-2 border-blue-600 shadow-2xl bg-gradient-to-br from-blue-50 via-white to-indigo-50"

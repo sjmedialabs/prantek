@@ -340,6 +340,7 @@ export const api = {
       logout: async () => {
         await fetchAPI("/api/auth/logout", {
           method: "POST",
+          body: JSON.stringify({}),
         })
       },
       getCurrentUser: async () => {
