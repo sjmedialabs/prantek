@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Shield, Save, Key, Eye, EyeOff } from "lucide-react"
 import { api } from "@/lib/api-client"
+import { toast } from "@/lib/toast"
+import Link from "next/link"
 
 export default function SecurityPage() {
   const { hasPermission } = useUser()
@@ -61,22 +63,29 @@ export default function SecurityPage() {
       setPasswordError("User not found")
       return
     }
+    console.log(currentUser)
+    // // Verify current password
+    // if (currentUser.password !== passwordData.currentPassword) {
+    //   setPasswordError("Current password is incorrect")
+    //   return
+    // }
 
-    // Verify current password
-    if (currentUser.password !== passwordData.currentPassword) {
-      setPasswordError("Current password is incorrect")
-      return
-    }
-
-    // Update password
-    const updated = await api.users.update(currentUser.id, { password: passwordData.newPassword }, null)
-
-    if (updated) {
+    
+    try{
+        // Update password
+          const updated = await api.auth.updatePassword(
+          currentUser.userId,
+          passwordData.currentPassword,   // 👉 Correct current password
+          passwordData.newPassword        // 👉 Correct new password
+        )
+      toast.success( "Password is updated successfully")
       setPasswordSuccess(true)
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
       setTimeout(() => setPasswordSuccess(false), 3000)
-    } else {
-      setPasswordError("Failed to update password")
+
+    }catch(error){
+      setPasswordError(`Failed to update password current password is incorrect`)
+
     }
   }
 
@@ -147,6 +156,11 @@ export default function SecurityPage() {
               >
                 {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
+            </div>
+             <div className="text-end">
+              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+                Forgot Password?
+              </Link>
             </div>
           </div>
 

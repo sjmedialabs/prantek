@@ -33,7 +33,14 @@ interface NavItem {
 
 const navigationItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
-  {
+  { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
+  { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
+  { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
+  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
+  { name: "Reconciliation", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
+  { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "manage_assets" },
+  { name: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "view_reports" },
+   {
     name: "Settings",
     icon: Settings,
     permission: "tenant_settings",
@@ -50,8 +57,9 @@ const navigationItems: NavItem[] = [
         name: "Product Settings",
         permission: "tenant_settings",
         submenu: [
-          { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
           { name: "Tax Settings", href: "/dashboard/settings/tax", permission: "tenant_settings" },
+          { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
+         
         ],
       },
       {
@@ -65,20 +73,20 @@ const navigationItems: NavItem[] = [
         ],
       },
       {
-        name: "Asset Settings",
-        permission: "tenant_settings",
-        submenu: [
-          { name: "Asset Categories", href: "/dashboard/settings/asset-categories", permission: "tenant_settings" },
-          { name: "Asset Conditions", href: "/dashboard/settings/asset-conditions", permission: "tenant_settings" },
-        ],
-      },
-      {
         name: "HR Settings",
         permission: "tenant_settings",
         submenu: [
           { name: "Roles", href: "/dashboard/roles", permission: "manage_roles" },
           { name: "Employment Type", href: "/dashboard/settings/member-types", permission: "tenant_settings" },
           { name: "Employee Management", href: "/dashboard/settings/employee", permission: "tenant_settings" },
+        ],
+      },
+      {
+        name: "Asset Settings",
+        permission: "tenant_settings",
+        submenu: [
+          { name: "Asset Categories", href: "/dashboard/settings/asset-categories", permission: "tenant_settings" },
+          { name: "Asset Conditions", href: "/dashboard/settings/asset-conditions", permission: "tenant_settings" },
         ],
       },
       {
@@ -93,13 +101,6 @@ const navigationItems: NavItem[] = [
       { name: "Plans", href: "/dashboard/plans", permission: null }
     ],
   },
-  { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
-  { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
-  { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
-  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
-  { name: "Reconciliation", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
-  { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "manage_assets" },
-  { name: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "view_reports" },
 ]
 
 export default function DashboardSidebar() {
