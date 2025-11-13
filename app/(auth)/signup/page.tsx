@@ -422,75 +422,21 @@ export default function SignUpPage() {
       setLoading(false);
     }
   };
-  // ✅ Trigger auto signup after payment
+  // Payment page now handles account creation directly
+  // This useEffect just clears any stale data if user lands here after payment
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
 
     if (paymentStatus === "success") {
-      completeSignup();
-    }
-  }, []);
-
-  const completeSignup = async () => {
-    const stored = localStorage.getItem("pending_signup");
-
-    if (!stored) {
-      setError("Signup data missing. Please signup again.");
-      return;
-    }
-
-    const signupData = JSON.parse(stored);
-
-    try {
-      // Clear any existing sessions and cookies before signup
-      tokenStorage.clearTokens();
-      
-      // Clear all localStorage except pending_signup
-      const pendingSignup = localStorage.getItem("pending_signup");
-      localStorage.clear();
-      if (pendingSignup) {
-        localStorage.setItem("pending_signup", pendingSignup);
-      }
-      
-      // Clear all sessionStorage
-      sessionStorage.clear();
-      
-      // Clear cookies by calling logout API
-      try {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({}),
-        });
-      } catch (logoutErr) {
-        console.error("Error clearing session:", logoutErr);
-      }
-
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupData),
-      });
-
-      if (!res.ok) {
-        const d = await res.json();
-        setError(d.error || "Signup failed");
-        return;
-      }
-
-      // Clean up signup data and session storage
+      // Payment page should have already created account and redirected
+      // If we're here, something went wrong - redirect to signin
+      console.log("Payment success detected but account creation already handled");
       localStorage.removeItem("pending_signup");
       sessionStorage.removeItem("signup_state");
-      
-      // Redirect to signin with registered flag
-      window.location.href = "/signin?registered=true";
-    } catch (err) {
-      console.error("Signup error:", err);
-      setError("Signup failed. Try again.");
+      window.location.replace("/signin");
     }
-  };
+  }, []);
 
   // Step 1: Account Details
   if (step === 1) {
