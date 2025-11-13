@@ -135,14 +135,6 @@ const navigationItems: NavItem[] = [
         ],
       },
       {
-        name: "Asset Settings",
-        permission: "tenant_settings",
-        submenu: [
-          { name: "Asset Categories", href: "/dashboard/settings/asset-categories", permission: "tenant_settings" },
-          { name: "Asset Conditions", href: "/dashboard/settings/asset-conditions", permission: "tenant_settings" },
-        ],
-      },
-      {
         name: "Security Settings",
         permission: "tenant_settings",
         submenu: [
@@ -196,7 +188,7 @@ export default function DashboardSidebar() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const loadedPlans = await await api.subscriptionPlans.getById(
+        const loadedPlans = await api.subscriptionPlans.getById(
           loginedUserLocalStorage.subscriptionPlanId
         );
         setCurrentPlan(loadedPlans);
@@ -204,6 +196,10 @@ export default function DashboardSidebar() {
         console.error("Failed to load dashboard data:", error);
       }
     };
+    
+    if (loginedUserLocalStorage?.subscriptionPlanId) {
+      loadData();
+    }
   }, []);
 
   // ✅ Auto-expand parents of active route
