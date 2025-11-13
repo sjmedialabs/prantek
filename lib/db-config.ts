@@ -29,6 +29,7 @@ export const COLLECTIONS = {
 export const INDEXES = {
   USERS: [
     { key: { email: 1 }, unique: true },
+    { key: { phone: 1 }, unique: false }, // Add index for phone lookups
     { key: { companyId: 1 } },
     { key: { subscriptionPlanId: 1 } },
     { key: { createdAt: -1 } },

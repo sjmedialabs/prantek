@@ -438,8 +438,8 @@ export default function PaymentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.map((payment) => (
-                <TableRow key={payment.id}>
+              {filteredPayments.map((payment, index) => (
+                <TableRow key={payment.id || `payment-${index}`}>
                   <TableCell className="font-medium">{payment.paymentNumber}</TableCell>
                   <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString() : "N/A"}</TableCell>
                   <TableCell>
