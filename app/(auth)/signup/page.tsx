@@ -65,10 +65,38 @@ export default function SignUpPage() {
     useState<NodeJS.Timeout | null>(null);
   const [phoneDebounceTimer, setPhoneDebounceTimer] =
     useState<NodeJS.Timeout | null>(null);
+  const [checkedEmails, setCheckedEmails] = useState<Map<string, boolean>>(new Map());
+  const [checkedPhones, setCheckedPhones] = useState<Map<string, boolean>>(new Map());
   const router = useRouter();
 
-  // Middleware handles redirect if already logged in
-  // No need to check here to avoid redirect loops
+  // Clear any existing sessions when signup page loads
+  useEffect(() => {
+    // Clear tokens and storage on initial load
+    const clearExistingSessions = async () => {
+      try {
+        // Only clear if not coming back from payment
+        const params = new URLSearchParams(window.location.search);
+        const paymentStatus = params.get("payment");
+        
+        if (paymentStatus !== "success") {
+          // Clear tokens
+          tokenStorage.clearTokens();
+          
+          // Call logout API to clear cookies
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({}),
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error("Error clearing sessions:", err);
+      }
+    };
+    
+    clearExistingSessions();
+  }, []);
 
   // Restore signup state from sessionStorage on mount
   useEffect(() => {
@@ -127,18 +155,46 @@ export default function SignUpPage() {
 
   // Using validatePhoneNumber from phone-input component
 
-  // Async validation for email availability
+  // Async validation for email availability with caching
   const checkEmailAvailability = async (email: string): Promise<boolean> => {
     if (!email || validateEmail(email)) return false;
+
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Check cache first
+    if (checkedEmails.has(normalizedEmail)) {
+      const exists = checkedEmails.get(normalizedEmail)!;
+      if (exists) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          email: "This email is already registered. Would you like to login instead?",
+        }));
+        setError(
+          <div className="flex items-center justify-between">
+            <span>Email already registered</span>
+            <Link href="/signin" className="text-blue-600 hover:underline font-medium">
+              Go to Login
+            </Link>
+          </div> as any
+        );
+      } else {
+        setFieldErrors((prev) => ({ ...prev, email: "" }));
+        setError("");
+      }
+      return exists;
+    }
 
     setCheckingEmail(true);
     try {
       const response = await fetch("/api/auth/check-availability", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
       const data = await response.json();
+
+      // Cache the result
+      setCheckedEmails((prev) => new Map(prev).set(normalizedEmail, data.emailExists));
 
       if (data.emailExists) {
         setFieldErrors((prev) => ({
@@ -167,18 +223,46 @@ export default function SignUpPage() {
     }
   };
 
-  // Async validation for phone availability
+  // Async validation for phone availability with caching
   const checkPhoneAvailability = async (phone: string): Promise<boolean> => {
     if (!phone || validatePhoneNumber(phone)) return false;
+
+    const normalizedPhone = phone.trim();
+    
+    // Check cache first
+    if (checkedPhones.has(normalizedPhone)) {
+      const exists = checkedPhones.get(normalizedPhone)!;
+      if (exists) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          phone: "This phone number is already registered. Would you like to login instead?",
+        }));
+        setError(
+          <div className="flex items-center justify-between">
+            <span>Phone already registered</span>
+            <Link href="/signin" className="text-blue-600 hover:underline font-medium">
+              Go to Login
+            </Link>
+          </div> as any
+        );
+      } else {
+        setFieldErrors((prev) => ({ ...prev, phone: "" }));
+        setError("");
+      }
+      return exists;
+    }
 
     setCheckingPhone(true);
     try {
       const response = await fetch("/api/auth/check-availability", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone: normalizedPhone }),
       });
       const data = await response.json();
+
+      // Cache the result
+      setCheckedPhones((prev) => new Map(prev).set(normalizedPhone, data.phoneExists));
 
       if (data.phoneExists) {
         setFieldErrors((prev) => ({
@@ -338,47 +422,21 @@ export default function SignUpPage() {
       setLoading(false);
     }
   };
-  // ✅ Trigger auto signup after payment
+  // Payment page now handles account creation directly
+  // This useEffect just clears any stale data if user lands here after payment
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
 
     if (paymentStatus === "success") {
-      completeSignup();
+      // Payment page should have already created account and redirected
+      // If we're here, something went wrong - redirect to signin
+      console.log("Payment success detected but account creation already handled");
+      localStorage.removeItem("pending_signup");
+      sessionStorage.removeItem("signup_state");
+      window.location.replace("/signin");
     }
   }, []);
-
-  const completeSignup = async () => {
-    const stored = localStorage.getItem("pending_signup");
-
-    if (!stored) {
-      setError("Signup data missing. Please signup again.");
-      return;
-    }
-
-    const signupData = JSON.parse(stored);
-
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupData),
-      });
-
-      if (!res.ok) {
-        const d = await res.json();
-        setError(d.error || "Signup failed");
-        return;
-      }
-
-      localStorage.removeItem("pending_signup");
-      // Mark as new user for onboarding
-      router.push("/signin?registered=true");
-    } catch (err) {
-      console.error("Signup error:", err);
-      setError("Signup failed. Try again.");
-    }
-  };
 
   // Step 1: Account Details
   if (step === 1) {
@@ -618,7 +676,7 @@ export default function SignUpPage() {
                         if (!error && value) {
                           const timer = setTimeout(() => {
                             checkEmailAvailability(value);
-                          }, 800); // 800ms debounce
+                          }, 500); // 500ms debounce - faster response
                           setEmailDebounceTimer(timer);
                         }
                       }}
@@ -673,7 +731,7 @@ export default function SignUpPage() {
                         if (!error && value) {
                           const timer = setTimeout(() => {
                             checkPhoneAvailability(value);
-                          }, 800); // 800ms debounce
+                          }, 500); // 500ms debounce - faster response
                           setPhoneDebounceTimer(timer);
                         }
                       }}
@@ -945,7 +1003,7 @@ export default function SignUpPage() {
 
                   return (
                     <Card
-                      key={plan.id}
+                      key={plan._id || plan.id}
                       className={`relative cursor-pointer overflow-hidden transition-all duration-300 flex flex-col max-h-[200px] md:max-h-[260px] xl:max-h-[270px] ${
                         isSelected
                           ? "border-2 border-blue-600 shadow-2xl bg-gradient-to-br from-blue-50 via-white to-indigo-50"

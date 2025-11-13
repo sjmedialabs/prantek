@@ -174,6 +174,14 @@ export default function DashboardSidebar() {
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
+  // Update CSS variable when collapsed state changes
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--sidebar-width',
+      collapsed ? '4rem' : '16rem'
+    );
+  }, [collapsed]);
+
   const loginedUserLocalStorage = loginedUserLocalStorageString
     ? JSON.parse(loginedUserLocalStorageString)
     : null;

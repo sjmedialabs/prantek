@@ -2,8 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { isSuperAdmin } = body
+    let body = {}
+    try {
+      body = await request.json()
+    } catch (e) {
+      // Handle empty body
+    }
+    const { isSuperAdmin } = body as { isSuperAdmin?: boolean }
 
     const response = NextResponse.json({ success: true })
 

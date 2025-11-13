@@ -10,19 +10,23 @@ export async function POST(request: NextRequest) {
 
     const result: { emailExists?: boolean; phoneExists?: boolean } = {};
 
-    // Check email if provided
+    // Check email if provided - normalized to lowercase for indexed query
     if (email) {
-      const existingUserByEmail = await db.collection(Collections.USERS).findOne({
-        email: { $regex: new RegExp(`^${email}$`, 'i') }
-      });
+      const normalizedEmail = email.toLowerCase().trim();
+      const existingUserByEmail = await db.collection(Collections.USERS).findOne(
+        { email: normalizedEmail },
+        { projection: { _id: 1 } } // Only fetch _id for faster query
+      );
       result.emailExists = !!existingUserByEmail;
     }
 
     // Check phone if provided
     if (phone) {
-      const existingUserByPhone = await db.collection(Collections.USERS).findOne({
-        phone: phone.trim()
-      });
+      const normalizedPhone = phone.trim();
+      const existingUserByPhone = await db.collection(Collections.USERS).findOne(
+        { phone: normalizedPhone },
+        { projection: { _id: 1 } } // Only fetch _id for faster query
+      );
       result.phoneExists = !!existingUserByPhone;
     }
 

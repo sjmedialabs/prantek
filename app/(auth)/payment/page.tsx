@@ -114,9 +114,10 @@ export default function PaymentPage() {
 
   const handlePaymentSuccess = async (response: any) => {
     console.log("[v0] Processing payment success...")
+    setLoading(true)
     
     try {
-      // Get pending signup data from localStorage
+      // Get pending signup data
       const pendingSignupStr = localStorage.getItem("pending_signup")
       if (!pendingSignupStr) {
         console.error("[v0] No pending signup data found")
@@ -125,69 +126,64 @@ export default function PaymentPage() {
       }
 
       const signupData = JSON.parse(pendingSignupStr)
-      console.log("[v0] Found pending signup data:", { email: signupData.email })
+      console.log("[v0] Found pending signup data, creating account...")
 
-      // Calculate trial end date (14 days from now)
-      const trialEndDate = new Date()
-      trialEndDate.setDate(trialEndDate.getDate() + 14)
-
-      // Call the account creation API
-      const createAccountResponse = await fetch("/api/payment/verify-and-create-account", {
+      // Create account directly via register API
+      const registerResponse = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          signupData,
-          paymentId: response.razorpay_payment_id,
-          razorpayOrderId: response.razorpay_order_id || "",
-          razorpaySignature: response.razorpay_signature || "",
-          trialAmount: selectedPlan.trialPrice,
-          planAmount: selectedPlan.actualPrice,
-          trialEndDate: trialEndDate.toISOString(),
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(signupData),
       })
 
-      const result = await createAccountResponse.json()
-
-      if (!result.success) {
-        console.error("[v0] Account creation failed:", result.error)
-        setError(result.error || "Failed to create account after payment")
+      if (!registerResponse.ok) {
+        const error = await registerResponse.json()
+        setError(error.error || "Failed to create account")
         return
       }
 
       console.log("[v0] Account created successfully!")
-
-      // Store tokens in localStorage
-      if (result.accessToken) {
-        localStorage.setItem("accessToken", result.accessToken)
-      }
-      if (result.refreshToken) {
-        localStorage.setItem("refreshToken", result.refreshToken)
-      }
-
-      // Clear pending signup data
-      localStorage.removeItem("pending_signup")
 
       // Store payment details for reference
       localStorage.setItem(
         "paymentDetails",
         JSON.stringify({
           paymentId: response.razorpay_payment_id,
+          orderId: response.razorpay_order_id || "",
+          signature: response.razorpay_signature || "",
           plan: plan,
-          trialAmount: selectedPlan.trialPrice,
-          planAmount: selectedPlan.actualPrice,
           timestamp: new Date().toISOString(),
         }),
       )
 
-      // Show success message and redirect to dashboard
-      setTimeout(() => {
-        router.push("/dashboard?signup=success")
-      }, 2000)
+      // Clear all auth-related storage
+      localStorage.removeItem("pending_signup")
+      localStorage.removeItem("signup_state")
+      sessionStorage.clear()
+      
+      // Remove any tokens that might have been set
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+      localStorage.removeItem("auth_token")
+
+      // Clear cookies
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({}),
+        })
+      } catch (logoutErr) {
+        console.error("Error clearing cookies:", logoutErr)
+      }
+
+      // Single redirect to signin with success message
+      console.log("[v0] Redirecting to signin...")
+      window.location.replace("/signin?registered=true")
     } catch (err) {
       console.error("[v0] Error processing payment success:", err)
       setError("Failed to complete account creation. Please contact support.")
+      setLoading(false)
     }
   }
 
