@@ -32,12 +32,14 @@ interface NavItem {
 }
 
 const navigationItems: NavItem[] = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    permission: null,
-  },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
+  { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
+  { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
+  { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
+  { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
+  { name: "Reconciliation", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
+  { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "manage_assets" },
+  { name: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "view_reports" },
   {
     name: "Settings",
     icon: Settings,
@@ -63,16 +65,10 @@ const navigationItems: NavItem[] = [
         name: "Product Settings",
         permission: "tenant_settings",
         submenu: [
-          {
-            name: "Product Management",
-            href: "/dashboard/settings/items",
-            permission: "tenant_settings",
-          },
-          {
-            name: "Tax Settings",
-            href: "/dashboard/settings/tax",
-            permission: "tenant_settings",
-          },
+          { name: "Tax Settings", href: "/dashboard/settings/tax", permission: "tenant_settings" },
+          { name: "Product Management", href: "/dashboard/settings/items", permission: "tenant_settings" },
+         
+          
         ],
       },
       {
@@ -162,48 +158,12 @@ const navigationItems: NavItem[] = [
       { name: "Plans", href: "/dashboard/plans", permission: null },
     ],
   },
-  {
-    name: "Client",
-    href: "/dashboard/clients",
-    icon: Users,
-    permission: "view_clients",
-  },
-  {
-    name: "Quotation",
-    href: "/dashboard/quotations",
-    icon: FileText,
-    permission: "view_quotations",
-  },
-  {
-    name: "Receipts",
-    href: "/dashboard/receipts",
-    icon: Receipt,
-    permission: "view_receipts",
-  },
-  {
-    name: "Payments",
-    href: "/dashboard/payments",
-    icon: CreditCard,
-    permission: "view_payments",
-  },
-  {
-    name: "Reconciliation",
-    href: "/dashboard/reconciliation",
-    icon: RefreshCw,
-    permission: "view_reconciliation",
-  },
-  {
-    name: "Assets",
-    href: "/dashboard/assets",
-    icon: Package,
-    permission: "manage_assets",
-  },
-  {
-    name: "Reports",
-    href: "/dashboard/reports",
-    icon: BarChart3,
-    permission: "view_reports",
-  },
+
+  
+  
+ 
+
+ 
 ];
 
 export default function DashboardSidebar() {
@@ -228,7 +188,7 @@ export default function DashboardSidebar() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const loadedPlans = await await api.subscriptionPlans.getById(
+        const loadedPlans = await api.subscriptionPlans.getById(
           loginedUserLocalStorage.subscriptionPlanId
         );
         setCurrentPlan(loadedPlans);
@@ -236,6 +196,10 @@ export default function DashboardSidebar() {
         console.error("Failed to load dashboard data:", error);
       }
     };
+    
+    if (loginedUserLocalStorage?.subscriptionPlanId) {
+      loadData();
+    }
   }, []);
 
   // ✅ Auto-expand parents of active route

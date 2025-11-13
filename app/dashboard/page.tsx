@@ -37,7 +37,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const { user } = useUser();
-  const { getCompletionPercentage, isOnboardingComplete, progress } = useOnboarding();
+  const { getCompletionPercentage, isOnboardingComplete, progress, updateProgress } = useOnboarding();
 
   const [stats, setStats] = useState({
     cashInHand: 0,
@@ -77,8 +77,33 @@ export default function DashboardPage() {
     // console.log('[DASHBOARD] subscriptionPlanId:', user?.subscriptionPlanId)
     if (user) {
       loadDashboardData();
+      validateOnboardingProgress();
     }
   }, [user, dateRange]);
+
+  // Validate onboarding progress against real data
+  const validateOnboardingProgress = async () => {
+    try {
+      const [company, clients, categories, taxRates, paymentMethods, items] = await Promise.all([
+        api.company.get().catch(() => null),
+        api.clients.getAll().catch(() => []),
+        api.paymentCategories.getAll().catch(() => []),
+        api.taxRates.getAll().catch(() => []),
+        api.paymentMethods.getAll().catch(() => []),
+        api.items.getAll().catch(() => []),
+      ]);
+
+      // Update progress based on real data
+      updateProgress("companyInfo", !!company?.companyName);
+      updateProgress("clients", (clients?.length || 0) > 0);
+      updateProgress("basicSettings", 
+        (categories?.length || 0) > 0 || (taxRates?.length || 0) > 0 || (paymentMethods?.length || 0) > 0
+      );
+      updateProgress("products", (items?.length || 0) > 0);
+    } catch (err) {
+      console.error("Failed to validate onboarding progress:", err);
+    }
+  };
 
   /** ✅ Rewritten — fetches real DB data using API */
   const loadDashboardData = async () => {

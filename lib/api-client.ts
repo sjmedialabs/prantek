@@ -344,8 +344,17 @@ export const api = {
       },
       getCurrentUser: async () => {
         const data = await fetchAPI("/api/auth/me")
-        return data.user
+        
+        return data
       },
+      updatePassword: async (userId:String,currentPassword:String,newPassword:String)=>{
+        const data = await fetchAPI("/api/auth/update-password", {
+          method: "PUT",
+          body: JSON.stringify({ userId, currentPassword, newPassword}),
+        })
+        console.log("Update password Response:::",data)
+        return data
+      }
     },
 
     // Team Members API
@@ -459,7 +468,7 @@ export const api = {
         return data.data || data.content
       },
       update: async (id: string, contentData: any) => {
-        const data = await fetchAPI(`/api/website-content`, {
+        const data = await fetchAPI(`/api/website-content/${id}`, {
           method: "PUT",
           body: JSON.stringify({ id, updateData: contentData }),
         })

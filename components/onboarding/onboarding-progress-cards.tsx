@@ -47,12 +47,10 @@ export function OnboardingProgressCards() {
         setRealData(newData)
 
         // Auto-update progress based on real data
-        if (newData.hasCompany) updateProgress("companyInfo", true)
-        if (newData.clientsCount > 0) updateProgress("clients", true)
-        if (newData.categoriesCount > 0 || newData.taxRatesCount > 0 || newData.paymentMethodsCount > 0) {
-          updateProgress("basicSettings", true)
-        }
-        if (newData.itemsCount > 0) updateProgress("products", true)
+        updateProgress("companyInfo", newData.hasCompany)
+        updateProgress("clients", newData.clientsCount > 0)
+        updateProgress("basicSettings", newData.categoriesCount > 0 || newData.taxRatesCount > 0 || newData.paymentMethodsCount > 0)
+        updateProgress("products", newData.itemsCount > 0)
 
         setLoading(false)
       } catch (error) {
@@ -101,12 +99,12 @@ export function OnboardingProgressCards() {
   const completionPercentage = getCompletionPercentage()
   const completedCount = Object.values(progress).filter((v) => v).length
 
-  // Sequential access control
+  // Sequential access control based on real data
   const canAccessCard = (card: any) => {
     if (card.title === "Company Profile") return true
-    if (card.title === "Basic Settings") return progress.companyInfo
-    if (card.title === "Clients") return progress.companyInfo && progress.basicSettings
-    if (card.title === "Products/Services") return progress.companyInfo && progress.basicSettings && progress.clients
+    if (card.title === "Basic Settings") return realData.hasCompany
+    if (card.title === "Clients") return realData.hasCompany && (realData.categoriesCount > 0 || realData.taxRatesCount > 0 || realData.paymentMethodsCount > 0)
+    if (card.title === "Products/Services") return realData.hasCompany && (realData.categoriesCount > 0 || realData.taxRatesCount > 0 || realData.paymentMethodsCount > 0) && realData.clientsCount > 0
     return false
   }
 
@@ -114,7 +112,7 @@ export function OnboardingProgressCards() {
     {
       title: "Company Profile",
       icon: Building2,
-      completed: progress.companyInfo,
+      completed: realData.hasCompany, // Use real data instead of progress state
       action: () => setCurrentStep(1),
       link: "/dashboard/settings/company",
       color: "blue",
@@ -126,7 +124,7 @@ export function OnboardingProgressCards() {
     {
       title: "Basic Settings",
       icon: Settings,
-      completed: progress.basicSettings,
+      completed: realData.categoriesCount > 0 || realData.taxRatesCount > 0 || realData.paymentMethodsCount > 0, // Use real data
       action: () => setCurrentStep(3),
       link: "/dashboard/settings/tax",
       color: "purple",
@@ -142,7 +140,7 @@ export function OnboardingProgressCards() {
     {
       title: "Clients",
       icon: Users,
-      completed: progress.clients,
+      completed: realData.clientsCount > 0, // Use real data
       action: () => setCurrentStep(2),
       link: "/dashboard/clients",
       color: "green",
@@ -154,7 +152,7 @@ export function OnboardingProgressCards() {
     {
       title: "Products/Services",
       icon: Package,
-      completed: progress.products,
+      completed: realData.itemsCount > 0, // Use real data
       action: () => setCurrentStep(4),
       link: "/dashboard/settings/items",
       color: "orange",

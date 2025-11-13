@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Dialog,
@@ -6,17 +6,20 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Sparkles, Building2, Users, Settings, Package } from "lucide-react"
-import { useOnboarding } from "./onboarding-context"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Building2, Users, Settings, Package } from "lucide-react";
+import { useOnboarding } from "./onboarding-context";
 
 export function WelcomeModal() {
-  const { showWelcome, startOnboarding, skipOnboarding } = useOnboarding()
+  const { showWelcome, startOnboarding, skipOnboarding } = useOnboarding();
 
   return (
-    <Dialog open={showWelcome} onOpenChange={(open) => !open && skipOnboarding()}>
-      <DialogContent className="max-w-[80vw] max-h-[80vh] overflow-y-auto">
+    <Dialog
+      open={showWelcome}
+      onOpenChange={(open) => !open && skipOnboarding()}
+    >
+      <DialogContent className="!min-w-[90%] !min-h-[90%] overflow-y-auto">
         <DialogHeader className="space-y-4">
           <div className="flex items-center justify-center">
             <div className="rounded-full bg-gradient-to-r from-blue-500 to-purple-500 p-3">
@@ -27,7 +30,8 @@ export function WelcomeModal() {
             Welcome to Your Business Management Platform! 🎉
           </DialogTitle>
           <DialogDescription className="text-center text-base">
-            Let's get you started with a quick setup to unlock the full potential of your account
+            Let's get you started with a quick setup to unlock the full
+            potential of your account
           </DialogDescription>
         </DialogHeader>
 
@@ -38,13 +42,16 @@ export function WelcomeModal() {
               Why is the basic setup important?
             </h3>
             <p className="text-gray-700 leading-relaxed mb-4">
-              Completing your setup ensures you get the most out of this platform. By adding your
-              company information, clients, settings, and products/services, you'll be able to:
+              Completing your setup ensures you get the most out of this
+              platform. By adding your company information, clients, settings,
+              and products/services, you'll be able to:
             </p>
             <ul className="space-y-2 text-gray-700">
               <li className="flex items-start">
                 <span className="text-green-500 mr-2">✓</span>
-                <span>Create professional invoices and quotations instantly</span>
+                <span>
+                  Create professional invoices and quotations instantly
+                </span>
               </li>
               <li className="flex items-start">
                 <span className="text-green-500 mr-2">✓</span>
@@ -72,7 +79,9 @@ export function WelcomeModal() {
                   <Building2 className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">Company Information</h4>
+                  <h4 className="font-medium text-gray-900">
+                    Company Information
+                  </h4>
                   <p className="text-sm text-gray-600">
                     Add your business details, logo, and contact information
                   </p>
@@ -108,7 +117,9 @@ export function WelcomeModal() {
                   <Package className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">Products/Services</h4>
+                  <h4 className="font-medium text-gray-900">
+                    Products/Services
+                  </h4>
                   <p className="text-sm text-gray-600">
                     Add items you sell for quick invoice creation
                   </p>
@@ -119,8 +130,9 @@ export function WelcomeModal() {
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <p className="text-sm text-amber-800 text-center">
-              ⏱️ This setup takes about <strong>5-10 minutes</strong> and you can complete it at
-              your own pace. Don't worry, you can always come back to it later!
+              ⏱️ This setup takes about <strong>5-10 minutes</strong> and you
+              can complete it at your own pace. Don't worry, you can always come
+              back to it later!
             </p>
           </div>
         </div>
@@ -144,5 +156,5 @@ export function WelcomeModal() {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

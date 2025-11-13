@@ -126,7 +126,7 @@ const handleSubmit = async () => {
 
       setMemberTypes((prev) =>
         prev.map((type) =>
-          type.id === id ? { ...type, isActive } : type
+          type._id === id ? { ...type, isActive } : type
         )
 
       )
@@ -211,10 +211,10 @@ const handleSubmit = async () => {
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      {/* <Button
+                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleActive(type?.id || "")}
+                      onClick={() => toggleActive(type._id, !type.isActive)}
                       title={type.isActive === false ? "Enable" : "Disable"}
                     >
                       {type.isActive === false ? (
@@ -222,7 +222,8 @@ const handleSubmit = async () => {
                       ) : (
                         <PowerOff className="h-4 w-4 text-red-500" />
                       )}
-                    </Button> */}
+                    </Button>
+                    
                       {/* <Switch
                         checked={!!type.isActive}   // ✅ ensures boolean
                         onCheckedChange={(checked) => toggleActive(type?._id, checked)}
