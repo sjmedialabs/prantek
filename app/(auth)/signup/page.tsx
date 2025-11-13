@@ -67,8 +67,32 @@ export default function SignUpPage() {
     useState<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
-  // Middleware handles redirect if already logged in
-  // No need to check here to avoid redirect loops
+  // Clear any existing sessions when signup page loads
+  useEffect(() => {
+    // Clear tokens and storage on initial load
+    const clearExistingSessions = async () => {
+      try {
+        // Only clear if not coming back from payment
+        const params = new URLSearchParams(window.location.search);
+        const paymentStatus = params.get("payment");
+        
+        if (paymentStatus !== "success") {
+          // Clear tokens
+          tokenStorage.clearTokens();
+          
+          // Call logout API to clear cookies
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "include",
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.error("Error clearing sessions:", err);
+      }
+    };
+    
+    clearExistingSessions();
+  }, []);
 
   // Restore signup state from sessionStorage on mount
   useEffect(() => {
@@ -359,6 +383,29 @@ export default function SignUpPage() {
     const signupData = JSON.parse(stored);
 
     try {
+      // Clear any existing sessions and cookies before signup
+      tokenStorage.clearTokens();
+      
+      // Clear all localStorage except pending_signup
+      const pendingSignup = localStorage.getItem("pending_signup");
+      localStorage.clear();
+      if (pendingSignup) {
+        localStorage.setItem("pending_signup", pendingSignup);
+      }
+      
+      // Clear all sessionStorage
+      sessionStorage.clear();
+      
+      // Clear cookies by calling logout API
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch (logoutErr) {
+        console.error("Error clearing session:", logoutErr);
+      }
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -371,9 +418,12 @@ export default function SignUpPage() {
         return;
       }
 
+      // Clean up signup data and session storage
       localStorage.removeItem("pending_signup");
-      // Mark as new user for onboarding
-      router.push("/signin?registered=true");
+      sessionStorage.removeItem("signup_state");
+      
+      // Redirect to signin with registered flag
+      window.location.href = "/signin?registered=true";
     } catch (err) {
       console.error("Signup error:", err);
       setError("Signup failed. Try again.");
