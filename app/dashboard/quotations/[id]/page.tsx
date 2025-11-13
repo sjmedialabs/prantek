@@ -417,8 +417,8 @@ export default function QuotationDetailsPage() {
                 <span className="font-medium">{quotation.clientName}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Amount:</span>
-                <span className="font-medium">₹{(quotation.total || 0).toLocaleString()}</span>
+                <span className="text-gray-600">Grand Total:</span>
+                <span className="font-medium">₹{(quotation.grandTotal || 0).toLocaleString()}</span>
               </div>
             </div>
           </div>

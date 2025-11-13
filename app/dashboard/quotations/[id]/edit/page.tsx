@@ -308,7 +308,7 @@ export default function EditQuotationPage() {
       if (it.price <= 0) return toast.error("Price must be > 0.")
     }
     if (!date) return toast.error("Select a date.")
-    if (!validityDate) return toast.error("Select a validity date.")
+    // Validity date is now optional
     if (!clientEmail.trim()) return toast.error("Client email required.")
 
     try {
@@ -389,8 +389,8 @@ export default function EditQuotationPage() {
   const isLast = curIdx === tabs.length - 1
 
   const handleContinue = () => {
-    if (activeTab === "quotation" && (!date || !validityDate)) {
-      toast.error("Fill date & validity")
+    if (activeTab === "quotation" && !date) {
+      toast.error("Please select a date")
       return
     }
     if (activeTab === "client" && (!clientName || !clientAddress || !clientContact || !clientEmail)) {

@@ -282,10 +282,7 @@ updatedItem.total = updatedItem.amount + updatedItem.taxAmount
      toast.error("Please select a date.")
     return
   }
-  if(!validityDate){
-     toast.error("Please select a validityDate.")
-    return
-  }
+  // Validity date is now optional
   if(!clientEmail.trim()){
      toast.error("Please enter the clientEmail.")
     return
@@ -396,9 +393,9 @@ updatedItem.total = updatedItem.amount + updatedItem.taxAmount
   const handleContinue = () => {
   // Check fields only when on "quotation" tab
   if (activeTab === "quotation") {
-    if (!date || !validityDate) {
+    if (!date) {
       // setError("Please fill all required fields before moving to next step.");
-      toast.error("Please fill all required fields before moving to next step.")
+      toast.error("Please select a date before moving to next step.")
       return; // stop navigation!
     }
   }
@@ -486,12 +483,6 @@ const clientOptions = clients.map((c) => ({
                       placeholder="Add any additional notes or terms"
                       rows={3}
                     />
-                  </div>
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold">Quotation Total:</span>
-                      <span className="text-2xl font-bold text-purple-600">₹{quotationTotal.toLocaleString()}</span>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
