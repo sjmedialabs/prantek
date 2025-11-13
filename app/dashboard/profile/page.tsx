@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { User, Mail, Phone, MapPin, Save, CreditCard, Check, Zap } from "lucide-react"
+import { User, Mail, Phone, MapPin, Save, CreditCard, Check, Zap, Edit2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
@@ -26,12 +26,13 @@ interface SubscriptionPlan {
 export default function ProfilePage() {
   const { user } = useUser()
   const [saved, setSaved] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [profileData, setProfileData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    phone: "",
-    address: "",
-    avatar: "",
+    phone: user?.phone || "",
+    address: user?.address || "",
+    avatar: user?.avatar || "",
   })
 
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
@@ -42,6 +43,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadPlans()
+    // Update profile data when user changes
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        avatar: user.avatar || "",
+      })
+    }
   }, [user])
 
   const loadPlans = async () => {
@@ -67,16 +78,49 @@ export default function ProfilePage() {
     }
   }
 
-  const handleSave = async () => {
+  const handleSaveProfile = async () => {
+    if (!user) return
+    
     try {
+      const updateData = {
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        address: profileData.address,
+        avatar: profileData.avatar,
+      }
+      
+      console.log("[Profile] Saving profile data:", updateData)
+      
       // Save profile data to backend via API
+      const result = await api.users.update(user.id, updateData)
+      
+      console.log("[Profile] Save result:", result)
+      
       toast({ title: "Success", description: "Profile updated successfully" })
+      setIsEditingProfile(false)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
+      
+      // Note: Removed auto-reload - you may need to manually refresh to see avatar in sidebar/header
     } catch (error) {
-      console.error("Error saving profile:", error)
+      console.error("[Profile] Error saving profile:", error)
       toast({ title: "Error", description: "Failed to update profile", variant: "destructive" })
     }
+  }
+
+  const handleCancelEdit = () => {
+    // Reset to original user data
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        avatar: user.avatar || "",
+      })
+    }
+    setIsEditingProfile(false)
   }
 
   const handlePlanSelection = async (plan: SubscriptionPlan) => {
@@ -141,28 +185,197 @@ export default function ProfilePage() {
         </Alert>
       )}
 
-      {/* Profile Overview */}
+      {/* Profile Overview with Edit */}
       <Card>
         <CardHeader>
-          <CardTitle>Profile Overview</CardTitle>
-          <CardDescription>Your account information and role</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-start space-x-6">
-            <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center">
-              <User className="h-12 w-12 text-purple-600" />
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Profile Overview</CardTitle>
+              <CardDescription>Your account information and personal details</CardDescription>
             </div>
+            {!isEditingProfile ? (
+              <Button onClick={() => setIsEditingProfile(true)} variant="outline" size="sm">
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            ) : (
+              <div className="flex space-x-2">
+                <Button onClick={handleSaveProfile} size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+                <Button onClick={handleCancelEdit} variant="outline" size="sm">
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Profile Picture and Basic Info */}
+          <div className="flex items-start space-x-6">
+            {isEditingProfile ? (
+              <div className="space-y-2">
+                <Label>Profile Picture</Label>
+                <ImageUpload
+                  value={profileData.avatar}
+                  onChange={(value) => {
+                    console.log("[Profile] Avatar updated:", value)
+                    setProfileData({ ...profileData, avatar: value })
+                  }}
+                  previewClassName="w-24 h-24 rounded-full"
+                  description="Upload your profile picture"
+                  maxSizeMB={2}
+                  allowedTypes={["image/*"]}
+                />
+              </div>
+            ) : (
+              <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center overflow-hidden">
+                {profileData.avatar ? (
+                  <img src={profileData.avatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-12 w-12 text-purple-600" />
+                )}
+              </div>
+            )}
             <div className="flex-1 space-y-4">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
-                <p className="text-gray-600">{user?.email}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">{user?.role?.replace("-", " ") || "User"}</Badge>
-                {currentPlan && <Badge variant="outline">{currentPlan.name} Plan</Badge>}
-              </div>
+              {isEditingProfile ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">
+                        <User className="inline h-4 w-4 mr-1" />
+                        Full Name
+                      </Label>
+                      <Input
+                        id="edit-name"
+                        value={profileData.name}
+                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">
+                        <Mail className="inline h-4 w-4 mr-1" />
+                        Email Address
+                      </Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                        placeholder="your.email@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-phone">
+                        <Phone className="inline h-4 w-4 mr-1" />
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="edit-phone"
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                        placeholder="+91 12345 67890"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-address">
+                        <MapPin className="inline h-4 w-4 mr-1" />
+                        Address
+                      </Label>
+                      <Input
+                        id="edit-address"
+                        value={profileData.address}
+                        onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                        placeholder="Your address"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">{profileData.name}</h3>
+                    <p className="text-gray-600">{profileData.email}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary">{user?.role?.replace("-", " ") || "User"}</Badge>
+                    {currentPlan && <Badge variant="outline">{currentPlan.name} Plan</Badge>}
+                  </div>
+                </>
+              )}
             </div>
           </div>
+
+          {!isEditingProfile && (
+            <>
+              <Separator />
+              
+              {/* Contact Information */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Contact Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start space-x-3">
+                    <Phone className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Phone Number</p>
+                      <p className="font-medium text-gray-900">{profileData.phone || "Not provided"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600">Address</p>
+                      <p className="font-medium text-gray-900">{profileData.address || "Not provided"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+              
+              {/* Account Information */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Account Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">User ID</p>
+                    <p className="font-medium text-gray-900 font-mono text-xs">{user?.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Account Role</p>
+                    <p className="font-medium text-gray-900 capitalize">{user?.role?.replace("-", " ") || "User"}</p>
+                  </div>
+                  {user?.subscriptionEndDate && (
+                    <div>
+                      <p className="text-sm text-gray-600">Subscription Expires</p>
+                      <p className="font-medium text-gray-900">
+                        {new Date(user.subscriptionEndDate).toLocaleDateString("en-IN", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  )}
+                  {user?.subscriptionStatus && (
+                    <div>
+                      <p className="text-sm text-gray-600">Subscription Status</p>
+                      <Badge
+                        variant={user.subscriptionStatus === "active" ? "default" : "secondary"}
+                        className="mt-1"
+                      >
+                        {user.subscriptionStatus}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -245,110 +458,6 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Personal Information */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>Update your personal details</CardDescription>
-            </div>
-            <Button onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <ImageUpload
-            label="Profile Picture"
-            value={profileData.avatar}
-            onChange={(value) => setProfileData({ ...profileData, avatar: value })}
-            description="Upload a profile picture (PNG, JPG) or provide a URL"
-            previewClassName="w-20 h-20 rounded-full"
-          />
-
-          <Separator />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">
-                <User className="inline h-4 w-4 mr-1" />
-                Full Name
-              </Label>
-              <Input
-                id="name"
-                value={profileData.name}
-                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">
-                <Mail className="inline h-4 w-4 mr-1" />
-                Email Address
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={profileData.email}
-                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                placeholder="your.email@example.com"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">
-                <Phone className="inline h-4 w-4 mr-1" />
-                Phone Number
-              </Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                placeholder="+91 12345 67890"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">
-                <MapPin className="inline h-4 w-4 mr-1" />
-                Address
-              </Label>
-              <Input
-                id="address"
-                value={profileData.address}
-                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                placeholder="Your address"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Account Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Information</CardTitle>
-          <CardDescription>Your account details and permissions</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">User ID</p>
-              <p className="font-semibold">{user?.id}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Role</p>
-              <p className="font-semibold">{user?.role?.replace("-", " ") || "User"}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -361,7 +470,7 @@ export default function ProfilePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             {availablePlans.length === 0 ? (
-              <div className="col-span-3 text-center py-8">
+              <div key="no-plans" className="col-span-3 text-center py-8">
                 <p className="text-gray-600 mb-2">No subscription plans available</p>
                 <p className="text-sm text-gray-500">
                   Please contact the administrator or check the super admin panel to create subscription plans.
@@ -369,12 +478,14 @@ export default function ProfilePage() {
               </div>
             ) : (
               availablePlans.map((plan) => {
-                const isCurrentPlan = currentPlan?.id === plan.id
+                const planId = plan.id || plan._id?.toString()
+                const currentPlanId = currentPlan?.id || currentPlan?._id?.toString()
+                const isCurrentPlan = currentPlanId === planId
                 const isUpgrade = currentPlan && plan.price > currentPlan.price
 
                 return (
                   <Card
-                    key={plan.id}
+                    key={planId}
                     className={`relative ${isCurrentPlan ? "border-purple-500 border-2" : ""} ${isUpgrade ? "shadow-lg" : ""}`}
                   >
                     {isCurrentPlan && (

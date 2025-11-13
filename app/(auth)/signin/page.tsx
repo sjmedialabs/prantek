@@ -86,6 +86,11 @@ function SignInForm() {
         // Set last activity timestamp for session tracking
         localStorage.setItem('last_activity', Date.now().toString())
 
+        // Check if this is a new user (from registration redirect)
+        if (searchParams.get("registered") === "true" || authResult.isNewUser) {
+          localStorage.setItem(`new_user_${authResult.user.id}`, "true")
+        }
+
         // Redirect with full page reload
         window.location.href = "/dashboard"
       } else {

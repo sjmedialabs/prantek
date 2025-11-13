@@ -7,11 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, LinkIcon, Loader2 } from "lucide-react"
-import Image from "next/image"
 import { toast } from "@/lib/toast"
 
 interface ImageUploadProps {
-  label: string
+  label?: string
   value?: string
   onChange: (value: string) => void
   accept?: string
@@ -47,11 +46,17 @@ export function ImageUpload({
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      console.log("[ImageUpload] No file selected")
+      return
+    }
+
+    console.log("[ImageUpload] File selected:", { name: file.name, size: file.size, type: file.type })
 
     // ✅ Validate size
     const maxBytes = maxSizeMB * 1024 * 1024
     if (file.size > maxBytes) {
+      console.error("[ImageUpload] File too large:", file.size, ">", maxBytes)
       toast.error("File Too Large", `File must be under ${maxSizeMB}MB`)
       return
     }
@@ -62,6 +67,7 @@ export function ImageUpload({
     )
 
     if (!fileTypeValid) {
+      console.error("[ImageUpload] Invalid file type:", file.type)
       toast.error("Invalid File Type", "This type is not allowed")
       return
     }
@@ -71,17 +77,30 @@ export function ImageUpload({
       const formData = new FormData()
       formData.append("file", file)
 
+      console.log("[ImageUpload] Uploading to /api/upload...")
+
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       })
 
-      if (!response.ok) throw new Error("Upload failed")
+      console.log("[ImageUpload] Upload response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("[ImageUpload] Upload failed:", errorData)
+        throw new Error(errorData.error || "Upload failed")
+      }
 
       const data = await response.json()
+      console.log("[ImageUpload] Upload successful:", data)
+      
       onChange(data.url)
+      console.log("[ImageUpload] onChange called with URL:", data.url)
+      
       toast.success("File uploaded successfully")
     } catch (error) {
+      console.error("[ImageUpload] Upload error:", error)
       toast.error(error instanceof Error ? error.message : "Upload failed")
     } finally {
       setUploading(false)
@@ -97,18 +116,21 @@ export function ImageUpload({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <Label>{label}</Label>
+      {label && <Label>{label}</Label>}
 
       {/* ✅ Preview + remove */}
       {value && (
         <div className="flex items-center gap-4">
           {isImageType ? (
-            <div className={`relative ${previewClassName} rounded-lg border overflow-hidden bg-gray-50`}>
-              <Image
-                src={value || "/placeholder.svg"}
+            <div className={`${previewClassName} rounded-lg border overflow-hidden bg-gray-50`}>
+              <img
+                src={value}
                 alt={`${label} preview`}
-                fill
-                className="object-contain"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error("Image load error:", value)
+                  e.currentTarget.src = "/placeholder.svg"
+                }}
               />
             </div>
           ) : (
