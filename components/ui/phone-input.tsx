@@ -74,7 +74,7 @@ export function PhoneInput({
   return (
     <div className="flex gap-2">
       <Select value={countryCode} onValueChange={handleCountryCodeChange}>
-        <SelectTrigger className={`w-[80px] ${error ? "border-red-500" : ""}`}>
+        <SelectTrigger className={`w-[68px] ${error ? "border-red-500" : ""}`}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

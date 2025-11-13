@@ -223,47 +223,52 @@ export function OnboardingWizard() {
     applyTax: false,
   });
 
-  const [taxRates, setTaxRates] = useState<any[]>([])
+  const [taxRates, setTaxRates] = useState<any[]>([]);
 
   // Load existing data when component mounts or step changes
   useEffect(() => {
-    loadExistingData()
-  }, [currentStep])
+    loadExistingData();
+  }, [currentStep]);
 
   // Validate progress against real data on mount
   useEffect(() => {
-    validateProgressWithRealData()
-  }, [])
+    validateProgressWithRealData();
+  }, []);
 
   const validateProgressWithRealData = async () => {
     try {
-      const [company, clients, categories, taxRates, paymentMethods, items] = await Promise.all([
-        api.company.get().catch(() => null),
-        api.clients.getAll().catch(() => []),
-        api.paymentCategories.getAll().catch(() => []),
-        api.taxRates.getAll().catch(() => []),
-        api.paymentMethods.getAll().catch(() => []),
-        api.items.getAll().catch(() => []),
-      ])
+      const [company, clients, categories, taxRates, paymentMethods, items] =
+        await Promise.all([
+          api.company.get().catch(() => null),
+          api.clients.getAll().catch(() => []),
+          api.paymentCategories.getAll().catch(() => []),
+          api.taxRates.getAll().catch(() => []),
+          api.paymentMethods.getAll().catch(() => []),
+          api.items.getAll().catch(() => []),
+        ]);
 
       // Update progress based on real data
-      if (company?.companyName) updateProgress("companyInfo", true)
-      if (clients?.length > 0) updateProgress("clients", true)
-      if ((categories?.length > 0) || (taxRates?.length > 0) || (paymentMethods?.length > 0)) {
-        updateProgress("basicSettings", true)
+      if (company?.companyName) updateProgress("companyInfo", true);
+      if (clients?.length > 0) updateProgress("clients", true);
+      if (
+        categories?.length > 0 ||
+        taxRates?.length > 0 ||
+        paymentMethods?.length > 0
+      ) {
+        updateProgress("basicSettings", true);
       }
-      if (items?.length > 0) updateProgress("products", true)
+      if (items?.length > 0) updateProgress("products", true);
     } catch (err) {
-      console.error("Failed to validate progress:", err)
+      console.error("Failed to validate progress:", err);
     }
-  }
+  };
 
   const loadExistingData = async () => {
     try {
       switch (currentStep) {
         case 1:
           // Load company data
-          const companyInfo = await api.company.get()
+          const companyInfo = await api.company.get();
           if (companyInfo) {
             setCompanyData({
               companyName: companyInfo.companyName || "",
@@ -277,28 +282,28 @@ export function OnboardingWizard() {
               pan: companyInfo.pan || "",
               logo: companyInfo.logo || "",
               website: companyInfo.website || "",
-            })
+            });
           }
-          break
+          break;
         case 3:
           // Load tax rates for reference
-          const rates = await api.taxRates.getAll()
-          setTaxRates(Array.isArray(rates) ? rates : [])
-          break
+          const rates = await api.taxRates.getAll();
+          setTaxRates(Array.isArray(rates) ? rates : []);
+          break;
       }
     } catch (err) {
-      console.error("Failed to load existing data:", err)
+      console.error("Failed to load existing data:", err);
     }
-  }
+  };
 
   const loadTaxRates = async () => {
     try {
-      const rates = await api.taxRates.getAll()
-      setTaxRates(Array.isArray(rates) ? rates : [])
+      const rates = await api.taxRates.getAll();
+      setTaxRates(Array.isArray(rates) ? rates : []);
     } catch (err) {
-      console.error("Failed to load tax rates:", err)
+      console.error("Failed to load tax rates:", err);
     }
-  }
+  };
 
   const handleNext = async () => {
     setLoading(true);
@@ -330,6 +335,30 @@ export function OnboardingWizard() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(companyData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate phone number format if provided
+    if (companyData.phone) {
+      const phoneError = validatePhoneNumber(companyData.phone);
+      if (phoneError) {
+        toast({
+          title: "Invalid Phone",
+          description: phoneError,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     try {
@@ -423,7 +452,7 @@ export function OnboardingWizard() {
 
   const saveSettings = async () => {
     let anythingSaved = false;
-    
+
     try {
       // Save category
       if (settingsData.category) {
@@ -519,8 +548,10 @@ export function OnboardingWizard() {
   };
 
   const handlePrevious = () => {
-    // Disable going back - sequential flow only
-    return;
+    // Allow going back to previous step
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   const handleContinue = () => {
@@ -546,7 +577,9 @@ export function OnboardingWizard() {
   const currentStepData = STEPS[currentStep - 1];
   const StepIcon = currentStepData.icon;
   // Calculate progress based on actual completed steps, not current step number
-  const completedCount = Object.values(progress).filter((v) => v === true).length;
+  const completedCount = Object.values(progress).filter(
+    (v) => v === true
+  ).length;
   const progressPercent = (completedCount / Object.keys(progress).length) * 100;
 
   // Check if user can access current step (must complete previous steps)
@@ -561,7 +594,10 @@ export function OnboardingWizard() {
 
   return (
     <Dialog open={currentStep > 0} onOpenChange={() => {}}>
-      <DialogContent showCloseButton={false} className="!max-w-[90vw] !w-[90vw] !min-w-[80vw] !h-[90vh] !min-h-[90vh] !max-h-[90vh] !p-0 !gap-0 overflow-hidden flex flex-col rounded-xl">
+      <DialogContent
+        showCloseButton={false}
+        className="!max-w-[90vw] !w-[90vw] !min-w-[80vw] !h-[90vh] !min-h-[90vh] !max-h-[90vh] !p-0 !gap-0 overflow-hidden flex flex-col rounded-xl"
+      >
         <DialogTitle className="sr-only">
           Onboarding Setup - Step {currentStep} of {STEPS.length}:{" "}
           {currentStepData.title}
@@ -1181,13 +1217,25 @@ export function OnboardingWizard() {
 
         {/* Footer Actions */}
         <div className="border-t bg-white px-6 lg:px-10 py-2 flex items-center justify-between flex-shrink-0 shadow-lg">
-          <Button
-            variant="ghost"
-            onClick={handleSkipStep}
-            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-6"
-          >
-            Skip This Step
-          </Button>
+          <div className="flex gap-3">
+            {currentStep > 1 && (
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                className="text-gray-700 border-gray-300 hover:bg-gray-50 px-6"
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              onClick={handleSkipStep}
+              className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-6"
+            >
+              Skip This Step
+            </Button>
+          </div>
 
           <div className="flex gap-3">
             <Button
