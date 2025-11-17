@@ -53,7 +53,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const data = await req.json()
 
     // Validate required fields for employee
-    if (!data.employeeName || !data.designation) {
+    if (!data.employeeName || !data.role && !data.designation) {
       return NextResponse.json(
         { error: "Employee name and designation are required" },
         { status: 400 }
@@ -65,6 +65,11 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
 
     // Generate unique employee number
     const uniqueEmployeeNumber = await generateUniqueEmployeeNumber(db, user.userId)
+    // Map role to designation if designation is not provided
+    if (!cleanData.designation && data.role) {
+      cleanData.designation = data.role
+    }
+
 
     const employee = {
       ...cleanData,
