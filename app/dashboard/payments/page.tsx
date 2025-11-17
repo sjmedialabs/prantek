@@ -430,7 +430,7 @@ export default function PaymentsPage() {
                 <TableHead>Payment No.</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Party Type</TableHead>
-                <TableHead>Party Name</TableHead>
+                <TableHead>Party</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Payment Method</TableHead>
@@ -441,7 +441,7 @@ export default function PaymentsPage() {
             </TableHeader>
             <TableBody>
               {filteredPayments.map((payment, index) => (
-                <TableRow key={payment.id || `payment-${index}`}>
+                <TableRow key={payment._id?.toString() || `payment-${index}`}>
                   <TableCell className="font-medium">{payment.paymentNumber}</TableCell>
                   <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString() : "N/A"}</TableCell>
                   <TableCell>
@@ -472,7 +472,7 @@ export default function PaymentsPage() {
                   {hasPermission("manage_payments") && (
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Link href={`/dashboard/payments/${payment._id}`}>
+                        <Link href={`/dashboard/payments/${payment._id?.toString()}`}>
                           <Button variant="ghost" size="sm">
                             View
                           </Button>

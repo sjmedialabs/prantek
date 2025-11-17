@@ -10,13 +10,9 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    // For admin users, filter by companyId (parent account)
-    // For regular users, filter by userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
-    const quotations = await mongoStore.getAll("quotations", { userId: String(filterUserId) }, { skip, limit, sort: { date: -1 } })
+    const quotations = await mongoStore.getAll("quotations", { userId:String( user.userId) }, { skip, limit, sort: { date: -1 } })
     console.log(quotations)
-    const total = await mongoStore.count("quotations", { userId: filterUserId })
+    const total = await mongoStore.count("quotations", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
@@ -37,10 +33,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
-    // For admin users, use companyId (parent account)
-    // For regular users, use userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
     // Get client name for generating unique number with client code
     let clientName = "Unknown"
     if (body.clientId) {
@@ -53,13 +45,13 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
 
     if (!body.quotationNumber) {
-      body.quotationNumber = await generateNextNumber("quotations", "QT", filterUserId, clientName)
+      body.quotationNumber = await generateNextNumber("quotations", "QT", user.userId, clientName)
     }
 
-    console.log("user id is :::", filterUserId)
-    const quotation = await mongoStore.create("quotations", { ...body, userId: filterUserId })
+    console.log("user id is :::",user.userId)
+    const quotation = await mongoStore.create("quotations", { ...body, userId: user.userId })
 
-    await logActivity(filterUserId, "create", "quotation", quotation._id?.toString(), {
+    await logActivity(user.userId, "create", "quotation", quotation._id?.toString(), {
       quotationNumber: body.quotationNumber,
     })
 
@@ -69,7 +61,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         quotation._id?.toString() || "",
         body.quotationNumber,
         clientName,
-        filterUserId
+        user.userId
       )
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)

@@ -20,25 +20,6 @@ export default function PaymentDetailsPage() {
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [payment, setPayment] = useState<Payment | null>(null)
   const [loading, setLoading] = useState(true)
-  const numberToWords = (num: number) => {
-  const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen",
-    "Sixteen", "Seventeen", "Eighteen", "Nineteen"
-  ];
-  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-
-  const inWords = (n: number): string => {
-    if (n < 20) return a[n];
-    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? " " + a[n % 10] : "");
-    if (n < 1000) return a[Math.floor(n / 100)] + " Hundred " + (n % 100 ? inWords(n % 100) : "");
-    if (n < 100000) return inWords(Math.floor(n / 1000)) + " Thousand " + (n % 1000 ? inWords(n % 1000) : "");
-    if (n < 10000000) return inWords(Math.floor(n / 100000)) + " Lakh " + (n % 100000 ? inWords(n % 100000) : "");
-    return inWords(Math.floor(n / 10000000)) + " Crore " + (n % 10000000 ? inWords(n % 10000000) : "");
-  };
-
-  return inWords(num).trim() + " Rupees Only";
-};
 
   useEffect(() => {
     getCompanyDetails().then(setCompanyDetails)
@@ -48,8 +29,7 @@ export default function PaymentDetailsPage() {
     const loadPayment = async () => {
       try {
         const paymentData = await api.payments.getById(paymentId)
-        setPayment(paymentData.payment)
-        console.log("[v0] Payment data:", paymentData.payment)
+        setPayment(paymentData)
       } catch (error) {
         console.error("[v0] Error loading payment:", error)
       } finally {
@@ -78,20 +58,23 @@ export default function PaymentDetailsPage() {
   }
 
   const paymentForPrint = {
-    _id : payment._id,
     paymentNumber: payment.paymentNumber,
     date: payment.date,
-    recipientType: payment.recipientType,
-    recipientName: payment.recipientName,
-    recipientId: payment.recipientId,
+    client: {
+      name: payment.clientName,
+      address: payment.clientAddress || "",
+      phone: payment.clientPhone || "",
+      email: payment.clientEmail || "",
+    },
     paymentCategory: payment.category,
     description: payment.description,
     amount: payment.amount,
     paymentMethod: payment.paymentMethod,
     referenceNumber: payment.referenceNumber || "",
     status: payment.status,
+    createdBy: payment.createdBy || "N/A",
   }
-  console.log("payment for view page",paymentForPrint)
+
   const handleDownloadPDF = async () => {
     await generatePDF("print-content", `Payment-${payment.paymentNumber}.pdf`)
   }
@@ -162,7 +145,7 @@ export default function PaymentDetailsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
-                  <Badge variant={payment.status === "completed" ? "default" : "secondary"}>{payment.status}</Badge>
+                  <Badge variant={payment.status === "Cleared" ? "default" : "secondary"}>{payment.status}</Badge>
                 </div>
               </div>
               <Separator />
@@ -176,31 +159,31 @@ export default function PaymentDetailsPage() {
           {/* Client Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Party Details</CardTitle>
+              <CardTitle>Client Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-gray-600">Party Name</p>
-                <p className="font-semibold">{payment.recipientName}</p>
+                <p className="text-sm text-gray-600">Client Name</p>
+                <p className="font-semibold">{payment.clientName}</p>
               </div>
-              {payment.recipientId && (
+              {payment.clientEmail && (
                 <div>
-                  <p className="text-sm text-gray-600">Party ID</p>
-                  <p className="font-semibold">{payment.recipientId}</p>
+                  <p className="text-sm text-gray-600">Email</p>
+                  <p className="font-semibold">{payment.clientEmail}</p>
                 </div>
               )}
-              {payment.recipientType && (
+              {payment.clientPhone && (
                 <div>
-                  <p className="text-sm text-gray-600">Party Type</p>
-                  <p className="font-semibold">{payment.recipientType}</p>
+                  <p className="text-sm text-gray-600">Phone</p>
+                  <p className="font-semibold">{payment.clientPhone}</p>
                 </div>
               )}
-              {/* {payment.clientAddress && (
+              {payment.clientAddress && (
                 <div>
                   <p className="text-sm text-gray-600">Address</p>
                   <p className="font-semibold">{payment.clientAddress}</p>
                 </div>
-              )} */}
+              )}
             </CardContent>
           </Card>
 
@@ -213,7 +196,7 @@ export default function PaymentDetailsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Payment Method</p>
-                  <p className="font-semibold capitalize">{payment.paymentMethod}</p>
+                  <p className="font-semibold capitalize">{payment.paymentMethod?.replace("-", " ") || "Unknown"}</p>
                 </div>
                 {payment.bankAccount && (
                   <div>
@@ -227,12 +210,12 @@ export default function PaymentDetailsPage() {
                     <p className="font-semibold">{payment.referenceNumber}</p>
                   </div>
                 )}
-                {/* {payment.createdBy && (
+                {payment.createdBy && (
                   <div>
                     <p className="text-sm text-gray-600">Created By</p>
                     <p className="font-semibold">{payment.createdBy}</p>
                   </div>
-                )} */}
+                )}
                 <div>
                   <p className="text-sm text-gray-600">Created At</p>
                   <p className="font-semibold">{new Date(payment.createdAt).toLocaleString()}</p>
@@ -252,12 +235,12 @@ export default function PaymentDetailsPage() {
             <CardContent className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Payment Amount</p>
-                <p className="text-3xl font-bold text-gray-900">₹{(payment.amount || 0).toLocaleString()}</p>
+                <p className="text-3xl font-bold text-gray-900">₹{payment.amount?.toLocaleString() || "0"}</p>
               </div>
               <Separator />
               <div>
                 <p className="text-sm text-gray-600 mb-1">Amount in Words</p>
-                <p className="font-semibold text-gray-900">{payment.amount ? numberToWords(Number(payment.amount)) : "-"}</p>
+                <p className="font-semibold text-gray-900">{payment.amountInWords}</p>
               </div>
             </CardContent>
           </Card>
@@ -271,9 +254,9 @@ export default function PaymentDetailsPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Current Status</span>
-                  <Badge variant={payment.status === "completed" ? "default" : "secondary"}>{payment.status}</Badge>
+                  <Badge variant={payment.status === "Cleared" ? "default" : "secondary"}>{payment.status}</Badge>
                 </div>
-                {payment.status === "completed" && (
+                {payment.status === "Cleared" && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-800 font-medium">Payment Cleared Successfully</p>
                   </div>

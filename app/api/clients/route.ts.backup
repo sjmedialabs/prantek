@@ -10,17 +10,16 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
  
-    // For admin users, filter by companyId (parent account)
-    // For regular users, filter by userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
+    // console.log(user.userId)
+    //const clients = await mongoStore.getAll("clients", { userId: user.userId }, { skip, limit, sort: { createdAt: -1 } })
     const clients = await mongoStore.getAll(
-      "clients",
-      { userId: String(filterUserId) },
-      { skip, limit, sort: { createdAt: -1 } }
-    )
+  "clients",
+  { userId: String(user.userId) },
+  { skip, limit, sort: { createdAt: -1 } }
+)
+// console.log(clients);
 
-    const total = await mongoStore.count("clients", { userId: filterUserId })
+    const total = await mongoStore.count("clients", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
@@ -41,10 +40,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
-    // For admin users, use companyId (parent account)
-    // For regular users, use userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-    const userId = String(filterUserId)
+    const userId = String(user.userId)  // ensure consistent string value
 
     // ✅ Check if client with same email or name exists under same user
     const existingClient = await mongoStore.findOne("clients", {
@@ -75,3 +71,4 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     return NextResponse.json({ success: false, error: "Failed to create client" }, { status: 500 })
   }
 })
+ 

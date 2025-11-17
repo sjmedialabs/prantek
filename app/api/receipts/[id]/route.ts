@@ -1,75 +1,105 @@
-import { NextRequest, NextResponse } from "next/server"
-import { ObjectId } from "mongodb"
+import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
+import { withAuth } from "@/lib/api-auth"
+import { ObjectId } from "mongodb"
 
-// Extract ID from URL
-function getId(req: NextRequest) {
-  return req.nextUrl.pathname.split("/").pop()!
+// Helper: extract last segment (/api/receipts/ID)
+function getIdFromRequest(req: NextRequest): string {
+  const segments = req.nextUrl.pathname.split("/")
+  return segments[segments.length - 1]
 }
 
-/* ============================
-      GET /api/receipts/:id
-   ============================ */
-export async function GET(req: NextRequest) {
-  try {
-    const db = await connectDB()
-    const id = getId(req)
+/**
+ * GET — Get receipt detail
+ */
+export const GET = withAuth(async (req: NextRequest, user: any) => {
+  const db = await connectDB()
 
-    const receipt = await db
-      .collection(Collections.RECEIPTS)
-      .findOne({ _id: new ObjectId(id) })
+  const id = getIdFromRequest(req)
 
-    if (!receipt) {
-      return NextResponse.json(
-        { error: "Receipt not found" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({ receipt }, { status: 200 })
-  } catch (error: any) {
-    console.error("GET receipt error:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch receipt", message: error.message },
-      { status: 500 }
-    )
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json({ error: "Invalid receipt ID" }, { status: 400 })
   }
-}
 
-/* ============================
-      PUT /api/receipts/:id
-   ============================ */
-export async function PUT(req: NextRequest) {
-  try {
-    const db = await connectDB()
-    const id = getId(req)
-    const payload = await req.json()
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
-    // Auto update timestamp
-    payload.updatedAt = new Date()
+  const receipt = await db
+    .collection(Collections.RECEIPTS)
+    .findOne({
+      _id: new ObjectId(id),
+      userId: filterUserId,
+    })
 
-    const updated = await db
-      .collection(Collections.RECEIPTS)
-      .findOneAndUpdate(
-        { _id: new ObjectId(id) },
-        { $set: payload },
-        { returnDocument: "after" }
-      )
-
-    if (!updated) {
-      return NextResponse.json(
-        { error: "Receipt not found" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({ receipt: updated }, { status: 200 })
-  } catch (error: any) {
-    console.error("PUT receipt error:", error)
-    return NextResponse.json(
-      { error: "Failed to update receipt", message: error.message },
-      { status: 500 }
-    )
+  if (!receipt) {
+    return NextResponse.json({ error: "Receipt not found" }, { status: 404 })
   }
-}
+
+  return NextResponse.json(receipt)
+})
+
+/**
+ * PUT — Update receipt
+ */
+export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  const db = await connectDB()
+
+  const id = getIdFromRequest(req)
+
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json({ error: "Invalid receipt ID" }, { status: 400 })
+  }
+
+  const body = await req.json()
+  const { _id, ...updateData } = body
+
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
+  const result = await db
+    .collection(Collections.RECEIPTS)
+    .updateOne(
+      { _id: new ObjectId(id), userId: filterUserId },
+      { $set: { ...updateData, updatedAt: new Date() } }
+    )
+
+  if (result.matchedCount === 0) {
+    return NextResponse.json({ error: "Receipt not found" }, { status: 404 })
+  }
+
+  const updatedReceipt = await db
+    .collection(Collections.RECEIPTS)
+    .findOne({ _id: new ObjectId(id) })
+
+  return NextResponse.json({ success: true, data: updatedReceipt })
+})
+
+/**
+ * DELETE — Delete receipt
+ */
+export const DELETE = withAuth(async (req: NextRequest, user: any) => {
+  const db = await connectDB()
+
+  const id = getIdFromRequest(req)
+
+  if (!ObjectId.isValid(id)) {
+    return NextResponse.json({ error: "Invalid receipt ID" }, { status: 400 })
+  }
+
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
+  const result = await db
+    .collection(Collections.RECEIPTS)
+    .deleteOne({ _id: new ObjectId(id), userId: filterUserId })
+
+  if (result.deletedCount === 0) {
+    return NextResponse.json({ error: "Receipt not found" }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true, message: "Receipt deleted successfully" })
+})

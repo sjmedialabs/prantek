@@ -10,12 +10,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    // For admin users, filter by companyId (parent account)
-    // For regular users, filter by userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
-    const payments = await mongoStore.getAll("payments", { userId: filterUserId }, { skip, limit, sort: { date: -1 } })
-    const total = await mongoStore.count("payments", { userId: filterUserId })
+    const payments = await mongoStore.getAll("payments", { userId: user.userId }, { skip, limit, sort: { date: -1 } })
+    const total = await mongoStore.count("payments", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
@@ -36,20 +32,16 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
-    // For admin users, use companyId (parent account)
-    // For regular users, use userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
     // Use recipient name for client code (payments are made to vendors/recipients)
     const recipientName = body.recipientName || "Unknown"
 
     if (!body.paymentNumber) {
-      body.paymentNumber = await generateNextNumber("payments", "PAY", filterUserId, recipientName)
+      body.paymentNumber = await generateNextNumber("payments", "PAY", user.userId, recipientName)
     }
 
-    const payment = await mongoStore.create("payments", { ...body, userId: filterUserId })
+    const payment = await mongoStore.create("payments", { ...body, userId: user.userId })
 
-    await logActivity(filterUserId, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
+    await logActivity(user.userId, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
 
     // Notify admins about new payment
     try {

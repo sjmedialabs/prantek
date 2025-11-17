@@ -32,9 +32,9 @@ export default function EditReceiptPage() {
     loadReceipt()
   }, [receiptId])
 
-  const loadReceipt = () => {
+  const loadReceipt = async () => {
     try {
-      const data = api.receipts.getById(receiptId)
+      const data = await api.receipts.getById(receiptId)
       if (data) {
         setReceipt(data)
         setFormData({

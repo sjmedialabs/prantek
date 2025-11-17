@@ -348,7 +348,7 @@ export default function ReceiptsPage() {
               </TableHeader>
               <TableBody>
                 {filteredReceipts.map((receipt, index) => (
-                  <TableRow key={receipt.id || `receipt-${index}`}>
+                  <TableRow key={receipt._id?.toString() || `receipt-${index}`}>
                     <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
                     <TableCell>{new Date(receipt.date || receipt.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>{receipt.clientName}</TableCell>
@@ -368,7 +368,7 @@ export default function ReceiptsPage() {
                     {hasPermission("manage_receipts") && (
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Link href={`/dashboard/receipts/${receipt._id}`}>
+                          <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
                             <Button variant="ghost" size="sm">
                               View
                             </Button>
