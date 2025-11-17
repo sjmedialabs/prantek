@@ -11,6 +11,7 @@ export interface JWTPayload {
   permissions?: string[] // Permissions array for admin users
   roleId?: string // Reference to assigned role
   companyId?: string // Reference to parent account for admin users
+  isAdminUser?: boolean // Distinguishes admin users from account owners
   subscriptionStartDate?: Date
   trialEndsAt?: Date
   subscriptionPlanId?: string // For legacy user system
