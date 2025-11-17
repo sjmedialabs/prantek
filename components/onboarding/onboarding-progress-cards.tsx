@@ -14,7 +14,7 @@ export function OnboardingProgressCards() {
   const router = useRouter()
   const [realData, setRealData] = useState({
     hasCompany: false,
-    clientsCount: 0,
+    // clientsCount: 0,
     categoriesCount: 0,
     taxRatesCount: 0,
     paymentMethodsCount: 0,
@@ -37,7 +37,7 @@ export function OnboardingProgressCards() {
 
         const newData = {
           hasCompany: !!company?.companyName,
-          clientsCount: clients?.length || 0,
+          // clientsCount: clients?.length || 0,
           categoriesCount: categories?.length || 0,
           taxRatesCount: taxRates?.length || 0,
           paymentMethodsCount: paymentMethods?.length || 0,
@@ -48,7 +48,7 @@ export function OnboardingProgressCards() {
 
         // Auto-update progress based on real data
         updateProgress("companyInfo", newData.hasCompany)
-        updateProgress("clients", newData.clientsCount > 0)
+        // updateProgress("clients", newData.clientsCount > 0)
         updateProgress("basicSettings", newData.categoriesCount > 0 || newData.taxRatesCount > 0 || newData.paymentMethodsCount > 0)
         updateProgress("products", newData.itemsCount > 0)
 
@@ -64,7 +64,7 @@ export function OnboardingProgressCards() {
 
   // Show cards if any step is incomplete based on real data
   const hasIncompleteSteps = !realData.hasCompany || 
-                             realData.clientsCount === 0 || 
+                            //  realData.clientsCount === 0 || 
                              (realData.categoriesCount === 0 && realData.taxRatesCount === 0 && realData.paymentMethodsCount === 0) || 
                              realData.itemsCount === 0
 
@@ -137,18 +137,18 @@ export function OnboardingProgressCards() {
       total: null,
       buttonText: "Complete Setup",
     },
-    {
-      title: "Clients",
-      icon: Users,
-      completed: realData.clientsCount > 0, // Use real data
-      action: () => setCurrentStep(2),
-      link: "/dashboard/clients",
-      color: "green",
-      data: `${realData.clientsCount} client${realData.clientsCount !== 1 ? 's' : ''}`,
-      count: realData.clientsCount,
-      total: null,
-      buttonText: "Create Client",
-    },
+    // {
+    //   title: "Clients",
+    //   icon: Users,
+    //   completed: realData.clientsCount > 0, // Use real data
+    //   action: () => setCurrentStep(2),
+    //   link: "/dashboard/clients",
+    //   color: "green",
+    //   data: `${realData.clientsCount} client${realData.clientsCount !== 1 ? 's' : ''}`,
+    //   count: realData.clientsCount,
+    //   total: null,
+    //   buttonText: "Create Client",
+    // },
     {
       title: "Products/Services",
       icon: Package,

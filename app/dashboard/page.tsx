@@ -95,7 +95,7 @@ export default function DashboardPage() {
 
       // Update progress based on real data
       updateProgress("companyInfo", !!company?.companyName);
-      updateProgress("clients", (clients?.length || 0) > 0);
+      // updateProgress("clients", (clients?.length || 0) > 0);
       updateProgress("basicSettings", 
         (categories?.length || 0) > 0 || (taxRates?.length || 0) > 0 || (paymentMethods?.length || 0) > 0
       );
@@ -443,19 +443,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Right Side - Setup Progress (Compact) - Only for account owners */}
-            {!user?.isAdminUser && (
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
-                  <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
-                </div>
-                <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
-                <p className="text-xs text-gray-600">
-                  {Object.values(progress).filter((v) => v).length} of 4 steps completed
-                </p>
+            {/* Right Side - Setup Progress (Compact) */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
+                <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
               </div>
-            )}
+              <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
+              <p className="text-xs text-gray-600">
+                {Object.values(progress).filter((v) => v).length} of 3 steps completed
+              </p>
+            </div>
           </div>
         </div>
       </div>

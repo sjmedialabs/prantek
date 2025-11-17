@@ -88,7 +88,7 @@ export function WelcomeModal() {
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:border-green-300 transition">
+              {/* <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:border-green-300 transition">
                 <div className="rounded-lg bg-green-100 p-2">
                   <Users className="h-5 w-5 text-green-600" />
                 </div>
@@ -98,7 +98,7 @@ export function WelcomeModal() {
                     Add your customers and vendors for easy billing
                   </p>
                 </div>
-              </div>
+              </div> */}
 
               <div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:border-purple-300 transition">
                 <div className="rounded-lg bg-purple-100 p-2">
