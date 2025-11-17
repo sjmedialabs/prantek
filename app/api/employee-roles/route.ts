@@ -9,7 +9,8 @@ const EMPLOYEE_ROLES_COLLECTION = "employee_roles"
 export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   
-  const query = user.role === "super-admin" ? {} : { userId: user.id }
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+  const query = user.role === "super-admin" ? {} : { userId: String(filterUserId) }
   const roles = await db
     .collection(EMPLOYEE_ROLES_COLLECTION)
     .find(query)
@@ -23,6 +24,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
   try {
     const db = await connectDB()
     const data = await req.json()
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
     if (!data.name || !data.code) {
       return NextResponse.json(
@@ -35,7 +37,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
 
     const role = {
       ...cleanData,
-      userId: user.id,
+      userId: String(filterUserId),
       name: data.name,
       code: data.code,
       description: data.description || "",
