@@ -368,7 +368,7 @@ export default function ReceiptsPage() {
                     {hasPermission("manage_receipts") && (
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Link href={`/dashboard/receipts/${receipt.id}`}>
+                          <Link href={`/dashboard/receipts/${receipt._id}`}>
                             <Button variant="ghost" size="sm">
                               View
                             </Button>

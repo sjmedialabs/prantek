@@ -12,7 +12,7 @@ import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { ReceiptPrint } from "@/components/print-templates/receipt-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
-import type { Receipt } from "@/lib/data-store"
+import type { Receipt } from "@/lib/models/types"
 
 export default function ReceiptDetailsPage() {
   const params = useParams()
@@ -27,10 +27,11 @@ export default function ReceiptDetailsPage() {
     loadReceipt()
   }, [receiptId])
 
-  const loadReceipt = () => {
+  const loadReceipt = async () => {
     try {
-      const data = api.receipts.getById(receiptId)
-      setReceipt(data || null)
+      const data = await api.receipts.getById(receiptId)
+      console.log("Getting recipt data from api",data)
+      setReceipt(data)
     } catch (error) {
       setReceipt(null)
     } finally {
@@ -240,16 +241,16 @@ export default function ReceiptDetailsPage() {
               {receipt.items && receipt.items.length > 0 ? (
                 <div className="space-y-4">
                   {receipt.items.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4">
+                    <div key={item.id || item.itemId} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold">{item.name}</p>
+                          <p className="font-semibold">{item.itemName}</p>
                           <p className="text-sm text-gray-600">{item.description}</p>
                           <Badge variant="outline" className="mt-1">
                             {item.type}
                           </Badge>
                         </div>
-                        <p className="font-bold text-lg">₹{item.total.toLocaleString()}</p>
+                        <p className="font-bold text-lg">₹{item.amount}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -267,11 +268,11 @@ export default function ReceiptDetailsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{item.amount.toLocaleString()}</p>
+                          <p className="font-semibold">₹{item.amount}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Tax ({item.taxRate}%)</p>
-                          <p className="font-semibold">₹{item.taxAmount.toLocaleString()}</p>
+                          <p className="font-semibold">₹{item.taxAmount}</p>
                         </div>
                       </div>
                     </div>
