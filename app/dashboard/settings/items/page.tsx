@@ -373,7 +373,7 @@ const handleSave = async () => {
                             {taxRates
                               .filter((rate) => rate.type === "SGST" && rate.isActive)
                               .map((rate) => (
-                                <SelectItem key={rate.id} value={rate.rate.toString()}>
+                                <SelectItem key={rate._id} value={rate.rate.toString()}>
                                   {rate.rate}%
                                 </SelectItem>
                               ))}
@@ -394,7 +394,7 @@ const handleSave = async () => {
                             {taxRates
                               .filter((rate) => rate.type === "IGST" && rate.isActive)
                               .map((rate) => (
-                                <SelectItem key={rate.id} value={rate.rate.toString()}>
+                                <SelectItem key={rate._id} value={rate.rate.toString()}>
                                   {rate.rate}%
                                 </SelectItem>
                               ))}
@@ -492,7 +492,7 @@ const handleSave = async () => {
                 return matchesSearch && matchesType
               }).map((item) => (
                 <div
-                  key={item.id}
+                  key={item._id}
                   className={`flex items-center justify-between p-4 border rounded-lg ${item.isActive === false ? "opacity-50 bg-gray-50" : ""}`}
                 >
                   <div className="flex-1">

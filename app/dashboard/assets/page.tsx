@@ -226,6 +226,7 @@ const handleSubmitAsset = async (assetId: string) => {
   
   await api.assets.update(assetId, {
     submittedDate: new Date().toISOString(),
+    userId: user?.id,
     status: "available",
   })
 
@@ -636,7 +637,7 @@ const handleSubmitAsset = async (assetId: string) => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleSubmitAsset(asset.id)}
+                              onClick={() => handleSubmitAsset(asset._id)}
                             >
                               <UserX className="h-4 w-4 mr-1" />
                               Submit

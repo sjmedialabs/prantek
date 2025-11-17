@@ -1,20 +1,17 @@
 interface PaymentPrintProps {
   payment: {
+    _id: string
     paymentNumber: string
     date: string
-    client: {
-      name: string
-      address?: string
-      phone?: string
-      email?: string
-    }
+    recipientName: string
+    recipientType: string
+    recipientId: string
     paymentCategory: string
     description?: string
     amount: number
     paymentMethod: string
     referenceNumber?: string
     status: string
-    createdBy: string
   }
   companyDetails?: {
     logo?: string
@@ -82,7 +79,6 @@ export function PaymentPrint({ payment, companyDetails }: PaymentPrintProps) {
 
     return result.trim() + " Rupees"
   }
-
   return (
     <div className="bg-white p-8 max-w-4xl mx-auto print:p-0" id="print-content">
       {/* Header with Company Logo and Details */}
@@ -115,10 +111,10 @@ export function PaymentPrint({ payment, companyDetails }: PaymentPrintProps) {
         <div>
           <h3 className="text-sm font-semibold text-gray-700 mb-2">PAID TO:</h3>
           <div className="text-sm">
-            <p className="font-semibold text-gray-900">{payment.client.name}</p>
-            {payment.client.address && <p className="text-gray-600">{payment.client.address}</p>}
-            {payment.client.phone && <p className="text-gray-600">Phone: {payment.client.phone}</p>}
-            {payment.client.email && <p className="text-gray-600">Email: {payment.client.email}</p>}
+            <p className="font-semibold text-gray-900">{payment.recipientName}</p>
+            {payment.recipientId && <p className="text-gray-600">{payment.recipientId}</p>}
+            {payment.recipientType && <p className="text-gray-600">Phone: {payment.recipientType}</p>}
+            {/* {payment.recipientName && <p className="text-gray-600">Email: {payment.recipientName}</p>} */}
           </div>
         </div>
         <div className="text-right">
@@ -147,10 +143,10 @@ export function PaymentPrint({ payment, companyDetails }: PaymentPrintProps) {
                 {payment.status}
               </span>
             </div>
-            <div className="flex justify-between">
+            {/* <div className="flex justify-between">
               <span className="font-semibold text-gray-700">Created By:</span>
               <span className="text-gray-900">{payment.createdBy}</span>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

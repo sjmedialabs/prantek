@@ -13,16 +13,16 @@ export const PUT = async (req: NextRequest) => {
   try {
     const db = await connectDB()
     const data = await req.json()
-
+    console.log("data in the api", data)
     const id = getIdFromRequest(req)
 
     // REQUIRE userId
-    if (!data.userId) {
-      return NextResponse.json(
-        { error: "userId is required to update asset" },
-        { status: 400 }
-      )
-    }
+    // if (!data.userId) {
+    //   return NextResponse.json(
+    //     { error: "userId is required to update asset" },
+    //     { status: 400 }
+    //   )
+    // }
 
     // Create push object safely
     const historyPush = data.assignmentHistoryItem || null

@@ -879,11 +879,12 @@ getAll: async (userId: string) => {
     },
 
     update: async (id: string, data: any) => {
+      console.log("data from assets", data)
       const res = await fetch(`/api/assets/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
       })
-      return res.json()
+      return res.json() || data || res
     },
   },
 
