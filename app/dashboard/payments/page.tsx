@@ -429,8 +429,8 @@ export default function PaymentsPage() {
               <TableRow>
                 <TableHead>Payment No.</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Party Type</TableHead> {/* Added recipient type column */}
-                <TableHead>Party</TableHead> {/* Changed from Client to Recipient */}
+                <TableHead>Party Type</TableHead>
+                <TableHead>Party Name</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Payment Method</TableHead>
@@ -449,7 +449,7 @@ export default function PaymentsPage() {
                       {payment.recipientType}
                     </Badge>
                   </TableCell>
-                  <TableCell>{payment.recipientName}</TableCell> {/* Changed from clientName to recipientName */}
+                  <TableCell>{payment.recipientName}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{payment.category}</Badge>
                   </TableCell>
@@ -472,7 +472,7 @@ export default function PaymentsPage() {
                   {hasPermission("manage_payments") && (
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <Link href={`/dashboard/payments/${payment.id}`}>
+                        <Link href={`/dashboard/payments/${payment._id}`}>
                           <Button variant="ghost" size="sm">
                             View
                           </Button>

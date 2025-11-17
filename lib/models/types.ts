@@ -27,6 +27,7 @@ export interface User extends BaseDocument {
 export interface Client extends BaseDocument {
   userId: string
   name: string
+  type: string
   email: string
   phone?: string
   address?: string
@@ -34,10 +35,13 @@ export interface Client extends BaseDocument {
   state?: string
   pincode?: string
   companyName?:string
+  contactName?: string
   gst?: string
   pan?: string
   notes?: string
+  status?: "active" | "inactive"
 }
+
 
 export interface Vendor extends BaseDocument {
   userId: string

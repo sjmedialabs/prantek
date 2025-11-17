@@ -93,7 +93,7 @@ const navigationItems: NavItem[] = [
           //   permission: "tenant_settings",
           // },
           {
-            name: "Recipient Types",
+            name: "Party Types",
             href: "/dashboard/settings/recipient-types",
             permission: "tenant_settings",
           },

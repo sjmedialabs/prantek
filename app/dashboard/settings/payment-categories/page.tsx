@@ -159,7 +159,7 @@ const handleSave = async () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ledger Heads</h1>
-          <p className="text-gray-600">Manage categories for payment classification</p>
+          <p className="text-gray-600">Manage Ledger for payment classification</p>
         </div>
         <Button
           onClick={() => {
@@ -174,7 +174,7 @@ const handleSave = async () => {
 
       {saved && (
         <Alert>
-          <AlertDescription>Payment category saved successfully!</AlertDescription>
+          <AlertDescription>Ledger Head saved successfully!</AlertDescription>
         </Alert>
       )}
 
@@ -183,7 +183,7 @@ const handleSave = async () => {
   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
       <CardTitle>Categories List ({filteredCategories.length})</CardTitle>
-      <CardDescription>Manage payment categories used inside the application</CardDescription>
+      <CardDescription>Manage Ledger Heads used inside the application</CardDescription>
     </div>
 
     <div className="flex items-center gap-3">
@@ -215,7 +215,7 @@ const handleSave = async () => {
         <CardContent className="space-y-4">
           {filteredCategories.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No payment categories added yet. Click "Add Category" to get started.
+              No Ledger Heads added yet. Click "Add Ledger" to get started.
             </div>
           ) : (
             <div className="space-y-2">

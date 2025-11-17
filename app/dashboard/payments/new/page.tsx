@@ -47,59 +47,104 @@ export default function NewPaymentPage() {
     referenceNumber: "",
     billFile: null as File | null,
   })
-
   const [amountInWords, setAmountInWords] = useState("")
   const [activeTab, setActiveTab] = useState("payment-details")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
-  const tabs = ["payment-details", "recipient-details", "payment-info"]
+  const tabs = ["payment-details", "payment-info"]
   const currentTabIndex = tabs.indexOf(activeTab)
-  const isLastTab = currentTabIndex === tabs.length - 1
-
+  const isLastTab = currentTabIndex === tabs.length - 1;
+  const [paymentCategories, setPaymentCategories] = useState<any[]>([])
+  const [bankAccounts, setBankAccounts] = useState<any[]>([])
   const [clients, setClients] = useState<any[]>([])
   const [vendors, setVendors] = useState<any[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([])
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [recipientTypes, setRecipientTypes] = useState<any[]>([])
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [clientsData, vendorsData, teamData, recipientTypesData] = await Promise.all([
+        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts] = await Promise.all([
           api.clients.getAll(),
           api.vendors.getAll(),
-          api.teamMembers.getAll(),
+          api.employees.getAll(),
           api.recipientTypes.getAll(),
-        ])
-        setClients(clientsData)
-        setVendors(vendorsData)
-        setTeamMembers(teamData)
-        setRecipientTypes(recipientTypesData.filter((type: any) => type.isActive))
+          api.paymentCategories.getAll(),
+          api.paymentMethods.getAll(),
+          api.bankAccounts.getAll(),
+        ]);
+
+        console.log("Loaded data:", clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts);
+
+        // 🧹 Filter → Dedupe → Set
+
+        // ⬅️ 1. ACTIVE clients only + dedupe by _id
+        const activeClients = clientsData
+          .filter((c: any) => c.status === "active" || c.isActive === true)
+          .map((c: any) => ({ ...c, name: c.name?.trim() || c.email?.trim() || "Unnamed Client" }));
+
+        const uniqueClients = Array.from(new Map(activeClients.map((c: any) => [c._id, c])).values());
+
+        setClients(uniqueClients);
+
+        // ⬅️ 2. ACTIVE vendors only + dedupe by _id
+        const activeVendors = vendorsData
+
+        const uniqueVendors = Array.from(new Map(activeVendors.map((v: any) => [v._id, v])).values());
+
+        setVendors(uniqueVendors);
+
+        // ⬅️ 3. ACTIVE team members only + dedupe
+        const activeEmployees = teamData.filter((t: any) => t.isActive === true);
+
+        const uniqueTeams = Array.from(new Map(activeEmployees.map((t: any) => [t._id, t])).values());
+
+        setTeamMembers(uniqueTeams);
+
+        // ⬅️ 4. ACTIVE recipient types only + dedupe by value field
+        const activeRecipientTypes = recipientTypesData.filter((t: any) => t.isActive);
+
+        const uniqueRecipientTypes = Array.from(
+          new Map(activeRecipientTypes.map((t: any) => [t.value, t])).values()
+        );
+
+        setRecipientTypes(uniqueRecipientTypes);
+
+        const activePaymentCategories = paymentCategories.filter((t: any) => t.isActive);
+
+        const uniquePaymentCategories = Array.from(
+          new Map(activePaymentCategories.map((t: any) => [t._id, t])).values()
+        );
+
+        setPaymentCategories(uniquePaymentCategories);
+
+        const activePaymentMethods = paymentMethods.filter((t: any) => t.isEnabled);
+        setPaymentMethods(activePaymentMethods);
+
+        const activeBankAccounts = bankAccounts.filter((t: any) => t.isActive);
+        setBankAccounts(activeBankAccounts);
       } catch (error) {
-        console.error("Failed to load data:", error)
+        console.error("Failed to load data:", error);
       }
-    }
-    loadData()
-  }, [])
+    };
+
+    loadData();
+  }, []);
+
+  const uniqueRecipientTypes = Array.from(
+    new Map(recipientTypes.map((type) => [type.value, type])).values()
+  )
 
   // Validation functions for each tab
   const validatePaymentDetails = (): boolean => {
     const errors: Record<string, string> = {}
 
-    if (!paymentData.date) {
+    if (!paymentData.date && !paymentData.category) {
       errors.date = "Date is required"
-    }
-    if (!paymentData.category) {
-      errors.category = "Payment category is required"
     }
     if (!paymentData.amount || Number.parseFloat(paymentData.amount) <= 0) {
       errors.amount = "Valid amount is required"
     }
-
-    setValidationErrors(errors)
-    return Object.keys(errors).length === 0
-  }
-
-  const validateRecipientDetails = (): boolean => {
-    const errors: Record<string, string> = {}
 
     if (!paymentData.recipientType) {
       errors.recipientType = "Recipient type is required"
@@ -112,6 +157,20 @@ export default function NewPaymentPage() {
     return Object.keys(errors).length === 0
   }
 
+  // const validateRecipientDetails = (): boolean => {
+  //   const errors: Record<string, string> = {}
+
+  //   if (!paymentData.recipientType) {
+  //     errors.recipientType = "Recipient type is required"
+  //   }
+  //   if (!paymentData.recipientId) {
+  //     errors.recipientId = "Recipient must be selected"
+  //   }
+
+  //   setValidationErrors(errors)
+  //   return Object.keys(errors).length === 0
+  // }
+
   const validatePaymentInfo = (): boolean => {
     const errors: Record<string, string> = {}
 
@@ -120,7 +179,7 @@ export default function NewPaymentPage() {
     }
 
     const requiresReference = ["Bank Transfer", "UPI", "Check"].includes(paymentData.paymentMethod)
-    
+
     if (requiresReference && !paymentData.referenceNumber) {
       errors.referenceNumber = "Reference number is required for this payment method"
     }
@@ -138,85 +197,55 @@ export default function NewPaymentPage() {
   }
 
   const handleContinue = () => {
-    let isValid = false
+    const isValid = validatePaymentDetails();
 
-    // Validate current tab before moving to next
-    if (activeTab === "payment-details") {
-      isValid = validatePaymentDetails()
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields in Payment Details",
-          variant: "destructive",
-        })
-        return
-      }
-    } else if (activeTab === "recipient-details") {
-      isValid = validateRecipientDetails()
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields in Recipient Details",
-          variant: "destructive",
-        })
-        return
-      }
+    if (!isValid) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields in Payment Details",
+        variant: "destructive",
+      });
+      return;
     }
 
-    if (isValid && !isLastTab) {
-      setValidationErrors({}) // Clear errors on successful validation
-      setActiveTab(tabs[currentTabIndex + 1])
-    }
-  }
+    setActiveTab("payment-info");
+  };
+
 
   const handleTabChange = (newTab: string) => {
-    const newTabIndex = tabs.indexOf(newTab)
-    const currentIndex = currentTabIndex
-
-    // Prevent moving forward without validation
-    if (newTabIndex > currentIndex) {
-      if (currentIndex === 0 && !validatePaymentDetails()) {
-        toast({
-          title: "Validation Required",
-          description: "Please complete Payment Details before proceeding",
-          variant: "destructive",
-        })
-        return
-      }
-      if (currentIndex === 1 && !validateRecipientDetails()) {
-        toast({
-          title: "Validation Required",
-          description: "Please complete Recipient Details before proceeding",
-          variant: "destructive",
-        })
-        return
-      }
+    if (newTab === "payment-info" && !validatePaymentDetails()) {
+      toast({
+        title: "Validation Required",
+        description: "Please complete Payment Details before proceeding",
+        variant: "destructive",
+      });
+      return;
     }
 
-    // Allow backward navigation
-    setActiveTab(newTab)
-  }
+    setActiveTab(newTab);
+  };
 
-  const paymentCategories = ["Salary", "Rent", "Stationary", "Miscellaneous", "Refund", "Purchase", "Service", "Other"]
-  const paymentMethods = ["Cash", "Bank Transfer", "UPI", "Check"]
-  const bankAccounts = ["HDFC Bank - ****1234", "ICICI Bank - ****5678", "SBI - ****9012"]
+
+  // const paymentCategories = ["Salary", "Rent", "Stationary", "Miscellaneous", "Refund", "Purchase", "Service", "Other"]
+  // const paymentMethods = ["Cash", "Bank Transfer", "UPI", "Check"]
+  // const bankAccounts = ["HDFC Bank - ****1234", "ICICI Bank - ****5678", "SBI - ****9012"]
 
   const handleRecipientChange = (recipientId: string) => {
     let recipient: any = null
     let details = ""
 
     if (paymentData.recipientType === "client") {
-      recipient = clients.find((c) => c.id === recipientId)
+      recipient = clients.find((c) => c._id === recipientId)
       if (recipient) {
         details = `${recipient.address}\n${recipient.phone}\n${recipient.email}`
       }
     } else if (paymentData.recipientType === "vendor") {
-      recipient = vendors.find((v) => v.id === recipientId)
+      recipient = vendors.find((v) => v._id === recipientId)
       if (recipient) {
         details = `${recipient.category}\n${recipient.address}\n${recipient.phone}\n${recipient.email}`
       }
     } else if (paymentData.recipientType === "team") {
-      recipient = teamMembers.find((t) => t.id === recipientId)
+      recipient = teamMembers.find((t) => t._id === recipientId)
       if (recipient) {
         details = `${recipient.role}\n${recipient.department || "N/A"}\n${recipient.phone}\n${recipient.email}`
       }
@@ -255,10 +284,10 @@ export default function NewPaymentPage() {
 
     // Final validation of all tabs
     const isPaymentDetailsValid = validatePaymentDetails()
-    const isRecipientDetailsValid = validateRecipientDetails()
+    // const isRecipientDetailsValid = validateRecipientDetails()
     const isPaymentInfoValid = validatePaymentInfo()
 
-    if (!isPaymentDetailsValid || !isRecipientDetailsValid || !isPaymentInfoValid) {
+    if (!isPaymentDetailsValid || !isPaymentInfoValid) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields across all tabs",
@@ -268,8 +297,6 @@ export default function NewPaymentPage() {
       // Navigate to first tab with errors
       if (!isPaymentDetailsValid) {
         setActiveTab("payment-details")
-      } else if (!isRecipientDetailsValid) {
-        setActiveTab("recipient-details")
       } else if (!isPaymentInfoValid) {
         setActiveTab("payment-info")
       }
@@ -278,6 +305,7 @@ export default function NewPaymentPage() {
 
     try {
       api.payments.create({
+        userId: user?.id || "",
         paymentNumber: paymentData.paymentNumber,
         recipientType: paymentData.recipientType as "client" | "vendor" | "team",
         recipientId: paymentData.recipientId,
@@ -290,6 +318,7 @@ export default function NewPaymentPage() {
         status: paymentData.paymentMethod === "Cash" ? "completed" : "pending",
         bankAccount: paymentData.bankAccount,
         referenceNumber: paymentData.referenceNumber,
+        createdBy: user?.id || "",
       })
 
       toast({
@@ -338,7 +367,7 @@ export default function NewPaymentPage() {
 
     const client = api.clients.create(newClient)
     setClients([...clients, client])
-    handleRecipientChange(client.id)
+    handleRecipientChange(client._id)
     setIsCreateClientOpen(false)
     setNewClient({ name: "", email: "", phone: "", address: "" })
     toast({
@@ -359,7 +388,7 @@ export default function NewPaymentPage() {
 
     const vendor = api.vendors.create(newVendor)
     setVendors([...vendors, vendor])
-    handleRecipientChange(vendor.id)
+    handleRecipientChange(vendor._id)
     setIsCreateVendorOpen(false)
     setNewVendor({ name: "", email: "", phone: "", address: "", category: "" })
     toast({
@@ -417,18 +446,18 @@ export default function NewPaymentPage() {
                 <TabsTrigger value="payment-details" className="relative">
                   Payment Details
                 </TabsTrigger>
-                <TabsTrigger 
+                {/* <TabsTrigger 
                   value="recipient-details" 
                   disabled={isTabDisabled("recipient-details")}
                   className="relative disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Recipient Details
+                  Party Details
                   {isTabDisabled("recipient-details") && (
                     <AlertCircle className="h-3 w-3 absolute -top-1 -right-1 text-red-500" />
                   )}
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="payment-info" 
+                </TabsTrigger> */}
+                <TabsTrigger
+                  value="payment-info"
                   disabled={isTabDisabled("payment-info")}
                   className="relative disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -478,33 +507,309 @@ export default function NewPaymentPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="category">
-                        Payment Category <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={paymentData.category}
-                        onValueChange={(value) => {
-                          setPaymentData({ ...paymentData, category: value })
-                          if (validationErrors.category) {
-                            setValidationErrors({ ...validationErrors, category: "" })
-                          }
-                        }}
-                        required
-                      >
-                        <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {paymentCategories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {validationErrors.category && (
-                        <p className="text-xs text-red-500">{validationErrors.category}</p>
+                    <div className="space-y-2 flex flex-wrap gap-6">
+                      <div>
+                        <Label htmlFor="category">
+                          Ledger Head <span className="text-red-500">*</span>
+                        </Label>
+
+                        <Select
+                          value={paymentData.category}
+                          onValueChange={(value) => {
+                            setPaymentData({ ...paymentData, category: value });
+                            if (validationErrors.category) {
+                              setValidationErrors({ ...validationErrors, category: "" });
+                            }
+                          }}
+                          required
+                        >
+                          <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
+                            <SelectValue placeholder="Select ledger head" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            {paymentCategories.map((cat) => (
+                              <SelectItem key={cat._id} value={cat.name}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {validationErrors.category && (
+                          <p className="text-xs text-red-500">{validationErrors.category}</p>
+                        )}
+                      </div>
+
+
+                      <div className="space-y-2">
+                        <Label htmlFor="recipientType">
+                          Party Type <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={paymentData.recipientType}
+                          onValueChange={(value: any) => {
+                            setPaymentData({
+                              ...paymentData,
+                              recipientType: value,
+                              recipientId: "",
+                              recipientName: "",
+                              recipientDetails: "",
+                            })
+                            if (validationErrors.recipientType) {
+                              setValidationErrors({ ...validationErrors, recipientType: "" })
+                            }
+                          }}
+                          required
+                        >
+                          <SelectTrigger className={validationErrors.recipientType ? "border-red-500" : ""}>
+                            <SelectValue placeholder="Select party type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {uniqueRecipientTypes.map((type) => (
+                              <SelectItem key={type._id || type.id} value={type.value}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {validationErrors.recipientType && (
+                          <p className="text-xs text-red-500">{validationErrors.recipientType}</p>
+                        )}
+                      </div>
+
+                      {paymentData.recipientType === "client" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="client">
+                              Client Name <span className="text-red-500">*</span>
+                            </Label>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <ClientSelectSimple
+                                  options={clients.map((client) => ({
+                                    value: client._id,
+                                    label: client.name || client.email,
+                                  }))}
+                                  value={paymentData.recipientId}
+                                  onValueChange={handleRecipientChange}
+                                  placeholder="Search and select a client..."
+                                  searchPlaceholder="Type to search clients..."
+                                  emptyText="No clients found."
+                                  className={validationErrors.recipientId ? "border-red-500" : ""}
+                                />
+                              </div>
+
+                              <Dialog open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
+                                <DialogTrigger asChild>
+                                  <Button type="button" variant="outline" size="icon">
+                                    <UserPlus className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Create New Client</DialogTitle>
+                                    <DialogDescription>Add a new client to your records</DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div>
+                                      <Label htmlFor="newClientName">Client Name *</Label>
+                                      <Input
+                                        id="newClientName"
+                                        value={newClient.name}
+                                        onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                                        placeholder="Enter client name"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newClientEmail">Email</Label>
+                                      <Input
+                                        id="newClientEmail"
+                                        type="email"
+                                        value={newClient.email}
+                                        onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                                        placeholder="client@example.com"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newClientPhone">Phone *</Label>
+                                      <Input
+                                        id="newClientPhone"
+                                        value={newClient.phone}
+                                        onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                                        placeholder="+91 12345 67890"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newClientAddress">Address</Label>
+                                      <Textarea
+                                        id="newClientAddress"
+                                        value={newClient.address}
+                                        onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+                                        placeholder="Enter client address"
+                                        rows={2}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                    <Button type="button" variant="outline" onClick={() => setIsCreateClientOpen(false)}>
+                                      Cancel
+                                    </Button>
+                                    <Button type="button" onClick={handleCreateNewClient}>
+                                      Create Client
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            {validationErrors.recipientId && (
+                              <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {paymentData.recipientType === "vendor" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="vendor">
+                              Vendor Name <span className="text-red-500">*</span>
+                            </Label>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <ClientSelectSimple
+                                  options={vendors.map((vendor) => ({
+                                    value: vendor._id,
+                                    label: vendor.name,
+                                  }))}
+                                  value={paymentData.recipientId}
+                                  onValueChange={handleRecipientChange}
+                                  placeholder="Search and select a vendor..."
+                                  searchPlaceholder="Type to search vendors..."
+                                  emptyText="No vendors found."
+                                  className={validationErrors.recipientId ? "border-red-500" : ""}
+                                />
+                              </div>
+
+                              <Dialog open={isCreateVendorOpen} onOpenChange={setIsCreateVendorOpen}>
+                                <DialogTrigger asChild>
+                                  <Button type="button" variant="outline" size="icon">
+                                    <UserPlus className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Create New Vendor</DialogTitle>
+                                    <DialogDescription>Add a new vendor to your records</DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4 py-4">
+                                    <div>
+                                      <Label htmlFor="newVendorName">Vendor Name *</Label>
+                                      <Input
+                                        id="newVendorName"
+                                        value={newVendor.name}
+                                        onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
+                                        placeholder="Enter vendor name"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newVendorCategory">Category *</Label>
+                                      <Select
+                                        value={newVendor.category}
+                                        onValueChange={(value) => setNewVendor({ ...newVendor, category: value })}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Supplier">Supplier</SelectItem>
+                                          <SelectItem value="Service Provider">Service Provider</SelectItem>
+                                          <SelectItem value="Contractor">Contractor</SelectItem>
+                                          <SelectItem value="Consultant">Consultant</SelectItem>
+                                          <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newVendorEmail">Email</Label>
+                                      <Input
+                                        id="newVendorEmail"
+                                        type="email"
+                                        value={newVendor.email}
+                                        onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
+                                        placeholder="vendor@example.com"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newVendorPhone">Phone *</Label>
+                                      <Input
+                                        id="newVendorPhone"
+                                        value={newVendor.phone}
+                                        onChange={(e) => setNewVendor({ ...newVendor, phone: e.target.value })}
+                                        placeholder="+91 12345 67890"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="newVendorAddress">Address</Label>
+                                      <Textarea
+                                        id="newVendorAddress"
+                                        value={newVendor.address}
+                                        onChange={(e) => setNewVendor({ ...newVendor, address: e.target.value })}
+                                        placeholder="Enter vendor address"
+                                        rows={2}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                    <Button type="button" variant="outline" onClick={() => setIsCreateVendorOpen(false)}>
+                                      Cancel
+                                    </Button>
+                                    <Button type="button" onClick={handleCreateNewVendor}>
+                                      Create Vendor
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            {validationErrors.recipientId && (
+                              <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {paymentData.recipientType === "team" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="teamMember">
+                              Team Member <span className="text-red-500">*</span>
+                            </Label>
+                            <ClientSelectSimple
+                              options={teamMembers
+                                .filter((m) => m.isActive === true)
+                                .map((member) => ({
+                                  value: member._id,
+                                  label: `${member.employeeName} ${member.middleName} ${member.surname}`,
+                                }))}
+                              value={paymentData.recipientId}
+                              onValueChange={handleRecipientChange}
+                              placeholder="Search and select a team member..."
+                              searchPlaceholder="Type to search team members..."
+                              emptyText="No active team members found."
+                              className={validationErrors.recipientId ? "border-red-500" : ""}
+                            />
+                            {validationErrors.recipientId && (
+                              <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {paymentData.recipientId && (
+                        <div className="space-y-2">
+                          <Label>Recipient Details</Label>
+                          <Textarea value={paymentData.recipientDetails} disabled rows={4} />
+                        </div>
                       )}
                     </div>
 
@@ -542,286 +847,6 @@ export default function NewPaymentPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="recipient-details" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recipient Details</CardTitle>
-                    <CardDescription>Select who will receive this payment</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="recipientType">
-                        Recipient Type <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={paymentData.recipientType}
-                        onValueChange={(value: any) => {
-                          setPaymentData({
-                            ...paymentData,
-                            recipientType: value,
-                            recipientId: "",
-                            recipientName: "",
-                            recipientDetails: "",
-                          })
-                          if (validationErrors.recipientType) {
-                            setValidationErrors({ ...validationErrors, recipientType: "" })
-                          }
-                        }}
-                        required
-                      >
-                        <SelectTrigger className={validationErrors.recipientType ? "border-red-500" : ""}>
-                          <SelectValue placeholder="Select recipient type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {recipientTypes.map((type) => (
-                            <SelectItem key={type._id || type.id} value={type.value}>
-                              {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {validationErrors.recipientType && (
-                        <p className="text-xs text-red-500">{validationErrors.recipientType}</p>
-                      )}
-                    </div>
-
-                    {paymentData.recipientType === "client" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="client">
-                            Client Name <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <ClientSelectSimple
-                                options={clients.map((client) => ({
-                                  value: client.id,
-                                  label: client.name,
-                                }))}
-                                value={paymentData.recipientId}
-                                onValueChange={handleRecipientChange}
-                                placeholder="Search and select a client..."
-                                searchPlaceholder="Type to search clients..."
-                                emptyText="No clients found."
-                                className={validationErrors.recipientId ? "border-red-500" : ""}
-                              />
-                            </div>
-
-                            <Dialog open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
-                              <DialogTrigger asChild>
-                                <Button type="button" variant="outline" size="icon">
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Create New Client</DialogTitle>
-                                  <DialogDescription>Add a new client to your records</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                  <div>
-                                    <Label htmlFor="newClientName">Client Name *</Label>
-                                    <Input
-                                      id="newClientName"
-                                      value={newClient.name}
-                                      onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                                      placeholder="Enter client name"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newClientEmail">Email</Label>
-                                    <Input
-                                      id="newClientEmail"
-                                      type="email"
-                                      value={newClient.email}
-                                      onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                                      placeholder="client@example.com"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newClientPhone">Phone *</Label>
-                                    <Input
-                                      id="newClientPhone"
-                                      value={newClient.phone}
-                                      onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                                      placeholder="+91 12345 67890"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newClientAddress">Address</Label>
-                                    <Textarea
-                                      id="newClientAddress"
-                                      value={newClient.address}
-                                      onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-                                      placeholder="Enter client address"
-                                      rows={2}
-                                    />
-                                  </div>
-                                </div>
-                                <div className="flex justify-end gap-2">
-                                  <Button type="button" variant="outline" onClick={() => setIsCreateClientOpen(false)}>
-                                    Cancel
-                                  </Button>
-                                  <Button type="button" onClick={handleCreateNewClient}>
-                                    Create Client
-                                  </Button>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                          {validationErrors.recipientId && (
-                            <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {paymentData.recipientType === "vendor" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="vendor">
-                            Vendor Name <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <ClientSelectSimple
-                                options={vendors.map((vendor) => ({
-                                  value: vendor.id,
-                                  label: vendor.name,
-                                }))}
-                                value={paymentData.recipientId}
-                                onValueChange={handleRecipientChange}
-                                placeholder="Search and select a vendor..."
-                                searchPlaceholder="Type to search vendors..."
-                                emptyText="No vendors found."
-                                className={validationErrors.recipientId ? "border-red-500" : ""}
-                              />
-                            </div>
-
-                            <Dialog open={isCreateVendorOpen} onOpenChange={setIsCreateVendorOpen}>
-                              <DialogTrigger asChild>
-                                <Button type="button" variant="outline" size="icon">
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Create New Vendor</DialogTitle>
-                                  <DialogDescription>Add a new vendor to your records</DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 py-4">
-                                  <div>
-                                    <Label htmlFor="newVendorName">Vendor Name *</Label>
-                                    <Input
-                                      id="newVendorName"
-                                      value={newVendor.name}
-                                      onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
-                                      placeholder="Enter vendor name"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newVendorCategory">Category *</Label>
-                                    <Select
-                                      value={newVendor.category}
-                                      onValueChange={(value) => setNewVendor({ ...newVendor, category: value })}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select category" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="Supplier">Supplier</SelectItem>
-                                        <SelectItem value="Service Provider">Service Provider</SelectItem>
-                                        <SelectItem value="Contractor">Contractor</SelectItem>
-                                        <SelectItem value="Consultant">Consultant</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newVendorEmail">Email</Label>
-                                    <Input
-                                      id="newVendorEmail"
-                                      type="email"
-                                      value={newVendor.email}
-                                      onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
-                                      placeholder="vendor@example.com"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newVendorPhone">Phone *</Label>
-                                    <Input
-                                      id="newVendorPhone"
-                                      value={newVendor.phone}
-                                      onChange={(e) => setNewVendor({ ...newVendor, phone: e.target.value })}
-                                      placeholder="+91 12345 67890"
-                                    />
-                                  </div>
-                                  <div>
-                                    <Label htmlFor="newVendorAddress">Address</Label>
-                                    <Textarea
-                                      id="newVendorAddress"
-                                      value={newVendor.address}
-                                      onChange={(e) => setNewVendor({ ...newVendor, address: e.target.value })}
-                                      placeholder="Enter vendor address"
-                                      rows={2}
-                                    />
-                                  </div>
-                                </div>
-                                <div className="flex justify-end gap-2">
-                                  <Button type="button" variant="outline" onClick={() => setIsCreateVendorOpen(false)}>
-                                    Cancel
-                                  </Button>
-                                  <Button type="button" onClick={handleCreateNewVendor}>
-                                    Create Vendor
-                                  </Button>
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                          {validationErrors.recipientId && (
-                            <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {paymentData.recipientType === "team" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="teamMember">
-                            Team Member <span className="text-red-500">*</span>
-                          </Label>
-                          <ClientSelectSimple
-                            options={teamMembers
-                              .filter((m) => m.status === "active")
-                              .map((member) => ({
-                                value: member.id,
-                                label: `${member.name} - ${member.role}`,
-                              }))}
-                            value={paymentData.recipientId}
-                            onValueChange={handleRecipientChange}
-                            placeholder="Search and select a team member..."
-                            searchPlaceholder="Type to search team members..."
-                            emptyText="No active team members found."
-                            className={validationErrors.recipientId ? "border-red-500" : ""}
-                          />
-                          {validationErrors.recipientId && (
-                            <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {paymentData.recipientId && (
-                      <div className="space-y-2">
-                        <Label>Recipient Details</Label>
-                        <Textarea value={paymentData.recipientDetails} disabled rows={4} />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
               <TabsContent value="payment-info" className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -848,8 +873,8 @@ export default function NewPaymentPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {paymentMethods.map((method) => (
-                            <SelectItem key={method} value={method}>
-                              {method}
+                            <SelectItem key={method._id} value={method.name}>
+                              {method.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -879,8 +904,8 @@ export default function NewPaymentPage() {
                           </SelectTrigger>
                           <SelectContent>
                             {bankAccounts.map((account) => (
-                              <SelectItem key={account} value={account}>
-                                {account}
+                              <SelectItem key={account._id} value={account.bankName}>
+                               {account.bankName}, {account.branchName}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1048,7 +1073,7 @@ export default function NewPaymentPage() {
           <div className="flex gap-3">
             {!isLastTab ? (
               <Button onClick={handleContinue} size="lg" className="min-w-[200px]">
-                Continue to {tabs[currentTabIndex + 1] === "recipient-details" ? "Recipient Details" : "Payment Info"}
+                Continue to Payment Info
               </Button>
             ) : (
               <Button onClick={handleSubmit} type="button" size="lg" className="min-w-[200px]">
@@ -1056,6 +1081,7 @@ export default function NewPaymentPage() {
               </Button>
             )}
           </div>
+
         </div>
       </div>
     </div>

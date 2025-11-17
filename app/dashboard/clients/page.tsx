@@ -21,12 +21,13 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Edit, Eye, Building2, User } from "lucide-react"
 import { api } from "@/lib/api-client"
-import type { Client } from "@/lib/data-store"
+import type { Client } from "@/lib/models/types"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
+import { ObjectId } from "mongodb"
 
 export default function ClientsPage() {
-  const { hasPermission } = useUser()
+  const { hasPermission, loading } = useUser()
   const [clients, setClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all")
@@ -283,7 +284,16 @@ export default function ClientsPage() {
 
     return matchesSearch && matchesDate
   })
-
+    if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading quotations...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("view_clients")) {
     return (
       <div className="text-center py-12">
@@ -590,7 +600,7 @@ export default function ClientsPage() {
                               onCheckedChange={async (checked) => {
                                 try {
                                   const newStatus = checked ? "active" : "inactive"
-                                  await api.clients.updateStatus(client._id, newStatus)
+                                  await api.clients.updateStatus(client?._id, newStatus)
                                   toast.success("Status Updated", `${client.name || client.companyName} is now ${newStatus}`)
                                   await loadClients()
                                 } catch (err) {

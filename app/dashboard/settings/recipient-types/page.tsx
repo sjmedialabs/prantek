@@ -165,19 +165,19 @@ export default function RecipientTypesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Recipient Types</h1>
-          <p className="text-muted-foreground">Manage recipient types for payments</p>
+          <h1 className="text-3xl font-bold">Party Types</h1>
+          <p className="text-muted-foreground">Manage Part types for payments</p>
         </div>
         <Button onClick={handleAdd}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Recipient Type
+          Add Part Type
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Recipient Types ({recipientTypes.length})</CardTitle>
-          <CardDescription>Manage your recipient types for payment records</CardDescription>
+          <CardTitle>Types List ({recipientTypes.length})</CardTitle>
+          <CardDescription>Manage types for payment records</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">

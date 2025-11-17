@@ -24,10 +24,10 @@ export function ClientSelectSimple({
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(search.toLowerCase())
+    (opt.label || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const selectedOption = options.find((opt) => opt.value === value);
+  const selectedOption = options.find((opt) => (opt.value || "") === value);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -81,7 +81,7 @@ export function ClientSelectSimple({
             ) : (
               filteredOptions.map((option) => (
                 <div
-                  key={option.value}
+                  key={option.value + option.label}
                   onClick={() => {
                     onValueChange(option.value);
                     setIsOpen(false);

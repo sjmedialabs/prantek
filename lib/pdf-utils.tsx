@@ -83,7 +83,7 @@ export function printDocument(elementId: string): void {
           <title>Print</title>
           <style>
             body {
-              margin: 0;
+              margin: 20px;
               padding: 20px;
               font-family: Arial, sans-serif;
             }
@@ -93,7 +93,7 @@ export function printDocument(elementId: string): void {
                 padding: 0;
               }
               @page {
-                margin: 0;
+                margin: 50px;
               }
             }
           </style>
