@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   Settings,
+  BookOpen,
 } from "lucide-react";
 
 interface NavItem {
@@ -33,6 +34,7 @@ interface NavItem {
 
 const navigationItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
+  { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: null },
   { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
   { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
@@ -85,11 +87,11 @@ const navigationItems: NavItem[] = [
             href: "/dashboard/settings/payment-methods",
             permission: "tenant_settings",
           },
-          {
-            name: "Receipt Categories",
-            href: "/dashboard/settings/receipt-categories",
-            permission: "tenant_settings",
-          },
+          // {
+          //   name: "Receipt Categories",
+          //   href: "/dashboard/settings/receipt-categories",
+          //   permission: "tenant_settings",
+          // },
           {
             name: "Recipient Types",
             href: "/dashboard/settings/recipient-types",
@@ -158,19 +160,13 @@ const navigationItems: NavItem[] = [
       { name: "Plans", href: "/dashboard/plans", permission: null },
     ],
   },
-
-  
-  
- 
-
- 
 ];
 
 export default function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const pathname = usePathname();
-  const { user, tenant, hasPermission } = useUser();
+  const { user, hasPermission } = useUser();
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
@@ -352,7 +348,7 @@ export default function DashboardSidebar() {
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900">Prantek</h2>
-                <p className="text-xs text-gray-500">{tenant?.name}</p>
+                {/* <p className="text-xs text-gray-500">{tenant?.name}</p> */}
               </div>
             </div>
           )}

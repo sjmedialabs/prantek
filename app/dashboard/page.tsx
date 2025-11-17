@@ -109,13 +109,13 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     // console.log('[DASHBOARD] Loading data with date range:', { from: dateRange.from, to: dateRange.to })
     try {
-      const [quotations, receipts, payments, employees, items, plans] =
+      const [quotations, receipts, payments, employees, assets, plans] =
         await Promise.all([
           api.quotations.getAll(),
           api.receipts.getAll(),
           api.payments.getAll(),
           api.employees.getAll(),
-          api.items.getAll(),
+          api.assets.getAll(user?.id),
           api.subscriptionPlans.getAll(),
         ]);
 
@@ -210,7 +210,7 @@ export default function DashboardPage() {
         payables,
         activeUsers: employees.length,
         monthlyRevenue,
-        assetsManaged: items.length,
+        assetsManaged: assets.length,
         growthRate: Number(growthRate.toFixed(2)),
         quotations: quotations.length,
         pendingQuotations: pendingQuotations.length,

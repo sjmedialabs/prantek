@@ -275,6 +275,7 @@ const isDuplicate = isDuplicateAccountNumber(
               <TableHeader>
                 <TableRow>
                   <TableHead>Bank Name</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead>Account Number</TableHead>
                   <TableHead>IFSC Code</TableHead>
                   <TableHead>Account Holder</TableHead>
@@ -286,6 +287,7 @@ const isDuplicate = isDuplicateAccountNumber(
                 {bankAccounts.map((account) => (
                   <TableRow key={account?.id || account?._id}>
                     <TableCell className="font-medium">{account?.bankName}</TableCell>
+                    <TableCell>{account?.branchName}</TableCell>
                     <TableCell>{account?.accountNumber}</TableCell>
                     <TableCell>{account?.ifscCode}</TableCell>
                     <TableCell>{account?.accountName}</TableCell>
@@ -340,7 +342,7 @@ const isDuplicate = isDuplicateAccountNumber(
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="branchName" required>Branch Name</Label>
+                  <Label htmlFor="branchName" required>Branch</Label>
                   <Input
                     id="branchName"
                       className={errors.branchName ? "border-red-500" : ""}

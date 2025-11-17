@@ -326,7 +326,7 @@ export default function PaymentsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Recipient Type</label>
+                  <label className="text-sm font-medium">Party Type</label>
                   <Select value={recipientFilter} onValueChange={setRecipientFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Types" />
@@ -429,8 +429,8 @@ export default function PaymentsPage() {
               <TableRow>
                 <TableHead>Payment No.</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Recipient Type</TableHead> {/* Added recipient type column */}
-                <TableHead>Recipient</TableHead> {/* Changed from Client to Recipient */}
+                <TableHead>Party Type</TableHead> {/* Added recipient type column */}
+                <TableHead>Party</TableHead> {/* Changed from Client to Recipient */}
                 <TableHead>Category</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Payment Method</TableHead>

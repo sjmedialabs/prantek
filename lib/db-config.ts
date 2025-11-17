@@ -1,4 +1,4 @@
-export const DB_NAME = "saas_platform"
+export const DB_NAME = "prantek"
 
 export const COLLECTIONS = {
   USERS: "users",
@@ -23,6 +23,7 @@ export const COLLECTIONS = {
   ROLES: "roles",
   ACTIVITY_LOGS: "activity_logs",
   WEBSITE_CONTENT: "website_content",
+  ASSETS: "assets",
   COUNTERS: "counters", // New collection for global sequences
 } as const
 
@@ -64,6 +65,8 @@ export const INDEXES = {
   SUBSCRIPTION_PLANS: [{ key: { name: 1 }, unique: true }, { key: { price: 1 } }],
   TEAM_MEMBERS: [{ key: { userId: 1 } }, { key: { email: 1 } }, { key: { createdAt: -1 } }],
   ACTIVITY_LOGS: [{ key: { userId: 1 } }, { key: { action: 1 } }, { key: { timestamp: -1 } }],
+  WEBSITE_CONTENT: [{ key: { key: 1 }, unique: true }],
+  ASSETS: [{ key: { userId: 1 }, unique: true }],
   COUNTERS: [{ key: { _id: 1 }, unique: true }], // Index for counters collection
 }
 

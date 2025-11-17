@@ -11,21 +11,21 @@ import { Plus, Search, Edit, ReceiptIcon, Filter, X } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
- 
-interface Receipt {
-  id: string
-  receiptNumber: string
-  date: string
-  clientName: string
-  quotationNumber?: string
-  amountPaid: number // Changed from 'amount' to 'amountPaid'
-  total: number // Added total field
-  balanceAmount: number // Added balance field
-  paymentType: "full" | "partial" | "advance" // Updated to match DataStore
-  paymentMethod: string
-  status: "received" | "cleared" // Updated to match DataStore (lowercase)
-  createdBy?: string
-}
+import type { Receipt } from "@/lib/models/types"
+// interface Receipt {
+//   id: string
+//   receiptNumber: string
+//   date: string
+//   clientName: string
+//   quotationNumber?: string
+//   amountPaid: number // Changed from 'amount' to 'amountPaid'
+//   total: number // Added total field
+//   balanceAmount: number // Added balance field
+//   paymentType: "full" | "partial" | "advance" // Updated to match DataStore
+//   paymentMethod: string
+//   status: "received" | "cleared" // Updated to match DataStore (lowercase)
+//   createdBy?: string
+// }
 
 export default function ReceiptsPage() {
   const { hasPermission, user } = useUser()
@@ -108,7 +108,7 @@ export default function ReceiptsPage() {
   const formatPaymentType = (type: string) => {
     if (type === "full") return "Full Payment"
     if (type === "partial") return "Partial"
-    if (type === "advance") return "Advance Payment"
+    // if (type === "advance") return "Advance Payment"
     return type
   }
 
@@ -153,7 +153,7 @@ export default function ReceiptsPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Total Receipts</CardDescription>
@@ -172,16 +172,16 @@ export default function ReceiptsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        {/* <Card>
           <CardHeader className="pb-3">
             <CardDescription>Received</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {receipts.filter((r) => r.status === "received").length}
+              {receipts.filter((r) => r.status === "pending").length}
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Cleared</CardDescription>
@@ -239,12 +239,13 @@ export default function ReceiptsPage() {
                   <label className="text-sm font-medium">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All Statuses" />
+                      <SelectValue placeholder="All Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="received">Received</SelectItem>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="received">pending</SelectItem>
                       <SelectItem value="cleared">Cleared</SelectItem>
+                      <SelectItem value="cleared">Failed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
