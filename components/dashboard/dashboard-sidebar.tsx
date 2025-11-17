@@ -64,12 +64,12 @@ const navigationItems: NavItem[] = [
         permission: "tenant_settings",
       },
       {
-        name: "Recipients",
+        name: "Party Type",
         href: "/dashboard/settings/recipient-types",
         permission: "tenant_settings",
       },
       {
-        name: "Payment Categories",
+        name: "Ledger Head",
         href: "/dashboard/settings/payment-categories",
         permission: "tenant_settings",
       },
@@ -78,11 +78,11 @@ const navigationItems: NavItem[] = [
         href: "/dashboard/settings/payment-methods",
         permission: "tenant_settings",
       },
-      {
-        name: "Receipt Categories",
-        href: "/dashboard/settings/receipt-categories",
-        permission: "tenant_settings",
-      },
+      // {
+      //   name: "Receipt Categories",
+      //   href: "/dashboard/settings/receipt-categories",
+      //   permission: "tenant_settings",
+      // },
       {
         name: "Financials",
         href: "/dashboard/settings/bank-accounts",

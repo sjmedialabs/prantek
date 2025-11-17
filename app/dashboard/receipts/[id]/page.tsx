@@ -260,7 +260,7 @@ export default function ReceiptDetailsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Price</p>
-                          <p className="font-semibold">₹{item.price.toLocaleString()}</p>
+                          <p className="font-semibold">₹{item.price}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Discount</p>

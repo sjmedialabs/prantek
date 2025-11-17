@@ -149,7 +149,7 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
                   {item.description && <p className="text-xs text-gray-600">{item.description}</p>}
                 </td>
                 <td className="text-right py-3 px-4 text-sm text-gray-900">{item.quantity}</td>
-                <td className="text-right py-3 px-4 text-sm text-gray-900">₹{item.price.toFixed(2)}</td>
+                <td className="text-right py-3 px-4 text-sm text-gray-900">₹{(item.price || 0).toFixed(2)}</td>
                 <td className="text-right py-3 px-4 text-sm text-gray-900">₹{item.discount.toFixed(2)}</td>
                 <td className="text-right py-3 px-4 text-sm text-gray-600">
                   {item.taxName} ({item.taxRate}%)
