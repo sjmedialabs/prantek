@@ -245,7 +245,7 @@ export default function DashboardSidebar() {
 
   return (
     <div
-      className={`flex flex-col border-r bg-background transition-all duration-300 ${
+      className={`flex flex-col border-r bg-background transition-all duration-300 h-screen sticky top-0 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >
