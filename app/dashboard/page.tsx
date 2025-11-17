@@ -425,38 +425,43 @@ export default function DashboardPage() {
                 >
                   {user?.role.replace("-", " ")}
                 </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-100 text-blue-900 font-medium"
-                >
-                  {currentPlan
-                    ? `${currentPlan.name}${
-                        user?.subscriptionStatus === "trial" ? " (Trial)" : ""
-                      }`
-                    : user?.subscriptionStatus === "trial"
-                    ? "Trial Plan"
-                    : "No Active Plan"}
-                </Badge>
+                {/* Only show subscription badge for account owners */}
+                {(user?.role === "user" || user?.role === "super-admin") && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-900 font-medium"
+                  >
+                    {currentPlan
+                      ? `${currentPlan.name}${
+                          user?.subscriptionStatus === "trial" ? " (Trial)" : ""
+                        }`
+                      : user?.subscriptionStatus === "trial"
+                      ? "Trial Plan"
+                      : "No Active Plan"}
+                  </Badge>
+                )}
               </div>
             </div>
 
-            {/* Right Side - Setup Progress (Compact) */}
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
-                <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
+            {/* Right Side - Setup Progress (Compact) - Only for account owners */}
+            {(user?.role === "user" || user?.role === "super-admin") && (
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
+                  <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
+                </div>
+                <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
+                <p className="text-xs text-gray-600">
+                  {Object.values(progress).filter((v) => v).length} of 4 steps completed
+                </p>
               </div>
-              <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
-              <p className="text-xs text-gray-600">
-                {Object.values(progress).filter((v) => v).length} of 4 steps completed
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Onboarding Progress Cards - Below Welcome */}
-      <OnboardingProgressCards />
+      {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
+      {(user?.role === "user" || user?.role === "super-admin") && <OnboardingProgressCards />}
 
       {/* Quick Action Cards */}
       <div>
