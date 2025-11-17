@@ -711,6 +711,7 @@ export const api = {
         })
         return data.data || data.role
       },
+    },
     // Employee Roles
     employeeRoles: {
       getAll: async () => {
@@ -736,8 +737,6 @@ export const api = {
           method: "DELETE",
         })
       },
-    },
-
     },
 
     taxSetting: {
