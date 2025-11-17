@@ -557,7 +557,7 @@ export const api = {
       getAll: async () => {
         const data = await fetchAPI("/api/member-types")
         console.log("Member types from api :", data)
-        return data || data.memberTypes || []
+        return data.data || data.memberTypes || data || []
       },
       create: async (memberTypeData: any) => {
         const data = await fetchAPI("/api/member-types", {
