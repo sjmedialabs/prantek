@@ -391,7 +391,7 @@ export default function ClientsPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="gst">GST (Optional)</Label>
+              <Label htmlFor="gst">GST</Label>
               <Input
                 id="gst"
                 value={formData.gst}
@@ -401,7 +401,7 @@ export default function ClientsPage() {
               {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pan">PAN (Optional)</Label>
+              <Label htmlFor="pan">PAN</Label>
               <Input
                 id="pan"
                 value={formData.pan}

@@ -24,7 +24,7 @@ import { api } from "@/lib/api-client"
 import { Item } from "@/lib/models/types"
 
 export default function ItemsPage() {
-  const { user, hasPermission } = useUser()
+  const { user, loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [items, setItems] = useState<Item[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -190,7 +190,16 @@ const handleSave = async () => {
       userId: user?.id
     })
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -246,7 +255,7 @@ const handleSave = async () => {
 
                 {formData.type === "product" && (
                   <div className="space-y-2">
-                    <Label htmlFor="unitType">Unit Type (Optional)</Label>
+                    <Label htmlFor="unitType" required>Unit Type</Label>
                     <Select
                       value={formData.unitType}
                       onValueChange={(value) => setFormData({ ...formData, unitType: value })}

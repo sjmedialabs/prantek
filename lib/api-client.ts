@@ -340,6 +340,7 @@ export const api = {
       logout: async () => {
         await fetchAPI("/api/auth/logout", {
           method: "POST",
+          body: JSON.stringify({}),
         })
       },
       getCurrentUser: async () => {
@@ -847,7 +848,29 @@ activityLogs: {
   },
 },
 
+  assets: {
+getAll: async (userId: string) => {
+  const res = await fetch(`/api/assets?userId=${userId}`)
+  const json = await res.json()
+  return json.assets || []
+},
 
+    create: async (asset: any) => {
+      const data = await fetch("/api/assets", {
+        method: "POST",
+        body: JSON.stringify(asset),
+      })
+      return  data
+    },
+
+    update: async (id: string, data: any) => {
+      const res = await fetch(`/api/assets/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      })
+      return res.json()
+    },
+  },
 
 }
 

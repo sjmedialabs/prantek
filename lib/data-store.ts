@@ -684,7 +684,11 @@ class DataStore {
         })
       }
 
-      await fetch("/api/auth/logout", { method: "POST" })
+      await fetch("/api/auth/logout", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      })
     } catch (error) {
       console.error("[v0] Error logging out:", error)
     }

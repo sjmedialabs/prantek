@@ -26,7 +26,7 @@ export default function DashboardLayout({
         <ProtectedRoute>
           <div className="min-h-screen bg-gray-50">
             <DashboardSidebar />
-            <div className="lg:pl-64">
+            <div className="transition-all duration-300" style={{ paddingLeft: 'var(--sidebar-width, 16rem)' }}>
               <DashboardHeader />
               <main className="p-6">{children}</main>
             </div>

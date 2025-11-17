@@ -42,6 +42,7 @@ interface Asset {
   condition?: "excellent" | "good" | "fair" | "poor"
   location?: string
   serialNumber?: string
+  userId: String
   warranty?: string
   maintenanceSchedule?: string
   lastMaintenance?: string
@@ -83,41 +84,36 @@ export default function AssetsPage() {
     warranty: "",
   })
 
-  useEffect(() => {
+useEffect(() => {
+  if (user?.id) {
     loadData()
-  }, [])
-
-  const loadData = async () => {
-
-      // Load categories and conditions from API
-      const loadedCategories = await api.assetCategories.getAll()
-      setCategories(loadedCategories || [])
-      
-      const loadedConditions = await api.assetConditions.getAll()
-      setConditions(loadedConditions || [])
-    try {
-      // Load employees from API
-      const loadedEmployees = await api.employees.getAll()
-      setEmployees(loadedEmployees || [])
-
-      // Load assets from localStorage
-      const storedAssets = localStorage.getItem("assets")
-      if (storedAssets) {
-        setAssets(JSON.parse(storedAssets))
-      } else {
-        setAssets([])
-      }
-    } catch (error) {
-      console.error("Error loading data:", error)
-    } finally {
-      setLoading(false)
-    }
   }
+}, [user])
 
-  const saveAssets = (updatedAssets: Asset[]) => {
-    localStorage.setItem("assets", JSON.stringify(updatedAssets))
-    setAssets(updatedAssets)
-  }
+const userid = user?.id
+const loadData = async () => {
+  const loadedCategories = await api.assetCategories.getAll()
+  setCategories(loadedCategories || [])
+  console.log("loadedCategories", loadedCategories)
+  const loadedConditions = await api.assetConditions.getAll()
+  setConditions(loadedConditions || [])
+  console.log("loadedConditions", loadedConditions)
+  const loadedEmployees = await api.employees.getAll()
+  setEmployees(loadedEmployees || [])
+  console.log("loadedEmployees", loadedEmployees)
+    console.log("user details are ", userid)
+ const loadedAssets = await api.assets.getAll(user?.id)
+  console.log("loadedAssets", loadedAssets, user?.id)
+  setAssets(loadedAssets || [])
+
+  setLoading(false)
+}
+
+
+  // const saveAssets = (updatedAssets: Asset[]) => {
+  //   localStorage.setItem("assets", JSON.stringify(updatedAssets))
+  //   setAssets(updatedAssets)
+  // }
 
   // Calculate asset metrics
   const totalAssetValue = assets.reduce((sum, asset) => sum + (asset.currentValue || 0), 0)
@@ -145,93 +141,98 @@ export default function AssetsPage() {
     return matchesSearch && matchesCategory && matchesStatus
   })
 
-  const handleAddAsset = () => {
-    const asset: Asset = {
-      id: Date.now().toString(),
-      name: newAsset.name || undefined,
-      category: newAsset.category || undefined,
-      purchasePrice: newAsset.purchasePrice ? Number.parseFloat(newAsset.purchasePrice) : undefined,
-      currentValue: newAsset.purchasePrice ? Number.parseFloat(newAsset.purchasePrice) : undefined,
-      purchaseDate: newAsset.purchaseDate || undefined,
-      condition: newAsset.condition || undefined,
-      location: newAsset.location || undefined,
-      serialNumber: newAsset.serialNumber || undefined,
-      warranty: newAsset.warranty || undefined,
+const handleAddAsset = async () => {
+  try {
+
+    // 🔍 1. Check serial uniqueness
+    const serialExists = assets.some(
+      (a) => a.serialNumber?.toLowerCase() === newAsset.serialNumber.toLowerCase()
+    )
+
+    if (serialExists) {
+      alert("Serial number already exists! Please use a unique serial number.")
+      return
+    }
+
+    // 🔵 2. Continue with creating asset
+    const payload = {
+      userId: user?.id,
+      name: newAsset.name || "",
+      category: newAsset.category,
+      purchasePrice: newAsset.purchasePrice ? Number(newAsset.purchasePrice) : undefined,
+      currentValue: newAsset.purchasePrice ? Number(newAsset.purchasePrice) : undefined,
+      purchaseDate: newAsset.purchaseDate,
+      condition: newAsset.condition,
+      location: newAsset.location,
+      serialNumber: newAsset.serialNumber,
+      warranty: newAsset.warranty,
       status: "available",
       assignmentHistory: [],
     }
-    saveAssets([asset, ...assets])
-    setNewAsset({
-      name: "",
-      category: "equipment",
-      purchasePrice: "",
-      purchaseDate: new Date().toISOString().split("T")[0],
-      condition: "excellent",
-      location: "",
-      serialNumber: "",
-      warranty: "",
-    })
+
+    console.log("sending payload", payload)
+    const created = await api.assets.create(payload)
+
+    const loadedAssets = await api.assets.getAll(user?.id)
+    setAssets(loadedAssets)
+
     setIsAddAssetOpen(false)
+
+  } catch (error: any) {
+    alert(error.message)
   }
+}
 
-  const handleAssignAsset = () => {
-    if (!selectedAssetForAssignment || !selectedEmployeeId) return
 
-    const employee = employees.find((e) => String(e._id || e.id) === selectedEmployeeId)
-    if (!employee) return
 
-    const updatedAssets = assets.map((asset) => {
-      if (asset.id === selectedAssetForAssignment.id) {
-        const history: AssignmentHistory = {
-          employeeId: String(employee._id || employee.id),
-          employeeName: `${employee.employeeName} ${employee.surname}`,
-          assignedDate: new Date().toISOString(),
-          assignedBy: user?.email || "Admin",
-        }
+const handleAssignAsset = async () => {
+  console.log("enter in on click function ")
+  if (!selectedAssetForAssignment || !selectedEmployeeId) return
+console.log("selectedAssetForAssignment", selectedAssetForAssignment)
+  const employee = employees.find(
+    (e) => String(e._id || e.id) === selectedEmployeeId
+  )
 
-        return {
-          ...asset,
-          assignedTo: String(employee._id || employee.id),
-          assignedToName: `${employee.employeeName} ${employee.surname}`,
-          assignedDate: new Date().toISOString(),
-          assignedBy: user?.email || "Admin",
-          submittedDate: undefined,
-          status: "assigned" as const,
-          assignmentHistory: [...(asset.assignmentHistory || []), history],
-        }
-      }
-      return asset
-    })
+const updatedData = {
+  userId: selectedAssetForAssignment.userId,
+  assignedTo: employee._id,
+  assignedToName: employee.employeeName + " " + employee.surname,
+  assignedDate: new Date().toISOString(),
+  submittedDate: null,
+  status: "assigned",
 
-    saveAssets(updatedAssets)
-    setIsAssignDialogOpen(false)
-    setSelectedAssetForAssignment(null)
-    setSelectedEmployeeId("")
+  assignmentHistoryItem: {
+    employeeId: employee._id,
+    employeeName: employee.employeeName + " " + employee.surname,
+    assignedDate: new Date().toISOString(),
+    assignedBy: user?.email || "Admin",
   }
+}
 
-  const handleSubmitAsset = (assetId: string) => {
-    const updatedAssets = assets.map((asset) => {
-      if (asset.id === assetId && asset.assignedTo) {
-        // Update the last assignment history entry with submission date
-        const updatedHistory = asset.assignmentHistory?.map((history, index) => {
-          if (index === asset.assignmentHistory!.length - 1 && !history.submittedDate) {
-            return { ...history, submittedDate: new Date().toISOString() }
-          }
-          return history
-        })
+  console.log("updatedData", updatedData)
+  console.log("selectedAssetForAssignment id ", selectedAssetForAssignment._id)
+  await api.assets.update(selectedAssetForAssignment._id, updatedData)
 
-        return {
-          ...asset,
-          submittedDate: new Date().toISOString(),
-          status: "available" as const,
-          assignmentHistory: updatedHistory,
-        }
-      }
-      return asset
-    })
+const loadedAssets = await api.assets.getAll(user?.id)
 
-    saveAssets(updatedAssets)
-  }
+  setAssets(loadedAssets)
+
+  setIsAssignDialogOpen(false)
+  setSelectedEmployeeId("")
+}
+
+
+const handleSubmitAsset = async (assetId: string) => {
+  
+  await api.assets.update(assetId, {
+    submittedDate: new Date().toISOString(),
+    status: "available",
+  })
+
+  const refreshedAssets = await api.assets.getAll(user?.id)
+  setAssets(refreshedAssets)
+}
+
 
   const handleReassignAsset = (asset: Asset) => {
     setSelectedAssetForAssignment(asset)
@@ -593,7 +594,7 @@ export default function AssetsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredAssets.map((asset) => (
-                    <TableRow key={asset.id}>
+                    <TableRow key={asset.id || asset._id }>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           {getCategoryIcon(asset.category)}
@@ -671,7 +672,7 @@ export default function AssetsPage() {
                 {assets
                   .filter((asset) => asset.assignmentHistory && asset.assignmentHistory.length > 0)
                   .map((asset) => (
-                    <div key={asset.id} className="p-4 border rounded-lg">
+                    <div key={asset.id || asset._id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           {getCategoryIcon(asset.category)}

@@ -79,7 +79,7 @@ export function OwnSearchableSelect({
               ) : (
                 filtered.map((opt) => (
                   <Combobox.Option
-                    key={opt.value}
+                    key={opt.value + opt.label}
                     value={opt.value}
                     className={({ active }) =>
                       cn(

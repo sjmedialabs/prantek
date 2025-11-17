@@ -13,7 +13,7 @@ import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { QuotationPrint } from "@/components/print-templates/quotation-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
-import type { Quotation } from "@/lib/data-store"
+import type { Quotation } from "@/lib/models/types"
 
 export default function QuotationDetailsPage() {
   const params = useParams()
@@ -266,7 +266,7 @@ export default function QuotationDetailsPage() {
             <CardContent>
               <div className="space-y-4">
                 {(quotation.items || []).map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4">
+                  <div key={item.itemId} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <p className="font-semibold text-md">{item.itemName}</p>

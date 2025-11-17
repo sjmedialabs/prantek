@@ -196,53 +196,81 @@ export interface ReceiptItem {
 }
 
 export interface Receipt extends BaseDocument {
-  userId: string
-  clientId: string
+  id: string
   receiptNumber: string
-  date: Date
-  dueDate?: Date
-  items: ReceiptItem[]
+  quotationId: string // Made mandatory - every receipt must reference a quotation
+  quotationNumber: string
+  clientId: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  clientAddress: string
+  date: string
+  items: QuotationItem[]
   subtotal: number
   taxAmount: number
-  total: number
-  amountPaid?: number
-  status: "draft" | "sent" | "paid" | "overdue" | "cancelled"
+  total: number // Total amount from quotation
+  amountPaid: number // Amount paid in this receipt
+  balanceAmount: number // Remaining balance after this payment
+  paymentType: "full" | "partial" | "advance"
+  paymentMethod: "cash" | "card" | "upi" | "bank-transfer" | "cheque"
+  bankAccount?: string
+  referenceNumber?: string
+  screenshot?: string
+  status: "pending" | "cleared" // Lowercase to match reconciliation
   notes?: string
-  terms?: string
-  cleared?: boolean
 }
 
 export interface QuotationItem {
-  itemId: string
-  itemName: string            // changed field name
+  itemId?: string
+  id: string
+  type: "product" | "service"
+  itemName: string
   description?: string
+
   quantity: number
   price: number
-  discount?: number           // add since FE sends it
-  cgst?: number               // add
-  sgst?: number               // add
-  igst?: number               // add
-  total?: number              // optional if you calculate later
+  discount: number
+
+  cgst: number
+  sgst: number
+  igst: number
+
+  // For printing compatibility
+  taxName?: string
+  taxRate?: number
 }
+
 
 
 export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
+
   quotationNumber: string
   date: string | Date
+  validity?: string | Date
+  note?: string
 
-  validity?: string | Date     // accept the field exactly as FE sends
-  note?: string                // rename notes → note so FE works
+  clientName: string
+  clientEmail: string
+  clientAddress?: string
+  clientContact?: string
+  clientPhone?: string   // added for backward support
 
   items: QuotationItem[]
 
-  grandTotal: number           // replace subtotal + total → grandTotal
-  status: string               // keep as is ("pending", "sent", etc.)
-  isActive?:string,
-  paidAmount?:number,
-  balanceAmount?:number
+  grandTotal: number
+  paidAmount: number
+  balanceAmount: number
+
+  status: "pending" | "accepted"
+
+  acceptedDate?: string | Date
+
+  isActive?: string
 }
+
 
 
 export interface Payment extends BaseDocument {
@@ -328,6 +356,7 @@ export interface CompanySetting extends BaseDocument {
   state?: string
   pincode?: string
   gstin?: string
+  tan?: string
   pan?: string
   logo?: string
   website?: string
@@ -381,4 +410,49 @@ export interface Notification extends BaseDocument {
   entityType?: string
   isRead: boolean
   link?: string
+}
+
+export interface AssignmentHistory {
+  employeeId: string
+  employeeName: string
+  assignedDate: string
+  submittedDate?: string
+  assignedBy: string
+}
+export interface Asset {
+  // Database identifiers
+  _id?: string         // MongoDB ObjectId as string
+  id?: string          // Client-side ID alias
+  userId: string       // Owner admin user
+
+  // Core details
+  name?: string
+  category?: String
+  purchasePrice?: number
+  currentValue?: number
+  purchaseDate?: string
+  condition?: String
+  location?: string
+  serialNumber?: string
+  warranty?: string
+
+  // Maintenance
+  maintenanceSchedule?: string
+  lastMaintenance?: string
+  nextMaintenance?: string
+  depreciationRate?: number
+
+  // Assignment
+  status: "active" | "maintenance" | "retired" | "sold"
+  assignedTo?: string
+  assignedToName?: string
+  assignedDate?: string
+  assignedBy?: string
+  submittedDate?: string
+
+  assignmentHistory?: AssignmentHistory[]
+
+  // System fields
+  createdAt?: string
+  updatedAt?: string
 }

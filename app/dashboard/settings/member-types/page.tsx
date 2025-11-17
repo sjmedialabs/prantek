@@ -191,8 +191,8 @@ const handleSubmit = async () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Employment Types</CardTitle>
-          <CardDescription>Manage different types of employment in your organization</CardDescription>
+          <CardTitle>Types List ({memberTypes.length})</CardTitle>
+          <CardDescription>Manage different types of employment</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -204,7 +204,7 @@ const handleSubmit = async () => {
             </TableHeader>
             <TableBody>
               {memberTypes.map((type) => (
-                <TableRow key={type.id}>
+                <TableRow key={type.id || type._id}>
                   <TableCell className="font-medium">{type.name}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">

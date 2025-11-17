@@ -1,18 +1,29 @@
 import Razorpay from 'razorpay'
 
-const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-})
+let razorpayInstance: Razorpay | null = null
 
-export { razorpayInstance }
+function getRazorpayInstance(): Razorpay {
+  if (!razorpayInstance && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    razorpayInstance = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  }
+  if (!razorpayInstance) {
+    throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.')
+  }
+  return razorpayInstance
+}
+
+export { getRazorpayInstance as razorpayInstance }
 
 /**
  * Create a Razorpay order for a payment
  */
 export async function createOrder(amount: number, currency: string = 'INR', receipt?: string) {
   try {
-    const order = await razorpayInstance.orders.create({
+    const instance = getRazorpayInstance()
+    const order = await instance.orders.create({
       amount: Math.round(amount * 100), // Convert to paise
       currency,
       receipt: receipt || `order_${Date.now()}`,
@@ -49,7 +60,8 @@ export function verifyPaymentSignature(
  */
 export async function getPaymentDetails(paymentId: string) {
   try {
-    const payment = await razorpayInstance.payments.fetch(paymentId)
+    const instance = getRazorpayInstance()
+    const payment = await instance.payments.fetch(paymentId)
     return payment
   } catch (error) {
     console.error('Error fetching payment details:', error)
@@ -68,9 +80,10 @@ export async function createRecurringPayment(
   description?: string
 ) {
   try {
+    const instance = getRazorpayInstance()
     // For recurring payments with saved tokens, we use the transfer API
     // First, we need to get a token for the customer's saved payment method
-    const payment = await razorpayInstance.payments.create({
+    const payment = await instance.payments.create({
       customer_id: customerId,
       amount: Math.round(amount * 100), // Convert to paise
       currency,
@@ -98,7 +111,8 @@ export async function chargeCustomerToken(
   description?: string
 ) {
   try {
-    const payment = await razorpayInstance.payments.create({
+    const instance = getRazorpayInstance()
+    const payment = await instance.payments.create({
       customer_id: customerId,
       token: tokenId,
       recurring: 'true',
@@ -120,7 +134,8 @@ export async function chargeCustomerToken(
  */
 export async function getCustomerDetails(customerId: string) {
   try {
-    const customer = await razorpayInstance.customers.fetch(customerId)
+    const instance = getRazorpayInstance()
+    const customer = await instance.customers.fetch(customerId)
     return customer
   } catch (error) {
     console.error('Error fetching customer details:', error)
@@ -133,7 +148,8 @@ export async function getCustomerDetails(customerId: string) {
  */
 export async function getCustomerTokens(customerId: string) {
   try {
-    const tokens = await razorpayInstance.tokens.all({ customer_id: customerId })
+    const instance = getRazorpayInstance()
+    const tokens = await instance.tokens.all({ customer_id: customerId })
     return tokens
   } catch (error) {
     console.error('Error fetching customer tokens:', error)

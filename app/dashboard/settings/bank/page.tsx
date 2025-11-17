@@ -39,7 +39,7 @@ interface BankAccount {
 }
 
 export default function BankAccountPage() {
-  const { hasPermission } = useUser()
+  const { loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -53,6 +53,14 @@ export default function BankAccountPage() {
     upiId: "",
     upiScanner: null as File | null,
   })
+const [errors, setErrors] = useState({
+  bankName: false,
+  branchName: false,
+  accountName: false,
+  accountNumber: false,
+  ifscCode: false,
+  // upiId: false,
+})
 
   useEffect(() => {
     const loadAccounts = async () => {
@@ -61,39 +69,107 @@ export default function BankAccountPage() {
     }
     loadAccounts()
   }, [])
+  const validateAccountNumber = (num: string) => {
+  return /^[0-9]{9,18}$/.test(num)   // bank account numbers are 9–18 digits
+}
 
-  const handleSave = async () => {
-    if (!bankData.bankName || !bankData.accountNumber) {
-      toast({ title: "Validation Error", description: "Please fill in required fields", variant: "destructive" })
-      return
-    }
+const validateIFSC = (ifsc: string) => {
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())
+}
 
-    if (editingAccount) {
-      // Update existing account
-      const updated = await api.bankAccounts.update( editingAccount._id, {
-        ...bankData,
-        upiScanner: bankData.upiScanner ? URL.createObjectURL(bankData.upiScanner) : editingAccount.upiScanner,
-      })
-      if (updated) {
-        setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
-      }
-    } else {
-      // Create new account
-      const newAccount = await api.bankAccounts.create( {
-        ...bankData,
-        upiScanner: bankData.upiScanner ? URL.createObjectURL(bankData.upiScanner) : null,
-        isActive: true,
-      })
-      setBankAccounts([...bankAccounts, newAccount])
-    }
+const validateUPI = (upi: string) => {
+  return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)
+}
 
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
-    setIsDialogOpen(false)
-    toast({ title: "Success", description: "Account saved successfully!" })
-    window.location.reload()
-    resetForm()
+const isDuplicateAccountNumber = (
+  bankName: string,
+  accountNumber: string,
+  accounts: any[],
+  editingId?: string
+) => {
+  return accounts.some(
+    (acc) =>
+      acc.bankName.trim().toLowerCase() === bankName.trim().toLowerCase() && // same bank
+      acc.accountNumber.trim() === accountNumber.trim() &&                    // same account number
+      acc._id !== editingId                                                   // ignore self when editing
+  )
+}
+const handleSave = async () => {
+  const newErrors = {
+    bankName: !bankData.bankName.trim(),
+    accountNumber: !validateAccountNumber(bankData.accountNumber),
+    accountName: !bankData.accountName.trim(),
+    branchName: !bankData.branchName.trim(),
+    ifscCode: !validateIFSC(bankData.ifscCode || ""),
+    // upiId: !validateUPI(bankData.upiId || "")
   }
+
+  // 🔥 CHECK FOR DUPLICATE ACCOUNT NUMBER
+const isDuplicate = isDuplicateAccountNumber(
+  bankData.bankName,
+  bankData.accountNumber,
+  bankAccounts,
+  editingAccount?._id
+)
+
+  if (isDuplicate) {
+    newErrors.accountNumber = true
+
+    toast({
+      title: "Duplicate Account Number",
+      description: "This account number already exists. Please enter a unique one.",
+      variant: "destructive",
+    })
+
+    setErrors(newErrors)
+    return
+  }
+
+  setErrors(newErrors)
+
+  if (Object.values(newErrors).some((e) => e)) {
+    toast({
+      title: "Validation Error",
+      description: "Please fix the highlighted fields",
+      variant: "destructive",
+    })
+    return
+  }
+
+  // ---- UPDATE EXISTING ACCOUNT ----
+  if (editingAccount) {
+    const updated = await api.bankAccounts.update(editingAccount._id, {
+      ...bankData,
+      upiScanner: bankData.upiScanner
+        ? URL.createObjectURL(bankData.upiScanner)
+        : editingAccount.upiScanner,
+    })
+
+    if (updated) {
+      setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
+    }
+  }
+
+  // ---- CREATE NEW ACCOUNT ----
+  else {
+    const newAccount = await api.bankAccounts.create({
+      ...bankData,
+      upiScanner: bankData.upiScanner
+        ? URL.createObjectURL(bankData.upiScanner)
+        : null,
+      isActive: true,
+    })
+
+    setBankAccounts([...bankAccounts, newAccount])
+  }
+
+  setSaved(true)
+  setTimeout(() => setSaved(false), 3000)
+  setIsDialogOpen(false)
+  toast({ title: "Success", description: "Account saved successfully!" })
+  window.location.reload()
+  resetForm()
+}
 
   const resetForm = () => {
     setBankData({
@@ -138,7 +214,16 @@ export default function BankAccountPage() {
       setBankData({ ...bankData, upiScanner: e.target.files[0] })
     }
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading company details...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -176,7 +261,7 @@ export default function BankAccountPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Landmark className="h-5 w-5 mr-2" />
-            Bank Accounts List
+           Accounts List
           </CardTitle>
           <CardDescription>View and manage all your bank accounts</CardDescription>
         </CardHeader>
@@ -190,6 +275,7 @@ export default function BankAccountPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Bank Name</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead>Account Number</TableHead>
                   <TableHead>IFSC Code</TableHead>
                   <TableHead>Account Holder</TableHead>
@@ -199,8 +285,9 @@ export default function BankAccountPage() {
               </TableHeader>
               <TableBody>
                 {bankAccounts.map((account) => (
-                  <TableRow key={account?.id}>
+                  <TableRow key={account?.id || account?._id}>
                     <TableCell className="font-medium">{account?.bankName}</TableCell>
+                    <TableCell>{account?.branchName}</TableCell>
                     <TableCell>{account?.accountNumber}</TableCell>
                     <TableCell>{account?.ifscCode}</TableCell>
                     <TableCell>{account?.accountName}</TableCell>
@@ -244,19 +331,21 @@ export default function BankAccountPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="bankName">Bank Name *</Label>
+                  <Label htmlFor="bankName" required>Bank Name</Label>
                   <Input
                     id="bankName"
                     value={bankData?.bankName}
+                      className={errors.bankName ? "border-red-500" : ""}
                     onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
                     placeholder="Enter bank name"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="branchName">Branch Name</Label>
+                  <Label htmlFor="branchName" required>Branch</Label>
                   <Input
                     id="branchName"
+                      className={errors.branchName ? "border-red-500" : ""}
                     value={bankData?.branchName}
                     onChange={(e) => setBankData({ ...bankData, branchName: e.target.value })}
                     placeholder="Enter branch name"
@@ -265,9 +354,10 @@ export default function BankAccountPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="accountName">Bank Account Name</Label>
+                <Label htmlFor="accountName" required>Bank Account Name</Label>
                 <Input
                   id="accountName"
+                    className={errors.accountName ? "border-red-500" : ""}
                   value={bankData?.accountName}
                   onChange={(e) => setBankData({ ...bankData, accountName: e.target.value })}
                   placeholder="Account holder name"
@@ -276,9 +366,10 @@ export default function BankAccountPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="accountNumber">Bank Account Number *</Label>
+                  <Label htmlFor="accountNumber" required>Bank Account Number </Label>
                   <Input
                     id="accountNumber"
+                      className={errors.accountNumber ? "border-red-500" : ""}
                     value={bankData?.accountNumber}
                     onChange={(e) => setBankData({ ...bankData, accountNumber: e.target.value })}
                     placeholder="Enter account number"
@@ -286,9 +377,10 @@ export default function BankAccountPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="ifscCode">IFSC Code</Label>
+                  <Label htmlFor="ifscCode" required>IFSC Code</Label>
                   <Input
                     id="ifscCode"
+                      className={errors.ifscCode ? "border-red-500" : ""}
                     value={bankData?.ifscCode}
                     onChange={(e) => setBankData({ ...bankData, ifscCode: e.target.value })}
                     placeholder="Enter IFSC code"
@@ -300,6 +392,7 @@ export default function BankAccountPage() {
                 <Label htmlFor="upiId">UPI ID</Label>
                 <Input
                   id="upiId"
+                    // className={errors.upiId ? "border-red-500" : ""}
                   value={bankData?.upiId}
                   onChange={(e) => setBankData({ ...bankData, upiId: e.target.value })}
                   placeholder="yourname@upi"

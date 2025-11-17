@@ -64,7 +64,7 @@ interface Employee {
 }
 
 export default function EmployeePage() {
-  const { hasPermission, user } = useUser()
+  const { loading, hasPermission, user } = useUser()
   const [saved, setSaved] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -385,7 +385,16 @@ const handleSave = async () => {
       setSendingCredentials(null)
     }
   }
-
+      if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
   if (!hasPermission("tenant_settings")) {
     return (
       <div className="text-center py-12">
@@ -1172,55 +1181,89 @@ const handleSave = async () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Users className="h-5 w-5 mr-2" />
-            Employee List
-          </CardTitle>
-          <CardDescription>All employees in your organization</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredEmployees.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>{employees.length === 0 ? "No employees added yet. Click 'Add Employee' to get started." : "No employees match your current filters."}</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredEmployees.map((employee) => (
-                <div
-                  key={employee.id}
-                  className={`flex items-center justify-between p-4 border rounded-lg ${!employee?.isActive ? "bg-gray-50 opacity-60" : ""
-                    }`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="font-semibold">{employee.employeeNumber}</span>
-                      <span className="font-medium">
-                        {employee.employeeName} {employee.middleName} {employee.surname}
-                      </span>
-                      {employee.memberType && (
-                        <Badge variant="secondary" className="text-xs">
-                          {memberTypes.find((t) => t._id === employee.memberType)?.name}
-                        </Badge>
-                      )}
-                      {employee.role && (
-                        <Badge variant="outline" className="text-xs">
-                          {roles.find((r) => r._id === employee.role)?.name || employee.role}
-                        </Badge>
-                      )}
-                      {!employee.isActive && (
-                        <Badge variant="destructive" className="text-xs">
-                          Inactive
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      <p>{employee.email}</p>
-                      <p>{employee.mobileNo}</p>
-                    </div>
-                  </div>
+     <Card>
+  <CardHeader>
+    <CardTitle className="flex items-center">
+      <Users className="h-5 w-5 mr-2" />
+      Employee List
+    </CardTitle>
+    <CardDescription>All employees in your organization</CardDescription>
+  </CardHeader>
+
+  <CardContent>
+    {filteredEmployees.length === 0 ? (
+      <div className="text-center py-12 text-gray-500">
+        <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+        <p>
+          {employees.length === 0
+            ? "No employees added yet. Click 'Add Employee' to get started."
+            : "No employees match your current filters."}
+        </p>
+      </div>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="min-w-full border rounded-lg">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="p-3 text-left font-medium">Employee No</th>
+              <th className="p-3 text-left font-medium">Name</th>
+              <th className="p-3 text-left font-medium">Role</th>
+              <th className="p-3 text-left font-medium">Member Type</th>
+              <th className="p-3 text-left font-medium">Status</th>
+              <th className="p-3 text-left font-medium">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredEmployees.map((employee) => (
+              <tr
+                key={employee.id || employee._id}
+                className={`border-b ${
+                  !employee.isActive ? "bg-gray-50 opacity-60" : ""
+                }`}
+              >
+                {/* Employee Number */}
+                <td className="p-3 font-semibold">{employee.employeeNumber}</td>
+
+                {/* Name */}
+                <td className="p-3">
+                  {employee.employeeName} {employee.middleName}{" "}
+                  {employee.surname}
+                </td>
+
+                {/* Role */}
+                <td className="p-3">
+                  <Badge variant="outline" className="text-xs">
+                    {roles.find((r) => r._id === employee.role)?.name ||
+                      employee.role}
+                  </Badge>
+                </td>
+
+                {/* Member Type */}
+                <td className="p-3">
+                  {employee.memberType ? (
+                    <Badge variant="secondary" className="text-xs">
+                      {memberTypes.find((t) => t._id === employee.memberType)
+                        ?.name}
+                    </Badge>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
+                {/* Status */}
+                <td className="p-3">
+                  {employee.isActive ? (
+                    <Badge className="text-xs">Active</Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-xs">
+                      Inactive
+                    </Badge>
+                  )}
+                </td>
+
+                {/* Actions */}
+                <td className="p-3">
                   <div className="flex items-center space-x-2">
                     <Button 
                       variant="outline" 
