@@ -24,11 +24,11 @@ export default function DashboardLayout({
     <UserProvider>
       <OnboardingProvider>
         <ProtectedRoute>
-          <div className="min-h-screen bg-gray-50">
+          <div className="flex min-h-screen bg-gray-50">
             <DashboardSidebar />
-            <div className="transition-all duration-300" style={{ paddingLeft: 'var(--sidebar-width, 16rem)' }}>
+            <div className="flex-1 flex flex-col">
               <DashboardHeader />
-              <main className="p-6">{children}</main>
+              <main className="flex-1 p-6">{children}</main>
             </div>
           </div>
           <Toaster />

@@ -270,7 +270,22 @@ export const api = {
       },
     },
 
-    // Users
+    // Reconciliation
+    reconciliation: {
+      getAll: async () => {
+        const data = await fetchAPI("/api/reconciliation")
+        return data || []
+      },
+      updateStatus: async (id: string, type: "receipt" | "payment", cleared: boolean) => {
+        const data = await fetchAPI("/api/reconciliation", {
+          method: "PUT",
+          body: JSON.stringify({ id, type, cleared }),
+        })
+        return data
+      },
+    },
+
+  // Users
     users: {
       getAll: async () => {
         const data = await fetchAPI("/api/users")

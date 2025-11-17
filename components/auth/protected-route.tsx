@@ -46,6 +46,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
       try {
         // Verify token with backend
         const response = await fetch("/api/auth/verify", {
+          credentials: "include",
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,

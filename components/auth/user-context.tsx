@@ -11,6 +11,7 @@ interface User {
   email: string
   name: string
   role: "super-admin" | "admin" | "employee"
+  permissions?: string[]
   phone?: string
   address?: string
   avatar?: string
@@ -116,6 +117,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Super-admin has ALL permissions
     if (user.role === "super-admin") return true
 
+    // Check user's actual permissions array from database (if available)
+    if (user.permissions && Array.isArray(user.permissions)) {
+      return user.permissions.includes(permission)
+    }
+
+    // Fallback to role-based permissions for backward compatibility
     const permissions = {
       "super-admin": [
         "platform_management",
@@ -180,6 +187,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     return permissions[user.role]?.includes(permission) || false
   }
+
 
   return (
     <UserContext.Provider value={{ user, loading, logout, hasPermission, refreshUser }}>

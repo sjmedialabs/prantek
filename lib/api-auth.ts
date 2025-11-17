@@ -3,13 +3,19 @@ import { verifyToken, extractTokenFromHeader } from "./jwt"
 import type { JWTPayload } from "./jwt"
 
 /**
- * Verify JWT token from API request
+ * Verify JWT token from API request (checks both Authorization header and cookies)
  * @param request - Next.js API request
  * @returns JWT payload if valid, null if invalid
  */
 export async function verifyApiRequest(request: NextRequest): Promise<JWTPayload | null> {
+  // Try Authorization header first
   const authHeader = request.headers.get("authorization")
-  const token = extractTokenFromHeader(authHeader)
+  let token = extractTokenFromHeader(authHeader)
+
+  // If no token in header, try cookies
+  if (!token) {
+    token = request.cookies.get("auth_token")?.value || request.cookies.get("accessToken")?.value || null
+  }
 
   if (!token) {
     return null
@@ -22,15 +28,15 @@ export async function verifyApiRequest(request: NextRequest): Promise<JWTPayload
  * Middleware wrapper for protected API routes
  * Automatically verifies JWT and adds user to request
  */
-export function withAuth(handler: (request: NextRequest, user: JWTPayload) => Promise<NextResponse>) {
-  return async (request: NextRequest) => {
+export function withAuth(handler: (request: NextRequest, user: JWTPayload, context?: any) => Promise<NextResponse>) {
+  return async (request: NextRequest, context?: any) => {
     const user = await verifyApiRequest(request)
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized - Invalid or missing token" }, { status: 401 })
     }
 
-    return handler(request, user)
+    return handler(request, user, context)
   }
 }
 
@@ -56,7 +62,7 @@ export function withSuperAdmin(handler: (request: NextRequest, user: JWTPayload)
 /**
  * Check if user has specific role
  */
-export function hasRole(user: JWTPayload, role: "user" | "super-admin"): boolean {
+export function hasRole(user: JWTPayload, role: "user" | "super-admin" | "admin"): boolean {
   return user.role === role
 }
 

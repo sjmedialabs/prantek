@@ -167,3 +167,4 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 >>>>>>> bfc109ab04c7f37baebc8b82c266fedc372a045a
+public/uploads/*
