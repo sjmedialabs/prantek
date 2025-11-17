@@ -1,27 +1,33 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectDB } from "@/lib/mongodb"
-import { Collections } from "@/lib/db-config"
+import { mongoStore } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
 
-export const GET = withAuth(async (req: NextRequest, user: any) => {
-  const db = await connectDB()
-  const taxRates = await db.collection(Collections.TAX_RATES).find({ userId: user.userId }).toArray()
+export const GET = withAuth(async (request: NextRequest, user) => {
+  try {
+    // For admin users, filter by companyId (parent account)
+    // For regular users, filter by userId (their own account)
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
-  return NextResponse.json(taxRates)
+    const taxRates = await mongoStore.getAll("tax-rates", { userId: filterUserId }, { sort: { createdAt: -1 } })
+    
+    return NextResponse.json({ success: true, data: taxRates })
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Failed to fetch tax rates" }, { status: 500 })
+  }
 })
 
-export const POST = withAuth(async (req: NextRequest, user: any) => {
-  const db = await connectDB()
-  const data = await req.json()
+export const POST = withAuth(async (request: NextRequest, user) => {
+  try {
+    const body = await request.json()
+    
+    // For admin users, use companyId (parent account)
+    // For regular users, use userId (their own account)
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
-  const taxRate = {
-    ...data,
-    userId: user.userId,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    const taxRate = await mongoStore.create("tax-rates", { ...body, userId: filterUserId })
+    
+    return NextResponse.json({ success: true, data: taxRate })
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Failed to create tax rate" }, { status: 500 })
   }
-
-  const result = await db.collection(Collections.TAX_RATES).insertOne(taxRate)
-
-  return NextResponse.json({ ...taxRate, _id: result.insertedId })
 })

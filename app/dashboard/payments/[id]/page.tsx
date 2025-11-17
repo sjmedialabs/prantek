@@ -196,7 +196,7 @@ export default function PaymentDetailsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Payment Method</p>
-                  <p className="font-semibold capitalize">{payment.paymentMethod.replace("-", " ")}</p>
+                  <p className="font-semibold capitalize">{payment.paymentMethod?.replace("-", " ") || "Unknown"}</p>
                 </div>
                 {payment.bankAccount && (
                   <div>
@@ -235,7 +235,7 @@ export default function PaymentDetailsPage() {
             <CardContent className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Payment Amount</p>
-                <p className="text-3xl font-bold text-gray-900">₹{payment.amount.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-gray-900">₹{payment.amount?.toLocaleString() || "0"}</p>
               </div>
               <Separator />
               <div>

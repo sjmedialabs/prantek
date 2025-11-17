@@ -10,12 +10,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    // For admin users, filter by companyId (parent account)
-    // For regular users, filter by userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
-    const receipts = await mongoStore.getAll("receipts", { userId: filterUserId }, { skip, limit, sort: { date: -1 } })
-    const total = await mongoStore.count("receipts", { userId: filterUserId })
+    const receipts = await mongoStore.getAll("receipts", { userId: user.userId }, { skip, limit, sort: { date: -1 } })
+    const total = await mongoStore.count("receipts", { userId: user.userId })
 
     return NextResponse.json({
       success: true,
@@ -36,10 +32,6 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
-    // For admin users, use companyId (parent account)
-    // For regular users, use userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
     // Get client name for generating unique number with client code
     let clientName = "Unknown"
     if (body.clientId || body.selectedClientId) {
@@ -52,12 +44,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
 
     if (!body.receiptNumber) {
-      body.receiptNumber = await generateNextNumber("receipts", "RC", filterUserId, clientName)
+      body.receiptNumber = await generateNextNumber("receipts", "RC", user.userId, clientName)
     }
 
-    const receipt = await mongoStore.create("receipts", { ...body, userId: filterUserId })
+    const receipt = await mongoStore.create("receipts", { ...body, userId: user.userId })
 
-    await logActivity(filterUserId, "create", "receipt", receipt._id?.toString(), { receiptNumber: body.receiptNumber })
+    await logActivity(user.userId, "create", "receipt", receipt._id?.toString(), { receiptNumber: body.receiptNumber })
 
     // Notify admins about new receipt
     try {
@@ -65,7 +57,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         receipt._id?.toString() || "",
         body.receiptNumber,
         clientName,
-        filterUserId
+        user.userId
       )
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)

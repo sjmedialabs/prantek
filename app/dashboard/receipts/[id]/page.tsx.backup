@@ -23,14 +23,13 @@ export default function ReceiptDetailsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!receiptId) return
     getCompanyDetails().then(setCompanyDetails)
     loadReceipt()
   }, [receiptId])
 
-  const loadReceipt = async () => {
+  const loadReceipt = () => {
     try {
-      const data = await api.receipts.getById(receiptId)
+      const data = api.receipts.getById(receiptId)
       setReceipt(data || null)
     } catch (error) {
       setReceipt(null)
@@ -166,7 +165,7 @@ export default function ReceiptDetailsPage() {
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
                   <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                    {receipt.status?.charAt(0).toUpperCase() + receipt.status?.slice(1) || "Unknown"}
+                    {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -363,7 +362,7 @@ export default function ReceiptDetailsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Payment Status</span>
                   <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                    {receipt.status?.charAt(0).toUpperCase() + receipt.status?.slice(1) || "Unknown"}
+                    {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
                   </Badge>
                 </div>
                 {(receipt.balanceAmount || 0) === 0 && (

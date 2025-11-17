@@ -9,8 +9,12 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    const vendors = await mongoStore.getAll("vendors", { userId: user.userId }, { skip, limit, sort: { createdAt: -1 } })
-    const total = await mongoStore.count("vendors", { userId: user.userId })
+    // For admin users, filter by companyId (parent account)
+    // For regular users, filter by userId (their own account)
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
+    const vendors = await mongoStore.getAll("vendors", { userId: filterUserId }, { skip, limit, sort: { createdAt: -1 } })
+    const total = await mongoStore.count("vendors", { userId: filterUserId })
 
     return NextResponse.json({
       success: true,
@@ -30,9 +34,14 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
-    const vendor = await mongoStore.create("vendors", { ...body, userId: user.id })
+    
+    // For admin users, use companyId (parent account)
+    // For regular users, use userId (their own account)
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+    
+    const vendor = await mongoStore.create("vendors", { ...body, userId: filterUserId })
 
-    await logActivity(user.userId, "create", "vendor", vendor._id?.toString(), { name: body.name })
+    await logActivity(filterUserId, "create", "vendor", vendor._id?.toString(), { name: body.name })
 
     return NextResponse.json({ success: true, data: vendor })
   } catch (error) {
