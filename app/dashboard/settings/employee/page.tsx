@@ -1172,143 +1172,96 @@ const handleSave = async () => {
         </CardContent>
       </Card>
 
-     <Card>
-  <CardHeader>
-    <CardTitle className="flex items-center">
-      <Users className="h-5 w-5 mr-2" />
-      Employee List
-    </CardTitle>
-    <CardDescription>All employees in your organization</CardDescription>
-  </CardHeader>
-
-  <CardContent>
-    {filteredEmployees.length === 0 ? (
-      <div className="text-center py-12 text-gray-500">
-        <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-        <p>
-          {employees.length === 0
-            ? "No employees added yet. Click 'Add Employee' to get started."
-            : "No employees match your current filters."}
-        </p>
-      </div>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full border rounded-lg">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-3 text-left font-medium">Employee No</th>
-              <th className="p-3 text-left font-medium">Name</th>
-              <th className="p-3 text-left font-medium">Role</th>
-              <th className="p-3 text-left font-medium">Member Type</th>
-              <th className="p-3 text-left font-medium">Status</th>
-              <th className="p-3 text-left font-medium">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredEmployees.map((employee) => (
-              <tr
-                key={employee.id}
-                className={`border-b ${
-                  !employee.isActive ? "bg-gray-50 opacity-60" : ""
-                }`}
-              >
-                {/* Employee Number */}
-                <td className="p-3 font-semibold">{employee.employeeNumber}</td>
-
-                {/* Name */}
-                <td className="p-3">
-                  {employee.employeeName} {employee.middleName}{" "}
-                  {employee.surname}
-                </td>
-
-                {/* Role */}
-                <td className="p-3">
-                  <Badge variant="outline" className="text-xs">
-                    {roles.find((r) => r._id === employee.role)?.name ||
-                      employee.role}
-                  </Badge>
-                </td>
-
-                {/* Member Type */}
-                <td className="p-3">
-                  {employee.memberType ? (
-                    <Badge variant="secondary" className="text-xs">
-                      {memberTypes.find((t) => t._id === employee.memberType)
-                        ?.name}
-                    </Badge>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-
-                {/* Status */}
-                <td className="p-3">
-                  {employee.isActive ? (
-                    <Badge className="text-xs">Active</Badge>
-                  ) : (
-                    <Badge variant="destructive" className="text-xs">
-                      Inactive
-                    </Badge>
-                  )}
-                </td>
-
-                {/* Actions */}
-                <td className="p-3">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Users className="h-5 w-5 mr-2" />
+            Employee List
+          </CardTitle>
+          <CardDescription>All employees in your organization</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {filteredEmployees.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p>{employees.length === 0 ? "No employees added yet. Click 'Add Employee' to get started." : "No employees match your current filters."}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredEmployees.map((employee) => (
+                <div
+                  key={employee.id}
+                  className={`flex items-center justify-between p-4 border rounded-lg ${!employee?.isActive ? "bg-gray-50 opacity-60" : ""
+                    }`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <span className="font-semibold">{employee.employeeNumber}</span>
+                      <span className="font-medium">
+                        {employee.employeeName} {employee.middleName} {employee.surname}
+                      </span>
+                      {employee.memberType && (
+                        <Badge variant="secondary" className="text-xs">
+                          {memberTypes.find((t) => t._id === employee.memberType)?.name}
+                        </Badge>
+                      )}
+                      {employee.role && (
+                        <Badge variant="outline" className="text-xs">
+                          {roles.find((r) => r._id === employee.role)?.name || employee.role}
+                        </Badge>
+                      )}
+                      {!employee.isActive && (
+                        <Badge variant="destructive" className="text-xs">
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <p>{employee.email}</p>
+                      <p>{employee.mobileNo}</p>
+                    </div>
+                  </div>
                   <div className="flex items-center space-x-2">
-                    {/* Send Credentials Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleSendCredentials(employee._id || employee.id)
-                      }
-                      disabled={
-                        sendingCredentials === (employee._id || employee.id) ||
-                        !employee.isActive
-                      }
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleSendCredentials(employee._id || employee.id)}
+                      disabled={sendingCredentials === (employee._id || employee.id) || !employee.isActive}
+                      title="Send login credentials to employee"
                       className="text-xs"
                     >
-                      {sendingCredentials ===
-                      (employee._id || employee.id) ? (
+                      {sendingCredentials === (employee._id || employee.id) ? (
                         <>
-                          <span className="animate-spin mr-1">⏳</span> Sending...
+                          <span className="animate-spin mr-1">⏳</span>
+                          <span className="text-xs">Sending...</span>
                         </>
                       ) : (
                         <>
-                          <Send className="h-3 w-3 mr-1" /> Send
+                          <Send className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Send Credentials</span>
                         </>
                       )}
                     </Button>
-
-                    {/* Edit Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(employee)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-
-                    {/* Toggle Switch */}
-                    <Switch
-                      checked={!!employee.isActive}
-                      onCheckedChange={(checked) =>
-                        handleToggleActive(employee._id || employee.id, checked)
-                      }
-                      disabled={employee.isSystem || employee.userCount > 0}
-                    />
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor={`active-${employee.id}`} className="text-sm">
+                        {employee.isActive ? "Active" : "Inactive"}
+                      </Label>
+                      <Switch
+                        checked={!!employee.isActive}
+                        onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
+                        disabled={employee.isSystem || employee.userCount > 0}
+                      />
+                    </div>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </CardContent>
-</Card>
-
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
