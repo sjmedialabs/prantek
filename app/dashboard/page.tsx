@@ -425,18 +425,21 @@ export default function DashboardPage() {
                 >
                   {user?.role.replace("-", " ")}
                 </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-100 text-blue-900 font-medium"
-                >
-                  {currentPlan
-                    ? `${currentPlan.name}${
-                        user?.subscriptionStatus === "trial" ? " (Trial)" : ""
-                      }`
-                    : user?.subscriptionStatus === "trial"
-                    ? "Trial Plan"
-                    : "No Active Plan"}
-                </Badge>
+                {/* Only show subscription badge for account owners */}
+                {(user?.role === "user" || user?.role === "super-admin") && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-900 font-medium"
+                  >
+                    {currentPlan
+                      ? `${currentPlan.name}${
+                          user?.subscriptionStatus === "trial" ? " (Trial)" : ""
+                        }`
+                      : user?.subscriptionStatus === "trial"
+                      ? "Trial Plan"
+                      : "No Active Plan"}
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -455,8 +458,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Onboarding Progress Cards - Below Welcome */}
-      <OnboardingProgressCards />
+      {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
+      {(user?.role === "user" || user?.role === "super-admin") && <OnboardingProgressCards />}
 
       {/* Quick Action Cards */}
       <div>

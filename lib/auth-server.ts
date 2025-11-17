@@ -45,6 +45,33 @@ export async function authenticateAdminUser(email: string, password: string): Pr
     return null
   }
 
+  // Fetch parent account (company owner) to get subscription details
+  let subscriptionData = {}
+  if (adminUser.companyId) {
+    try {
+      const parentAccount = await db.collection(Collections.USERS).findOne({ 
+        _id: new ObjectId(adminUser.companyId)
+      })
+      
+      if (parentAccount) {
+        console.log('[AUTH-SERVER] Found parent account with subscription:', {
+          subscriptionPlanId: parentAccount.subscriptionPlanId,
+          subscriptionStatus: parentAccount.subscriptionStatus
+        })
+        
+        subscriptionData = {
+          subscriptionPlanId: parentAccount.subscriptionPlanId,
+          subscriptionStatus: parentAccount.subscriptionStatus,
+          subscriptionStartDate: parentAccount.subscriptionStartDate,
+          subscriptionEndDate: parentAccount.subscriptionEndDate,
+          trialEndsAt: parentAccount.trialEndsAt,
+        }
+      }
+    } catch (error) {
+      console.error('[AUTH-SERVER] Error fetching parent account:', error)
+    }
+  }
+
   // Update last login
   await db.collection(Collections.ADMIN_USERS).updateOne(
     { _id: adminUser._id },
@@ -57,6 +84,8 @@ export async function authenticateAdminUser(email: string, password: string): Pr
     role: adminUser.role || "admin",
     permissions: adminUser.permissions || [],
     roleId: adminUser.roleId?.toString(),
+    companyId: adminUser.companyId,
+    ...subscriptionData,
   }
   console.log("[AUTH-SERVER] Token payload:", JSON.stringify(tokenPayload))
 
@@ -73,6 +102,8 @@ export async function authenticateAdminUser(email: string, password: string): Pr
       role: adminUser.role || "admin",
       permissions: adminUser.permissions || [],
       roleId: adminUser.roleId?.toString(),
+      companyId: adminUser.companyId,
+      ...subscriptionData,
     },
   }
 }
