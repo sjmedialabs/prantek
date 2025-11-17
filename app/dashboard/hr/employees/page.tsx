@@ -97,7 +97,7 @@ export default function EmployeePage() {
       console.log("loadedEmployees", loadedEmployees)
       const loadedMemberTypes = await api.memberTypes.getAll()
       console.log("loadedMemberTypes", loadedMemberTypes)
-      const loadedRoles = await api.roles.getAll()
+      const loadedRoles = await api.employeeRoles.getAll()
       console.log("loadedRoles", loadedRoles)
         setRoles(loadedRoles)
       setEmployees(loadedEmployees)

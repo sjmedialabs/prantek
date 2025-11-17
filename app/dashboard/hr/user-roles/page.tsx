@@ -102,8 +102,8 @@ useEffect(() => {
       // 1️⃣ Load roles from DB
       const loadedRoles = await api.roles.getAll()
 
-      // 2️⃣ Load employees from DB
-      const loadedUsers = await api.employees.getAll()
+      // 2️⃣ Load admin users from DB
+      const loadedUsers = await api.users.getAll()
 
       // 3️⃣ Count how many users match each role
       const rolesWithUserCount = loadedRoles.map((role: any) => {

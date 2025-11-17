@@ -711,6 +711,33 @@ export const api = {
         })
         return data.data || data.role
       },
+    // Employee Roles
+    employeeRoles: {
+      getAll: async () => {
+        const data = await fetchAPI("/api/employee-roles")
+        return data.roles || data.data || []
+      },
+      create: async (roleData: any) => {
+        const data = await fetchAPI("/api/employee-roles", {
+          method: "POST",
+          body: JSON.stringify(roleData),
+        })
+        return data.role || data.data
+      },
+      update: async (id: string, roleData: any) => {
+        const data = await fetchAPI(`/api/employee-roles/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(roleData),
+        })
+        return data.role || data.data
+      },
+      delete: async (id: string) => {
+        await fetchAPI(`/api/employee-roles/${id}`, {
+          method: "DELETE",
+        })
+      },
+    },
+
     },
 
     taxSetting: {
