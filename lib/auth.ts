@@ -5,6 +5,9 @@ export interface User {
   email: string
   name: string
   role: "user" | "super-admin" | "admin" | "employee"
+  permissions?: string[]
+  isAdminUser?: boolean
+  roleId?: string
   companyId?: string
   subscriptionPlanId?: string
   subscriptionStatus?: string
@@ -26,6 +29,7 @@ export async function verifyUser(accessToken: string): Promise<User | null> {
   try {
     const response = await fetch("/api/auth/verify", {
       method: "GET",
+      credentials: "include",
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -61,6 +65,8 @@ export async function refreshAccessToken(refreshToken: string): Promise<string |
       userId: payload.userId,
       email: payload.email,
       role: payload.role,
+      permissions: payload.permissions,
+      roleId: payload.roleId,
     },
     "15m"
   )

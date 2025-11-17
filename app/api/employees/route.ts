@@ -52,6 +52,14 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const db = await connectDB()
     const data = await req.json()
 
+    // Validate required fields for employee
+    if (!data.employeeName || !data.designation) {
+      return NextResponse.json(
+        { error: "Employee name and designation are required" },
+        { status: 400 }
+      )
+    }
+
     // Remove empty id and _id fields that come from the frontend
     const { id, _id, ...cleanData } = data
 
@@ -62,6 +70,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
       ...cleanData,
       employeeNumber: uniqueEmployeeNumber,
       userId: user.userId,
+      employmentStatus: data.employmentStatus || "active",
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -69,8 +78,9 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const result = await db.collection(Collections.EMPLOYEES).insertOne(employee)
     
     await logActivity(user.userId, "create", "employee", result.insertedId?.toString(), { 
-      name: `${employee.employeeName} ${employee.surname}`, 
-      employeeNumber: employee.employeeNumber 
+      name: `${employee.employeeName} ${employee.surname || ''}`.trim(), 
+      employeeNumber: employee.employeeNumber,
+      designation: employee.designation
     })
 
     return NextResponse.json({ ...employee, _id: result.insertedId })

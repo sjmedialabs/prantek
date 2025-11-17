@@ -379,6 +379,8 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      {/* Only show subscription management for account owners */}
+      {!user?.isAdminUser && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -457,6 +459,7 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
+      )}
 
 
       <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>

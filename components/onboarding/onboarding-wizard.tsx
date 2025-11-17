@@ -72,37 +72,37 @@ const STEPS = [
         "Complete company profile ensures all your business documents are professional, compliant, and ready for clients. This is the foundation of your business identity in the system.",
     },
   },
-  {
-    id: 2,
-    title: "Create Clients",
-    icon: Users,
-    description: "Add your first customer",
-    image:
-      "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",
-    educationalContent: {
-      title: "Why Client Management is Important",
-      benefits: [
-        {
-          icon: "✓",
-          text: "Quick access to client details when creating invoices",
-        },
-        {
-          icon: "✓",
-          text: "Track payment history and outstanding balances",
-        },
-        {
-          icon: "✓",
-          text: "Generate client-specific reports and insights",
-        },
-        {
-          icon: "✓",
-          text: "Improve customer relationships with organized data",
-        },
-      ],
-      description:
-        "A well-maintained client database helps you create invoices faster, track receivables, and provide better customer service. Start by adding your first client.",
-    },
-  },
+  // {
+  //   id: 2,
+  //   title: "Create Clients",
+  //   icon: Users,
+  //   description: "Add your first customer",
+  //   image:
+  //     "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80",
+  //   educationalContent: {
+  //     title: "Why Client Management is Important",
+  //     benefits: [
+  //       {
+  //         icon: "✓",
+  //         text: "Quick access to client details when creating invoices",
+  //       },
+  //       {
+  //         icon: "✓",
+  //         text: "Track payment history and outstanding balances",
+  //       },
+  //       {
+  //         icon: "✓",
+  //         text: "Generate client-specific reports and insights",
+  //       },
+  //       {
+  //         icon: "✓",
+  //         text: "Improve customer relationships with organized data",
+  //       },
+  //     ],
+  //     description:
+  //       "A well-maintained client database helps you create invoices faster, track receivables, and provide better customer service. Start by adding your first client.",
+  //   },
+  // },
   {
     id: 3,
     title: "Basic Settings",
@@ -249,7 +249,7 @@ export function OnboardingWizard() {
 
       // Update progress based on real data
       if (company?.companyName) updateProgress("companyInfo", true);
-      if (clients?.length > 0) updateProgress("clients", true);
+      // if (clients?.length > 0) updateProgress("clients", true);
       if (
         categories?.length > 0 ||
         taxRates?.length > 0 ||
@@ -312,13 +312,13 @@ export function OnboardingWizard() {
         case 1:
           await saveCompanyInfo();
           break;
+        // case 2:
+        //   await saveClient();
+        //   break;
         case 2:
-          await saveClient();
-          break;
-        case 3:
           await saveSettings();
           break;
-        case 4:
+        case 3:
           await saveProduct();
           break;
       }
@@ -556,7 +556,7 @@ export function OnboardingWizard() {
 
   const handleContinue = () => {
     setShowCongrats(false);
-    if (currentStep < 4) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
       completeOnboarding();
@@ -565,7 +565,7 @@ export function OnboardingWizard() {
 
   const handleSkipStep = () => {
     // Don't mark as complete when skipping - just move to next step
-    if (currentStep < 4) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
       completeOnboarding();
@@ -899,7 +899,7 @@ export function OnboardingWizard() {
                   </>
                 )}
 
-                {currentStep === 2 && (
+                {/* {currentStep === 2 && (
                   <>
                     <div>
                       <Label htmlFor="clientName">
@@ -969,9 +969,9 @@ export function OnboardingWizard() {
                       />
                     </div>
                   </>
-                )}
+                )} */}
 
-                {currentStep === 3 && (
+                {currentStep === 2 && (
                   <>
                     <div>
                       <Label htmlFor="category">
@@ -1073,7 +1073,7 @@ export function OnboardingWizard() {
                   </>
                 )}
 
-                {currentStep === 4 && (
+                {currentStep === 3 && (
                   <>
                     <div>
                       <Label htmlFor="productType">
@@ -1271,7 +1271,7 @@ export function OnboardingWizard() {
           </DialogTitle>
           <DialogDescription className="sr-only">
             You have successfully completed {completedStepTitle}.{" "}
-            {currentStep < 4
+            {currentStep < 3
               ? "Continue to the next step."
               : "Your setup is complete!"}
           </DialogDescription>
@@ -1314,7 +1314,7 @@ export function OnboardingWizard() {
                 className="text-sm text-gray-600 mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
                 style={{ animationDelay: "0.2s" }}
               >
-                {currentStep < 4
+                {currentStep < 3
                   ? "Great job! You're making excellent progress. Let's continue to the next step."
                   : "Amazing! You've completed the entire setup process. Your account is ready to go!"}
               </p>
@@ -1342,7 +1342,7 @@ export function OnboardingWizard() {
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium py-6 text-lg shadow-lg animate-in fade-in zoom-in duration-500"
                 style={{ animationDelay: "0.4s" }}
               >
-                {currentStep < 4 ? (
+                {currentStep < 3 ? (
                   <>
                     Continue to Next Step
                     <ChevronRight className="h-5 w-5 ml-2" />

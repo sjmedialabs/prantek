@@ -95,7 +95,7 @@ export default function DashboardPage() {
 
       // Update progress based on real data
       updateProgress("companyInfo", !!company?.companyName);
-      updateProgress("clients", (clients?.length || 0) > 0);
+      // updateProgress("clients", (clients?.length || 0) > 0);
       updateProgress("basicSettings", 
         (categories?.length || 0) > 0 || (taxRates?.length || 0) > 0 || (paymentMethods?.length || 0) > 0
       );
@@ -425,18 +425,21 @@ export default function DashboardPage() {
                 >
                   {user?.role.replace("-", " ")}
                 </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-100 text-blue-900 font-medium"
-                >
-                  {currentPlan
-                    ? `${currentPlan.name}${
-                        user?.subscriptionStatus === "trial" ? " (Trial)" : ""
-                      }`
-                    : user?.subscriptionStatus === "trial"
-                    ? "Trial Plan"
-                    : "No Active Plan"}
-                </Badge>
+                {/* Only show subscription badge for account owners */}
+                {!user?.isAdminUser && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-900 font-medium"
+                  >
+                    {currentPlan
+                      ? `${currentPlan.name}${
+                          user?.subscriptionStatus === "trial" ? " (Trial)" : ""
+                        }`
+                      : user?.subscriptionStatus === "trial"
+                      ? "Trial Plan"
+                      : "No Active Plan"}
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -448,15 +451,15 @@ export default function DashboardPage() {
               </div>
               <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
               <p className="text-xs text-gray-600">
-                {Object.values(progress).filter((v) => v).length} of 4 steps completed
+                {Object.values(progress).filter((v) => v).length} of 3 steps completed
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Onboarding Progress Cards - Below Welcome */}
-      <OnboardingProgressCards />
+      {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
+      {!user?.isAdminUser && <OnboardingProgressCards />}
 
       {/* Quick Action Cards */}
       <div>

@@ -1,0 +1,210 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Search, Download, Trash2 } from "lucide-react"
+import { toast } from "@/lib/toast"
+import api from "@/lib/api-client"
+
+type ActivityLog = {
+  _id: string
+  userId: string
+  userName: string
+  userRole: string
+  action: string
+  description: string
+  timestamp: string
+  metadata?: Record<string, unknown>
+}
+
+export default function ActivityLogPage() {
+  const [logs, setLogs] = useState<ActivityLog[]>([])
+  const [filteredLogs, setFilteredLogs] = useState<ActivityLog[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadLogs()
+  }, [])
+
+
+
+const loadLogs = async () => {
+  setLoading(true)
+  try {
+    const logs = await api.activityLogs.getAll()
+    console.log("Loaded activity logs:", logs.data)
+    setLogs(logs.data)
+    setFilteredLogs(logs.data)
+  } catch {
+    toast.error("Failed to load activity logs")
+  } finally {
+    setLoading(false)
+  }
+}
+
+  const handleClearOldLogs = async () => {
+    if (confirm("Are you sure you want to clear activity logs older than 30 days?")) {
+      try {
+        const response = await fetch("/api/activity-logs", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ daysOld: 30 }),
+        })
+        if (!response.ok) throw new Error("Failed to clear old logs")
+        await loadLogs()
+        toast.success("Old activity logs cleared successfully")
+      } catch (error) {
+        console.error("Error clearing old logs:", error)
+        toast.error("Failed to clear old logs")
+      }
+    }
+  }
+
+  const handleExport = () => {
+    const csv = [
+      ["Timestamp", "User", "Role", "Action", "Description"],
+      ...filteredLogs.map((log) => [
+        new Date(log.timestamp).toLocaleString(),
+        log.userName,
+        log.userRole,
+        log.action,
+        log.description,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n")
+
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `activity-log-${new Date().toISOString().split("T")[0]}.csv`
+    a.click()
+    toast.success("Activity log exported successfully")
+  }
+
+  const getActionBadge = (action: string) => {
+    const colors: Record<string, string> = {
+      login: "bg-green-100 text-green-800",
+      logout: "bg-gray-100 text-gray-800",
+      auto_logout: "bg-orange-100 text-orange-800",
+      create: "bg-blue-100 text-blue-800",
+      update: "bg-yellow-100 text-yellow-800",
+      delete: "bg-red-100 text-red-800",
+    }
+
+    const actionType = action.split("_")[0]
+    const colorClass = colors[actionType] || "bg-gray-100 text-gray-800"
+
+    return <Badge className={colorClass}>{action.replace(/_/g, " ")}</Badge>
+  }
+
+    useEffect(() => {
+    if (searchTerm) {
+      const filtered = logs.filter(
+        (log) =>
+          log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          log.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      setFilteredLogs(filtered)
+    } else {
+      setFilteredLogs(logs.data)
+    }
+  }, [searchTerm, logs])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Activity Log</h1>
+        <p className="text-gray-600 mt-2">Track all user activities and system events</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Activity History</CardTitle>
+              <CardDescription>View and manage system activity logs</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClearOldLogs}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear Old Logs
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search by user, action, or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Description</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLogs.length == 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                      No activity logs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <TableRow key={log?._id}>
+                      <TableCell className="font-mono text-sm">{new Date(log.timestamp).toLocaleString()}</TableCell>
+                      <TableCell>{log.userName}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{log.userRole}</Badge>
+                      </TableCell>
+                      <TableCell>{getActionBadge(log.action)}</TableCell>
+                      <TableCell className="max-w-md truncate">{log.description}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="mt-4 text-sm text-gray-600">
+            Showing {filteredLogs.length} of {logs.length} activities
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

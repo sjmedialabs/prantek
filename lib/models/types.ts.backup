@@ -6,22 +6,6 @@ export interface BaseDocument {
   updatedAt: Date
 }
 
-// Admin User - has dashboard access with roles and permissions
-export interface AdminUser extends BaseDocument {
-  email: string
-  password: string
-  name: string
-  companyId?: string
-  role: "super-admin" | "admin"  // admin users have specific roles
-  roleId?: string  // Reference to Role collection
-  permissions?: string[]  // Cached permissions from role
-  phone?: string
-  avatar?: string
-  isActive: boolean
-  lastLogin?: Date
-}
-
-// Legacy User type for backward compatibility with subscription system
 export interface User extends BaseDocument {
   email: string
   password: string
@@ -40,38 +24,9 @@ export interface User extends BaseDocument {
   isActive: boolean
 }
 
-// Employee - no dashboard access, only designation/role
-export interface Employee extends BaseDocument {
-  userId: string  // Reference to the company/account owner
-  employeeNumber: string
-  employeeName: string
-  surname: string
-  email?: string
-  phone?: string
-  address?: string
-  city?: string
-  state?: string
-  pincode?: string
-  designation: string  // Executive, Manager, Senior Manager, etc.
-  department?: string
-  dateOfJoining?: string | Date
-  dateOfBirth?: string | Date
-  salary?: number
-  bankAccountNumber?: string
-  ifscCode?: string
-  panNumber?: string
-  aadharNumber?: string
-  emergencyContact?: string
-  emergencyContactName?: string
-  employmentStatus: "active" | "inactive" | "terminated" | "resigned"
-  notes?: string
-  profileImage?: string
-}
-
 export interface Client extends BaseDocument {
   userId: string
   name: string
-  type: string
   email: string
   phone?: string
   address?: string
@@ -79,13 +34,10 @@ export interface Client extends BaseDocument {
   state?: string
   pincode?: string
   companyName?:string
-  contactName?: string
   gst?: string
   pan?: string
   notes?: string
-  status?: "active" | "inactive"
 }
-
 
 export interface Vendor extends BaseDocument {
   userId: string
@@ -432,33 +384,12 @@ export interface MemberType extends BaseDocument {
   isActive: boolean
 }
 
-// Role for Admin Users (dashboard access permissions)
 export interface Role extends BaseDocument {
-  userId?: string  // Owner of this role definition
   name: string
-  code?: string  // Unique identifier like 'admin', 'manager', 'viewer'
-  permissions: string[]  // Array of permission strings like 'view_reports', 'manage_users', etc.
+  permissions: string[]
   description?: string
   isActive: boolean
 }
-
-// Available permission options
-export const AVAILABLE_PERMISSIONS = [
-  'view_dashboard',
-  'manage_users',
-  'manage_employees',
-  'manage_clients',
-  'manage_vendors',
-  'manage_quotations',
-  'manage_receipts',
-  'manage_payments',
-  'manage_assets',
-  'view_reports',
-  'manage_settings',
-  'manage_roles',
-] as const
-
-export type Permission = typeof AVAILABLE_PERMISSIONS[number]
 
 export interface ActivityLog extends BaseDocument {
   userId: string

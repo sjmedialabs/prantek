@@ -8,6 +8,15 @@ export interface JWTPayload {
   id?: string // Alias for userId for backward compatibility
   email: string
   role: "user" | "super-admin" | "admin"
+  permissions?: string[] // Permissions array for admin users
+  roleId?: string // Reference to assigned role
+  companyId?: string // Reference to parent account for admin users
+  isAdminUser?: boolean // Distinguishes admin users from account owners
+  subscriptionStartDate?: Date
+  trialEndsAt?: Date
+  subscriptionPlanId?: string // For legacy user system
+  subscriptionStatus?: string
+  subscriptionEndDate?: Date
   iat?: number
   exp?: number
 }
@@ -93,4 +102,52 @@ export function extractTokenFromHeader(authHeader: string | null): string | null
     return null
   }
   return authHeader.substring(7)
+}
+
+/**
+ * Check if user has a specific permission
+ * @param user - User object with permissions array
+ * @param permission - Permission to check
+ * @returns true if user has permission
+ */
+export function hasPermission(user: JWTPayload, permission: string): boolean {
+  // Super admins have all permissions
+  if (user.role === "super-admin") {
+    return true
+  }
+  
+  // Check if user has the specific permission
+  return user.permissions?.includes(permission) || false
+}
+
+/**
+ * Check if user has any of the specified permissions
+ * @param user - User object with permissions array
+ * @param permissions - Array of permissions to check
+ * @returns true if user has at least one permission
+ */
+export function hasAnyPermission(user: JWTPayload, permissions: string[]): boolean {
+  // Super admins have all permissions
+  if (user.role === "super-admin") {
+    return true
+  }
+  
+  // Check if user has any of the specified permissions
+  return permissions.some(permission => user.permissions?.includes(permission))
+}
+
+/**
+ * Check if user has all of the specified permissions
+ * @param user - User object with permissions array
+ * @param permissions - Array of permissions to check
+ * @returns true if user has all permissions
+ */
+export function hasAllPermissions(user: JWTPayload, permissions: string[]): boolean {
+  // Super admins have all permissions
+  if (user.role === "super-admin") {
+    return true
+  }
+  
+  // Check if user has all of the specified permissions
+  return permissions.every(permission => user.permissions?.includes(permission))
 }

@@ -5,7 +5,7 @@ import { useUser } from "@/components/auth/user-context"
 
 export interface OnboardingProgress {
   companyInfo: boolean
-  clients: boolean
+ 
   basicSettings: boolean
   products: boolean
 }
@@ -32,7 +32,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [currentStep, setCurrentStep] = useState(0)
   const [progress, setProgress] = useState<OnboardingProgress>({
     companyInfo: false,
-    clients: false,
+  
     basicSettings: false,
     products: false,
   })

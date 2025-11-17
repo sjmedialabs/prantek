@@ -1,7 +1,8 @@
 export const DB_NAME = "prantek"
 
 export const COLLECTIONS = {
-  USERS: "users",
+  USERS: "users",  // Legacy user collection for subscription/account owners
+  ADMIN_USERS: "admin_users",  // New collection for admin users with dashboard access
   CLIENTS: "clients",
   VENDORS: "vendors",
   ITEMS: "items",
@@ -9,7 +10,7 @@ export const COLLECTIONS = {
   QUOTATIONS: "quotations",
   PAYMENTS: "payments",
   SUBSCRIPTION_PLANS: "subscription_plans",
-  EMPLOYEES: "employees",
+  EMPLOYEES: "employees",  // Employee records without login access
   PAYMENT_METHODS: "payment_methods",
   RECEIPT_CATEGORIES: "receipt_categories",
   PAYMENT_CATEGORIES: "payment_categories",
@@ -20,7 +21,7 @@ export const COLLECTIONS = {
   COMPANY_SETTINGS: "company_settings",
   TEAM_MEMBERS: "team_members",
   MEMBER_TYPES: "member_types",
-  ROLES: "roles",
+  ROLES: "roles",  // Roles for admin users (dashboard permissions)
   ACTIVITY_LOGS: "activity_logs",
   WEBSITE_CONTENT: "website_content",
   ASSETS: "assets",
@@ -33,6 +34,13 @@ export const INDEXES = {
     { key: { phone: 1 }, unique: false }, // Add index for phone lookups
     { key: { companyId: 1 } },
     { key: { subscriptionPlanId: 1 } },
+    { key: { createdAt: -1 } },
+  ],
+  ADMIN_USERS: [
+    { key: { email: 1 }, unique: true },
+    { key: { roleId: 1 } },
+    { key: { companyId: 1 } },
+    { key: { isActive: 1 } },
     { key: { createdAt: -1 } },
   ],
   CLIENTS: [{ key: { userId: 1 } }, { key: { email: 1 } }, { key: { name: 1 } }, { key: { createdAt: -1 } }],
@@ -63,7 +71,20 @@ export const INDEXES = {
     { key: { createdAt: -1 } },
   ],
   SUBSCRIPTION_PLANS: [{ key: { name: 1 }, unique: true }, { key: { price: 1 } }],
+  EMPLOYEES: [
+    { key: { userId: 1 } },
+    { key: { employeeNumber: 1 }, unique: true },
+    { key: { email: 1 } },
+    { key: { designation: 1 } },
+    { key: { employmentStatus: 1 } },
+    { key: { createdAt: -1 } },
+  ],
   TEAM_MEMBERS: [{ key: { userId: 1 } }, { key: { email: 1 } }, { key: { createdAt: -1 } }],
+  ROLES: [
+    { key: { userId: 1 } },
+    { key: { code: 1 } },
+    { key: { isActive: 1 } },
+  ],
   ACTIVITY_LOGS: [{ key: { userId: 1 } }, { key: { action: 1 } }, { key: { timestamp: -1 } }],
   WEBSITE_CONTENT: [{ key: { key: 1 }, unique: true }],
   ASSETS: [{ key: { userId: 1 }, unique: true }],

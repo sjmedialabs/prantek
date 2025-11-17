@@ -4,46 +4,116 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
+import { withAuth } from "@/lib/api-auth"
 
-export async function GET() {
+// GET - Fetch all admin users
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
     const db = await connectDB()
-    const users = await db.collection(Collections.USERS).find({}).toArray()
+    const { searchParams } = new URL(request.url)
     
-    // Remove passwords from response
-    const safeUsers = users.map(({ password, ...user }) => user)
+    // Filter by companyId - admins see only their company's users
+    let query = {}
+    if (user.role !== "super-admin") {
+      // Regular admins can only see users from their company
+      const companyId = user.companyId || user.userId
+      query = { companyId: companyId }
+    }
     
-    return NextResponse.json({ 
-      success: true, 
-      data: safeUsers,
-      users: safeUsers
-    })
+    const adminUsers = await db.collection(Collections.ADMIN_USERS).find(query).toArray()
+    
+    // Fetch associated roles for each user
+    const usersWithRoles = await Promise.all(
+      adminUsers.map(async (u) => {
+        let roleName = null
+        if (u.roleId) {
+          try {
+            const role = await db.collection(Collections.ROLES).findOne({ _id: new ObjectId(u.roleId) })
+            roleName = role?.name || null
+          } catch (err) {
+            console.error("Error fetching role:", err)
+          }
+        }
+        
+        const { password, ...safeUser } = u
+        return { 
+          ...safeUser, 
+          id: u._id.toString(), 
+          _id: u._id.toString(),
+          roleName 
+        }
+      })
+    )
+    
+    return NextResponse.json({ success: true, data: usersWithRoles, users: usersWithRoles })
   } catch (error) {
-    console.error("Error fetching users:", error)
+    console.error("[API-USERS] GET error:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch users" }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+// POST - Create new admin user
+export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const db = await connectDB()
     const data = await request.json()
     
-    // Hash password if provided
-    if (data.password) {
-      data.password = await bcrypt.hash(data.password, 10)
+    // Validate required fields
+    if (!data.email || !data.password || !data.name) {
+      return NextResponse.json(
+        { success: false, error: "Email, password, and name are required" }, 
+        { status: 400 }
+      )
     }
     
-    const newUser = {
-      ...data,
+    // Check if email already exists
+    const existingUser = await db.collection(Collections.ADMIN_USERS).findOne({ email: data.email })
+    if (existingUser) {
+      return NextResponse.json(
+        { success: false, error: "Email already exists" }, 
+        { status: 409 }
+      )
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(data.password, 10)
+    
+    // Fetch role permissions if roleId is provided
+    let permissions = []
+    if (data.roleId) {
+      const role = await db.collection(Collections.ROLES).findOne({ _id: new ObjectId(data.roleId) })
+      if (role) {
+        permissions = role.permissions || []
+      }
+    }
+    
+    // Automatically set companyId from the creating user
+    // For super-admin, use their userId; for regular admin, use their companyId or userId
+    let companyId = data.companyId
+    if (!companyId) {
+      companyId = user.companyId || user.userId
+    }
+    
+    const newAdminUser = {
+      email: data.email,
+      password: hashedPassword,
+      name: data.name,
+      companyId: companyId,
+      role: data.role || "admin",  // "admin" or "super-admin"
+      roleId: data.roleId || null,
+      permissions: permissions,
+      phone: data.phone || null,
+      avatar: data.avatar || null,
+      isActive: data.isActive !== undefined ? data.isActive : true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      lastLogin: null,
     }
     
-    const result = await db.collection(Collections.USERS).insertOne(newUser)
+    const result = await db.collection(Collections.ADMIN_USERS).insertOne(newAdminUser)
     
     // Remove password from response
-    const { password, ...safeUser } = newUser
+    const { password: _, ...safeUser } = newAdminUser
     
     return NextResponse.json({ 
       success: true, 
@@ -51,75 +121,7 @@ export async function POST(request: NextRequest) {
       user: { ...safeUser, _id: result.insertedId, id: result.insertedId.toString() }
     })
   } catch (error) {
-    console.error("Error creating user:", error)
+    console.error("[API-USERS] POST error:", error)
     return NextResponse.json({ success: false, error: "Failed to create user" }, { status: 500 })
   }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const db = await connectDB()
-    const data = await request.json()
-    const { id, _id, password, ...updateData } = data
-    
-    const userId = _id || id
-    if (!userId) {
-      return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 })
-    }
-    
-    // Hash password if being updated
-    const finalUpdate: any = { ...updateData, updatedAt: new Date() }
-    if (password) {
-      finalUpdate.password = await bcrypt.hash(password, 10)
-    }
-    
-    const result = await db.collection(Collections.USERS).updateOne(
-      { _id: new ObjectId(userId) },
-      { $set: finalUpdate }
-    )
-    
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
-    }
-    
-    const updatedUser = await db.collection(Collections.USERS).findOne({ _id: new ObjectId(userId) })
-    
-    // Remove password from response
-    if (updatedUser) {
-      const { password: _, ...safeUser } = updatedUser
-      return NextResponse.json({ 
-        success: true, 
-        data: safeUser,
-        user: safeUser
-      })
-    }
-    
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Error updating user:", error)
-    return NextResponse.json({ success: false, error: "Failed to update user" }, { status: 500 })
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const db = await connectDB()
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get("id")
-    
-    if (!id) {
-      return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 })
-    }
-    
-    const result = await db.collection(Collections.USERS).deleteOne({ _id: new ObjectId(id) })
-    
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
-    }
-    
-    return NextResponse.json({ success: true, message: "User deleted successfully" })
-  } catch (error) {
-    console.error("Error deleting user:", error)
-    return NextResponse.json({ success: false, error: "Failed to delete user" }, { status: 500 })
-  }
-}
+})
