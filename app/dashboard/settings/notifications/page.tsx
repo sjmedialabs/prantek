@@ -51,10 +51,6 @@ export default function NotificationsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Notification Preferences</h1>
           <p className="text-gray-600">Choose which alerts you want to receive</p>
         </div>
-        <Button onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
-        </Button>
       </div>
 
       {saved && (
@@ -125,6 +121,12 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
       )}
+      <div className="text-end mt-5">
+        <Button onClick={handleSave}>
+          <Save className="h-4 w-4 mr-2" />
+          Save Changes
+        </Button>
+      </div>
     </div>
   )
 }

@@ -188,10 +188,6 @@ const handleSave = async () => {
           <h1 className="text-2xl font-bold text-gray-900">Company Details</h1>
           <p className="text-gray-600">Manage your company information and branding</p>
         </div>
-        <Button onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
-        </Button>
       </div>
 
       {saved && (
@@ -364,6 +360,12 @@ const handleSave = async () => {
 
         </CardContent>
       </Card>
+      <div className="text-end  mt-5">
+         <Button onClick={handleSave}>
+          <Save className="h-4 w-4 mr-2" />
+          Save Changes
+        </Button>
+      </div>
     </div>
   )
 }

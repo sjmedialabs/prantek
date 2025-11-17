@@ -114,10 +114,7 @@ export default function SecurityPage() {
           <h1 className="text-2xl font-bold text-gray-900">Security Settings</h1>
           <p className="text-gray-600">Configure security and data protection settings</p>
         </div>
-        <Button onClick={handleSave}>
-          <Save className="h-4 w-4 mr-2" />
-          Save Changes
-        </Button>
+       
       </div>
 
       {saved && (
@@ -242,6 +239,12 @@ export default function SecurityPage() {
           </div>
         </CardContent>
       </Card>
+      <div className="mt-5 text-end">
+         <Button onClick={handleSave}>
+          <Save className="h-4 w-4 mr-2" />
+          Save Changes
+        </Button>
+      </div>
     </div>
   )
 }

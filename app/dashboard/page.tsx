@@ -95,7 +95,7 @@ export default function DashboardPage() {
 
       // Update progress based on real data
       updateProgress("companyInfo", !!company?.companyName);
-      updateProgress("clients", (clients?.length || 0) > 0);
+      // updateProgress("clients", (clients?.length || 0) > 0);
       updateProgress("basicSettings", 
         (categories?.length || 0) > 0 || (taxRates?.length || 0) > 0 || (paymentMethods?.length || 0) > 0
       );
@@ -448,7 +448,7 @@ export default function DashboardPage() {
               </div>
               <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
               <p className="text-xs text-gray-600">
-                {Object.values(progress).filter((v) => v).length} of 4 steps completed
+                {Object.values(progress).filter((v) => v).length} of 3 steps completed
               </p>
             </div>
           </div>

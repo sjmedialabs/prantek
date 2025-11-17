@@ -449,862 +449,825 @@ const handleSave = async () => {
     toast({ title: "Copied", description: "Copied to clipboard" })
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employee</h1>
-          <p className="text-gray-600">Manage employee information</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal>
-          <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                resetForm()
-                setEditingEmployee(null)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Employee
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            className="max-w-[90vw] !w-[90vw] h-[98vh] flex flex-col p-0 gap-0 sm:max-w-[90vw]"
-            onInteractOutside={(e) => e.preventDefault()}
+ return (
+  <div className="space-y-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Employee</h1>
+        <p className="text-gray-600">Manage employee information</p>
+      </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal>
+        <DialogTrigger asChild>
+          <Button
+            onClick={() => {
+              resetForm()
+              setEditingEmployee(null)
+            }}
           >
-            <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-xl font-semibold text-gray-900">
-                    {editingEmployee ? "Edit Employee" : "Add New Employee"}
-                  </DialogTitle>
-                  <DialogDescription className="text-gray-600 mt-1">
-                    {editingEmployee
-                      ? "Update employee information below"
-                      : "Enter employee details below. Fields marked with * are required."}
-                  </DialogDescription>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsDialogOpen(false)}
-                  className="hover:bg-gray-100"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6">
-              <div className="max-w-7xl mx-auto space-y-6">
-                {/* Basic Information Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Basic Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Employee Number *</Label>
-                        <Input
-                          value={editingEmployee ? formData.employeeNumber : "Auto-generated on save"}
-                          disabled
-                          className="bg-gray-100"
-                        />
-                        <p className="text-xs text-gray-500">
-                          {editingEmployee ? "Employee number cannot be changed" : "Will be generated automatically"}
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="employeeName" className="text-sm font-medium">
-                          Employee Name *
-                        </Label>
-                        <Input
-                          id="employeeName"
-                          value={formData.employeeName}
-                          onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
-                          placeholder="First name"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="employeeName" className="text-sm font-medium">
-                          Middle Name *
-                        </Label>
-                        <Input
-                          id="employeeName"
-                          value={formData.middleName}
-                          onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
-                          placeholder="Middle name"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="surname" className="text-sm font-medium">
-                          Surname *
-                        </Label>
-                        <Input
-                          id="surname"
-                          value={formData.surname}
-                          onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
-                          placeholder="Last name"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="memberType" className="text-sm font-medium">
-                          Employment Type *
-                        </Label>
-                        <Select
-                          value={formData.memberType ?? ""}
-                          onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {memberTypes.map((type) => (
-                              <SelectItem key={type._id} value={String(type._id)}>
-                                {type.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="role" className="text-sm font-medium">
-                          Role * {!canManageRoles && <Badge variant="outline" className="ml-2 text-xs"><Shield className="h-3 w-3 mr-1" />Plan Upgrade Required</Badge>}
-                        </Label>
-                        {!canManageRoles ? (
-                          <Alert className="mt-2">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
-                              Role and permission management is not available in your current plan (Plan 1). Please upgrade to Plan 2 or Plan 3 to assign roles to employees.
-                            </AlertDescription>
-                          </Alert>
-                        ) : (
-                          <Select
-                            value={formData.role ?? ""}
-                            onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {roles.filter((r) => r.isActive === true).length === 0 ? (
-                                <SelectItem value="no-roles" disabled>
-                                  No active roles available. Please create roles first.
-                                </SelectItem>
-                              ) : (
-                                roles
-                                  .filter((role) => role.isActive === true)
-                                  .map((role) => (
-                                    <SelectItem key={role._id} value={String(role._id)}>
-                                      {role.name}
-                                    </SelectItem>
-                                  ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Contact Information Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Contact Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="mobileNo" className="text-sm font-medium">
-                          Mobile No *
-                        </Label>
-                        <Input
-                          id="mobileNo"
-                          type="tel"
-                          value={formData.mobileNo}
-                          onChange={(e) => setFormData({ ...formData, mobileNo: e.target.value })}
-                          placeholder="+91 12345 67890"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">
-                          Email *
-                        </Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          placeholder="employee@example.com"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm font-medium">
-                        Address *
-                      </Label>
-                      <Textarea
-                        id="address"
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        placeholder="Complete address"
-                        rows={3}
-                        required
-                      />
-                    </div>
-                                        {/* //emergency contact */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">
-                          Emergency Contact Name *
-                        </Label>
-                        <Input
-                          id="emergencyName"
-                          value={formData.emergencyName}
-                          onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
-                          placeholder="Emergency Contact Name"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="Emergency No." className="text-sm font-medium">
-                        Emergency Mobile No *
-                        </Label>
-                        <Input
-                          id="emergenrcyNo"
-                          type="tel"
-                          value={formData.emergencyNo}
-                          onChange={(e) => setFormData({ ...formData, emergencyNo: e.target.value })}
-                          placeholder="+91 12345 67890"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Documents & Media Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Documents & Media</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <ImageUpload
-                          label="Employee Photo *"
-                          value={formData.photo}
-                          onChange={(value) => setFormData({ ...formData, photo: value })}
-                            maxSizeMB={1}
-                            allowedTypes={["image/*"]}
-                          previewClassName="w-32 h-32 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <ImageUpload
-                          label="Aadhar Document *"
-                          value={formData.aadharUpload}
-                          onChange={(value) => setFormData({ ...formData, aadharUpload: value })}
-                          allowedTypes={["image/*", "application/pdf"]}
-                          maxSizeMB={1}
-                          previewClassName="w-32 h-32 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <ImageUpload
-                          label="Resume"
-                          value={formData.resume || ""}
-                          onChange={(value) => setFormData({ ...formData, resume: value })}
-                          allowedTypes={["application/pdf"]}
-                          maxSizeMB={3}
-                          previewClassName="w-32 h-32 rounded-lg"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <ImageUpload
-                          label="PAN Card"
-                          value={formData.panCard || ""}
-                          onChange={(value) => setFormData({ ...formData, panCard: value })}
-                          allowedTypes={["image/*", "application/pdf"]}
-                          maxSizeMB={1}
-                          previewClassName="w-32 h-32 rounded-lg"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Education Certificates Section */}
-                <MultiDocumentUpload
-                  label="Education Certificates"
-                  documents={formData.educationCertificates}
-                  onChange={(docs) => setFormData({ ...formData, educationCertificates: docs })}
-                  placeholder="e.g., Bachelor's Degree, Master's Degree, Diploma"
-                />
-
-                {/* Experience Certificates Section */}
-                <MultiDocumentUpload
-                  label="Experience Certificates"
-                  documents={formData.experienceCertificates}
-                  onChange={(docs) => setFormData({ ...formData, experienceCertificates: docs })}
-                  placeholder="e.g., ABC Company - Offer Letter, XYZ Corp - Relieving Letter"
-                />
-
-                {/* Banking Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Banking Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="accountName" className="text-sm font-medium">
-                          Account Holder Name
-                        </Label>
-                        <Input
-                          id="accountName"
-                          value={formData.bankAccountDetails?.accountName || ""}
-                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, accountName: e.target.value }})}
-                          placeholder="XXXX XXXX XXXX"
-                          maxLength={14}
-                          required
-                        />
-                      </div>
-                    </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="bankName" className="text-sm font-medium">
-                          Bank Name
-                        </Label>
-                        <Input
-                          id="bankName"
-                          value={formData.bankAccountDetails?.bankName}
-                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, bankName: e.target.value }})}
-                          placeholder="Example Bank"
-                          required
-                        />
-                      </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="branchName" className="text-sm font-medium">
-                          Branch Name
-                        </Label>
-                        <Input
-                          id="bankName"
-                          value={formData.bankAccountDetails?.branchName}
-                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, branchName: e.target.value }})}
-                          placeholder="Branch Name"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="accountNumber" className="text-sm font-medium">
-                          Account Number
-                        </Label>
-                        <Input
-                          id="accountNumber"
-                          value={formData.bankAccountDetails?.accountNumber}
-                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, accountNumber: e.target.value }})}
-                          placeholder="XXXX XXXX XXXX"
-                          maxLength={14}
-                          required
-                        />
-                      </div>
-                        <div className="space-y-2">
-                        <Label htmlFor="ifsc" className="text-sm font-medium">
-                          IFSC
-                        </Label>
-                        <Input
-                          id="ifsc"
-                          value={formData.bankAccountDetails?.ifscCode}
-                          onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, ifscCode: e.target.value }})}
-                          placeholder="XXXX XXXX XXXX"
-                          maxLength={14}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Identity Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Identity Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="adharNo" className="text-sm font-medium">
-                          Aadhar Number *
-                        </Label>
-                        <Input
-                          id="adharNo"
-                          value={formData.aadharNo}
-                          onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                {/* Employment Dates Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Employment Dates</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="joiningDate" className="text-sm font-medium">
-                          Joining Date *
-                        </Label>
-                        <Input
-                          id="joiningDate"
-                          type="date"
-                          value={formData.joiningDate}
-                          onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
-                          required
-                        />
-                      </div>
-                      {editingEmployee && (
-                        <div className="space-y-2">
-                          <Label htmlFor="relievingDate" className="text-sm font-medium">
-                            Relieving Date
-                          </Label>
-                          <Input
-                            id="relievingDate"
-                            type="date"
-                            value={formData.relievingDate || ""}
-                            onChange={(e) => setFormData({ ...formData, relievingDate: e.target.value })}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Additional Information Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Additional Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <Label htmlFor="description" className="text-sm font-medium">
-                        Description
-                      </Label>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Additional notes about the employee"
-                        rows={4}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <div className="h-20" />
-              </div>
-            </div>
-
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-50 shadow-lg">
-              <div className="max-w-7xl mx-auto flex justify-end space-x-3">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Employee
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Credentials Dialog */}
-      <Dialog open={isCredentialsDialogOpen} onOpenChange={setIsCredentialsDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Login Credentials Generated</DialogTitle>
-          <DialogDescription>
-            Login credentials for {generatedCredentials?.employeeName}
-          </DialogDescription>
-          {generatedCredentials && (
-            <div className="space-y-4">
-              <Alert className="bg-yellow-50 border-yellow-200">
-                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800 text-sm">
-                  Email service is not configured. Please share these credentials manually.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-                <div className="space-y-1">
-                  <Label className="text-xs text-gray-600">Email / Username</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      value={generatedCredentials.email} 
-                      readOnly 
-                      className="bg-white text-sm" 
-                    />
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => copyToClipboard(generatedCredentials.email)}
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs text-gray-600">Temporary Password</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      value={generatedCredentials.password} 
-                      readOnly 
-                      className="bg-white font-mono text-sm" 
-                    />
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => copyToClipboard(generatedCredentials.password)}
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <Alert className="bg-blue-50 border-blue-200">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800 text-xs">
-                  Make sure to save these credentials. The password cannot be retrieved later.
-                </AlertDescription>
-              </Alert>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsCredentialsDialogOpen(false)
-                    setGeneratedCredentials(null)
-                  }}
-                  className="flex-1"
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {saved && (
-        <Alert>
-          <AlertDescription>Employee saved successfully!</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Statistics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setFilterStatus("all")}
+            <Plus className="h-4 w-4 mr-2" />
+            Add Employee
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          className="max-w-[90vw] !w-[90vw] h-[98vh] flex flex-col p-0 gap-0 sm:max-w-[90vw]"
+          onInteractOutside={(e) => e.preventDefault()}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Employees</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalEmployees}</div>
-            <p className="text-xs text-gray-500 mt-1">All registered employees</p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setFilterStatus("active")}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Active Employees</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{activeEmployees}</div>
-            <p className="text-xs text-gray-500 mt-1">{((activeEmployees/totalEmployees)*100 || 0).toFixed(0)}% of total</p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => setFilterStatus("inactive")}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Inactive Employees</CardTitle>
-            <UserX className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{inactiveEmployees}</div>
-            <p className="text-xs text-gray-500 mt-1">{((inactiveEmployees/totalEmployees)*100 || 0).toFixed(0)}% of total</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Joined This Month</CardTitle>
-            <TrendingUp className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{joinedThisMonth}</div>
-            <p className="text-xs text-gray-500 mt-1">New hires in {new Date().toLocaleDateString('en-US', { month: 'long' })}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filter Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Filters</CardTitle>
-          <CardDescription>Filter and search employees</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search Input */}
-            <div className="space-y-2">
-              <Label htmlFor="search" className="text-sm font-medium">
-                Search
-              </Label>
-              <Input
-                id="search"
-                placeholder="Name, email, or employee #"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="statusFilter" className="text-sm font-medium">
-                Status
-              </Label>
-              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                <SelectTrigger id="statusFilter">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="active">Active Only</SelectItem>
-                  <SelectItem value="inactive">Inactive Only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Role Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="roleFilter" className="text-sm font-medium">
-                Role
-              </Label>
-              <Select value={filterRole} onValueChange={setFilterRole}>
-                <SelectTrigger id="roleFilter">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  {roles.filter(r => r.isActive).map((role) => (
-                    <SelectItem key={role._id} value={String(role._id)}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Member Type Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="memberTypeFilter" className="text-sm font-medium">
-                Employment Type
-              </Label>
-              <Select value={filterMemberType} onValueChange={setFilterMemberType}>
-                <SelectTrigger id="memberTypeFilter">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {memberTypes.map((type) => (
-                    <SelectItem key={type._id} value={String(type._id)}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  {editingEmployee ? "Edit Employee" : "Add New Employee"}
+                </DialogTitle>
+                <DialogDescription className="text-gray-600 mt-1">
+                  {editingEmployee
+                    ? "Update employee information below"
+                    : "Enter employee details below. Fields marked with * are required."}
+                </DialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsDialogOpen(false)}
+                className="hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
           </div>
 
-          {/* Clear Filters Button */}
-          {(searchQuery || filterStatus !== "all" || filterRole !== "all" || filterMemberType !== "all") && (
-            <div className="mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery("")
-                  setFilterStatus("all")
-                  setFilterRole("all")
-                  setFilterMemberType("all")
-                }}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Clear All Filters
-              </Button>
-              <span className="ml-3 text-sm text-gray-600">
-                Showing {filteredEmployees.length} of {totalEmployees} employees
-              </span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-     <Card>
-  <CardHeader>
-    <CardTitle className="flex items-center">
-      <Users className="h-5 w-5 mr-2" />
-      Employee List
-    </CardTitle>
-    <CardDescription>All employees in your organization</CardDescription>
-  </CardHeader>
-
-  <CardContent>
-    {filteredEmployees.length === 0 ? (
-      <div className="text-center py-12 text-gray-500">
-        <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-        <p>
-          {employees.length === 0
-            ? "No employees added yet. Click 'Add Employee' to get started."
-            : "No employees match your current filters."}
-        </p>
-      </div>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full border rounded-lg">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-3 text-left font-medium">Employee No</th>
-              <th className="p-3 text-left font-medium">Name</th>
-              <th className="p-3 text-left font-medium">Role</th>
-              <th className="p-3 text-left font-medium">Member Type</th>
-              <th className="p-3 text-left font-medium">Status</th>
-              <th className="p-3 text-left font-medium">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredEmployees.map((employee) => (
-              <tr
-                key={employee.id || employee._id}
-                className={`border-b ${
-                  !employee.isActive ? "bg-gray-50 opacity-60" : ""
-                }`}
-              >
-                {/* Employee Number */}
-                <td className="p-3 font-semibold">{employee.employeeNumber}</td>
-
-                {/* Name */}
-                <td className="p-3">
-                  {employee.employeeName} {employee.middleName}{" "}
-                  {employee.surname}
-                </td>
-
-                {/* Role */}
-                <td className="p-3">
-                  <Badge variant="outline" className="text-xs">
-                    {roles.find((r) => r._id === employee.role)?.name ||
-                      employee.role}
-                  </Badge>
-                </td>
-
-                {/* Member Type */}
-                <td className="p-3">
-                  {employee.memberType ? (
-                    <Badge variant="secondary" className="text-xs">
-                      {memberTypes.find((t) => t._id === employee.memberType)
-                        ?.name}
-                    </Badge>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-
-                {/* Status */}
-                <td className="p-3">
-                  {employee.isActive ? (
-                    <Badge className="text-xs">Active</Badge>
-                  ) : (
-                    <Badge variant="destructive" className="text-xs">
-                      Inactive
-                    </Badge>
-                  )}
-                </td>
-
-                {/* Actions */}
-                <td className="p-3">
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleSendCredentials(employee._id || employee.id)}
-                      disabled={sendingCredentials === (employee._id || employee.id) || !employee.isActive}
-                      title="Send login credentials to employee"
-                      className="text-xs"
-                    >
-                      {sendingCredentials === (employee._id || employee.id) ? (
-                        <>
-                          <span className="animate-spin mr-1">⏳</span>
-                          <span className="text-xs">Sending...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Send Credentials</span>
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor={`active-${employee.id}`} className="text-sm">
-                        {employee.isActive ? "Active" : "Inactive"}
+          <div className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6">
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Basic Information Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Employee Number *</Label>
+                      <Input
+                        value={editingEmployee ? formData.employeeNumber : "Auto-generated on save"}
+                        disabled
+                        className="bg-gray-100"
+                      />
+                      <p className="text-xs text-gray-500">
+                        {editingEmployee ? "Employee number cannot be changed" : "Will be generated automatically"}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="employeeName" className="text-sm font-medium">
+                        Employee Name *
                       </Label>
-                      <Switch
-                        checked={!!employee.isActive}
-                        onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
-                        disabled={employee.isSystem || employee.userCount > 0}
+                      <Input
+                        id="employeeName"
+                        value={formData.employeeName}
+                        onChange={(e) => setFormData({ ...formData, employeeName: e.target.value })}
+                        placeholder="First name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="middleName" className="text-sm font-medium">
+                        Middle Name *
+                      </Label>
+                      <Input
+                        id="middleName"
+                        value={formData.middleName}
+                        onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                        placeholder="Middle name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="surname" className="text-sm font-medium">
+                        Surname *
+                      </Label>
+                      <Input
+                        id="surname"
+                        value={formData.surname}
+                        onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
+                        placeholder="Last name"
+                        required
                       />
                     </div>
                   </div>
-                </div>
-              ))}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="memberType" className="text-sm font-medium">
+                        Employment Type *
+                      </Label>
+                      <Select
+                        value={formData.memberType ?? ""}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {memberTypes.map((type) => (
+                            <SelectItem key={type._id} value={String(type._id)}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role" className="text-sm font-medium">
+                        Role * {!canManageRoles && <Badge variant="outline" className="ml-2 text-xs"><Shield className="h-3 w-3 mr-1" />Plan Upgrade Required</Badge>}
+                      </Label>
+                      {!canManageRoles ? (
+                        <Alert className="mt-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Role and permission management is not available in your current plan (Plan 1). Please upgrade to Plan 2 or Plan 3 to assign roles to employees.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Select
+                          value={formData.role ?? ""}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.filter((r) => r.isActive === true).length === 0 ? (
+                              <SelectItem value="no-roles" disabled>
+                                No active roles available. Please create roles first.
+                              </SelectItem>
+                            ) : (
+                              roles
+                                .filter((role) => role.isActive === true)
+                                .map((role) => (
+                                  <SelectItem key={role._id} value={String(role._id)}>
+                                    {role.name}
+                                  </SelectItem>
+                                ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact Information Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="mobileNo" className="text-sm font-medium">
+                        Mobile No *
+                      </Label>
+                      <Input
+                        id="mobileNo"
+                        type="tel"
+                        value={formData.mobileNo}
+                        onChange={(e) => setFormData({ ...formData, mobileNo: e.target.value })}
+                        placeholder="+91 12345 67890"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">
+                        Email *
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="employee@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="text-sm font-medium">
+                      Address *
+                    </Label>
+                    <Textarea
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Complete address"
+                      rows={3}
+                      required
+                    />
+                  </div>
+
+                  {/* Emergency Contact */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyName" className="text-sm font-medium">
+                        Emergency Contact Name *
+                      </Label>
+                      <Input
+                        id="emergencyName"
+                        value={formData.emergencyName}
+                        onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
+                        placeholder="Emergency Contact Name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="emergencyNo" className="text-sm font-medium">
+                        Emergency Mobile No *
+                      </Label>
+                      <Input
+                        id="emergencyNo"
+                        type="tel"
+                        value={formData.emergencyNo}
+                        onChange={(e) => setFormData({ ...formData, emergencyNo: e.target.value })}
+                        placeholder="+91 12345 67890"
+                        required
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Documents & Media Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Documents & Media</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <ImageUpload
+                        label="Employee Photo *"
+                        value={formData.photo}
+                        onChange={(value) => setFormData({ ...formData, photo: value })}
+                        maxSizeMB={1}
+                        allowedTypes={["image/*"]}
+                        previewClassName="w-32 h-32 rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <ImageUpload
+                        label="Aadhar Document *"
+                        value={formData.aadharUpload}
+                        onChange={(value) => setFormData({ ...formData, aadharUpload: value })}
+                        allowedTypes={["image/*", "application/pdf"]}
+                        maxSizeMB={1}
+                        previewClassName="w-32 h-32 rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <ImageUpload
+                        label="Resume"
+                        value={formData.resume || ""}
+                        onChange={(value) => setFormData({ ...formData, resume: value })}
+                        allowedTypes={["application/pdf"]}
+                        maxSizeMB={3}
+                        previewClassName="w-32 h-32 rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <ImageUpload
+                        label="PAN Card"
+                        value={formData.panCard || ""}
+                        onChange={(value) => setFormData({ ...formData, panCard: value })}
+                        allowedTypes={["image/*", "application/pdf"]}
+                        maxSizeMB={1}
+                        previewClassName="w-32 h-32 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Education & Experience */}
+              <MultiDocumentUpload
+                label="Education Certificates"
+                documents={formData.educationCertificates}
+                onChange={(docs) => setFormData({ ...formData, educationCertificates: docs })}
+                placeholder="e.g., Bachelor's Degree, Master's Degree, Diploma"
+              />
+
+              <MultiDocumentUpload
+                label="Experience Certificates"
+                documents={formData.experienceCertificates}
+                onChange={(docs) => setFormData({ ...formData, experienceCertificates: docs })}
+                placeholder="e.g., ABC Company - Offer Letter, XYZ Corp - Relieving Letter"
+              />
+
+              {/* Banking Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Banking Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accountName" className="text-sm font-medium">
+                        Account Holder Name
+                      </Label>
+                      <Input
+                        id="accountName"
+                        value={formData.bankAccountDetails?.accountName || ""}
+                        onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, accountName: e.target.value }})}
+                        placeholder="XXXX XXXX XXXX"
+                        maxLength={14}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bankName" className="text-sm font-medium">
+                        Bank Name
+                      </Label>
+                      <Input
+                        id="bankName"
+                        value={formData.bankAccountDetails?.bankName}
+                        onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, bankName: e.target.value }})}
+                        placeholder="Example Bank"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="branchName" className="text-sm font-medium">
+                        Branch Name
+                      </Label>
+                      <Input
+                        id="branchName"
+                        value={formData.bankAccountDetails?.branchName}
+                        onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, branchName: e.target.value }})}
+                        placeholder="Branch Name"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accountNumber" className="text-sm font-medium">
+                        Account Number
+                      </Label>
+                      <Input
+                        id="accountNumber"
+                        value={formData.bankAccountDetails?.accountNumber}
+                        onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, accountNumber: e.target.value }})}
+                        placeholder="XXXX XXXX XXXX"
+                        maxLength={14}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ifsc" className="text-sm font-medium">
+                        IFSC
+                      </Label>
+                      <Input
+                        id="ifsc"
+                        value={formData.bankAccountDetails?.ifscCode}
+                        onChange={(e) => setFormData({ ...formData, bankAccountDetails: { ...formData.bankAccountDetails, ifscCode: e.target.value }})}
+                        placeholder="XXXX XXXX XXXX"
+                        maxLength={14}
+                        required
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Identity Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Identity Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="adharNo" className="text-sm font-medium">
+                        Aadhar Number *
+                      </Label>
+                      <Input
+                        id="adharNo"
+                        value={formData.aadharNo}
+                        onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Employment Dates */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Employment Dates</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="joiningDate" className="text-sm font-medium">
+                        Joining Date *
+                      </Label>
+                      <Input
+                        id="joiningDate"
+                        type="date"
+                        value={formData.joiningDate}
+                        onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                        required
+                      />
+                    </div>
+                    {editingEmployee && (
+                      <div className="space-y-2">
+                        <Label htmlFor="relievingDate" className="text-sm font-medium">
+                          Relieving Date
+                        </Label>
+                        <Input
+                          id="relievingDate"
+                          type="date"
+                          value={formData.relievingDate || ""}
+                          onChange={(e) => setFormData({ ...formData, relievingDate: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Additional Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">Additional Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-sm font-medium">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Additional notes about the employee"
+                      rows={4}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="h-20" />
             </div>
-          )}
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-50 shadow-lg">
+            <div className="max-w-7xl mx-auto flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Employee
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+
+    {/* Credentials Dialog */}
+    <Dialog open={isCredentialsDialogOpen} onOpenChange={setIsCredentialsDialogOpen}>
+      <DialogContent className="max-w-md">
+        <DialogTitle>Login Credentials Generated</DialogTitle>
+        <DialogDescription>
+          Login credentials for {generatedCredentials?.employeeName}
+        </DialogDescription>
+        {generatedCredentials && (
+          <div className="space-y-4">
+            <Alert className="bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800 text-sm">
+                Email service is not configured. Please share these credentials manually.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-600">Email / Username</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={generatedCredentials.email} 
+                    readOnly 
+                    className="bg-white text-sm" 
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => copyToClipboard(generatedCredentials.email)}
+                    title="Copy to clipboard"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-600">Temporary Password</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={generatedCredentials.password} 
+                    readOnly 
+                    className="bg-white font-mono text-sm" 
+                  />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => copyToClipboard(generatedCredentials.password)}
+                    title="Copy to clipboard"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <Alert className="bg-blue-50 border-blue-200">
+              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800 text-xs">
+                Make sure to save these credentials. The password cannot be retrieved later.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCredentialsDialogOpen(false)
+                  setGeneratedCredentials(null)
+                }}
+                className="flex-1"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+
+    {saved && (
+      <Alert>
+        <AlertDescription>Employee saved successfully!</AlertDescription>
+      </Alert>
+    )}
+
+    {/* Statistics Section */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("all")}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-700">Total Employees</CardTitle>
+          <Users className="h-4 w-4 text-blue-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalEmployees}</div>
+          <p className="text-xs text-gray-500 mt-1">All registered employees</p>
+        </CardContent>
+      </Card>
+
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("active")}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-700">Active Employees</CardTitle>
+          <UserCheck className="h-4 w-4 text-green-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-600">{activeEmployees}</div>
+          <p className="text-xs text-gray-500 mt-1">{((activeEmployees/totalEmployees)*100 || 0).toFixed(0)}% of total</p>
+        </CardContent>
+      </Card>
+
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus("inactive")}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-700">Inactive Employees</CardTitle>
+          <UserX className="h-4 w-4 text-red-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-red-600">{inactiveEmployees}</div>
+          <p className="text-xs text-gray-500 mt-1">{((inactiveEmployees/totalEmployees)*100 || 0).toFixed(0)}% of total</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-gray-700">Joined This Month</CardTitle>
+          <TrendingUp className="h-4 w-4 text-purple-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-purple-600">{joinedThisMonth}</div>
+          <p className="text-xs text-gray-500 mt-1">New hires in {new Date().toLocaleDateString('en-US', { month: 'long' })}</p>
         </CardContent>
       </Card>
     </div>
-  )
+
+    {/* Filters */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">Filters</CardTitle>
+        <CardDescription>Filter and search employees</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="search" className="text-sm font-medium">Search</Label>
+            <Input
+              id="search"
+              placeholder="Name, email, or employee #"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="statusFilter" className="text-sm font-medium">Status</Label>
+            <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+              <SelectTrigger id="statusFilter">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active Only</SelectItem>
+                <SelectItem value="inactive">Inactive Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="roleFilter" className="text-sm font-medium">Role</Label>
+            <Select value={filterRole} onValueChange={setFilterRole}>
+              <SelectTrigger id="roleFilter">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                {roles.filter(r => r.isActive).map((role) => (
+                  <SelectItem key={role._id} value={String(role._id)}>
+                    {role.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="memberTypeFilter" className="text-sm font-medium">Employment Type</Label>
+            <Select value={filterMemberType} onValueChange={setFilterMemberType}>
+              <SelectTrigger id="memberTypeFilter">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {memberTypes.map((type) => (
+                  <SelectItem key={type._id} value={String(type._id)}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {(searchQuery || filterStatus !== "all" || filterRole !== "all" || filterMemberType !== "all") && (
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("")
+                setFilterStatus("all")
+                setFilterRole("all")
+                setFilterMemberType("all")
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Clear All Filters
+            </Button>
+            <span className="ml-3 text-sm text-gray-600">
+              Showing {filteredEmployees.length} of {totalEmployees} employees
+            </span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+
+    {/* Employee List */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Users className="h-5 w-5 mr-2" />
+          Employee List
+        </CardTitle>
+        <CardDescription>All employees in your organization</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {filteredEmployees.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p>
+              {employees.length === 0
+                ? "No employees added yet. Click 'Add Employee' to get started."
+                : "No employees match your current filters."}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full border rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-3 text-left font-medium">Employee No</th>
+                  <th className="p-3 text-left font-medium">Name</th>
+                  <th className="p-3 text-left font-medium">Role</th>
+                  <th className="p-3 text-left font-medium">Member Type</th>
+                  <th className="p-3 text-left font-medium">Status</th>
+                  <th className="p-3 text-left font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEmployees.map((employee) => (
+                  <tr
+                    key={employee.id || employee._id}
+                    className={`border-b ${!employee.isActive ? "bg-gray-50 opacity-60" : ""}`}
+                  >
+                    <td className="p-3 font-semibold">{employee.employeeNumber}</td>
+                    <td className="p-3">
+                      {employee.employeeName} {employee.middleName} {employee.surname}
+                    </td>
+                    <td className="p-3">
+                      <Badge variant="outline" className="text-xs">
+                        {roles.find((r) => r._id === employee.role)?.name || employee.role}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      {employee.memberType ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {memberTypes.find((t) => t._id === employee.memberType)?.name}
+                        </Badge>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {employee.isActive ? (
+                        <Badge className="text-xs">Active</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">Inactive</Badge>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendCredentials(employee._id || employee.id)}
+                          disabled={sendingCredentials === (employee._id || employee.id) || !employee.isActive}
+                          title="Send login credentials to employee"
+                          className="text-xs"
+                        >
+                          {sendingCredentials === (employee._id || employee.id) ? (
+                            <>
+                              <span className="animate-spin mr-1">Loading...</span>
+                              <span className="text-xs">Sending...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-3 w-3 mr-1" />
+                              <span className="text-xs">Send Credentials</span>
+                            </>
+                          )}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor={`active-${employee.id}`} className="text-sm">
+                            {employee.isActive ? "Active" : "Inactive"}
+                          </Label>
+                          <Switch
+                            checked={!!employee.isActive}
+                            onCheckedChange={(checked) => handleToggleActive(employee?._id || employee.id, checked)}
+                            disabled={employee.isSystem || employee.userCount > 0}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  </div>
+);
 }
