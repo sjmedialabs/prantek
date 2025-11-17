@@ -68,6 +68,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     
     // Check if email already exists
     const existingUser = await db.collection(Collections.ADMIN_USERS).findOne({ email: data.email })
+    
+    // Also check regular users collection to prevent email conflicts
+    const existingRegularUser = await db.collection(Collections.USERS).findOne({ email: data.email })
+    if (existingRegularUser) {
+      return NextResponse.json(
+        { success: false, error: "Email already exists in the system" }, 
+        { status: 409 }
+      )
+    }
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: "Email already exists" }, 
