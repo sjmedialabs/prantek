@@ -1,293 +1,499 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
+import { format } from "date-fns"
+import { Check, Download, RefreshCw, Search, X } from "lucide-react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
-import type { Receipt } from "@/lib/data-store"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Download, CheckCircle } from "lucide-react"
-import { toast } from "react-toastify"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface Transaction {
-  id: string
-  type: "Receipt" | "Payment"
+  _id: string
+  type: "receipt" | "payment"
   transactionNumber: string
   quotationNumber?: string
   date: string
-  clientName: string
+  clientName?: string
+  recipientName?: string
+  recipientType?: string
   bankAccount?: string
   paymentMethod: string
   referenceNumber?: string
   amount: number
-  status: "Received" | "Paid" | "Cleared"
+  status: "pending" | "cleared" | "completed"
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Helper function to safely format dates
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) return "-"
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return "-"
+    return format(date, "dd/MM/yyyy")
+  } catch {
+    return "-"
+  }
 }
 
 export default function ReconciliationPage() {
-  const { hasPermission } = useUser()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState<"all" | "Receipt" | "Payment">("all")
-  const [filterStatus, setFilterStatus] = useState<"all" | "received" | "cleared">("all")
-
-  const [receipts, setReceipts] = useState<Receipt[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
-const exportReport = () => {
-  if (!receipts || receipts.length === 0) {
-    alert("No data available to export")
-    return
-  }
-
-  const csvRows = []
-  const headers = Object.keys(receipts[0])
-  csvRows.push(headers.join(","))
-
-  receipts.forEach((row) => {
-    const values = headers.map((header) => JSON.stringify(row[header] ?? ""))
-    csvRows.push(values.join(","))
-  })
-
-  const csvString = csvRows.join("\n")
-  const blob = new Blob([csvString], { type: "text/csv" })
-  const url = window.URL.createObjectURL(blob)
-
-  const a = document.createElement("a")
-  a.href = url
-  a.download = "report.csv"
-  a.click()
-  window.URL.revokeObjectURL(url)
-}
+  const [searchTerm, setSearchTerm] = useState("")
+  const [typeFilter, setTypeFilter] = useState<"all" | "receipt" | "payment">("all")
+  const [statusFilter, setStatusFilter] = useState<"uncleared" | "all" | "cleared">("uncleared")
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all")
+  const [statsView, setStatsView] = useState<"all" | "receipts" | "payments">("all")
+  const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set())
+  const { hasPermission, user } = useUser()
 
   useEffect(() => {
-    loadReceipts()
+    loadTransactions()
   }, [])
 
-  const loadReceipts = async () => {
+  useEffect(() => {
+    filterTransactions()
+  }, [transactions, searchTerm, typeFilter, statusFilter, paymentMethodFilter])
+
+  const loadTransactions = async () => {
     try {
-      const loadedRecipts = await api.receipts.getAll()
-      setReceipts(loadedRecipts)
-      console.log(loadedRecipts)
+      setLoading(true)
+      const data = await api.reconciliation.getAll()
+      setTransactions(data)
     } catch (error) {
-      console.error("[v0] Failed to load dashboard data:", error)
-      setReceipts([])
-      toast.error("Failed to load receipts")
+      console.error("Failed to load reconciliation data:", error)
+      toast.error("Failed to load reconciliation data")
     } finally {
       setLoading(false)
     }
   }
 
-  const transactions = receipts.map((receipt) => ({
-    id: receipt._id,
-    type: "Receipt" as const,
-    transactionNumber: receipt.receiptNumber,
-    quotationNumber: receipt.quotationNumber,
-    date: receipt.date,
-    clientName: receipt.clientName,
-    bankAccount: receipt.bankAccount,
-    paymentMethod: receipt.paymentMethod,
-    referenceNumber: receipt.referenceNumber,
-    amount: receipt.amountPaid || 0, // Default to 0 if undefined
-    status: receipt.status === "cleared" ? "Cleared" : "Pending",
-  }))
+  const filterTransactions = () => {
+    let filtered = [...transactions]
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch =
-      (transaction.transactionNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (transaction.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.referenceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      transaction.quotationNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === "all" || transaction.type === filterType
-    const matchesStatus = filterStatus === "all" || (transaction.status || "").toLowerCase() === filterStatus
-    return matchesSearch && matchesType && matchesStatus
-  })
+    // Status filter
+    if (statusFilter === "uncleared") {
+      filtered = filtered.filter((t) => t.status === "pending")
+    } else if (statusFilter === "cleared") {
+      filtered = filtered.filter((t) => t.status === "cleared" || t.status === "completed")
+    }
 
-  const handleToggleCleared = async (id: string, currentStatus: string) => {
+    // Type filter
+    if (typeFilter !== "all") {
+      filtered = filtered.filter((t) => t.type === typeFilter)
+    }
+
+    // Payment method filter
+    if (paymentMethodFilter !== "all") {
+      filtered = filtered.filter((t) => t.paymentMethod === paymentMethodFilter)
+    }
+
+    // Search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (t) =>
+          t.transactionNumber?.toLowerCase().includes(search) ||
+          t.quotationNumber?.toLowerCase().includes(search) ||
+          t.clientName?.toLowerCase().includes(search) ||
+          t.recipientName?.toLowerCase().includes(search) ||
+          t.referenceNumber?.toLowerCase().includes(search) ||
+          t.bankAccount?.toLowerCase().includes(search)
+      )
+    }
+
+    // Sort by date (newest first)
+    filtered.sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0
+      const dateB = b.date ? new Date(b.date).getTime() : 0
+      return dateB - dateA
+    })
+
+    setFilteredTransactions(filtered)
+  }
+
+  const handleClearTransaction = async (transaction: Transaction) => {
+    if (!hasPermission("manage_reconciliation")) {
+      toast.error("You don't have permission to clear transactions")
+      return
+    }
+
     try {
-      if (currentStatus === "Cleared") {
-        // Mark as received (uncleared)
-        const receipt = receipts.find((r) => r._id === id)
-        if (receipt) {
-          await api.receipts.update( id, { status: "paid" })
-          toast.success(`Receipt ${receipt.receiptNumber} marked as received`)
-          await loadReceipts()
-        }
-      } else {
-        // Mark as cleared
-        const clearedReceipt = await api.receipts.update(id, { status: "cleared" })
-        if (clearedReceipt) {
-          toast.success(`Receipt ${clearedReceipt.receiptNumber} marked as cleared`)
-          await loadReceipts()
-        }
-      }
+      const isCurrentlyCleared = transaction.status === "cleared" || transaction.status === "completed"
+      
+      // Add to animating set
+      setAnimatingIds(prev => new Set(prev).add(transaction._id))
+      
+      // Optimistically update the UI
+      setTransactions(prevTransactions => 
+        prevTransactions.map(t => 
+          t._id === transaction._id 
+            ? { ...t, status: isCurrentlyCleared ? "pending" : (t.type === "receipt" ? "cleared" : "completed") }
+            : t
+        )
+      )
+
+      // Call API to update status
+      await api.reconciliation.updateStatus(
+        transaction._id,
+        transaction.type,
+        !isCurrentlyCleared
+      )
+
+      // Wait for animation to complete before removing from view
+      setTimeout(() => {
+        setAnimatingIds(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(transaction._id)
+          return newSet
+        })
+        
+        // Reload to sync with server
+        loadTransactions()
+      }, 500) // 500ms for fade out animation
+      
+      toast.success(
+        isCurrentlyCleared
+          ? `${transaction.type === "receipt" ? "Receipt" : "Payment"} marked as uncleared`
+          : `${transaction.type === "receipt" ? "Receipt" : "Payment"} marked as cleared`
+      )
     } catch (error) {
-      console.error("Error toggling receipt status:", error)
-      toast.error("Failed to update receipt status")
+      // Remove from animating set on error
+      setAnimatingIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(transaction._id)
+        return newSet
+      })
+      
+      // Revert optimistic update
+      await loadTransactions()
+      
+      console.error("Failed to update transaction:", error)
+      toast.error("Failed to update transaction")
     }
   }
 
-  const pendingReconciliation = transactions.filter((t) => t.status !== "Cleared")
-  const totalPending = pendingReconciliation.reduce((sum, t) => sum + (t.amount || 0), 0) // Add null check
-  const clearedTransactions = transactions.filter((t) => t.status === "Cleared")
-  const totalCleared = clearedTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) // Add null check
+  const calculateStats = (filter: "all" | "receipts" | "payments") => {
+    let data = transactions
+
+    if (filter === "receipts") {
+      data = transactions.filter((t) => t.type === "receipt")
+    } else if (filter === "payments") {
+      data = transactions.filter((t) => t.type === "payment")
+    }
+
+    const pending = data.filter((t) => t.status === "pending")
+    const cleared = data.filter((t) => t.status === "cleared" || t.status === "completed")
+
+    return {
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((sum, t) => sum + t.amount, 0),
+      clearedCount: cleared.length,
+      clearedAmount: cleared.reduce((sum, t) => sum + t.amount, 0),
+      totalCount: data.length,
+      totalAmount: data.reduce((sum, t) => sum + t.amount, 0),
+    }
+  }
+
+  const exportToCSV = () => {
+    const headers = [
+      "Type",
+      "Transaction Number",
+      "Date",
+      "Name",
+      "Payment Method",
+      "Bank Account",
+      "Reference",
+      "Amount",
+      "Status",
+    ]
+
+    const rows = filteredTransactions.map((t) => [
+      t.type === "receipt" ? "Receipt" : "Payment",
+      t.transactionNumber,
+      formatDate(t.date),
+      t.type === "receipt" ? t.clientName : t.recipientName,
+      t.paymentMethod,
+      t.bankAccount || "-",
+      t.referenceNumber || "-",
+      t.amount.toFixed(2),
+      t.status === "pending" ? "Pending" : "Cleared",
+    ])
+
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `reconciliation-${format(new Date(), "yyyy-MM-dd")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const stats = calculateStats(statsView)
+  const paymentMethods = Array.from(new Set(transactions.map((t) => t.paymentMethod).filter(m => m && m.trim() !== ""))).sort()
 
   if (!hasPermission("view_reconciliation")) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-        <p className="text-gray-600">You don't have permission to view reconciliation.</p>
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>You don't have permission to view reconciliation</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reconciliation</h1>
-          <p className="text-gray-600">Reconcile receipts and payments with bank statements</p>
+          <h1 className="text-3xl font-bold">Reconciliation</h1>
+          <p className="text-muted-foreground">Verify receipts and payments with your bank account</p>
         </div>
-        <Button variant="outline" onClick={exportReport}>
-          <Download className="h-4 w-4 mr-2" />
-          Export Report
+        <Button onClick={loadTransactions} variant="outline" size="sm">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Pending Reconciliation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">₹{totalPending.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">{pendingReconciliation.length} transactions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Cleared</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">₹{totalCleared.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">{clearedTransactions.length} transactions</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">₹{(totalPending + totalCleared).toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">{transactions.length} transactions</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Reconciliation Table */}
+      {/* Statistics */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Transaction Reconciliation</CardTitle>
-              <CardDescription>Review and clear pending transactions</CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search transactions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-              <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Receipt">Receipt</SelectItem>
-                  <SelectItem value="Payment">Payment</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="received">Received</SelectItem>
-                  <SelectItem value="cleared">Cleared</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex justify-between items-center">
+            <CardTitle>Statistics</CardTitle>
+            <Tabs value={statsView} onValueChange={(v) => setStatsView(v as any)} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="receipts">Receipts</TabsTrigger>
+                <TabsTrigger value="payments">Payments</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Transaction No.</TableHead>
-                <TableHead>Quotation No.</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Client Name</TableHead>
-                <TableHead>Bank Account</TableHead>
-                <TableHead>Payment Method</TableHead>
-                <TableHead>Reference No.</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
-                {hasPermission("manage_reconciliation") && <TableHead className="text-right">Action</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>
-                    <Badge variant="default">{transaction.type}</Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{transaction.transactionNumber}</TableCell>
-                  <TableCell className="font-medium text-purple-600">{transaction.quotationNumber}</TableCell>
-                  <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{transaction.clientName}</TableCell>
-                  <TableCell>{transaction.bankAccount || "-"}</TableCell>
-                  <TableCell className="capitalize">{transaction.paymentMethod.replace("-", " ")}</TableCell>
-                  <TableCell>{transaction.referenceNumber || "-"}</TableCell>
-                  <TableCell className="text-right font-semibold">
-                    <span className="text-green-600">+₹{(transaction.amount || 0).toLocaleString()}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={transaction.status === "Cleared" ? "default" : "secondary"}>
-                      {transaction.status}
-                    </Badge>
-                  </TableCell>
-                  {hasPermission("manage_reconciliation") && (
-                    <TableCell className="text-right">
-                      <Button
-                        variant={transaction.status === "Cleared" ? "outline" : "ghost"}
-                        size="sm"
-                        onClick={() => handleToggleCleared(transaction.id, transaction.status)}
-                        className={
-                          transaction.status === "Cleared"
-                            ? "text-orange-600 hover:text-orange-700"
-                            : "text-green-600 hover:text-green-700"
-                        }
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Pending</p>
+              <p className="text-2xl font-bold">₹{stats.pendingAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground">{stats.pendingCount} transactions</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Cleared</p>
+              <p className="text-2xl font-bold text-green-600">₹{stats.clearedAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground">{stats.clearedCount} transactions</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Total</p>
+              <p className="text-2xl font-bold">₹{stats.totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground">{stats.totalCount} transactions</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger id="status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="uncleared">Uncleared Only</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="cleared">Cleared Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
+                <SelectTrigger id="type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="receipt">Receipts</SelectItem>
+                  <SelectItem value="payment">Payments</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+                <SelectTrigger id="payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method} value={method}>
+                      {method.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>&nbsp;</Label>
+              <Button onClick={exportToCSV} variant="outline" className="w-full">
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Transactions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Transactions ({filteredTransactions.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p>Loading transactions...</p>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No transactions found</p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Transaction #</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Payment Method</TableHead>
+                    <TableHead>Bank Account</TableHead>
+                    <TableHead>Reference</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((transaction) => {
+                    const isCleared = transaction.status === "cleared" || transaction.status === "completed"
+                    
+                    return (
+                      <TableRow 
+                        key={transaction._id}
+                        className={`transition-all duration-500 ${
+                          animatingIds.has(transaction._id) 
+                            ? 'opacity-0 scale-95 bg-green-50 dark:bg-green-950' 
+                            : 'opacity-100 scale-100'
+                        }`}
                       >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        {transaction.status === "Cleared" ? "Unmark" : "Clear"}
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        <TableCell>
+                          <Badge variant={transaction.type === "receipt" ? "default" : "secondary"}>
+                            {transaction.type === "receipt" ? "Receipt" : "Payment"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{transaction.transactionNumber}</TableCell>
+                        <TableCell>{formatDate(transaction.date)}</TableCell>
+                        <TableCell>
+                          {transaction.type === "receipt" ? transaction.clientName : transaction.recipientName}
+                        </TableCell>
+                        <TableCell>
+                          <span className="capitalize">{transaction.paymentMethod}</span>
+                        </TableCell>
+                        <TableCell>{transaction.bankAccount || "-"}</TableCell>
+                        <TableCell>{transaction.referenceNumber || "-"}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ₹{transaction.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={isCleared ? "default" : "secondary"} className="transition-all duration-300">
+                            {isCleared ? "Cleared" : "Pending"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {hasPermission("manage_reconciliation") && (
+                            <Button
+                              size="sm"
+                              variant={isCleared ? "outline" : "default"}
+                              onClick={() => handleClearTransaction(transaction)}
+                              disabled={animatingIds.has(transaction._id)}
+                              className="transition-all duration-200"
+                            >
+                              {isCleared ? (
+                                <>
+                                  <X className="mr-2 h-4 w-4" />
+                                  Unclear
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="mr-2 h-4 w-4" />
+                                  Clear
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

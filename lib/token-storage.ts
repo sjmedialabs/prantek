@@ -115,12 +115,22 @@ export const tokenStorage = {
 }
 
 /**
- * Server-side function to get token from request headers
+/**
+ * Server-side function to get token from request (checks headers and cookies)
  */
 export function getTokenFromRequest(request: Request): string | null {
+  // Try Authorization header first
   const authHeader = request.headers.get("authorization")
   if (authHeader && authHeader.startsWith("Bearer ")) {
     return authHeader.substring(7)
   }
+  
+  // Try cookies (for Next.js requests)
+  if ('cookies' in request && typeof (request as any).cookies?.get === 'function') {
+    const token = (request as any).cookies.get("auth_token")?.value || 
+                  (request as any).cookies.get("accessToken")?.value
+    if (token) return token
+  }
+  
   return null
 }

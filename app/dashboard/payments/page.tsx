@@ -429,8 +429,8 @@ export default function PaymentsPage() {
               <TableRow>
                 <TableHead>Payment No.</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Party Type</TableHead> {/* Added recipient type column */}
-                <TableHead>Party</TableHead> {/* Changed from Client to Recipient */}
+                <TableHead>Party Type</TableHead>
+                <TableHead>Party</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Payment Method</TableHead>
@@ -449,7 +449,7 @@ export default function PaymentsPage() {
                       {payment.recipientType}
                     </Badge>
                   </TableCell>
-                  <TableCell>{payment.recipientName}</TableCell> {/* Changed from clientName to recipientName */}
+                  <TableCell>{payment.recipientName}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{payment.category}</Badge>
                   </TableCell>

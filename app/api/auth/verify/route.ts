@@ -1,37 +1,61 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyToken } from "@/lib/jwt"
 import { connectDB } from "@/lib/mongodb"
+import { COLLECTIONS } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {
   try {
+    // Try to get token from Authorization header first
     const authHeader = request.headers.get("authorization")
+    let token = null
     
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7)
+    }
+    
+    // If no token in header, try cookies
+    if (!token) {
+      token = request.cookies.get("auth_token")?.value || request.cookies.get("accessToken")?.value || null
+    }
+    
+    if (!token) {
       return NextResponse.json({ error: "No token provided" }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
     const payload = await verifyToken(token)
 
     if (!payload) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    // Fetch user from database
+    // Fetch user from database (check ADMIN_USERS first, then regular users)
     const db = await connectDB()
     let user
     
     try {
-      // Try to convert userId to ObjectId if it's a valid ObjectId string
-      user = await db.collection("users").findOne({ 
+      // Try admin users first
+      user = await db.collection(COLLECTIONS.ADMIN_USERS).findOne({ 
         _id: new ObjectId(payload.userId)
       })
+      
+      // If not found in admin users, try regular users
+      if (!user) {
+        user = await db.collection(COLLECTIONS.USERS).findOne({ 
+          _id: new ObjectId(payload.userId)
+        })
+      }
     } catch {
       // If conversion fails, try searching by string id
-      user = await db.collection("users").findOne({ 
+      user = await db.collection(COLLECTIONS.ADMIN_USERS).findOne({ 
         _id: payload.userId as any
       })
+      
+      if (!user) {
+        user = await db.collection(COLLECTIONS.USERS).findOne({ 
+          _id: payload.userId as any
+        })
+      }
     }
 
     if (!user) {
@@ -44,6 +68,8 @@ export async function GET(request: NextRequest) {
         email: user.email,
         name: user.name,
         role: user.role,
+        roleId: user.roleId,
+        permissions: user.permissions || payload.permissions || [],
         clientId: user.clientId,
         phone: user.phone,
         address: user.address,

@@ -90,8 +90,8 @@ export default function ReceiptsPage() {
     )
   })
 
-  const uniqueClients = Array.from(new Set(receipts.map((r) => r.clientName)))
-  const uniquePaymentMethods = Array.from(new Set(receipts.map((r) => r.paymentMethod)))
+  const uniqueClients = Array.from(new Set(receipts.map((r) => r.clientName).filter(name => name && name.trim() !== "")))
+  const uniquePaymentMethods = Array.from(new Set(receipts.map((r) => r.paymentMethod).filter(method => method && method.trim() !== "")))
 
   const clearFilters = () => {
     setStatusFilter("all")
@@ -339,7 +339,7 @@ export default function ReceiptsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Quotation</TableHead>
-                  <TableHead>Amount Paid</TableHead> {/* Updated to 'Amount Paid' */}
+                  <TableHead>Amount Paid</TableHead>
                   <TableHead>Payment Type</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Status</TableHead>
@@ -347,8 +347,8 @@ export default function ReceiptsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredReceipts.map((receipt) => (
-                  <TableRow key={receipt.id}>
+                {filteredReceipts.map((receipt, index) => (
+                  <TableRow key={receipt.id || `receipt-${index}`}>
                     <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
                     <TableCell>{new Date(receipt.date || receipt.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>{receipt.clientName}</TableCell>
