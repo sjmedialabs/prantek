@@ -380,7 +380,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* Only show subscription management for account owners */}
-      {(user?.role === "user" || user?.role === "super-admin") && (
+      {!user?.isAdminUser && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

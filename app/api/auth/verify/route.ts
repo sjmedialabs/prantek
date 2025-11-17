@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     // Fetch user from database (check ADMIN_USERS first, then regular users)
     const db = await connectDB()
     let user
+    let isAdminUser = false
     
     try {
       // Try admin users first
@@ -39,11 +40,14 @@ export async function GET(request: NextRequest) {
         _id: new ObjectId(payload.userId)
       })
       
-      // If not found in admin users, try regular users
-      if (!user) {
+      if (user) {
+        isAdminUser = true // User is from User Management
+      } else {
+        // If not found in admin users, try regular users
         user = await db.collection(COLLECTIONS.USERS).findOne({ 
           _id: new ObjectId(payload.userId)
         })
+        isAdminUser = false // User is an account owner
       }
     } catch {
       // If conversion fails, try searching by string id
@@ -51,10 +55,13 @@ export async function GET(request: NextRequest) {
         _id: payload.userId as any
       })
       
-      if (!user) {
+      if (user) {
+        isAdminUser = true
+      } else {
         user = await db.collection(COLLECTIONS.USERS).findOne({ 
           _id: payload.userId as any
         })
+        isAdminUser = false
       }
     }
 
@@ -70,15 +77,17 @@ export async function GET(request: NextRequest) {
         role: user.role,
         roleId: user.roleId,
         permissions: user.permissions || payload.permissions || [],
+        isAdminUser: isAdminUser, // Distinguish admin users from account owners
         clientId: user.clientId,
+        companyId: user.companyId,
         phone: user.phone,
         address: user.address,
         profilePicture: user.profilePicture,
-        subscriptionPlanId: user.subscriptionPlanId,
-        subscriptionStatus: user.subscriptionStatus,
-        subscriptionStartDate: user.subscriptionStartDate,
-        subscriptionEndDate: user.subscriptionEndDate,
-        trialEndsAt: user.trialEndsAt,
+        subscriptionPlanId: user.subscriptionPlanId || payload.subscriptionPlanId,
+        subscriptionStatus: user.subscriptionStatus || payload.subscriptionStatus,
+        subscriptionStartDate: user.subscriptionStartDate || payload.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate || payload.subscriptionEndDate,
+        trialEndsAt: user.trialEndsAt || payload.trialEndsAt,
       },
     })
   } catch (error) {

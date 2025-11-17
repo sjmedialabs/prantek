@@ -6,6 +6,7 @@ export interface User {
   name: string
   role: "user" | "super-admin" | "admin" | "employee"
   permissions?: string[]
+  isAdminUser?: boolean
   roleId?: string
   companyId?: string
   subscriptionPlanId?: string

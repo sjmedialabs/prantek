@@ -84,6 +84,7 @@ export async function authenticateAdminUser(email: string, password: string): Pr
     role: adminUser.role || "admin",
     permissions: adminUser.permissions || [],
     roleId: adminUser.roleId?.toString(),
+    isAdminUser: true, // Flag to identify users created via User Management
     companyId: adminUser.companyId,
     ...subscriptionData,
   }
@@ -102,6 +103,7 @@ export async function authenticateAdminUser(email: string, password: string): Pr
       role: adminUser.role || "admin",
       permissions: adminUser.permissions || [],
       roleId: adminUser.roleId?.toString(),
+    isAdminUser: true, // Flag to identify users created via User Management
       companyId: adminUser.companyId,
       ...subscriptionData,
     },
@@ -157,6 +159,7 @@ export async function authenticate(email: string, password: string): Promise<Aut
       name: user.name,
       role: user.role || "user",
       clientId: user.clientId,
+      isAdminUser: false, // Account owner, not from User Management
     },
   }
 }

@@ -12,6 +12,7 @@ interface User {
   name: string
   role: "super-admin" | "admin" | "employee"
   permissions?: string[]
+  isAdminUser?: boolean // True if created via User Management, false if account owner
   phone?: string
   address?: string
   avatar?: string
@@ -117,7 +118,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Super-admin has ALL permissions
     if (user.role === "super-admin") return true
 
-    // Check user's actual permissions array from database (if available)
+    // Account owners (non-admin users) have full access to everything
+    if (!user.isAdminUser) return true
+
+    // For admin users created via User Management, check their assigned permissions
     if (user.permissions && Array.isArray(user.permissions)) {
       return user.permissions.includes(permission)
     }
@@ -187,6 +191,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     return permissions[user.role]?.includes(permission) || false
   }
+
 
 
   return (

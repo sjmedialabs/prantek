@@ -426,7 +426,7 @@ export default function DashboardPage() {
                   {user?.role.replace("-", " ")}
                 </Badge>
                 {/* Only show subscription badge for account owners */}
-                {(user?.role === "user" || user?.role === "super-admin") && (
+                {!user?.isAdminUser && (
                   <Badge
                     variant="secondary"
                     className="bg-blue-100 text-blue-900 font-medium"
@@ -459,7 +459,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
-      {(user?.role === "user" || user?.role === "super-admin") && <OnboardingProgressCards />}
+      {!user?.isAdminUser && <OnboardingProgressCards />}
 
       {/* Quick Action Cards */}
       <div>
