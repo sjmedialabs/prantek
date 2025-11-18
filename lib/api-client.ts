@@ -215,6 +215,7 @@ export const api = {
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/receipts/${id}`)
+        console.log("Get receipt by id response ::",data)
         return data.receipt
       },
       create: async (receiptData: Omit<Receipt, "id" | "createdAt" | "updatedAt" | "receiptNumber">) => {
@@ -528,8 +529,8 @@ export const api = {
     taxRates: {
       getAll: async () => {
         const data = await fetchAPI("/api/tax-rates")
-        console.log("Tax rates from api :", data)
-        return data || data.taxRates || []
+        console.log("Tax rates from api :", data.data)
+        return data.data || data.taxRates || [] 
       },
       create: async (taxData: any) => {
         const data = await fetchAPI("/api/tax-rates", {
@@ -592,7 +593,7 @@ export const api = {
     paymentCategories: {
       getAll: async () => {
         const data = await fetchAPI("/api/payment-categories")
-        return data || data.data || data.paymentCategories || []
+        return data.data || data.paymentCategories || []
       },
       create: async (categoryData: any) => {
         const data = await fetchAPI("/api/payment-categories", {
@@ -617,7 +618,8 @@ export const api = {
     recipientTypes: {
       getAll: async () => {
         const data = await fetchAPI("/api/recipient-types")
-        return data || data.data || data.recipientTypes || []
+        console.log("Recipient types from api :", data.data)
+        return data.data || data.recipientTypes || []
       },
       create: async (typeData: any) => {
         const data = await fetchAPI("/api/recipient-types", {
