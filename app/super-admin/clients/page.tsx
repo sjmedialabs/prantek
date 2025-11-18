@@ -71,6 +71,7 @@ export default function ClientAccountsPage() {
   const loadClients = async () => {
     try {
       const users = await api.users.getAll()
+      const adminUserCounts = await api.adminUsers.getCount()
       const plans = await api.subscriptionPlans.getAll()
       
       // Map users to client accounts format
@@ -78,6 +79,7 @@ export default function ClientAccountsPage() {
         .filter(user => user.role === "admin") // Only admin users are clients
         .map(user => {
           const plan = plans.find(p => (p._id || p.id) === user.subscriptionPlanId)
+          const userId = user._id || user.id
           return {
             id: user._id || user.id,
             companyName: user.name || user.email.split('@')[0],
@@ -87,7 +89,7 @@ export default function ClientAccountsPage() {
             address: user.address || "N/A",
             plan: plan?.name?.toLowerCase() || "standard",
             status: user.subscriptionStatus || "inactive",
-            userCount: 1,
+            userCount: adminUserCounts[userId] || 0,
             monthlyRevenue: plan?.price || 0,
             totalRevenue: plan?.price || 0,
             joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],

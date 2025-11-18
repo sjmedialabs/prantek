@@ -19,7 +19,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       filter = { companyId: filterCompanyId }
     }
 
-    const adminUsers = await db.collection(Collections.ADMIN_USERS).find(filter).toArray()
+    const adminUsers = await db.collection(Collections.USERS).find(filter).toArray()
 
     // Fetch role names for each user
     const usersWithRoles = await Promise.all(
@@ -69,8 +69,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       }, { status: 400 })
     }
 
-    // Check if email exists in admin_users
-    const existingAdminUser = await db.collection(Collections.ADMIN_USERS).findOne({ 
+    // Check if email exists in users
+    const existingAdminUser = await db.collection(Collections.USERS).findOne({ 
       email: body.email.toLowerCase() 
     })
     
@@ -129,7 +129,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       lastLogin: null
     }
 
-    const result = await db.collection(Collections.ADMIN_USERS).insertOne(newUser)
+    const result = await db.collection(Collections.USERS).insertOne(newUser)
 
     const { password: _, ...userWithoutPassword } = newUser
 
@@ -191,7 +191,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
       finalUpdate.permissions = []
     }
 
-    const result = await db.collection(Collections.ADMIN_USERS).updateOne(
+    const result = await db.collection(Collections.USERS).updateOne(
       { _id: new ObjectId(_id) },
       { $set: finalUpdate }
     )
@@ -203,7 +203,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
       }, { status: 404 })
     }
 
-    const updatedUser = await db.collection(Collections.ADMIN_USERS).findOne({ 
+    const updatedUser = await db.collection(Collections.USERS).findOne({ 
       _id: new ObjectId(_id) 
     })
 

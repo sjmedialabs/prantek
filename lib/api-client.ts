@@ -317,6 +317,13 @@ export const api = {
     },
 
 
+  // Admin Users
+    adminUsers: {
+      getCount: async () => {
+        const data = await fetchAPI("/api/admin-users/count")
+        return data.data || {}
+      },
+    },
     // Company
     company: {
       get: async () => {
