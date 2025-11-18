@@ -232,8 +232,8 @@ export default function CreateReceiptPage() {
                     Add Quotation
                   </Button>
                 </DialogTrigger>
-                <DialogContent className=":!p-0 !fixed !inset-0 !m-0 !p-0 !min-w-full !w-screen !h-screen !rounded-none">
-                  <div className="w-full h-full">
+                <DialogContent className=":!inset-0 !m-0 !px-10 !py-30 !min-w-full !rounded-none">
+                  <div className="">
                     <button 
                       onClick={() => setIsQuotationDialogOpen(false)}
                       className="absolute top-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100" type="button"
