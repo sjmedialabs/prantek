@@ -430,68 +430,34 @@ export default function NewReceiptPage() {
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="client">Client Name *</Label>
-                <div className="flex gap-2">
-                  <OwnSearchableSelect
-                    options={clientOptions}
-                    value={selectedClientId}
-                    onValueChange={setSelectedClientId}
-                    placeholder="Search and select a client..."
-                    searchPlaceholder="Type to search clients..."
-                    emptyText="No clients found."
-                  />
-
-                  <Dialog open={isCreateClientOpen} onOpenChange={setIsCreateClientOpen}>
-                    <DialogTrigger asChild>
-                      <Button type="button" variant="outline" size="icon">
-                        <UserPlus className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Create New Client</DialogTitle>
-                        <DialogDescription>Add a new client to your records</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <Label htmlFor="newClientName">Client Name *</Label>
-                          <Input id="newClientName" value={newClient.clientName} onChange={(e) => setNewClient({ ...newClient, clientName: e.target.value })} placeholder="Enter client name" />
-                          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-                        </div>
-                        <div>
-                          <Label htmlFor="newClientEmail">Email</Label>
-                          <Input id="newClientEmail" type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} placeholder="client@example.com" />
-                          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-                        </div>
-                        <div>
-                          <Label htmlFor="newClientPhone">Phone *</Label>
-                          <Input id="newClientPhone" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} placeholder="Mobile number" />
-                          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
-                        </div>
-                        <div>
-                          <Label htmlFor="newClientAddress">Address</Label>
-                          <Textarea id="newClientAddress" value={newClient.address} onChange={(e) => setNewClient({ ...newClient, address: e.target.value })} rows={2} />
-                          {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={() => setIsCreateClientOpen(false)}>Cancel</Button>
-                        <Button type="button" onClick={handleCreateClient}>Create Client</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                {selectedQuotationId && <p className="text-xs text-gray-500 mt-1">Auto-selected from quotation, read-only items</p>}
-              </div>
+              
+              <Dialog open={isQuotationDialogOpen} onOpenChange={setIsQuotationDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="outline">
+                    
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Quotation
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className=":!inset-0 !m-0 !px-10 !py-30 !min-w-full !rounded-none">
+                  <div className="">
+                    <button 
+                      onClick={() => setIsQuotationDialogOpen(false)}
+                      className="absolute top-4 right-4 z-50 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100" type="button"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <iframe 
+                      src="/quotation-embed" 
+                      className="w-full h-screen border-0"
+                      title="Create Quotation"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
               {selectedClientId && (
                 <>
