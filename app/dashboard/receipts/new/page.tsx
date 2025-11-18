@@ -89,8 +89,8 @@ export default function NewReceiptPage() {
         api.items.getAll(),
         api.bankAccounts.getAll(),
       ])
-
-      setClients(loadedClients || [])
+      const filteredClinets=loadedClients.filter((eachItem:any)=>eachItem.status==="active")
+      setClients(filteredClinets || [])
       setAllQuotations(loadedQuotations || [])
       setMasterItems(loadedItems || [])
       setBankDetails(loadedBankDetails || [])
@@ -131,6 +131,10 @@ export default function NewReceiptPage() {
 
     const q = (allQuotations || []).find((x: any) => String(x._id) === String(selectedQuotationId) || String(x.id) === String(selectedQuotationId))
     console.log("q:::",q)
+    if(q.balanceAmount===0) {
+      toast.error("Cannot create the Reciept aganist the Quotation which has pending amount 0 rupees")
+      return
+    }
     if (!q) return
 
     // Map quotation items to QuotationItem shape and calculate amounts
@@ -519,7 +523,7 @@ export default function NewReceiptPage() {
                 <Label htmlFor="quotation">Quotation Number</Label>
                 <div className="flex gap-2">
                   <OwnSearchableSelect
-                    options={quotations.map((q) => ({ value: String(q._id || q.id), label: `${q.quotationNumber} - ${q.projectName || q.clientName || ''} (Pending: ₹${(q.balanceAmount || q.grandTotal || 0).toLocaleString()})` }))}
+                    options={quotations.map((q) => ({ value: String(q._id || q.id), label: `${q.quotationNumber} - ${q.projectName || q.clientName || ''} (Pending: ₹${(q.balanceAmount  || 0).toLocaleString()})` }))}
                     value={selectedQuotationId}
                     onValueChange={setSelectedQuotationId}
                     placeholder={selectedClientId ? "Search quotations..." : "Select a client first"}
