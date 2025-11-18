@@ -374,10 +374,10 @@ export default function ReceiptsPage() {
                             </Button>
                           </Link>
                           <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
-                          <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm">
                             <Edit className="h-4 w-4" />
                           </Button>
-                          </Link>
+                            </Link>
                         </div>
                       </TableCell>
                     )}

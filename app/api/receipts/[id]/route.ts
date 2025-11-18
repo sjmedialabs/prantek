@@ -37,7 +37,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
     return NextResponse.json({ error: "Receipt not found" }, { status: 404 })
   }
 
-  return NextResponse.json(receipt)
+  return NextResponse.json({ success: true, data: receipt })
 })
 
 /**

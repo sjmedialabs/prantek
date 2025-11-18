@@ -240,8 +240,8 @@ export default function ReceiptDetailsPage() {
             <CardContent>
               {receipt.items && receipt.items.length > 0 ? (
                 <div className="space-y-4">
-                  {receipt.items.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4">
+                  {receipt.items.map((item, index) => (
+                    <div key={item.id || index} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="font-semibold">{item.name}</p>
@@ -250,7 +250,7 @@ export default function ReceiptDetailsPage() {
                             {item.type}
                           </Badge>
                         </div>
-                        <p className="font-bold text-lg">₹{item.total.toLocaleString()}</p>
+                        <p className="font-bold text-lg">₹{item.total?.toLocaleString() || "0"}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -260,7 +260,7 @@ export default function ReceiptDetailsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Price</p>
-                          <p className="font-semibold">₹{item.price}</p>
+                          <p className="font-semibold">₹{item.price || 0}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Discount</p>
@@ -268,11 +268,11 @@ export default function ReceiptDetailsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{item.amount.toLocaleString()}</p>
+                          <p className="font-semibold">₹{item.amount?.toLocaleString() || "0"}</p>
                         </div>
                         <div>
-                          <p className="text-gray-600">Tax ({item.taxRate}%)</p>
-                          <p className="font-semibold">₹{item.taxAmount.toLocaleString()}</p>
+                          <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
+                          <p className="font-semibold">₹{item.taxAmount?.toLocaleString() || "0"}</p>
                         </div>
                       </div>
                     </div>
