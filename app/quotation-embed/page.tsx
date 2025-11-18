@@ -381,7 +381,7 @@ export default function NewQuotationPage() {
       console.log("[v0] Quotation created successfully:", createdQuotation)
 
       toast.success(`Quotation ${status === "sent" ? "sent" : "saved as draft"} successfully!`)
-      router.push("/dashboard/quotations")
+      window.parent.postMessage({ type: "quotation-created", quotation: createdQuotation }, "*")
 
     } catch (error) {
       console.error("[v0] Error saving quotation:", error)
