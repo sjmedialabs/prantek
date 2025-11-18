@@ -232,7 +232,7 @@ export default function CreateReceiptPage() {
                     Add Quotation
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="[DialogContent className=">*]:!p-0 !fixed !inset-0 !m-0 !p-0 !min-w-full !w-screen !h-screen !rounded-none">
+                <DialogContent className=":!p-0 !fixed !inset-0 !m-0 !p-0 !min-w-full !w-screen !h-screen !rounded-none">
                   <div className="w-full h-full">
                     <button 
                       onClick={() => setIsQuotationDialogOpen(false)}
