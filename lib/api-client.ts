@@ -501,7 +501,7 @@ export const api = {
     bankAccounts: {
       getAll: async () => {
         const data = await fetchAPI("/api/bank-accounts")
-        return data || data.data || data.bankAccounts || []
+        return data.data || data.bankAccounts || []
       },
       create: async (accountData: any) => {
         const data = await fetchAPI("/api/bank-accounts", {
@@ -529,7 +529,7 @@ export const api = {
       getAll: async () => {
         const data = await fetchAPI("/api/tax-rates")
         console.log("Tax rates from api :", data)
-        return data || data.taxRates || []
+        return data.data || data.taxRates || []
       },
       create: async (taxData: any) => {
         const data = await fetchAPI("/api/tax-rates", {
@@ -592,7 +592,7 @@ export const api = {
     paymentCategories: {
       getAll: async () => {
         const data = await fetchAPI("/api/payment-categories")
-        return data || data.data || data.paymentCategories || []
+        return data.data || data.paymentCategories || []
       },
       create: async (categoryData: any) => {
         const data = await fetchAPI("/api/payment-categories", {
@@ -617,7 +617,7 @@ export const api = {
     recipientTypes: {
       getAll: async () => {
         const data = await fetchAPI("/api/recipient-types")
-        return data || data.data || data.recipientTypes || []
+        return data.data || data.recipientTypes || []
       },
       create: async (typeData: any) => {
         const data = await fetchAPI("/api/recipient-types", {
@@ -824,7 +824,7 @@ receiptCategories: {
   assetCategories: {
     getAll: async () => {
       const data = await fetchAPI("/api/asset-categories")
-      return data || []
+      return data.data || data.assetCategories || []
     },
     create: async (payload: { name: string; isActive?: boolean }) => {
       const data = await fetchAPI("/api/asset-categories", {
@@ -851,7 +851,7 @@ receiptCategories: {
   assetConditions: {
     getAll: async () => {
       const data = await fetchAPI("/api/asset-conditions")
-      return data || []
+      return data.data || data.assetConditions || []
     },
     create: async (payload: { name: string; isActive?: boolean }) => {
       const data = await fetchAPI("/api/asset-conditions", {
@@ -878,7 +878,7 @@ receiptCategories: {
 activityLogs: {
   getAll: async () => {
     const data = await fetchAPI("/api/activity-logs")
-    return data || data.data || data.logs || []
+    return data.data || data.logs || []
   },
   clearOld: async (daysOld: number) => {
     const data = await fetchAPI("/api/activity-logs", {

@@ -12,6 +12,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     
     return NextResponse.json({ success: true, data: taxRates })
   } catch (error) {
+    console.error("Error fetching tax rates:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch tax rates" }, { status: 500 })
   }
 })
@@ -20,14 +21,23 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
     
+    console.log("Creating tax rate with body:", body)
+    console.log("User:", { userId: user.userId, isAdminUser: user.isAdminUser, companyId: user.companyId })
+    
     // For admin users, use companyId (parent account)
     // For regular users, use userId (their own account)
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
     const taxRate = await mongoStore.create("tax-rates", { ...body, userId: filterUserId })
     
+    console.log("Tax rate created successfully:", taxRate)
+    
     return NextResponse.json({ success: true, data: taxRate })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to create tax rate" }, { status: 500 })
+    console.error("Error creating tax rate:", error)
+    return NextResponse.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to create tax rate" 
+    }, { status: 500 })
   }
 })
