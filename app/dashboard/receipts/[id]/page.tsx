@@ -12,7 +12,7 @@ import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { ReceiptPrint } from "@/components/print-templates/receipt-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
-import type { Receipt } from "@/lib/data-store"
+import type { Receipt } from "@/lib/models/types"
 
 export default function ReceiptDetailsPage() {
   const params = useParams()
@@ -23,7 +23,6 @@ export default function ReceiptDetailsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!receiptId) return
     getCompanyDetails().then(setCompanyDetails)
     loadReceipt()
   }, [receiptId])
@@ -31,7 +30,8 @@ export default function ReceiptDetailsPage() {
   const loadReceipt = async () => {
     try {
       const data = await api.receipts.getById(receiptId)
-      setReceipt(data || null)
+      console.log("Getting recipt data from api",data)
+      setReceipt(data)
     } catch (error) {
       setReceipt(null)
     } finally {
@@ -166,7 +166,7 @@ export default function ReceiptDetailsPage() {
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
                   <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                    {receipt.status?.charAt(0).toUpperCase() + receipt.status?.slice(1) || "Unknown"}
+                    {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -244,7 +244,7 @@ export default function ReceiptDetailsPage() {
                     <div key={item.id || index} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold">{item.name}</p>
+                          <p className="font-semibold">{item.itemName}</p>
                           <p className="text-sm text-gray-600">{item.description}</p>
                           <Badge variant="outline" className="mt-1">
                             {item.type}
@@ -363,7 +363,7 @@ export default function ReceiptDetailsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Payment Status</span>
                   <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                    {receipt.status?.charAt(0).toUpperCase() + receipt.status?.slice(1) || "Unknown"}
+                    {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
                   </Badge>
                 </div>
                 {(receipt.balanceAmount || 0) === 0 && (

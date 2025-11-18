@@ -501,7 +501,8 @@ export const api = {
     bankAccounts: {
       getAll: async () => {
         const data = await fetchAPI("/api/bank-accounts")
-        return data.data || data.bankAccounts || []
+        console.log("Bank accounts from api :", data)
+        return data || data.data || data.bankAccounts || []
       },
       create: async (accountData: any) => {
         const data = await fetchAPI("/api/bank-accounts", {

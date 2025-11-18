@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { mongoStore } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
+import { mongoStore } from "@/lib/mongodb-store"
+import { NextRequest, NextResponse } from "next/server"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {

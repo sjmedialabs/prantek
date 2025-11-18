@@ -50,19 +50,43 @@ const navigationItems: NavItem[] = [
     submenu: [
       {
         name: "Company Settings",
+        icon: Settings,
+        permission: "tenant_settings",
+        submenu:[
+      {
+        name: "Company Details",
         href: "/dashboard/settings/company",
         permission: "tenant_settings",
       },
       {
-        name: "Asset Categories",
-        href: "/dashboard/settings/asset-categories",
+        name: "Bank Details",
+        href: "/dashboard/settings/bank",
+        permission: "tenant_settings",
+      }
+        ]
+      },
+      {
+        name: "Product Settings",
+        icon: Settings,
+        permission: "tenant_settings",
+        submenu:[
+      {
+        name: "Tax Rates",
+        href: "/dashboard/settings/tax",
         permission: "tenant_settings",
       },
       {
-        name: "Asset Conditions",
-        href: "/dashboard/settings/asset-conditions",
+        name: "Product Management",
+        href: "/dashboard/settings/items",
         permission: "tenant_settings",
+      }
+        ]
       },
+            {
+        name: "Payment Settings",
+        icon: Settings,
+        permission: "tenant_settings",
+        submenu:[
       {
         name: "Party Type",
         href: "/dashboard/settings/recipient-types",
@@ -78,29 +102,30 @@ const navigationItems: NavItem[] = [
         href: "/dashboard/settings/payment-methods",
         permission: "tenant_settings",
       },
-      // {
-      //   name: "Receipt Categories",
-      //   href: "/dashboard/settings/receipt-categories",
-      //   permission: "tenant_settings",
-      // },
+        ]
+      },
       {
-        name: "Financials",
-        href: "/dashboard/settings/bank-accounts",
+        name: "Assets Settings",
+        icon: Settings,
+        permission: "tenant_settings",
+        submenu:[
+      {
+        name: "Asset Categories",
+        href: "/dashboard/settings/asset-categories",
         permission: "tenant_settings",
       },
       {
-        name: "Tax Rates",
-        href: "/dashboard/settings/tax-rates",
+        name: "Asset Conditions",
+        href: "/dashboard/settings/asset-conditions",
         permission: "tenant_settings",
       },
-      {
-        name: "Tax Settings",
-        href: "/dashboard/settings/tax-settings",
-        permission: "tenant_settings",
+        ]
       },
+
       {
         name: "HR Settings",
         permission: "tenant_settings",
+        icon: Settings,
         submenu: [
           {
             name: "User Management",
@@ -144,6 +169,7 @@ const navigationItems: NavItem[] = [
       {
         name: "Security Settings",
         permission: "tenant_settings",
+        icon: Settings,
         submenu: [
           {
             name: "Notifications",
