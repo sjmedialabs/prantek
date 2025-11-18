@@ -12,10 +12,17 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const data = await req.json()
   const id = getIdFromRequest(req)
+  
+  // Build filter - super-admin can update any content
+  const filter: any = { _id: new ObjectId(id) }
+  if (user.role !== "super-admin") {
+    filter.userId = String(user.id)
+  }
+  
   const contentData = await db
     .collection(Collections.WEBSITE_CONTENT)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), userId: String(user.id) },
+      filter,
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -30,9 +37,16 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
 export const DELETE = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const id = getIdFromRequest(req)
+  
+  // Build filter - super-admin can delete any content
+  const filter: any = { _id: new ObjectId(id) }
+  if (user.role !== "super-admin") {
+    filter.userId = user.userId
+  }
+  
   const result = await db
     .collection(Collections.WEBSITE_CONTENT)
-    .deleteOne({ _id: new ObjectId(id), userId: user.userId })
+    .deleteOne(filter)
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Content not found" }, { status: 404 })

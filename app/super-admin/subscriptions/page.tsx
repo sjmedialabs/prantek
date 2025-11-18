@@ -60,9 +60,26 @@ export default function SubscriptionPlansPage() {
 
   const loadPlans = async () => {
     const data = await api.subscriptionPlans.getAll()
-    const loadusers=await api.users.getAll()
-    //console.log("users:::",users)
-    setPlans(data)
+    const loadusers = await api.users.getAll()
+    
+    // Enrich plans with subscriber count and revenue
+    const enrichedPlans = data.map((plan: any) => {
+      // Count subscribers for this plan (excluding the first user)
+      const subscribers = loadusers.slice(1).filter(
+        (user: any) => user.subscriptionPlanId === (plan._id || plan.id)
+      )
+      
+      const subscriberCount = subscribers.length
+      const revenue = subscriberCount * Number(plan.price || 0)
+      
+      return {
+        ...plan,
+        subscriberCount,
+        revenue
+      }
+    })
+    
+    setPlans(enrichedPlans)
     setUsers(loadusers)
     setLoading(false)
   }
