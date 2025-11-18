@@ -132,7 +132,7 @@ export default function NewReceiptPage() {
     const q = (allQuotations || []).find((x: any) => String(x._id) === String(selectedQuotationId) || String(x.id) === String(selectedQuotationId))
     console.log("q:::",q)
     if(q.balanceAmount===0) {
-      toast.error("Cannot create the Reciept to the Quotation which has pending amount")
+      toast.error("Cannot create the rceipt the Quotation which has pending amount")
       return
     }
     if (!q) return
