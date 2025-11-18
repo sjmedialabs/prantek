@@ -49,7 +49,7 @@ export default function SuperAdminHeader() {
       }
     }
 
-    if (user) {
+    if (user && user.role !== "super-admin") {
       fetchNotifications()
       // Poll for new notifications every 30 seconds
       const interval = setInterval(fetchNotifications, 30000)
@@ -186,10 +186,6 @@ export default function SuperAdminHeader() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Super Admin Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/super-admin/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/super-admin/settings")}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
