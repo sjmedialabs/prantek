@@ -46,13 +46,34 @@ interface QuotationItem {
 
 interface Client {
   _id: string
-  clientNumber: string
-  clientName: string
-  address: string
-  phone: string
+  type: "individual" | "company"
+
+  // Individual
+  name?: string
+
+  // Company
+  companyName?: string
+  contactName?: string
+
+  // Common Fields
   email: string
-  name?: string // Added name field for fallback
+  phone: string
+  address: string
+  state: string
+  city: string
+  pincode: string
+
+  // Optional business identifiers
+  gst?: string
+  pan?: string
+
+  // System fields
+  status: "active" | "inactive"
+  userId?: string
+  createdAt?: string
+  updatedAt?: string
 }
+
 
 interface MasterItem {
   id: string
@@ -90,6 +111,17 @@ export default function NewQuotationPage() {
     email: "",
     phone: "",
     address: "",
+    state: "",
+    city: "",
+    pincode: "",
+    companyName: "",
+    contactName: "",
+    gst: "",
+    pan: "",
+    clientName: "",
+    clientAddress: "",
+    clientContact: "",
+    clientEmail: "",
   })
 
   const [items, setItems] = useState<QuotationItem[]>([
@@ -116,10 +148,18 @@ export default function NewQuotationPage() {
   const [activeTab, setActiveTab] = useState("client")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newClient, setNewClient] = useState({
-    clientName: "",
+    type: "individual" as "individual" | "company",
+    name: "",
+    companyName: "",
+    contactName: "",
+    gst: "",
+    pan: "",
     email: "",
     phone: "",
     address: "",
+    state: "",
+    city: "",
+    pincode: "",
   })
 
   useEffect(() => {
@@ -348,62 +388,144 @@ export default function NewQuotationPage() {
     }
   }
 
-  const handleCreateClient = async () => {
-    const localStored = localStorage.getItem("loginedUser");
-    const parsed = localStored ? JSON.parse(localStored) : null;
-    let newErrors = { name: "", email: "", phone: "", address: "" }
-    let isValid = true
+const handleCreateClient = async () => {
+  const localStored = localStorage.getItem("loginedUser")
+  const parsed = localStored ? JSON.parse(localStored) : null
 
-    // Name required
-    if (!newClient.clientName.trim()) {
-      newErrors.name = "Client name is required"
-      isValid = false
-    }
-
-    // Phone validation (Indian 10-digit)
-    const phoneRegex = /^[6-9]\d{9}$/
-    if (!phoneRegex.test(newClient.phone)) {
-      newErrors.phone = "Enter a valid 10-digit Indian mobile number"
-      isValid = false
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(newClient.email)) {
-      newErrors.email = "Enter a valid email address"
-      isValid = false
-    }
-
-    // Address required
-    if (!newClient.address.trim()) {
-      newErrors.address = "Address is required"
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    if (!isValid) return // <-- Stop submit if invalid
-
-    try {
-      const newClientData = await api.clients.create({
-        name: newClient.clientName,
-        email: newClient.email,
-        phone: newClient.phone,
-        address: newClient.address,
-        status: "active",
-        userId: parsed.id
-      })
-      toast.success("Client Added", `${newClient.clientName} has been added to your clients`)
-      const loadedClients = await api.clients.getAll()
-      setClients(loadedClients)
-      const filteredClinets = loadedClients.filter((eachItem: any) => eachItem.name === newClient.clientName);
-      setSelectedClientId(filteredClinets[0]._id);
-      setIsCreateDialogOpen(false)
-      setNewClient({ clientName: "", email: "", phone: "", address: "" })
-    } catch (error) {
-      toast.error("Error", error instanceof Error ? error.message : "Failed to save client")
-    }
-
+  let newErrors = {
+    name: "",
+    companyName: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    address: "",
+    state: "",
+    city: "",
+    pincode: "",
+    gst: "",
+    pan: "",
   }
+  let isValid = true
+
+  // Validations
+  const phoneRegex = /^[6-9]\d{9}$/
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const pincodeRegex = /^\d{6}$/
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
+
+  // Common validations
+  if (!phoneRegex.test(newClient.phone)) {
+    newErrors.phone = "Enter valid 10-digit Indian mobile number"
+    isValid = false
+  }
+  if (!emailRegex.test(newClient.email)) {
+    newErrors.email = "Invalid email"
+    isValid = false
+  }
+  if (!newClient.address.trim()) {
+    newErrors.address = "Address required"
+    isValid = false
+  }
+  if (!newClient.state.trim()) {
+    newErrors.state = "State required"
+    isValid = false
+  }
+  if (!newClient.city.trim()) {
+    newErrors.city = "City required"
+    isValid = false
+  }
+  if (!pincodeRegex.test(newClient.pincode)) {
+    newErrors.pincode = "Pincode must be 6 digits"
+    isValid = false
+  }
+
+  // Type-specific
+  if (newClient.type === "individual") {
+    if (!newClient.name.trim()) {
+      newErrors.name = "Client name required"
+      isValid = false
+    }
+  }
+
+  if (newClient.type === "company") {
+    if (!newClient.companyName.trim()) {
+      newErrors.companyName = "Company name required"
+      isValid = false
+    }
+    if (!newClient.contactName.trim()) {
+      newErrors.contactName = "Contact name required"
+      isValid = false
+    }
+    if (newClient.gst && !gstRegex.test(newClient.gst)) {
+      newErrors.gst = "Invalid GST number"
+      isValid = false
+    }
+    if (newClient.pan && !panRegex.test(newClient.pan)) {
+      newErrors.pan = "Invalid PAN number"
+      isValid = false
+    }
+  }
+
+  setErrors(newErrors)
+  if (!isValid) return
+
+  try {
+    const payload: any = {
+      type: newClient.type,
+      email: newClient.email,
+      phone: newClient.phone,
+      address: newClient.address,
+      state: newClient.state,
+      city: newClient.city,
+      pincode: newClient.pincode,
+      status: "active",
+      userId: parsed.id,
+    }
+
+    if (newClient.type === "individual") {
+      payload.name = newClient.name
+    } else {
+      payload.companyName = newClient.companyName
+      payload.name = newClient.contactName
+      if (newClient.gst) payload.gst = newClient.gst
+      if (newClient.pan) payload.pan = newClient.pan
+    }
+
+    const created = await api.clients.create(payload)
+    toast.success("Client Created!")
+
+    // reload + auto-select
+    const updatedClients = await api.clients.getAll()
+    setClients(updatedClients)
+
+    const match = updatedClients.find(
+      (c) => (c.name || "").toLowerCase() === (newClient.name || newClient.companyName).toLowerCase()
+    )
+    if (match) setSelectedClientId(match._id)
+
+    setIsCreateDialogOpen(false)
+
+    // reset
+    setNewClient({
+      type: "individual",
+      name: "",
+      companyName: "",
+      contactName: "",
+      gst: "",
+      pan: "",
+      phone: "",
+      email: "",
+      address: "",
+      state: "",
+      city: "",
+      pincode: "",
+    })
+  } catch (err) {
+    toast.error("Failed to save client")
+  }
+}
+
 
   const tabs = ["client", "items", "quotation"]
   const currentTabIndex = tabs.indexOf(activeTab)
@@ -486,71 +608,184 @@ export default function NewQuotationPage() {
                         emptyText="No clients found."
                       />
 
-                      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button type="button" variant="outline" size="icon">
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Create New Client</DialogTitle>
-                            <DialogDescription>Add a new client to your records</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div>
-                              <Label htmlFor="newClientName">Client Name *</Label>
-                              <Input
-                                id="newClientName"
-                                value={newClient.clientName}
-                                onChange={(e) => setNewClient({ ...newClient, clientName: e.target.value })}
-                                placeholder="Enter client name"
-                              />
-                              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-                            </div>
-                            <div>
-                              <Label htmlFor="newClientEmail">Email</Label>
-                              <Input
-                                id="newClientEmail"
-                                type="email"
-                                value={newClient.email}
-                                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                                placeholder="client@example.com"
-                              />
-                              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-                            </div>
-                            <div>
-                              <Label htmlFor="newClientPhone">Phone *</Label>
-                              <Input
-                                id="newClientPhone"
-                                value={newClient.phone}
-                                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                                placeholder="+1 (555) 123-4567"
-                              />
-                              {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
-                            </div>
-                            <div>
-                              <Label htmlFor="newClientAddress">Address</Label>
-                              <Textarea
-                                id="newClientAddress"
-                                value={newClient.address}
-                                onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-                                placeholder="Enter client address"
-                                rows={2}
-                              />
-                              {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button type="button" onClick={handleCreateClient}>
-                              Create Client
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+  <DialogTrigger asChild>
+    <Button type="button" variant="outline" size="icon">
+      <UserPlus className="h-4 w-4" />
+    </Button>
+  </DialogTrigger>
+
+  <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+    {/* Sticky Header */}
+    <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+      <DialogHeader>
+        <DialogTitle>Create New Client</DialogTitle>
+        <DialogDescription>Add a new client record</DialogDescription>
+      </DialogHeader>
+    </div>
+
+    {/* Scrollable Form */}
+    <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+      <form className="space-y-5 pb-20" id="quotation-create-client-form">
+        
+        {/* Client Type */}
+        <div className="flex gap-4 border-b pb-4">
+          <Button
+            type="button"
+            variant={newClient.type === "individual" ? "default" : "outline"}
+            className="flex-1"
+            onClick={() => setNewClient({ ...newClient, type: "individual" })}
+          >
+            Individual
+          </Button>
+          <Button
+            type="button"
+            variant={newClient.type === "company" ? "default" : "outline"}
+            className="flex-1"
+            onClick={() => setNewClient({ ...newClient, type: "company" })}
+          >
+            Company
+          </Button>
+        </div>
+
+        {/* INDIVIDUAL FIELDS */}
+        {newClient.type === "individual" && (
+          <div className="space-y-1">
+            <Label>Client Name *</Label>
+            <Input
+              value={newClient.name}
+              onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+            />
+            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+          </div>
+        )}
+
+        {/* COMPANY FIELDS */}
+        {newClient.type === "company" && (
+          <>
+            <div className="space-y-1">
+              <Label>Company Name *</Label>
+              <Input
+                value={newClient.companyName}
+                onChange={(e) =>
+                  setNewClient({ ...newClient, companyName: e.target.value })
+                }
+              />
+              {errors.companyName && <p className="text-red-500 text-sm">{errors.companyName}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <Label>Contact Person *</Label>
+              <Input
+                value={newClient.contactName}
+                onChange={(e) =>
+                  setNewClient({ ...newClient, contactName: e.target.value })
+                }
+              />
+              {errors.contactName && <p className="text-red-500 text-sm">{errors.contactName}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>GST</Label>
+                <Input
+                  value={newClient.gst}
+                  onChange={(e) =>
+                    setNewClient({ ...newClient, gst: e.target.value.toUpperCase() })
+                  }
+                />
+                {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
+              </div>
+              <div>
+                <Label>PAN</Label>
+                <Input
+                  value={newClient.pan}
+                  onChange={(e) =>
+                    setNewClient({ ...newClient, pan: e.target.value.toUpperCase() })
+                  }
+                />
+                {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* COMMON FIELDS */}
+        <div className="space-y-1">
+          <Label>Phone *</Label>
+          <Input
+            value={newClient.phone}
+            onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+          />
+          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <Label>Email *</Label>
+          <Input
+            type="email"
+            value={newClient.email}
+            onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+          />
+          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <Label>Address *</Label>
+          <Textarea
+            rows={2}
+            value={newClient.address}
+            onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+          />
+          {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+        </div>
+
+        {/* State / City / Pincode */}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>State *</Label>
+            <Input
+              value={newClient.state}
+              onChange={(e) => setNewClient({ ...newClient, state: e.target.value })}
+            />
+            {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
+          </div>
+
+          <div>
+            <Label>City *</Label>
+            <Input
+              value={newClient.city}
+              onChange={(e) => setNewClient({ ...newClient, city: e.target.value })}
+            />
+            {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
+          </div>
+
+          <div>
+            <Label>Pincode *</Label>
+            <Input
+              value={newClient.pincode}
+              onChange={(e) => setNewClient({ ...newClient, pincode: e.target.value })}
+            />
+            {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {/* Footer */}
+    <div className="bg-white border-t px-6 py-4">
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" form="quotation-create-client-form" onClick={handleCreateClient}>
+          Create Client
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Search by name, email, or phone</p>
                   </div>
@@ -824,7 +1059,8 @@ export default function NewQuotationPage() {
           <div className="flex gap-3">
             {!isLastTab ? (
               <Button onClick={handleContinue} size="lg" className="min-w-[200px]">
-                Continue to {tabs[currentTabIndex + 1] === "client" ? "Client Details" : "Items/Services"}
+                Continue to Next Step
+                {/* {tabs[currentTabIndex + 1] === "client" ? "Client Details" : "Items/Services"} */}
               </Button>
             ) : (
               <>
