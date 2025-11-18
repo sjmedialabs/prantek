@@ -130,6 +130,7 @@ export default function NewReceiptPage() {
     }
 
     const q = (allQuotations || []).find((x: any) => String(x._id) === String(selectedQuotationId) || String(x.id) === String(selectedQuotationId))
+    console.log("q:::",q)
     if (!q) return
 
     // Map quotation items to QuotationItem shape and calculate amounts
@@ -162,10 +163,13 @@ export default function NewReceiptPage() {
         total,
       } as QuotationItem
     })
-
+   
     setItems(mapped)
-    setReceiptTotal(Number(q.grandTotal || mapped.reduce((s, it) => s + (it.total || 0), 0)))
-    setPaymentAmount(Number(q.paidAmount ? Math.min(q.paidAmount, q.grandTotal || 0) : q.grandTotal || mapped.reduce((s, it) => s + (it.total || 0), 0)))
+    // setReceiptTotal(Number(q.grandTotal || mapped.reduce((s, it) => s + (it.total || 0), 0)))
+    // setPaymentAmount(Number(q.paidAmount ? Math.min(q.paidAmount, q.grandTotal || 0) : q.grandTotal || mapped.reduce((s, it) => s + (it.total || 0), 0)))
+    setReceiptTotal(q.grandTotal-q.paidAmount)
+    setPaymentAmount(q.balanceAmount)
+    
     setProjectName(q.projectName || "")
     setQuotationAcceptedDate(q.acceptedDate || q.date || "")
 
@@ -247,7 +251,9 @@ export default function NewReceiptPage() {
 
   // Submit handler
   const handleSubmit = async (e?: React.FormEvent) => {
+
     if (e) e.preventDefault()
+    
     if (isSubmitting) return
 
     if (!selectedClientId) {
@@ -265,6 +271,18 @@ export default function NewReceiptPage() {
     setIsSubmitting(true)
 
     try {
+      if(selectedQuotationId){
+        console.log("selected quotation id is::",selectedQuotationId)
+        console.log("Payment Amount in frontend:::",paymentAmount)
+        const filteredQuotation=allQuotations.filter((eachItem:any)=>eachItem._id===selectedQuotationId);
+        const totalAmountPaid=filteredQuotation[0].paidAmount+paymentAmount
+        const  totalAmountBalance=filteredQuotation[0].balanceAmount-paymentAmount
+        console.log("total AMount Paid is:::",totalAmountPaid);
+        console.log("Total Balance Amount:::",totalAmountBalance);
+        const quotationPayloadUpdate={paidAmount:totalAmountPaid,balanceAmount:totalAmountBalance}
+         await api.quotations.update(filteredQuotation[0]._id, quotationPayloadUpdate)
+        console.log(filteredQuotation);
+      }
       const payload = {
         clientId: selectedClientId,
         clientName: clientName,
