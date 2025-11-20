@@ -60,9 +60,9 @@ export default function QuotationDetailsPage() {
   if (!quotation) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Quotation Not Found</h2>
-        <p className="text-gray-600 mb-4">The quotation you're looking for doesn't exist.</p>
-        <Button onClick={() => router.push("/dashboard/quotations")}>Back to Quotations</Button>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Quotation/Agreement Not Found</h2>
+        <p className="text-gray-600 mb-4">The quotation/agreement you're looking for doesn't exist.</p>
+        <Button onClick={() => router.push("/dashboard/quotations")}>Back to Quotations/Agreements</Button>
       </div>
     )
   }
@@ -151,17 +151,17 @@ export default function QuotationDetailsPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quotation Details</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Quotation/Agreement Details</h1>
             <p className="text-gray-600">{quotation.quotationNumber}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {quotation.status === "pending" && (
+          {/* {quotation.status === "pending" && (
             <Button onClick={handleAccept} className="bg-green-600 hover:bg-green-700">
               <Check className="h-4 w-4 mr-2" />
               Accept Quotation
             </Button>
-          )}
+          )} */}
           <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4 mr-2" />
             Download PDF
@@ -181,13 +181,13 @@ export default function QuotationDetailsPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FileText className="h-5 w-5 mr-2" />
-                Quotation Information
+                Quotation/Agreement Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">Quotation Number</p>
+                  <p className="text-sm text-gray-600">Quotation/Agreement Number</p>
                   <p className="font-semibold">{quotation.quotationNumber}</p>
                 </div>
                 <div>
@@ -204,6 +204,14 @@ export default function QuotationDetailsPage() {
                     {/* {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)} */}
                     {quotation.status}
                   </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Balance Amount</p>
+                  <p className="font-semibold">{quotation.balanceAmount}</p>
+                </div>
+                                <div>
+                  <p className="text-sm text-gray-600">Paid Amount</p>
+                  <p className="font-semibold">{quotation.paidAmount}</p>
                 </div>
               </div>
               {quotation.acceptedDate && (
@@ -232,7 +240,7 @@ export default function QuotationDetailsPage() {
           {/* Client Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Client Details</CardTitle>
+              {/* <CardTitle>Client Details</CardTitle> */}
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
@@ -371,9 +379,9 @@ export default function QuotationDetailsPage() {
                     {quotation.status}
                   </Badge>
                 </div>
-                {quotation.status === "accepted" && (
+                {/* {quotation.status === "accepted" && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800 font-medium">Quotation Accepted</p>
+                    <p className="text-sm text-green-800 font-medium">Quotation/Agreement Accepted</p>
                     {quotation.acceptedDate && (
                       <p className="text-xs text-green-700 mt-1">
                         Accepted on {new Date(quotation.acceptedDate).toLocaleDateString()}
@@ -385,7 +393,7 @@ export default function QuotationDetailsPage() {
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800 font-medium">Awaiting Acceptance</p>
                   </div>
-                )}
+                )} */}
               </div>
             </CardContent>
           </Card>
@@ -393,7 +401,7 @@ export default function QuotationDetailsPage() {
       </div>
 
       {/* Accept Dialog */}
-      <Dialog open={acceptDialogOpen} onOpenChange={setAcceptDialogOpen}>
+      {/* <Dialog open={acceptDialogOpen} onOpenChange={setAcceptDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Accept Quotation</DialogTitle>
@@ -431,7 +439,7 @@ export default function QuotationDetailsPage() {
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
       {/* Hidden print template for PDF generation */}
       <div className="hidden" id="print-content">
