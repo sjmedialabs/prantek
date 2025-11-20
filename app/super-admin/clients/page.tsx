@@ -76,7 +76,7 @@ export default function ClientAccountsPage() {
       
       // Map users to client accounts format
       const clientAccounts = users
-        .filter(user => user.role === "admin") // Only admin users are clients
+        .filter(user => user.userType === "subscriber" && user.role !== "super-admin") // Only subscriber users are clients
         .map(user => {
           const plan = plans.find(p => (p._id || p.id) === user.subscriptionPlanId)
           const userId = user._id || user.id

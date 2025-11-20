@@ -119,6 +119,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       name: body.name,
       companyId,
       role: body.role || "admin",
+      userType: "admin",
       roleId: body.roleId || null,
       permissions,
       phone: body.phone || null,

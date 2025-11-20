@@ -32,37 +32,24 @@ export async function GET(request: NextRequest) {
     // Fetch user from database (check ADMIN_USERS first, then regular users)
     const db = await connectDB()
     let user
+    let user = null
     let isAdminUser = false
     
     try {
-      // Try admin users first
-      user = await db.collection(COLLECTIONS.ADMIN_USERS).findOne({ 
+      // Fetch user from USERS collection
+      user = await db.collection(COLLECTIONS.USERS).findOne({ 
         _id: new ObjectId(payload.userId)
       })
-      
-      if (user) {
-        isAdminUser = true // User is from User Management
-      } else {
-        // If not found in admin users, try regular users
-        user = await db.collection(COLLECTIONS.USERS).findOne({ 
-          _id: new ObjectId(payload.userId)
-        })
-        isAdminUser = false // User is an account owner
-      }
     } catch {
-      // If conversion fails, try searching by string id
-      user = await db.collection(COLLECTIONS.ADMIN_USERS).findOne({ 
+      // If ObjectId conversion fails, try searching by string id
+      user = await db.collection(COLLECTIONS.USERS).findOne({ 
         _id: payload.userId as any
       })
-      
-      if (user) {
-        isAdminUser = true
-      } else {
-        user = await db.collection(COLLECTIONS.USERS).findOne({ 
-          _id: payload.userId as any
-        })
-        isAdminUser = false
-      }
+    }
+    
+    // Determine if user is an admin user based on userType field
+    if (user) {
+      isAdminUser = user.userType === "admin" // Admin users created via User Management
     }
 
     if (!user) {

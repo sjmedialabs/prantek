@@ -37,8 +37,8 @@ export default function SuperAdminDashboard() {
       // Fetch all users and filter for admins
       const allUsers = await api.users.getAll()
       setUsers(allUsers);
-      const adminUsers = allUsers.filter((u: any) => u.role === "admin")
-      const activeClients = adminUsers.filter((u: any) => u.subscriptionStatus === "active").length
+      const subscriberUsers = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin")
+      const activeClients = subscriberUsers.filter((u: any) => u.subscriptionStatus === "active").length
 
       // Fetch subscription plans to calculate revenue and subscriptions
       const loadedplans = await api.subscriptionPlans.getAll()
@@ -64,11 +64,12 @@ export default function SuperAdminDashboard() {
   const calculateTotalRevenue = () => {
       if (!plans.length || !users.length) return 0;
 
-      const usersExcludingFirst = users.slice(1); // skip first object
+      // Only count revenue from subscribers, not admin users
+      const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
 
       let total = 0;
 
-      usersExcludingFirst.forEach((user: any) => {
+      subscriberUsers.forEach((user: any) => {
         const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
         if (userPlan && userPlan.price) {
           total += Number(userPlan.price);
@@ -78,7 +79,7 @@ export default function SuperAdminDashboard() {
   return total;
   };
   const totalRevenueGenerated=calculateTotalRevenue();
-   const totalSubscribers = users.slice(1).filter((user: any) => user.subscriptionPlanId).length;
+   const totalSubscribers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId).length;
 
   if (loading) {
     return (

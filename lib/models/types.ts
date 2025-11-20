@@ -12,6 +12,7 @@ export interface AdminUser extends BaseDocument {
   password: string
   name: string
   companyId?: string
+  userType?: "subscriber" | "admin"  // Distinguish between account owners and admin users
   role: "super-admin" | "admin"  // admin users have specific roles
   roleId?: string  // Reference to Role collection
   permissions?: string[]  // Cached permissions from role
@@ -27,7 +28,8 @@ export interface User extends BaseDocument {
   password: string
   name: string
   companyId?: string
-  role: "user" | "super-admin"
+  userType?: "subscriber" | "admin"  // Distinguish between account owners and admin users
+  role: "user" | "admin" | "super-admin"
   phone?: string
   address?: string
   avatar?: string
