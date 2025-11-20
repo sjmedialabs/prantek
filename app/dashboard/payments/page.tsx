@@ -46,6 +46,8 @@ export default function PaymentsPage() {
   const [vendorFilter, setVendorFilter] = useState<string>("all")
   const [teamFilter, setTeamFilter] = useState<string>("all")
   const [recipientFilter, setRecipientFilter] = useState<string>("all") // Declared recipientFilter
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   useEffect(() => {
     loadPayments()
@@ -122,13 +124,23 @@ export default function PaymentsPage() {
     setRecipientFilter("all") // Added setRecipientFilter
     setSearchTerm("")
   }
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPayments.length / rowsPerPage)
+
+  const paginatedPayments = filteredPayments.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  )
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, categoryFilter, paymentMethodFilter, clientFilter, vendorFilter, teamFilter, recipientFilter])
 
   const totalPaid = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
   const completedAmount = filteredPayments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0)
   const pendingAmount = filteredPayments.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0)
   const failedAmount = filteredPayments.filter((p) => p.status === "failed").reduce((sum, p) => sum + p.amount, 0)
 
-  
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -173,7 +185,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Total Payments</CardTitle>
@@ -267,11 +279,11 @@ export default function PaymentsPage() {
                 vendorFilter !== "all" ||
                 teamFilter !== "all" ||
                 recipientFilter !== "all") && ( // Added recipientFilter check
-                <Button variant="outline" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
-              )}
+                  <Button variant="outline" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Clear
+                  </Button>
+                )}
             </div>
 
             {showFilters && (
@@ -292,13 +304,13 @@ export default function PaymentsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
+                  <label className="text-sm font-medium">Ledger</label>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All Categories" />
+                      <SelectValue placeholder="All Ledgers" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="all">All Ledgers</SelectItem>
                       {uniqueCategories.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
@@ -427,11 +439,12 @@ export default function PaymentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>S.No</TableHead>
                 <TableHead>Payment No.</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Party Type</TableHead>
                 <TableHead>Party</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead>Ledger</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Payment Method</TableHead>
                 <TableHead>Status</TableHead>
@@ -440,8 +453,9 @@ export default function PaymentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.map((payment, index) => (
+              {paginatedPayments.map((payment, index) => (
                 <TableRow key={payment._id?.toString() || `payment-${index}`}>
+                  <TableCell>{(currentPage - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell className="font-medium">{payment.paymentNumber}</TableCell>
                   <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString() : "N/A"}</TableCell>
                   <TableCell>
@@ -484,6 +498,48 @@ export default function PaymentsPage() {
               ))}
             </TableBody>
           </Table>
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-6">
+
+            {/* Rows Per Page */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Rows per page:</span>
+              <Select value={String(rowsPerPage)} onValueChange={(v) => setRowsPerPage(Number(v))}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Page Navigation */}
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+
+              <span className="text-sm">
+                Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+              </span>
+
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
