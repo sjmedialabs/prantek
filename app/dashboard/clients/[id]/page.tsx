@@ -337,6 +337,12 @@ export default function ClientDetailsPage() {
             <CardTitle>Client Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {client.companyName && (
+              <div>
+              <p className="text-sm text-gray-600">Company Name</p>
+              <p className="font-medium">{client.companyName}</p>
+            </div>
+            )}
             <div>
               <p className="text-sm text-gray-600">Client Name</p>
               <p className="font-medium">{client.name || client.companyName}</p>
@@ -353,6 +359,18 @@ export default function ClientDetailsPage() {
               <p className="text-sm text-gray-600">Address</p>
               <p className="font-medium">{client.address}</p>
             </div>
+            {client.pan && (
+              <div>
+              <p className="text-sm text-gray-600">Pan Number</p>
+              <p className="font-medium">{client.pan}</p>
+            </div>
+            )}
+            {client.gst && (
+              <div>
+              <p className="text-sm text-gray-600">GST</p>
+              <p className="font-medium">{client.gst}</p>
+            </div>
+            )}
             {client.bankAccount && (
               <div>
                 <p className="text-sm text-gray-600">Bank Account</p>
