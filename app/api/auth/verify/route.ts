@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
 
     // Fetch user from database (check ADMIN_USERS first, then regular users)
     const db = await connectDB()
-    let user
     let user = null
     let isAdminUser = false
     
