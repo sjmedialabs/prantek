@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     }
 
     const db = await connectDB()
-    const categories = await db.collection(COLLECTION).find({ tenantId: userData.tenantId }).sort({ name: 1 }).toArray()
+    const categories = await db.collection(COLLECTION).find({ userId: userData.userId }).sort({ name: 1 }).toArray()
 
     return NextResponse.json(categories)
   } catch (error: any) {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     const newCategory = {
       ...body,
-      tenantId: userData.tenantId,
+      userId: userData.userId,
       isActive: body.isActive !== undefined ? body.isActive : true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

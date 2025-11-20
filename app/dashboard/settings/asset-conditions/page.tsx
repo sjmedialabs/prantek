@@ -35,8 +35,10 @@ export default function AssetConditionsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCondition, setEditingCondition] = useState<Condition | null>(null)
   const [conditionName, setConditionName] = useState("")
-const [searchTerm, setSearchTerm] = useState("")
-const [statusFilter, setStatusFilter] = useState("all")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     loadConditions()
@@ -46,10 +48,10 @@ const [statusFilter, setStatusFilter] = useState("all")
     const data = await api.assetConditions.getAll()
     if (data.length === 0) {
       // Initialize with default conditions
-      const defaultConditions = ["Excellent", "Good", "Fair", "Poor", "Damaged"]
-      for (const name of defaultConditions) {
-        await api.assetConditions.create({ name, isActive: true })
-      }
+      // const defaultConditions = ["Excellent", "Good", "Fair", "Poor", "Damaged"]
+      // for (const name of defaultConditions) {
+      //   await api.assetConditions.create({ name, isActive: true })
+      // }
       const newData = await api.assetConditions.getAll()
       setConditions(newData)
     } else {
@@ -57,35 +59,54 @@ const [statusFilter, setStatusFilter] = useState("all")
     }
   }
   const filteredConditions = conditions
-  .filter((cond) =>
-    cond.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .filter((cond) => {
-    if (statusFilter === "active") return cond.isActive
-    if (statusFilter === "inactive") return !cond.isActive
-    return true
-  })
+    .filter((cond) =>
+      cond.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((cond) => {
+      if (statusFilter === "active") return cond.isActive
+      if (statusFilter === "inactive") return !cond.isActive
+      return true
+    })
+  const validateCondition = (name: string, list: Condition[], editingId?: string) => {
+    if (!name || name.trim().length < 2) {
+      return "Condition name must be at least 2 characters."
+    }
+
+    const duplicate = list.some(
+      (c) =>
+        c.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+        c._id !== editingId
+    )
+
+    if (duplicate) return "Condition name already exists."
+
+    return null
+  }
 
   const handleSave = async () => {
-    if (!conditionName.trim()) {
-      toast({ title: "Validation Error", description: "Please enter a condition name", variant: "destructive" })
+    const trimmed = conditionName.trim()
+
+    // Validate name
+    const error = validateCondition(trimmed, conditions, editingCondition?._id)
+    if (error) {
+      toast({ title: "Validation Error", description: error, variant: "destructive" })
       return
     }
 
     if (editingCondition) {
-      const updated = await api.assetConditions.update(editingCondition._id, { name: conditionName })
+      const updated = await api.assetConditions.update(editingCondition._id, { name: trimmed })
       if (updated) {
         setConditions(conditions.map((cond) => (cond._id === updated._id ? updated : cond)))
       }
     } else {
-      const newCondition = await api.assetConditions.create({ name: conditionName, isActive: true })
+      const newCondition = await api.assetConditions.create({ name: trimmed, isActive: true })
       setConditions([...conditions, newCondition])
     }
 
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     setIsDialogOpen(false)
-    toast({ title: "Success", description: "Asset condition saved successfully" })
+    toast({ title: "Success", description: "Condition saved successfully" })
     resetForm()
   }
 
@@ -107,6 +128,9 @@ const [statusFilter, setStatusFilter] = useState("all")
       toast({ title: "Success", description: `Condition ${updated.isActive ? "activated" : "deactivated"}` })
     }
   }
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedConditions = filteredConditions.slice(startIndex, startIndex + itemsPerPage)
+  const totalPages = Math.ceil(filteredConditions.length / itemsPerPage)
 
   const handleDelete = async (condition: Condition) => {
     if (confirm(`Are you sure you want to delete "${condition.name}"?`)) {
@@ -115,7 +139,7 @@ const [statusFilter, setStatusFilter] = useState("all")
       toast({ title: "Success", description: "Condition deleted successfully" })
     }
   }
-      if (loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -141,18 +165,18 @@ const [statusFilter, setStatusFilter] = useState("all")
     <div className="space-y-6">
       <div className="flex justify-between">
         <div>
-        <h1 className="text-2xl font-bold text-gray-900">Asset Conditions</h1>
-        <p className="text-gray-600">Manage condition statuses for asset tracking</p>
+          <h1 className="text-2xl font-bold text-gray-900">Asset Conditions</h1>
+          <p className="text-gray-600">Manage condition statuses for asset tracking</p>
         </div>
-                    <Button
-              onClick={() => {
-                resetForm()
-                setIsDialogOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Condition
-            </Button>
+        <Button
+          onClick={() => {
+            resetForm()
+            setIsDialogOpen(true)
+          }}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Condition
+        </Button>
       </div>
 
       <Card>
@@ -162,45 +186,48 @@ const [statusFilter, setStatusFilter] = useState("all")
               <CardTitle>Condition List ({filteredConditions.length})</CardTitle>
               <CardDescription>Create and manage asset condition statuses</CardDescription>
             </div>
-            
-    <div className="flex items-center gap-3">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="Search conditions..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 w-72"
-        />
-      </div>
 
-      {/* Status Filter */}
-      <select
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="border rounded-lg px-2  py-3 text-sm"
-      >
-        <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-    </div>
+            <div className="flex items-center gap-3">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search conditions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-72"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border rounded-lg px-2  py-3 text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {filteredConditions.length === 0 ? (
+            {paginatedConditions.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
                 <p>No asset conditions found</p>
                 <p className="text-sm">Click "Add Condition" to create one</p>
               </div>
             ) : (
-              filteredConditions.map((condition) => (
+              paginatedConditions.map((condition, index) => (
                 <div key={condition._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                   <div className="flex items-center space-x-3">
-                    <Activity className="h-5 w-5 text-blue-600" />
+                    {/* Serial No */}
+                    <span className="font-semibold">
+                      {startIndex + index + 1}
+                    </span>
                     <div>
                       <p className="font-medium text-gray-900">{condition.name}</p>
                       <p className="text-sm text-gray-500">

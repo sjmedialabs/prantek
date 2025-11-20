@@ -832,7 +832,7 @@ receiptCategories: {
   assetCategories: {
     getAll: async () => {
       const data = await fetchAPI("/api/asset-categories")
-      return data.data || data.assetCategories || []
+      return data || data.assetCategories || []
     },
     create: async (payload: { name: string; isActive?: boolean }) => {
       const data = await fetchAPI("/api/asset-categories", {
@@ -859,7 +859,7 @@ receiptCategories: {
   assetConditions: {
     getAll: async () => {
       const data = await fetchAPI("/api/asset-conditions")
-      return data.data || data.assetConditions || []
+      return data || data.assetConditions || []
     },
     create: async (payload: { name: string; isActive?: boolean }) => {
       const data = await fetchAPI("/api/asset-conditions", {

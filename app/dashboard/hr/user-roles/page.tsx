@@ -96,32 +96,32 @@ export default function RolesPage() {
     permissions: [] as string[],
   })
 
-useEffect(() => {
-  const loadRolesAndUsers = async () => {
-    try {
-      // 1️⃣ Load roles from DB
-      const loadedRoles = await api.roles.getAll()
+  useEffect(() => {
+    const loadRolesAndUsers = async () => {
+      try {
+        // 1️⃣ Load roles from DB
+        const loadedRoles = await api.roles.getAll()
 
-      // 2️⃣ Load admin users from DB
-      const loadedUsers = await api.users.getAll()
+        // 2️⃣ Load admin users from DB
+        const loadedUsers = await api.users.getAll()
 
-      // 3️⃣ Count how many users match each role
-      const rolesWithUserCount = loadedRoles.map((role: any) => {
-        const count = loadedUsers.filter((u: any) => u.role === role._id).length
-        return { ...role, userCount: count }
-      })
+        // 3️⃣ Count how many users match each role
+        const rolesWithUserCount = loadedRoles.map((role: any) => {
+          const count = loadedUsers.filter((u: any) => u.role === role._id).length
+          return { ...role, userCount: count }
+        })
 
-      // 4️⃣ Save result
-      setRoles(rolesWithUserCount)
+        // 4️⃣ Save result
+        setRoles(rolesWithUserCount)
 
-      console.log("Roles with user count:", rolesWithUserCount)
-    } catch (err) {
-      console.error("Error loading roles/users", err)
+        console.log("Roles with user count:", rolesWithUserCount)
+      } catch (err) {
+        console.error("Error loading roles/users", err)
+      }
     }
-  }
 
-  loadRolesAndUsers()
-}, [])
+    loadRolesAndUsers()
+  }, [])
 
   const filteredRoles = (roles || [])
     .filter((role) => role?.name)
@@ -130,95 +130,103 @@ useEffect(() => {
       // (role.description ?? "").toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-const validateRole = (role: { name: string; permissions: string[] }, roles: Role[], editingId?: string) => {
-  if (!role.name || role.name.trim().length < 3) {
-    return "Role name must be at least 3 characters."
-  }
-
-  // ✅ DUPLICATE CHECK → exclude current editing role
-  const duplicate = roles.some(
-    (r) => r.name.trim().toLowerCase() === role.name.trim().toLowerCase() && r._id !== editingId
-  )
-  if (duplicate) {
-    return "Duplicate role name is not allowed."
-  }
-
-  if (!role.permissions || role.permissions.length === 0) {
-    return "Select at least 1 permission."
-  }
-
-  return null
-}
-  const handleAddRole = async () => {
-  const error = validateRole(newRole, roles)
-  if (error) {
-    toast({ title: "Notification", description: error, variant: "destructive" })
-    return
-  }
-
-  try {
-    const payload = {
-      name: newRole.name.trim(),
-      permissions: newRole.permissions,
-      isSystem: false,
-      userCount: 0,
+  const validateRole = (role: { name: string; permissions: string[] }, roles: Role[], editingId?: string) => {
+    if (!role.name || role.name.trim().length < 3) {
+      return "Role name must be at least 3 characters."
     }
 
-    const saved = await api.roles.create(payload)
-
-    setRoles((prev) => [...prev, saved])
-    setNewRole({ name: "", permissions: [] })
-    setIsAddRoleOpen(false)
-
-    toast({ title: "Success", description: "Role created successfully!" })
-    window.location.reload()
-  } catch (err: any) {
-    toast({
-      title: "Notification",
-      description: "Failed to create role: " + (err.message || "Something went wrong"),
-      variant: "destructive",
-    })
-  }
-}
-  const handleEditRole = (role: Role) => {
-  setEditingRole(role)
-  setNewRole({
-    name: role.name,
-    permissions: [...role.permissions],
-  })
-  setIsAddRoleOpen(true)
-}
-  const handleUpdateRole = async () => {
-  if (!editingRole || !editingRole._id) return
-
-  const error = validateRole(newRole, roles, editingRole._id)
-  if (error) {
-    toast({ title: "Notification", description: error, variant: "destructive" })
-    return
-  }
-
-  try {
-    const updated = await api.roles.update(editingRole._id, newRole)
-
-    setRoles((prev) =>
-      prev.map((r) => (r._id === editingRole._id ? updated : r))
+    // ✅ DUPLICATE CHECK → exclude current editing role
+    const duplicate = roles.some(
+      (r) => r.name.trim().toLowerCase() === role.name.trim().toLowerCase() && r._id !== editingId
     )
+    if (duplicate) {
+      return "Duplicate role name is not allowed."
+    }
 
-    toast({ title: "Success", description: "Role updated successfully!" })
-    window.location.reload()
+    if (!role.permissions || role.permissions.length === 0) {
+      return "Select at least 1 permission."
+    }
 
-    setEditingRole(null)
-    setNewRole({ name: "", permissions: [] })
-    setIsAddRoleOpen(false)
-
-  } catch (err: any) {
-    toast({
-      title: "Notification",
-      description: "Failed to update role: " + (err.message || "Something went wrong"),
-      variant: "destructive",
-    })
+    return null
   }
-}
+  const handleAddRole = async () => {
+    const error = validateRole(newRole, roles)
+    if (error) {
+      toast({ title: "Notification", description: error, variant: "destructive" })
+      return
+    }
+
+    try {
+      const payload = {
+        name: newRole.name.trim(),
+        permissions: newRole.permissions,
+        isSystem: false,
+        userCount: 0,
+      }
+
+      const saved = await api.roles.create(payload)
+
+      setRoles((prev) => [...prev, saved])
+      setNewRole({ name: "", permissions: [] })
+      setIsAddRoleOpen(false)
+
+      toast({ title: "Success", description: "Role created successfully!", variant: "success" })
+      // window.location.reload()
+    } catch (err: any) {
+      toast({
+        title: "Notification",
+        description: "Failed to create role: " + (err.message || "Something went wrong"),
+        variant: "destructive",
+      })
+    }
+  }
+  // Pagination
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 10
+
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedRoles = filteredRoles.slice(startIndex, startIndex + itemsPerPage)
+  const totalPages = Math.ceil(filteredRoles.length / itemsPerPage)
+
+  const handleEditRole = (role: Role) => {
+    setEditingRole(role)
+    setNewRole({
+      name: role.name,
+      permissions: [...role.permissions],
+    })
+    setIsAddRoleOpen(true)
+  }
+  const handleUpdateRole = async () => {
+    if (!editingRole || !editingRole._id) return
+
+    const error = validateRole(newRole, roles, editingRole._id)
+    if (error) {
+      toast({ title: "Notification", description: error, variant: "destructive" })
+      return
+    }
+
+    try {
+      const updated = await api.roles.update(editingRole._id, newRole)
+
+      setRoles((prev) =>
+        prev.map((r) => (r._id === editingRole._id ? updated : r))
+      )
+
+      toast({ title: "Success", description: "Role updated successfully!", variant: "success" })
+      // window.location.reload()
+
+      setEditingRole(null)
+      setNewRole({ name: "", permissions: [] })
+      setIsAddRoleOpen(false)
+
+    } catch (err: any) {
+      toast({
+        title: "Notification",
+        description: "Failed to update role: " + (err.message || "Something went wrong"),
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleToggleRoleActive = async (id: string, isActive: boolean) => {
     try {
@@ -226,11 +234,11 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
 
       setRoles((prev) =>
         prev.map((role) =>
-          role.id === id ? { ...role, isActive } : role
+          role._id === id ? { ...role, isActive } : role
         )
       )
-      toast({ title: "Success", description: "Role status updated successfully!" })   // ✅ ADDED
-      window.location.reload()
+      toast({ title: "Success", description: "Role status updated successfully!", variant: "success" })   // ✅ ADDED
+      // window.location.reload()
     } catch (err: any) {
       toast({ title: "Notification", description: "Failed to update status: " + (err.message || "Something went wrong"), variant: "default" })   // ✅ ADDED
     }
@@ -257,7 +265,7 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
     })
     return categories
   }
-      if (loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -403,11 +411,14 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{roles.reduce((sum, role) => sum + role.userCount, 0)}</div>
+            <div className="text-2xl font-bold">
+              {(roles || []).reduce((sum, role) => sum + (role?.userCount ?? 0), 0)}
+            </div>
             <p className="text-xs text-muted-foreground">Across all roles</p>
           </CardContent>
+
         </Card>
-{/* 
+        {/* 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Permissions</CardTitle>
@@ -442,6 +453,7 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>S.No.</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Users</TableHead>
                 <TableHead>Permissions</TableHead>
@@ -451,8 +463,12 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRoles.map((role) => (
-                <TableRow key={role.id || role.name}>
+              {paginatedRoles.map((role, idx) => (
+                <TableRow key={role._id}>
+                  {/* SERIAL NUMBER */}
+                  <TableCell className="font-semibold text-gray-700">
+                    {startIndex + idx + 1}
+                  </TableCell>
                   <TableCell>
                     <div>
                       <div className="font-medium">{role.name}</div>
@@ -490,6 +506,28 @@ const validateRole = (role: { name: string; permissions: string[] }, roles: Role
               ))}
             </TableBody>
           </Table>
+          <div className="flex justify-between items-center mt-4">
+            <Button
+              variant="outline"
+              disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+
+            <span className="text-sm text-gray-500">
+              Page {page} of {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
+          </div>
+
         </CardContent>
       </Card>
     </div>

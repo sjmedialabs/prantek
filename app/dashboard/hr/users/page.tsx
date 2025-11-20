@@ -413,7 +413,7 @@ export default function UsersPage() {
                 placeholder="+1234567890"
               />
             </div>
-            <div className="grid gap-2">
+            {/* <div className="grid gap-2">
               <Label htmlFor="role">Access Level</Label>
               <Select
                 value={formData.role}
@@ -429,7 +429,7 @@ export default function UsersPage() {
                   <SelectItem value="super-admin">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
             <div className="grid gap-2">
               <Label htmlFor="roleId">Assign Role (Optional)</Label>
               <Select

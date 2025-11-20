@@ -22,6 +22,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
 import { Item } from "@/lib/models/types"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 export default function ItemsPage() {
   const { user, loading, hasPermission } = useUser()
@@ -32,6 +33,8 @@ export default function ItemsPage() {
   const [taxRates, setTaxRates] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | "product" | "service">("all")
+  const [page, setPage] = useState(1)
+const itemsPerPage = 10
   const [formData, setFormData] = useState({
     type: "" as "product" | "service",
     unitType: "",
@@ -72,23 +75,28 @@ const validateItem = (data: any) => {
     return "Item name must be at least 2 characters long."
   }
 
+  // 🚨 Duplicate prevention (case-insensitive)
+  const duplicate = items.some(
+    (i) =>
+      i.name.trim().toLowerCase() === data.name.trim().toLowerCase() &&
+      i.id !== editingItem?.id
+  )
+  if (duplicate) return "Item name already exists."
+
   if (!data.price || data.price <= 0) {
     return "Price must be greater than 0."
   }
 
   if (data.type === "product" && !data.unitType) {
-    return "Please select a unit type for product."
+    return "Please select a unit type."
   }
 
-  if (data.applyTax) {
-    if (!data.cgst && !data.sgst && !data.igst) {
-      return "At least one tax (CGST/SGST/IGST) must be selected."
-    }
+  if (data.applyTax && !data.cgst && !data.sgst && !data.igst) {
+    return "At least one tax must be selected."
   }
 
-  return null // ✅ VALID
+  return null
 }
-
 
   // const loadTaxRates = async () => {
   //   const rates = (await api.taxRates.getAll()) || []
@@ -111,6 +119,21 @@ const validateItem = (data: any) => {
   loadTaxData()
 }, [])
 
+const filteredItems = items.filter(item => {
+  const matchesSearch =
+    searchQuery === "" ||
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
+
+  const matchesType = typeFilter === "all" || item.type === typeFilter
+
+  return matchesSearch && matchesType
+})
+
+const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
+const startIndex = (page - 1) * itemsPerPage
+const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage)
 
   const handleEdit = (item: Item) => {
     setEditingItem(item)
@@ -132,12 +155,12 @@ const validateItem = (data: any) => {
   }
 
   const toggleActive = (id: string) => {
-    const item = items.find((i) => i.id === id)
+    const item = items.find((i) => i._id === id)
     if (item) {
       api.items.update(id, { isActive: !item.isActive  })
-      loadItems()
+    setItems(items.map((i) => (i._id === id ? { ...i, isActive: !i.isActive } : i)))
+     toast({ title: "Success", description: "Item status updated successfully!", variant: "success" })
     }
-    toast({ title: "Success", description: "Item status updated successfully!" })
   }
 
 const handleSave = async () => {
@@ -276,7 +299,7 @@ const handleSave = async () => {
                     </Select>
                   </div>
                 )}
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">
                     Item Name <span className="text-red-500">*</span>
@@ -299,7 +322,7 @@ const handleSave = async () => {
                     placeholder="Enter HSN code"
                   />
                 </div>
-
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
@@ -352,7 +375,7 @@ const handleSave = async () => {
                             {taxRates
                               .filter((rate) => rate.type === "CGST" && rate.isActive)
                               .map((rate) => (
-                                <SelectItem key={rate.id} value={rate.rate.toString()}>
+                                <SelectItem key={rate._id} value={rate.rate.toString()}>
                                   {rate.rate}%
                                 </SelectItem>
                               ))}
@@ -468,79 +491,118 @@ const handleSave = async () => {
             </Select>
           </div>
         </CardHeader>
-        <CardContent>
-          {items.filter(item => {
-            const matchesSearch = searchQuery === "" || 
-              item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
-            const matchesType = typeFilter === "all" || item.type === typeFilter
-            return matchesSearch && matchesType
-          }).length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>No products/services added yet. Click "Add Product/Service" to get started.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {items.filter(item => {
-                const matchesSearch = searchQuery === "" || 
-                  item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
-                const matchesType = typeFilter === "all" || item.type === typeFilter
-                return matchesSearch && matchesType
-              }).map((item) => (
-                <div
-                  key={item._id}
-                  className={`flex items-center justify-between p-4 border rounded-lg ${item.isActive === false ? "opacity-50 bg-gray-50" : ""}`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span
-                        className={`px-2 py-1 text-xs rounded ${item.type === "product" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}
-                      >
-                        {item.type === "product" ? "Product" : "Service"}
-                      </span>
-                      <span className="font-medium">{item.name}</span>
-                      {item.hsnCode && <span className="text-sm text-gray-500">HSN: {item.hsnCode}</span>}
-                      {item.type === "product" && item.unitType && (
-                        <span className="text-sm text-gray-500">({item.unitType})</span>
-                      )}
-                      <span className="text-gray-600">₹{item.price.toFixed(2)}</span>
-                      {item.isActive === false && (
-                        <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Disabled</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                    {item.applyTax && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Tax: CGST {item.cgst}% + SGST {item.sgst}% + IGST {item.igst}%
-                      </div>
+<CardContent>
+  {filteredItems.length === 0 ? (
+    <div className="text-center py-12 text-gray-500">
+      <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+      <p>No products/services found.</p>
+    </div>
+  ) : (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="p-2 text-left">S.No</TableHead>
+            <TableHead className="p-2 text-left">Type</TableHead>
+            <TableHead className="p-2 text-left">Name</TableHead>
+            <TableHead className="p-2 text-left">HSN</TableHead>
+            <TableHead className="p-2 text-left">Unit</TableHead>
+            <TableHead className="p-2 text-left">Price</TableHead>
+            <TableHead className="p-2 text-left">Tax</TableHead>
+            <TableHead className="p-2 text-left">Status</TableHead>
+            <TableHead className="p-2 text-left">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody>
+          {paginatedItems.map((item, index) => (
+            <TableRow
+              key={item.id}
+              className={`border-b ${item.isActive === false ? "opacity-50 bg-gray-50" : ""}`}
+            >
+              <TableCell className="p-2">{startIndex + index + 1}</TableCell>
+
+              <TableCell className="p-2">
+                {item.type === "product" ? (
+                  <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">Product</span>
+                ) : (
+                  <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Service</span>
+                )}
+              </TableCell>
+
+              <TableCell className="p-2 font-medium">{item.name}</TableCell>
+              <TableCell className="p-2">{item.hsnCode || "-"}</TableCell>
+              <TableCell className="p-2">{item.unitType || "-"}</TableCell>
+              <TableCell className="p-2">₹{item.price.toFixed(2)}</TableCell>
+
+              <TableCell className="p-2 text-sm">
+                {item.applyTax ? (
+                  <>
+                    CGST {item.cgst}%<br />
+                    SGST {item.sgst}%<br />
+                    IGST {item.igst}%
+                  </>
+                ) : (
+                  "-"
+                )}
+              </TableCell>
+
+              <TableCell className="p-2">
+                {item.isActive ? (
+                  <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Active</span>
+                ) : (
+                  <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Disabled</span>
+                )}
+              </TableCell>
+
+              <TableCell className="p-2">
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleActive(item?._id)}
+                  >
+                    {item.isActive ? (
+                      <PowerOff className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <Power className="h-4 w-4 text-green-500" />
                     )}
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleActive(item?.id || "")}
-                      title={item.isActive === false ? "Enable" : "Disable"}
-                    >
-                      {item.isActive === false ? (
-                        <Power className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <PowerOff className="h-4 w-4 text-red-500" />
-                      )}
-                    </Button>
-                  </div>
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-between mt-4">
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+        >
+          Previous
+        </Button>
+
+        <span>Page {page} of {totalPages}</span>
+
+        <Button
+          variant="outline"
+          disabled={page === totalPages}
+          onClick={() => setPage(page + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </>
+  )}
+</CardContent>
+
       </Card>
     </div>
   )

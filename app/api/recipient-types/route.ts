@@ -31,6 +31,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
   const payload = {
     userId: String(filterUserId),
     name: body.name.trim(),
+    value: body.value.trim(),
     isEnabled: body.isEnabled ?? true,
     createdAt: now,
     updatedAt: now,
