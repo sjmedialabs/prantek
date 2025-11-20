@@ -103,3 +103,19 @@ From the `users` collection:
 3. Super admins always bypass subscription checks
 
 4. For pages that should be accessible without subscription, ensure the navigation item has `permission: null` in the sidebar configuration
+
+## API Route Fix (Added Later)
+
+### Problem
+The `/api/users/[id]` endpoint was only checking the `admin_users` collection, causing a 404 error when account owners (stored in the `users` collection) tried to cancel their subscription.
+
+### Solution
+Updated `/app/api/users/[id]/route.ts` to check both collections:
+1. First tries to find user in `admin_users` collection
+2. If not found, checks the `users` collection
+3. Performs the operation on whichever collection the user is in
+
+This allows both admin users (sub-users) and account owners (main subscribers) to update their profiles and subscription status.
+
+### Files Modified (Additional)
+- `/app/api/users/[id]/route.ts` - Updated GET, PUT, and DELETE handlers to check both collections
