@@ -41,6 +41,8 @@ export default function TaxDetailsPage() {
   const [taxRates, setTaxRates] = useState<TaxRate[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRate, setEditingRate] = useState<TaxRate | null>(null)
+  const [page, setPage] = useState(1)
+const itemsPerPage = 10
   const [rateData, setRateData] = useState({
     type: "CGST" as "CGST" | "SGST" | "IGST",
     rate: "",
@@ -65,9 +67,9 @@ const filteredRates = taxRates
     const term = searchTerm.toLowerCase()
 
     return (
-      rate.type.toLowerCase().includes(term) ||
+      (rate.type || "").toLowerCase().includes(term) ||
       rate.rate.toString().toLowerCase().includes(term) ||
-      rate.description.toLowerCase().includes(term)
+      (rate.description || "").toLowerCase().includes(term)
     )
   })
   .filter((rate) => {
@@ -75,77 +77,6 @@ const filteredRates = taxRates
     if (statusFilter === "inactive") return !rate.isActive
     return true
   })
-
-// const handleSaveSettings = async () => {
-//   const token = tokenStorage.getAccessToken()
-
-//   // ✅ Regex
-//   const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
-//   const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
-
-//   // ✅ Trim
-//   const gst = taxSettings.gst.trim().toUpperCase()
-//   const tan = taxSettings.tan.trim().toUpperCase()
-
-//   // ✅ Validation
-//   if (!tanRegex.test(tan)) {
-//     toast({ title: "Invalid TAN Format", description: "Example: ABCD12345E", variant: "destructive" })
-//     return
-//   }
-
-//   if (!gstRegex.test(gst)) {
-//     toast({ title: "Invalid GST Format", description: "Example: 22ABCDE1234F1Z5", variant: "destructive" })
-//     return
-//   }
-
-//   try {
-//     const payload = {
-//       tan,
-//       tanUrl: taxSettings.tanUrl,
-//       gst,
-//       gstUrl: taxSettings.gstUrl,
-//     }
-
-//     const existing = await api.taxSetting.get()
-
-//     let response
-
-//     if (existing) {
-//       // ✅ UPDATE
-//       response = await fetch("/api/tax-settings", {
-//         method: "PUT",
-//         headers: {
-//           "Content-Type": "application/json",
-//           Authorization: `Bearer ${token}`,
-//         },
-//         body: JSON.stringify(payload),
-//       })
-//     } else {
-//       // ✅ CREATE
-//       response = await fetch("/api/tax-settings", {
-//         method: "POST",
-//         headers: {
-//           "Content-Type": "application/json",
-//           Authorization: `Bearer ${token}`,
-//         },
-//         body: JSON.stringify(payload),
-//       })
-//     }
-
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! Status: ${response.status}`)
-//     }
-
-//     const data = await response.json()
-//     console.log("Tax settings saved:", data)
-
-//     setSaved(true)
-//     setTimeout(() => setSaved(false), 3000)
-//   } catch (error) {
-//     console.error("Failed to save tax settings", error)
-//     toast({ title: "Error", description: "Failed to save tax settings", variant: "destructive" })
-//   }
-// }
   const handleTanDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -156,6 +87,10 @@ const filteredRates = taxRates
       reader.readAsDataURL(file)
     }
   }
+// Pagination logic
+const startIndex = (page - 1) * itemsPerPage
+const paginatedRates = filteredRates.slice(startIndex, startIndex + itemsPerPage)
+const totalPages = Math.ceil(filteredRates.length / itemsPerPage)
 
   const handleGstDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -175,13 +110,32 @@ const filteredRates = taxRates
     }
     console.log("Rate data:", rateData)
     console.log("Editing rate:", editingRate?._id)
+    // ❌ Prevent duplicates: type + rate combination must be unique
+const isDuplicate = taxRates.some(
+  (r) =>
+    r.type.toLowerCase() === rateData.type.toLowerCase() &&
+    r.rate === Number(rateData.rate) &&
+    r._id !== editingRate?._id
+)
+
+if (isDuplicate) {
+  toast({
+    title: "Duplicate Rate",
+    description: "This tax type and rate combination already exists.",
+    variant: "destructive",
+  })
+  return
+}
+
     if (editingRate?._id) {
       const updated = await api.taxRates.update(editingRate._id,rateData)
+      console.log("Updated rate :", updated.role)
       if (updated) {
-        setTaxRates(taxRates.map((rate) => (rate.id === updated.id ? updated : rate)))
+        setTaxRates(taxRates.map((rate) => (rate._id === updated.role._id ? updated.role : rate)))
+              toast({ title: "Success", description: "Rate updated successfully!", variant: "success" })
       }
-      toast({ title: "Success", description: "Rate updated successfully!" })
-      window.location.reload()
+
+      // window.location.reload()
     } else {
       const newRate = await api.taxRates.create({
         ...rateData,
@@ -189,8 +143,8 @@ const filteredRates = taxRates
         isActive: true,
       })
       setTaxRates([...taxRates, newRate])
-      toast({ title: "Success", description: "Rate created successfully!" })
-      window.location.reload()
+      toast({ title: "Success", description: "Rate created successfully!", variant: "success" })
+      // window.location.reload()
     }
 
     setIsDialogOpen(false)
@@ -217,15 +171,18 @@ const filteredRates = taxRates
   }
 
   const handleToggleRateStatus = async (rate: TaxRate) => {
-    console.log("Toggling status for rate:", rate)
+    // console.log("Toggling status for rate:", rate)
     const updated = await api.taxRates.update(rate?._id, {
       isActive: !rate.isActive,
     })
-    if (updated) {
-      setTaxRates(taxRates.map((r) => (r.id === updated.id ? updated : r)))
+    console.log("Toggled rate status :", updated)
+    const toggle = updated.role
+    if (toggle) {
+      console.log("Toggled rate status:", toggle)
+      setTaxRates(taxRates.map((r) => (r._id === toggle._id ? toggle : r)))
+          toast({ title: "Success", description: "Rate status toggled successfully!", variant: "success" })
+    // window.location.reload()
     }
-    toast({ title: "Success", description: "Rate status toggled successfully!" })
-    window.location.reload()
   }
         if (loading) {
     return (
@@ -251,8 +208,8 @@ const filteredRates = taxRates
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tax Settings ({filteredRates.length})</h1>
-          <p className="text-gray-600">Manage your tax registration and rates</p>
+          <h1 className="text-2xl font-bold text-gray-900">Tax Rates ({filteredRates.length})</h1>
+          <p className="text-gray-600">Manage your tax rates</p>
         </div>
         {/* <Button onClick={handleSaveSettings}>
           <Save className="h-4 w-4 mr-2" />
@@ -274,53 +231,6 @@ const filteredRates = taxRates
           <AlertDescription>Tax settings saved successfully!</AlertDescription>
         </Alert>
       )}
-{/* 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            Tax Registration Information
-          </CardTitle>
-          <CardDescription>Enter your TAN and GST details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="tanNumber">TAN Number</Label>
-              <Input
-                id="tanNumber"
-                value={taxSettings?.tan || ""}
-                onChange={(e) => setTaxSettings({ ...taxSettings, tan: e.target.value })}
-                placeholder="Enter TAN number"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tanDocument">TAN Document</Label>
-              <Input id="tanDocument" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleTanDocumentUpload} />
-              {taxSettings?.tanUrl && <p className="text-sm text-green-600">Document uploaded</p>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="gstNumber">GST Number</Label>
-              <Input
-                id="gstNumber"
-                value={taxSettings?.gst}
-                onChange={(e) => setTaxSettings({ ...taxSettings, gst: e.target.value })}
-                placeholder="Enter GST number"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="gstDocument">GST Document</Label>
-              <Input id="gstDocument" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleGstDocumentUpload} />
-              {taxSettings?.gstUrl && <p className="text-sm text-green-600">Document uploaded</p>}
-            </div>
-          </div>
-        </CardContent>
-      </Card> */}
 
       <Card>
         <CardHeader>
@@ -367,6 +277,7 @@ const filteredRates = taxRates
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>S.No</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Rate (%)</TableHead>
                   <TableHead>Description</TableHead>
@@ -375,8 +286,9 @@ const filteredRates = taxRates
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRates.map((rate) => (
-                  <TableRow key={rate?._id || rate?.id}>
+                {paginatedRates.map((rate, index) => (
+                  <TableRow key={rate?._id}>
+                    <TableCell>{startIndex + index + 1}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{rate?.type}</Badge>
                     </TableCell>
@@ -406,6 +318,28 @@ const filteredRates = taxRates
               </TableBody>
             </Table>
           )}
+          <div className="flex justify-between items-center py-4">
+  <Button
+    variant="outline"
+    disabled={page === 1}
+    onClick={() => setPage(page - 1)}
+  >
+    Previous
+  </Button>
+
+  <span className="text-sm text-gray-600">
+    Page {page} of {totalPages}
+  </span>
+
+  <Button
+    variant="outline"
+    disabled={page === totalPages}
+    onClick={() => setPage(page + 1)}
+  >
+    Next
+  </Button>
+</div>
+
         </CardContent>
       </Card>
 

@@ -15,17 +15,18 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, CheckCircle2, XCircle } from "lucide-react"
+import { Plus, Edit, CheckCircle2, XCircle, PowerOff, Power } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/components/ui/use-toast"
 import { useUser } from "@/components/auth/user-context"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface RecipientType {
   _id?: string
   id?: string
   name: string
   value: string
-  isActive: boolean
+  isEnabled: boolean
 }
 
 export default function RecipientTypesPage() {
@@ -45,16 +46,16 @@ export default function RecipientTypesPage() {
       const data = await api.recipientTypes.getAll()
       if (!data || data.length === 0) {
         // Seed default recipient types
-        const defaults = [
-          { name: "Client", value: "client" },
-          { name: "Vendor", value: "vendor" },
-          { name: "Team Member", value: "team" },
-        ]
-        
-        for (const defaultType of defaults) {
-          await api.recipientTypes.create({ ...defaultType, isActive: true })
-        }
-        
+        // const defaults = [
+        //   { name: "Client", value: "client" },
+        //   { name: "Vendor", value: "vendor" },
+        //   { name: "Team Member", value: "team" },
+        // ]
+
+        // for (const defaultType of defaults) {
+        //   await api.recipientTypes.create({ ...defaultType, isEnabled: true })
+        // }
+
         const newData = await api.recipientTypes.getAll()
         setRecipientTypes(newData)
       } else {
@@ -81,6 +82,21 @@ export default function RecipientTypesPage() {
       })
       return
     }
+    // Duplicate name protection
+    const duplicate = recipientTypes.some(
+      (t) =>
+        t.name.trim().toLowerCase() === formData.name.trim().toLowerCase() &&
+        t._id !== editingType?._id
+    )
+
+    if (duplicate) {
+      toast({
+        title: "Duplicate Name",
+        description: "This party type name already exists.",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
       if (editingType) {
@@ -92,7 +108,7 @@ export default function RecipientTypesPage() {
           description: "Recipient type updated successfully",
         })
       } else {
-        await api.recipientTypes.create({ ...formData, isActive: true })
+        await api.recipientTypes.create({ ...formData, isEnabled: true })
         toast({
           title: "Success",
           description: "Recipient type created successfully",
@@ -123,15 +139,21 @@ export default function RecipientTypesPage() {
     setFormData({ name: "", value: "" })
     setIsDialogOpen(true)
   }
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 10
+
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedData = recipientTypes.slice(startIndex, startIndex + itemsPerPage)
+  const totalPages = Math.ceil(recipientTypes.length / itemsPerPage)
 
   const handleToggleStatus = async (type: RecipientType) => {
     try {
       const id = type._id || type.id
       if (!id) throw new Error("No ID found")
-      await api.recipientTypes.update(id, { isActive: !type.isActive })
+      await api.recipientTypes.update(id, { isEnabled: !type.isEnabled })
       toast({
         title: "Success",
-        description: `Recipient type ${type.isActive ? "deactivated" : "activated"} successfully`,
+        description: `Recipient type ${type.isEnabled ? "deactivated" : "activated"} successfully`,
       })
       await loadRecipientTypes()
     } catch (error) {
@@ -180,43 +202,97 @@ export default function RecipientTypesPage() {
           <CardDescription>Manage types for payment records</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {recipientTypes.map((type) => (
-              <div
-                key={type?._id || type?.id}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="font-medium">{type.name}</span>
-                  <Badge variant="outline">{type.value}</Badge>
-                  {type.isActive ? (
-                    <Badge variant="default" className="gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Active
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="gap-1">
-                      <XCircle className="h-3 w-3" />
-                      Inactive
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(type)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={type.isActive ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => handleToggleStatus(type)}
-                  >
-                    {type.isActive ? "Deactivate" : "Activate"}
-                  </Button>
-                </div>
-              </div>
-            ))}
+
+          {/* Table Wrapper */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-20">S.No</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {paginatedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-gray-500">
+                      No Party Types Found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedData.map((type, index) => (
+                    <TableRow key={type._id || type.id}>
+                      <TableCell>{startIndex + index + 1}</TableCell>
+
+                      <TableCell className="font-medium">{type.name}</TableCell>
+
+                      <TableCell>
+                        <Badge variant="outline">{type.value}</Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge variant={type.isEnabled ? "default" : "secondary"}>{type.isEnabled ? "Active" : "Inactive"}</Badge>
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleStatus(type)}
+                            title={type.isEnabled ? "Deactivate" : "Activate"}
+                          >
+                            {type.isEnabled ? (
+                              <PowerOff className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <Power className="h-4 w-4 text-green-500" />
+                            )}
+                          </Button>
+
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+
+              <span className="text-sm text-gray-600">
+                Page {page} of {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
+
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

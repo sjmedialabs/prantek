@@ -44,6 +44,9 @@ export default function BankAccountPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 10
+
   const [bankData, setBankData] = useState({
     bankName: "",
     branchName: "",
@@ -53,14 +56,14 @@ export default function BankAccountPage() {
     upiId: "",
     upiScanner: null as File | null,
   })
-const [errors, setErrors] = useState({
-  bankName: false,
-  branchName: false,
-  accountName: false,
-  accountNumber: false,
-  ifscCode: false,
-  // upiId: false,
-})
+  const [errors, setErrors] = useState({
+    bankName: false,
+    branchName: false,
+    accountName: false,
+    accountNumber: false,
+    ifscCode: false,
+    // upiId: false,
+  })
 
   useEffect(() => {
     const loadAccounts = async () => {
@@ -70,106 +73,107 @@ const [errors, setErrors] = useState({
     loadAccounts()
   }, [])
   const validateAccountNumber = (num: string) => {
-  return /^[0-9]{9,18}$/.test(num)   // bank account numbers are 9–18 digits
-}
-
-const validateIFSC = (ifsc: string) => {
-  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())
-}
-
-const validateUPI = (upi: string) => {
-  return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)
-}
-
-const isDuplicateAccountNumber = (
-  bankName: string,
-  accountNumber: string,
-  accounts: any[],
-  editingId?: string
-) => {
-  return accounts.some(
-    (acc) =>
-      acc.bankName.trim().toLowerCase() === bankName.trim().toLowerCase() && // same bank
-      acc.accountNumber.trim() === accountNumber.trim() &&                    // same account number
-      acc._id !== editingId                                                   // ignore self when editing
-  )
-}
-const handleSave = async () => {
-  const newErrors = {
-    bankName: !bankData.bankName.trim(),
-    accountNumber: !validateAccountNumber(bankData.accountNumber),
-    accountName: !bankData.accountName.trim(),
-    branchName: !bankData.branchName.trim(),
-    ifscCode: !validateIFSC(bankData.ifscCode || ""),
-    // upiId: !validateUPI(bankData.upiId || "")
+    return /^[0-9]{9,18}$/.test(num)   // bank account numbers are 9–18 digits
   }
 
-  // 🔥 CHECK FOR DUPLICATE ACCOUNT NUMBER
-const isDuplicate = isDuplicateAccountNumber(
-  bankData.bankName,
-  bankData.accountNumber,
-  bankAccounts,
-  editingAccount?._id
-)
+  const validateIFSC = (ifsc: string) => {
+    return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc.toUpperCase())
+  }
 
-  if (isDuplicate) {
-    newErrors.accountNumber = true
+  const validateUPI = (upi: string) => {
+    return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upi)
+  }
 
-    toast({
-      title: "Duplicate Account Number",
-      description: "This account number already exists. Please enter a unique one.",
-      variant: "destructive",
-    })
+  const isDuplicateAccountNumber = (
+    bankName: string,
+    accountNumber: string,
+    accounts: any[],
+    editingId?: string
+  ) => {
+    return accounts.some(
+      (acc) =>
+        acc.bankName.trim().toLowerCase() === bankName.trim().toLowerCase() && // same bank
+        acc.accountNumber.trim() === accountNumber.trim() &&                    // same account number
+        acc._id !== editingId                                                   // ignore self when editing
+    )
+  }
+  const handleSave = async () => {
+    const newErrors = {
+      bankName: !bankData.bankName.trim(),
+      accountNumber: !validateAccountNumber(bankData.accountNumber),
+      accountName: !bankData.accountName.trim(),
+      branchName: !bankData.branchName.trim(),
+      ifscCode: !validateIFSC(bankData.ifscCode || ""),
+      // upiId: !validateUPI(bankData.upiId || "")
+    }
+
+    // 🔥 CHECK FOR DUPLICATE ACCOUNT NUMBER
+    const isDuplicate = isDuplicateAccountNumber(
+      bankData.bankName,
+      bankData.accountNumber,
+      bankAccounts,
+      editingAccount?._id
+    )
+
+    if (isDuplicate) {
+      newErrors.accountNumber = true
+
+      toast({
+        title: "Duplicate Account Number",
+        description: "This account number already exists. Please enter a unique one.",
+        variant: "destructive",
+      })
+
+      setErrors(newErrors)
+      return
+    }
 
     setErrors(newErrors)
-    return
-  }
 
-  setErrors(newErrors)
-
-  if (Object.values(newErrors).some((e) => e)) {
-    toast({
-      title: "Validation Error",
-      description: "Please fix the highlighted fields",
-      variant: "destructive",
-    })
-    return
-  }
-
-  // ---- UPDATE EXISTING ACCOUNT ----
-  if (editingAccount) {
-    const updated = await api.bankAccounts.update(editingAccount._id, {
-      ...bankData,
-      upiScanner: bankData.upiScanner
-        ? URL.createObjectURL(bankData.upiScanner)
-        : editingAccount.upiScanner,
-    })
-
-    if (updated) {
-      setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
+    if (Object.values(newErrors).some((e) => e)) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the highlighted fields",
+        variant: "destructive",
+      })
+      return
     }
+
+    // ---- UPDATE EXISTING ACCOUNT ----
+    if (editingAccount) {
+      const updated = await api.bankAccounts.update(editingAccount._id, {
+        ...bankData,
+        upiScanner: bankData.upiScanner
+          ? URL.createObjectURL(bankData.upiScanner)
+          : editingAccount.upiScanner,
+      })
+
+      if (updated) {
+        setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
+      }
+    }
+
+    // ---- CREATE NEW ACCOUNT ----
+    else {
+      const newAccount = await api.bankAccounts.create({
+        ...bankData,
+        upiScanner: bankData.upiScanner
+          ? URL.createObjectURL(bankData.upiScanner)
+          : null,
+        isActive: true,
+      })
+
+      setBankAccounts([...bankAccounts, newAccount])
+    }
+
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+    setIsDialogOpen(false)
+    toast({ title: "Success", description: "Account saved successfully!", variant: "success" })
+
+    resetForm()
+    window.location.reload()
   }
-
-  // ---- CREATE NEW ACCOUNT ----
-  else {
-    const newAccount = await api.bankAccounts.create({
-      ...bankData,
-      upiScanner: bankData.upiScanner
-        ? URL.createObjectURL(bankData.upiScanner)
-        : null,
-      isActive: true,
-    })
-
-    setBankAccounts([...bankAccounts, newAccount])
-  }
-
-  setSaved(true)
-  setTimeout(() => setSaved(false), 3000)
-  setIsDialogOpen(false)
-  toast({ title: "Success", description: "Account saved successfully!" })
-  window.location.reload()
-  resetForm()
-}
 
   const resetForm = () => {
     setBankData({
@@ -183,6 +187,10 @@ const isDuplicate = isDuplicateAccountNumber(
     })
     setEditingAccount(null)
   }
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedAccounts = bankAccounts.slice(startIndex, startIndex + itemsPerPage)
+
+  const totalPages = Math.ceil(bankAccounts.length / itemsPerPage)
 
   const handleEdit = (account: BankAccount) => {
     setEditingAccount(account)
@@ -199,13 +207,13 @@ const isDuplicate = isDuplicateAccountNumber(
   }
 
   const handleToggleStatus = async (account: BankAccount) => {
-    const updated = await api.bankAccounts.update( account._id, {
+    const updated = await api.bankAccounts.update(account._id, {
       isActive: !account.isActive,
     })
     if (updated) {
       setBankAccounts(bankAccounts.map((acc) => (acc._id === updated._id ? updated : acc)))
     }
-    toast({ title: "Success", description: "Account status updated successfully!" })
+    toast({ title: "Success", description: "Account status updated successfully!", variant: "success" })
     window.location.reload()
   }
 
@@ -214,7 +222,7 @@ const isDuplicate = isDuplicateAccountNumber(
       setBankData({ ...bankData, upiScanner: e.target.files[0] })
     }
   }
-      if (loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -261,7 +269,7 @@ const isDuplicate = isDuplicateAccountNumber(
         <CardHeader>
           <CardTitle className="flex items-center">
             <Landmark className="h-5 w-5 mr-2" />
-           Accounts List
+            Accounts List ({paginatedAccounts.length})
           </CardTitle>
           <CardDescription>View and manage all your bank accounts</CardDescription>
         </CardHeader>
@@ -274,6 +282,7 @@ const isDuplicate = isDuplicateAccountNumber(
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>S.No</TableHead>
                   <TableHead>Bank Name</TableHead>
                   <TableHead>Branch</TableHead>
                   <TableHead>Account Number</TableHead>
@@ -284,8 +293,9 @@ const isDuplicate = isDuplicateAccountNumber(
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bankAccounts.map((account) => (
-                  <TableRow key={account?.id || account?._id}>
+                {paginatedAccounts.map((account, index) => (
+                  <TableRow key={account?.id || account?._id || index}>
+                    <TableCell>{startIndex + index + 1}</TableCell>
                     <TableCell className="font-medium">{account?.bankName}</TableCell>
                     <TableCell>{account?.branchName}</TableCell>
                     <TableCell>{account?.accountNumber}</TableCell>
@@ -315,11 +325,33 @@ const isDuplicate = isDuplicateAccountNumber(
               </TableBody>
             </Table>
           )}
+          <div className="flex justify-between items-center py-4">
+            <Button
+              variant="outline"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              Previous
+            </Button>
+
+            <span className="text-sm text-gray-600">
+              Page {page} of {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              disabled={page === totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+
         </CardContent>
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+        <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
           <DialogHeader className="sticky top-0 bg-white border-b px-6 py-4 z-20">
             <DialogTitle>{editingAccount ? "Edit Bank Account" : "Add Bank Account"}</DialogTitle>
             <DialogDescription>
@@ -335,7 +367,7 @@ const isDuplicate = isDuplicateAccountNumber(
                   <Input
                     id="bankName"
                     value={bankData?.bankName}
-                      className={errors.bankName ? "border-red-500" : ""}
+                    className={errors.bankName ? "border-red-500" : ""}
                     onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
                     placeholder="Enter bank name"
                   />
@@ -345,7 +377,7 @@ const isDuplicate = isDuplicateAccountNumber(
                   <Label htmlFor="branchName" required>Branch</Label>
                   <Input
                     id="branchName"
-                      className={errors.branchName ? "border-red-500" : ""}
+                    className={errors.branchName ? "border-red-500" : ""}
                     value={bankData?.branchName}
                     onChange={(e) => setBankData({ ...bankData, branchName: e.target.value })}
                     placeholder="Enter branch name"
@@ -357,7 +389,7 @@ const isDuplicate = isDuplicateAccountNumber(
                 <Label htmlFor="accountName" required>Bank Account Name</Label>
                 <Input
                   id="accountName"
-                    className={errors.accountName ? "border-red-500" : ""}
+                  className={errors.accountName ? "border-red-500" : ""}
                   value={bankData?.accountName}
                   onChange={(e) => setBankData({ ...bankData, accountName: e.target.value })}
                   placeholder="Account holder name"
@@ -369,7 +401,7 @@ const isDuplicate = isDuplicateAccountNumber(
                   <Label htmlFor="accountNumber" required>Bank Account Number </Label>
                   <Input
                     id="accountNumber"
-                      className={errors.accountNumber ? "border-red-500" : ""}
+                    className={errors.accountNumber ? "border-red-500" : ""}
                     value={bankData?.accountNumber}
                     onChange={(e) => setBankData({ ...bankData, accountNumber: e.target.value })}
                     placeholder="Enter account number"
@@ -380,7 +412,7 @@ const isDuplicate = isDuplicateAccountNumber(
                   <Label htmlFor="ifscCode" required>IFSC Code</Label>
                   <Input
                     id="ifscCode"
-                      className={errors.ifscCode ? "border-red-500" : ""}
+                    className={errors.ifscCode ? "border-red-500" : ""}
                     value={bankData?.ifscCode}
                     onChange={(e) => setBankData({ ...bankData, ifscCode: e.target.value })}
                     placeholder="Enter IFSC code"
@@ -392,7 +424,7 @@ const isDuplicate = isDuplicateAccountNumber(
                 <Label htmlFor="upiId">UPI ID</Label>
                 <Input
                   id="upiId"
-                    // className={errors.upiId ? "border-red-500" : ""}
+                  // className={errors.upiId ? "border-red-500" : ""}
                   value={bankData?.upiId}
                   onChange={(e) => setBankData({ ...bankData, upiId: e.target.value })}
                   placeholder="yourname@upi"

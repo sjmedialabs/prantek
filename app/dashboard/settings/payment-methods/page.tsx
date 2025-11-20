@@ -25,6 +25,8 @@ export default function PaymentMethodsPage() {
   const [newMethod, setNewMethod] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState("")
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 10
 
   // ✅ Load payment methods
   useEffect(() => {
@@ -36,40 +38,40 @@ export default function PaymentMethodsPage() {
     loadData()
   }, [])
   const validateMethodName = (name: string, list: PaymentMethod[], editingId?: string) => {
-  if (!name || name.trim().length < 2) return "Name must be at least 2 characters."
+    if (!name || name.trim().length < 2) return "Name must be at least 2 characters."
 
-  const exists = list.some(
-    (m) =>
-      m.name.trim().toLowerCase() === name.trim().toLowerCase() &&
-      m._id !== editingId
-  )
+    const exists = list.some(
+      (m) =>
+        m.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+        m._id !== editingId
+    )
 
-  if (exists) return "A payment method with this name already exists."
+    if (exists) return "A payment method with this name already exists."
 
-  return null
-}
+    return null
+  }
 
 
   // ✅ Add New Method → DB
-const handleAddMethod = async () => {
-  const trimmed = newMethod.trim()
+  const handleAddMethod = async () => {
+    const trimmed = newMethod.trim()
 
-  const error = validateMethodName(trimmed, paymentMethods)
-  if (error) {
-    toast({ title: "Validation Error", description: error, variant: "destructive" })
-    return
+    const error = validateMethodName(trimmed, paymentMethods)
+    if (error) {
+      toast({ title: "Validation Error", description: error, variant: "destructive" })
+      return
+    }
+
+    const created = await api.paymentMethods.create({
+      name: trimmed,
+      isEnabled: true,
+    })
+
+    if (created) {
+      setPaymentMethods([...paymentMethods, created])
+      setNewMethod("")
+    }
   }
-
-  const created = await api.paymentMethods.create({
-    name: trimmed,
-    isEnabled: true,
-  })
-
-  if (created) {
-    setPaymentMethods([...paymentMethods, created])
-    setNewMethod("")
-  }
-}
 
 
   // ✅ Delete Method → DB
@@ -84,8 +86,13 @@ const handleAddMethod = async () => {
 
     if (updated) {
       setPaymentMethods(paymentMethods.map((m) => (m._id === id ? updated : m)))
+      toast({ title: "Success", description: `Payment method ${updated.isEnabled ? "enabled" : "disabled"}.`, variant: "success" })
     }
   }
+  // Pagination Logic
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedMethods = paymentMethods.slice(startIndex, startIndex + itemsPerPage)
+  const totalPages = Math.ceil(paymentMethods.length / itemsPerPage)
 
   const handleStartEdit = (method: PaymentMethod) => {
     setEditingId(method._id!!)
@@ -93,33 +100,34 @@ const handleAddMethod = async () => {
   }
 
   // ✅ Edit name → DB
-const handleSaveEdit = async (id: string) => {
-  const trimmed = editingName.trim()
+  const handleSaveEdit = async (id: string) => {
+    const trimmed = editingName.trim()
 
-  const error = validateMethodName(trimmed, paymentMethods, id)
-  if (error) {
-    toast({ title: "Validation Error", description: error, variant: "destructive" })
-    return
+    const error = validateMethodName(trimmed, paymentMethods, id)
+    if (error) {
+      toast({ title: "Validation Error", description: error, variant: "destructive" })
+      return
+    }
+
+    const updated = await api.paymentMethods.update(id, {
+      name: trimmed,
+    })
+
+    if (updated) {
+      setPaymentMethods(paymentMethods.map((m) => (m._id === id ? updated : m)))
+      toast({ title: "Success", description: "Payment method updated.", variant: "success" })
+    }
+
+    setEditingId(null)
+    setEditingName("")
   }
-
-  const updated = await api.paymentMethods.update(id, {
-    name: trimmed,
-  })
-
-  if (updated) {
-    setPaymentMethods(paymentMethods.map((m) => (m._id === id ? updated : m)))
-  }
-
-  setEditingId(null)
-  setEditingName("")
-}
 
 
   const handleCancelEdit = () => {
     setEditingId(null)
     setEditingName("")
   }
-      if (loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -179,13 +187,16 @@ const handleSaveEdit = async (id: string) => {
 
           {/* List */}
           <div className="space-y-2">
-            {paymentMethods.map((method) => (
+            {paginatedMethods.map((method, index) => (
               <div
                 key={method._id}
-                className={`flex items-center justify-between p-3 border rounded-lg ${
-                  !method.isEnabled ? "bg-gray-50 opacity-60" : ""
-                }`}
+                className={`flex items-center justify-between p-3 border rounded-lg ${!method.isEnabled ? "bg-gray-50 opacity-60" : ""
+                  }`}
               >
+                {/* Serial Number */}
+                <span className="w-10 text-sm font-semibold">
+                  {startIndex + index + 1}
+                </span>
                 {editingId === method._id ? (
                   <>
                     <Input
