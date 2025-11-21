@@ -41,6 +41,8 @@ export default function ReceiptsPage() {
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
   const [clientFilter, setClientFilter] = useState<string>("all")
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // rows per page
 
   useEffect(() => {
     loadReceipts()
@@ -92,6 +94,25 @@ export default function ReceiptsPage() {
 
   const uniqueClients = Array.from(new Set(receipts.map((r) => r.clientName).filter(name => name && name.trim() !== "")))
   const uniquePaymentMethods = Array.from(new Set(receipts.map((r) => r.paymentMethod).filter(method => method && method.trim() !== "")))
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchTerm,
+    statusFilter,
+    paymentTypeFilter,
+    paymentMethodFilter,
+    dateFromFilter,
+    dateToFilter,
+    minAmountFilter,
+    maxAmountFilter,
+    clientFilter
+  ]);
+  const totalPages = Math.ceil(filteredReceipts.length / itemsPerPage);
+
+  const paginatedReceipts = filteredReceipts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const clearFilters = () => {
     setStatusFilter("all")
@@ -226,11 +247,11 @@ export default function ReceiptsPage() {
                 minAmountFilter ||
                 maxAmountFilter ||
                 clientFilter !== "all") && (
-                <Button variant="outline" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
-              )}
+                  <Button variant="outline" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Clear
+                  </Button>
+                )}
             </div>
 
             {showFilters && (
@@ -243,9 +264,9 @@ export default function ReceiptsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="received">pending</SelectItem>
+                      <SelectItem value="received">Received</SelectItem>
                       <SelectItem value="cleared">Cleared</SelectItem>
-                      <SelectItem value="cleared">Failed</SelectItem>
+                      {/* <SelectItem value="cleared">Failed</SelectItem> */}
                     </SelectContent>
                   </Select>
                 </div>
@@ -335,10 +356,11 @@ export default function ReceiptsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Receipt Number</TableHead>
+                  <TableHead>S.No</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Receipt Number</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Quotation</TableHead>
+                  <TableHead>Quotation/Agreement</TableHead>
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Payment Type</TableHead>
                   <TableHead>Method</TableHead>
@@ -347,45 +369,76 @@ export default function ReceiptsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredReceipts.map((receipt, index) => (
-                  <TableRow key={receipt._id?.toString() || `receipt-${index}`}>
-                    <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
-                    <TableCell>{new Date(receipt.date || receipt.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{receipt.clientName}</TableCell>
-                    <TableCell>{receipt.quotationNumber || "-"}</TableCell>
-                    <TableCell className="font-semibold">₹{(receipt.amountPaid || 0).toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant={receipt.paymentType === "full" ? "default" : "secondary"}>
-                        {formatPaymentType(receipt.paymentType)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{receipt.paymentMethod}</TableCell>
-                    <TableCell>
-                      <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                        {formatStatus(receipt.status)}
-                      </Badge>
-                    </TableCell>
-                    {hasPermission("manage_receipts") && (
+                {paginatedReceipts.map((receipt, index) => {
+                  const serial = (currentPage - 1) * itemsPerPage + (index + 1)
+                  return (
+                    <TableRow key={receipt._id?.toString() || `receipt-${index}`}>
+                      <TableCell>{serial}</TableCell>
+                      <TableCell>{new Date(receipt.date || receipt.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
+                      <TableCell>{receipt.clientName}</TableCell>
+                      <TableCell>{receipt.quotationNumber || "-"}</TableCell>
+                      <TableCell className="font-semibold">₹{(receipt.amountPaid || 0).toLocaleString()}</TableCell>
                       <TableCell>
-                        <div className="flex space-x-2">
-                          <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                          <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          </Link>
-                        </div>
+                        <Badge variant={receipt.paymentType === "full" ? "default" : "secondary"}>
+                          {formatPaymentType(receipt.paymentType)}
+                        </Badge>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell>{receipt.paymentMethod}</TableCell>
+                      <TableCell>
+                        <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
+                          {formatStatus(receipt.status)}
+                        </Badge>
+                      </TableCell>
+                      {hasPermission("manage_receipts") && (
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
+                              <Button variant="ghost" size="sm">
+                                View
+                              </Button>
+                            </Link>
+                            <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+
         </CardContent>
       </Card>
     </div>
