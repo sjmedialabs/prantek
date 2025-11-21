@@ -37,7 +37,7 @@ const navigationItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
   { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: null },
   { name: "Clients", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
-    { name: "Vendors", href: "/dashboard/vendor", icon: Users, permission: "view_clients" },
+  { name: "Vendors", href: "/dashboard/vendor", icon: Users, permission: "view_clients" },
   { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
