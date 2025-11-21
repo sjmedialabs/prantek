@@ -461,7 +461,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
-      {!user?.isAdminUser && <OnboardingProgressCards />}
+      {/* {!user?.isAdminUser && <OnboardingProgressCards />} */}
 
       {/* Quick Action Cards */}
       <div>

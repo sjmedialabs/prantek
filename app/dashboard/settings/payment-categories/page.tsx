@@ -71,7 +71,7 @@ const itemsPerPage = 10
 
   const filteredCategories = categories
     .filter((cat) =>
-      cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+      (cat.name ?? "").toLowerCase().includes(searchTerm.toLowerCase())
     )
     .filter((cat) => {
       if (statusFilter === "active") return cat.
@@ -109,11 +109,11 @@ const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
       // Create new category
       const newCategory = await api.paymentCategories.create({
         name: trimmedName,
-
         isEnabled: true,
       })
 
       setCategories([...categories, newCategory])
+      window.location.reload()
     }
 
     setSaved(true)
@@ -243,7 +243,7 @@ const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
 
       <TableBody>
         {paginatedCategories.map((category, index) => (
-          <TableRow key={category._id || category.id}>
+          <TableRow key={category._id || category.id || index}>
             {/* Serial Number */}
             <TableCell>{startIndex + index + 1}</TableCell>
 
