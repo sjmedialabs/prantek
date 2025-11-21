@@ -24,7 +24,6 @@ import { api } from "@/lib/api-client"
 import type { Client } from "@/lib/models/types"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
-import { ObjectId } from "mongodb"
 
 export default function ClientsPage() {
   const { hasPermission, loading } = useUser()
@@ -33,6 +32,8 @@ export default function ClientsPage() {
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10  // ← Updated: Now 10 items per page
 
   // Client Type
   const [clientType, setClientType] = useState<"individual" | "company">("individual")
@@ -128,13 +129,13 @@ export default function ClientsPage() {
 
     // Common Validations
     const phoneRegex = /^[6-9]\d{9}$/
-    if (!phoneRegex.test(formData.phone)) {
+    if (formData.phone && !phoneRegex.test(formData.phone)) {
       newErrors.phone = "Enter a valid 10-digit Indian mobile number"
       isValid = false
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
+    if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Enter a valid email address"
       isValid = false
     }
@@ -200,6 +201,7 @@ export default function ClientsPage() {
         city: formData.city,
         pincode: formData.pincode,
         userId: parsed.id,
+        pan: formData.pan,
         status: "active",
       }
 
@@ -224,6 +226,7 @@ export default function ClientsPage() {
       setIsDialogOpen(false)
       setEditingClient(null)
       resetForm()
+      setCurrentPage(1) // Reset to first page after add/edit
     } catch (error) {
       toast.error("Error", error instanceof Error ? error.message : "Failed to save client")
     }
@@ -256,6 +259,7 @@ export default function ClientsPage() {
         await api.clients.delete(id)
         toast.success("Client Deleted", `${client?.name || client?.companyName} removed`)
         await loadClients()
+        setCurrentPage(1) // Reset pagination after delete
       } catch (error) {
         toast.error("Error", "Failed to delete client")
       }
@@ -273,9 +277,9 @@ export default function ClientsPage() {
     let matchesDate = true
     if (dateFilter !== "all") {
       const clientDate = new Date(client.createdAt)
-      const today = new Date().toISOString().split("T")[0]
-      const created = clientDate.toISOString().split("T")[0]
-      const diffInDays = (new Date(today).getTime() - new Date(created).getTime()) / (1000 * 60 * 60 * 24)
+      const today = new Date()
+      const created = clientDate
+      const diffInDays = Math.floor((today.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
 
       if (dateFilter === "today") matchesDate = diffInDays === 0
       else if (dateFilter === "week") matchesDate = diffInDays <= 7
@@ -284,16 +288,23 @@ export default function ClientsPage() {
 
     return matchesSearch && matchesDate
   })
-    if (loading) {
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, dateFilter])
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading quotations...</p>
+          <p className="mt-4 text-gray-600">Loading clients...</p>
         </div>
       </div>
     )
   }
+
   if (!hasPermission("view_clients")) {
     return (
       <div className="text-center py-12">
@@ -302,6 +313,9 @@ export default function ClientsPage() {
       </div>
     )
   }
+
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage)
+  const paginatedClients = filteredClients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   return (
     <div className="space-y-6">
@@ -327,180 +341,195 @@ export default function ClientsPage() {
                 Add Client
               </Button>
             </DialogTrigger>
-           <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-  {/* Sticky Header */}
-  <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
-    <DialogHeader>
-      <DialogTitle>{editingClient ? "Edit Client" : "Add New Client"}</DialogTitle>
-      <DialogDescription>
-        {editingClient ? "Update client information" : "Create a new client record"}
-      </DialogDescription>
-    </DialogHeader>
-  </div>
+            <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+                <DialogHeader>
+                  <DialogTitle>{editingClient ? "Edit Client" : "Add New Client"}</DialogTitle>
+                  <DialogDescription>
+                    {editingClient ? "Update client information" : "Create a new client record"}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
 
-  {/* Scrollable Form Area */}
-  <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
-    <form onSubmit={handleSubmit} className="space-y-5 pb-20" id="client-form">
-      {/* ────── Client Type Toggle ────── */}
-      <div className="flex gap-4 border-b pb-4">
-        <Button
-          type="button"
-          variant={clientType === "individual" ? "default" : "outline"}
-          className="flex-1"
-          onClick={() => setClientType("individual")}
-        >
-          <User className="h-4 w-4 mr-2" />
-          Individual
-        </Button>
-        <Button
-          type="button"
-          variant={clientType === "company" ? "default" : "outline"}
-          className="flex-1"
-          onClick={() => setClientType("company")}
-        >
-          <Building2 className="h-4 w-4 mr-2" />
-          Company
-        </Button>
-      </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+                <form onSubmit={handleSubmit} className="space-y-5 pb-20" id="client-form">
+                  <div className="pb-4">
+                    <Label className="text-sm font-medium">Client Type</Label>
+                    <Select value={clientType} onValueChange={(v) => setClientType(v as "individual" | "company")}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select client type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="individual">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" /> Individual
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="company">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4" /> Company
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-      {/* ────── Individual Fields ────── */}
-      {clientType === "individual" && (
-        <div className="space-y-1">
-          <Label htmlFor="ind-name" required>Client Name </Label>
-          <Input
-            id="ind-name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
-        </div>
-      )}
+                  {clientType === "individual" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label htmlFor="ind-name" required>Client Name </Label>
+                        <Input
+                          id="ind-name"
+                          value={formData.name}
+                          placeholder="Client name"
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
+                        {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="pan">PAN</Label>
+                        <Input
+                          id="pan"
+                          value={formData.pan}
+                          onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                          placeholder="ABCDE1234F"
+                        />
+                        {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
+                      </div>
+                    </div>
+                  )}
 
-      {/* ────── Company Fields ────── */}
-      {clientType === "company" && (
-        <>
-          <div className="space-y-1">
-            <Label htmlFor="comp-name" required>Company Name </Label>
-            <Input
-              id="comp-name"
-              value={formData.companyName}
-              onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-            />
-            {errors.companyName && <p className="text-red-500 text-sm">{errors.companyName}</p>}
-          </div>
+                  {clientType === "company" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label htmlFor="comp-name" required>Company Name </Label>
+                          <Input
+                            id="comp-name"
+                            value={formData.companyName}
+                            placeholder="Company Name"
+                            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                          />
+                          {errors.companyName && <p className="text-red-500 text-sm">{errors.companyName}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="contact-name" required>Contact Name </Label>
+                          <Input
+                            id="contact-name"
+                            value={formData.contactName}
+                            placeholder="Contact Holder Name"
+                            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                          />
+                          {errors.contactName && <p className="text-red-500 text-sm">{errors.contactName}</p>}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label htmlFor="gst">GST</Label>
+                          <Input
+                            id="gst"
+                            value={formData.gst}
+                            onChange={(e) => setFormData({ ...formData, gst: e.target.value.toUpperCase() })}
+                            placeholder="22AAAAA0000A1Z5"
+                          />
+                          {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="pan">PAN</Label>
+                          <Input
+                            id="pan"
+                            value={formData.pan}
+                            onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                            placeholder="ABCDE1234F"
+                          />
+                          {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-          <div className="space-y-1">
-            <Label htmlFor="contact-name" required>Contact Name </Label>
-            <Input
-              id="contact-name"
-              value={formData.contactName}
-              onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-            />
-            {errors.contactName && <p className="text-red-500 text-sm">{errors.contactName}</p>}
-          </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="phone" required>Phone </Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        placeholder="Enter a valid 10-digit Indian mobile number"
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                      {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="email" required>Email </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Enter a valid email address"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                      {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                    </div>
+                  </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="gst">GST</Label>
-              <Input
-                id="gst"
-                value={formData.gst}
-                onChange={(e) => setFormData({ ...formData, gst: e.target.value.toUpperCase() })}
-                placeholder="22AAAAA0000A1Z5"
-              />
-              {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="pan">PAN</Label>
-              <Input
-                id="pan"
-                value={formData.pan}
-                onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                placeholder="ABCDE1234F"
-              />
-              {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
-            </div>
-          </div>
-        </>
-      )}
+                  <div className="space-y-1">
+                    <Label htmlFor="address" required>Address </Label>
+                    <Textarea
+                      id="address"
+                      value={formData.address}
+                      placeholder="Enter address"
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      rows={2}
+                    />
+                    {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                  </div>
 
-      {/* ────── Common Fields ────── */}
-      <div className="space-y-1">
-        <Label htmlFor="phone" required>Phone </Label>
-        <Input
-          id="phone"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-        />
-        {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
-      </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="state" required>State </Label>
+                      <Input
+                        id="state"
+                        value={formData.state}
+                        placeholder="Enter state"
+                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      />
+                      {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="city" required>City </Label>
+                      <Input
+                        id="city"
+                        value={formData.city}
+                        placeholder="Enter city"
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      />
+                      {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="pincode" required>Pincode </Label>
+                      <Input
+                        id="pincode"
+                        value={formData.pincode}
+                        placeholder="Enter pincode"
+                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                      />
+                      {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
+                    </div>
+                  </div>
+                </form>
+              </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="email" required>Email </Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-        />
-        {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-      </div>
-
-      <div className="space-y-1">
-        <Label htmlFor="address" required>Address </Label>
-        <Textarea
-          id="address"
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          rows={2}
-        />
-        {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <Label htmlFor="state" required>State </Label>
-          <Input
-            id="state"
-            value={formData.state}
-            onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-          />
-          {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="city" required>City </Label>
-          <Input
-            id="city"
-            value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-          />
-          {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="pincode" required>Pincode </Label>
-          <Input
-            id="pincode"
-            value={formData.pincode}
-            onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-          />
-          {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
-        </div>
-      </div>
-    </form>
-  </div>
-
-  {/* Footer – now inside the scrollable container, no fixed positioning */}
-  <div className="bg-white border-t px-6 py-4">
-    <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
-      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button type="submit" form="client-form">
-        {editingClient ? "Update" : "Create"} Client
-      </Button>
-    </div>
-  </div>
-</DialogContent>
+              <div className="bg-white border-t px-6 py-4">
+                <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" form="client-form">
+                    {editingClient ? "Update" : "Create"} Client
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
           </Dialog>
         )}
       </div>
@@ -543,9 +572,9 @@ export default function ClientsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Sr No.</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Name / Company</TableHead>
-                
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Created</TableHead>
@@ -553,15 +582,18 @@ export default function ClientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.length === 0 ? (
+                {paginatedClients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={hasPermission("manage_clients") ? 7 : 6} className="text-center py-12 text-gray-500">
                       No clients found. Add your first client to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredClients.map((client) => (
+                  paginatedClients.map((client, index) => (
                     <TableRow key={client._id}>
+                      <TableCell>
+                        {(currentPage - 1) * itemsPerPage + index + 1}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {client.type === "company" ? (
@@ -580,13 +612,12 @@ export default function ClientsPage() {
                       <TableCell className="font-medium">
                         {client.type === "company" ? client.companyName : client.name}
                       </TableCell>
-                      
                       <TableCell>{client.phone}</TableCell>
                       <TableCell>{client.email}</TableCell>
                       <TableCell>{new Date(client.createdAt).toLocaleDateString()}</TableCell>
                       {hasPermission("manage_clients") && (
                         <TableCell>
-                          <div className="flex space-x-2">
+                          <div className="flex items-center space-x-2">
                             <Link href={`/dashboard/clients/${client._id}`}>
                               <Button variant="ghost" size="sm">
                                 <Eye className="h-4 w-4" />
@@ -600,7 +631,7 @@ export default function ClientsPage() {
                               onCheckedChange={async (checked) => {
                                 try {
                                   const newStatus = checked ? "active" : "inactive"
-                                  await api.clients.updateStatus(client?._id, newStatus)
+                                  await api.clients.updateStatus(client._id, newStatus)
                                   toast.success("Status Updated", `${client.name || client.companyName} is now ${newStatus}`)
                                   await loadClients()
                                 } catch (err) {
@@ -616,6 +647,34 @@ export default function ClientsPage() {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {filteredClients.length > itemsPerPage && (
+              <div className="flex items-center justify-between px-4 py-4 border-t bg-gray-50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                >
+                  Previous
+                </Button>
+
+                <div className="text-sm text-gray-700">
+                  Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> 
+                  {" "} ({filteredClients.length} total clients)
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

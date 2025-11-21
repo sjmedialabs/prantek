@@ -154,15 +154,12 @@ export default function ProfilePage() {
     if (!user || !currentPlan) return
 
     try {
-      // Remove subscription via API
+      // Cancel subscription but maintain access until end date
       await api.users.update(user.id, {
-        subscriptionPlanId: null,
-        subscriptionStartDate: null,
-        subscriptionEndDate: null,
+        subscriptionStatus: "cancelled",
       })
 
-      setCurrentPlan(null)
-      toast({ title: "Success", description: "Subscription cancelled successfully" })
+      toast({ title: "Success", description: "Subscription cancelled. You can use your plan until the end date." })
 
       // Reload page to update user context
       window.location.reload()
@@ -171,6 +168,7 @@ export default function ProfilePage() {
       toast({ title: "Error", description: "Failed to cancel subscription", variant: "destructive" })
     }
   }
+
 
   return (
     <div className="space-y-6 max-w-4xl">

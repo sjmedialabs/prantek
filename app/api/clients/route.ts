@@ -51,14 +51,15 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       userId,
       $or: [
         { name: body.name },
-        { email: body.email }
+        { email: body.email },
+        {phone:body.phone}
       ]
     })
 
     if (existingClient) {
       return NextResponse.json({
         success: false,
-        message: "Client name or email already exists. Please use a different one."
+        message: "Client name or email or mobile number already exists. Please use a different one."
       }, { status: 400 })
     }
 

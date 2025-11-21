@@ -8,6 +8,46 @@ import { Collections } from "./db-config"
 import { ObjectId } from "mongodb"
 
 /**
+ * Check if user has an active subscription
+ * Returns false if:
+ * - No subscription plan
+ * - Status is "cancelled" and past end date
+ * - Status is "expired"
+ */
+async function hasActiveSubscription(user: any): Promise<boolean> {
+  // Super admins always have access
+  if (user.role === "super-admin") {
+    return true
+  }
+
+  // No subscription plan
+  if (!user.subscriptionPlanId) {
+    return false
+  }
+
+  // Check subscription status
+  const status = user.subscriptionStatus
+
+  // If cancelled, check if still within validity period
+  if (status === "cancelled") {
+    if (!user.subscriptionEndDate) {
+      return false
+    }
+    const endDate = new Date(user.subscriptionEndDate)
+    const now = new Date()
+    return now <= endDate
+  }
+
+  // If expired, no access
+  if (status === "expired" || status === "inactive") {
+    return false
+  }
+
+  // Active or trial status
+  return status === "active" || status === "trial"
+}
+
+/**
  * Check if a user's subscription plan allows role/permission management
  * Plan 1 (Basic) - No permission management
  * Plan 2 & Plan 3 - Has permission management
@@ -25,13 +65,8 @@ export async function canManagePermissions(userId: string): Promise<boolean> {
       return false
     }
 
-    // Super admins always have access
-    if (user.role === "super-admin") {
-      return true
-    }
-
-    // If no subscription plan, deny access
-    if (!user.subscriptionPlanId) {
+    // Check if user has active subscription
+    if (!await hasActiveSubscription(user)) {
       return false
     }
 
@@ -67,6 +102,7 @@ export async function canManagePermissions(userId: string): Promise<boolean> {
 
 /**
  * Get user's subscription plan details
+ * Returns null if subscription is not active
  */
 export async function getUserSubscriptionPlan(userId: string) {
   try {
@@ -76,7 +112,16 @@ export async function getUserSubscriptionPlan(userId: string) {
       _id: new ObjectId(userId)
     })
 
-    if (!user || !user.subscriptionPlanId) {
+    if (!user) {
+      return null
+    }
+
+    // Check if user has active subscription
+    if (!await hasActiveSubscription(user)) {
+      return null
+    }
+
+    if (!user.subscriptionPlanId) {
       return null
     }
 
