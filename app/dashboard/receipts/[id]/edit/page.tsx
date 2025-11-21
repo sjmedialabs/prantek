@@ -1,73 +1,193 @@
 "use client"
 
-import type React from "react"
-
-import { useParams, useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useParams, useRouter } from "next/navigation"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { ArrowLeft, Save } from "lucide-react"
 import { api } from "@/lib/api-client"
-import type { Receipt } from "@/lib/data-store"
-import { toast } from "react-toastify"
+import { toast } from "@/lib/toast"
+import { OwnSearchableSelect } from "@/components/searchableSelect"
+import { useUser } from "@/components/auth/user-context"
 
 export default function EditReceiptPage() {
-  const params = useParams()
+  const { id: receiptId } = useParams()
   const router = useRouter()
-  const receiptId = params.id as string
+  const { user } = useUser()
 
-  const [receipt, setReceipt] = useState<Receipt | null>(null)
+  // -------- STATES --------
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
-  const [formData, setFormData] = useState({
-    referenceNumber: "",
-    note: "",
-  })
+  const [receipt, setReceipt] = useState<any>(null)
+  const [quotation, setQuotation] = useState<any>(null)
 
+  // Editable fields
+  const [date, setDate] = useState("")
+  const [paymentAmount, setPaymentAmount] = useState(0)
+  const [paymentMethod, setPaymentMethod] = useState("Cash")
+  const [paymentType, setPaymentType] = useState<"Full Payment" | "Partial">("Full Payment")
+  const [bankAccount, setBankAccount] = useState("")
+  const [referenceNumber, setReferenceNumber] = useState("")
+  const [note, setNote] = useState("")
+
+  const [bankAccounts, setBankAccounts] = useState<any[]>([])
+
+  // Calculated
+  const [receiptTotal, setReceiptTotal] = useState(0)
+  const [balanceAmount, setBalanceAmount] = useState(0)
+
+  // -------- LOAD RECEIPT & QUOTATION --------
   useEffect(() => {
-    loadReceipt()
+    loadData()
   }, [receiptId])
 
-  const loadReceipt = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.receipts.getById(receiptId)
-      if (data) {
-        setReceipt(data)
-        setFormData({
-          referenceNumber: data.referenceNumber || "",
-          note: data.note || "",
-        })
+      const loadedReceipt = await api.receipts.getById(receiptId)
+      if (!loadedReceipt) {
+        toast.error("Receipt not found")
+        router.push("/dashboard/receipts")
+        return
       }
-    } catch (error) {
-      console.error("Error loading receipt:", error)
+
+      setReceipt(loadedReceipt)
+
+      const loadedQuotation = await api.quotations.getById(loadedReceipt.quotationId)
+      setQuotation(loadedQuotation)
+
+      const banks = await api.bankAccounts.getAll()
+      setBankAccounts(banks)
+
+      // Prefill editable fields
+      setDate(loadedReceipt.date?.split("T")[0] || "")
+      setPaymentAmount(loadedReceipt.amountPaid || 0)
+      setPaymentMethod(
+        loadedReceipt.paymentMethod === "cash"
+          ? "Cash"
+          : loadedReceipt.paymentMethod === "bank-transfer"
+            ? "Bank Transfer"
+            : loadedReceipt.paymentMethod === "upi"
+              ? "UPI"
+              : loadedReceipt.paymentMethod === "cheque"
+                ? "Cheque"
+                : "Card"
+      )
+      setPaymentType(loadedReceipt.paymentType || "Full Payment")
+      setBankAccount(loadedReceipt.bankAccount || "")
+      setReferenceNumber(loadedReceipt.referenceNumber || "")
+      setNote(loadedReceipt.notes || "")
+
+      setReceiptTotal(loadedQuotation.balanceAmount + loadedReceipt.amountPaid)
+      setBalanceAmount(loadedQuotation.balanceAmount)
+
+    } catch (err) {
+      console.error(err)
       toast.error("Failed to load receipt")
     } finally {
       setLoading(false)
     }
   }
+/* ------------------ SUBMIT HANDLER ------------------ */
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
+async function handleSubmit(e?: any) {
+  if (e) e.preventDefault()
 
-    try {
-      const updated = api.receipts.update(receiptId, formData)
-      if (updated) {
-        toast.success("Receipt updated successfully")
-        router.push(`/dashboard/receipts/${receiptId}`)
-      }
-    } catch (error) {
-      console.error("Error updating receipt:", error)
-      toast.error("Failed to update receipt")
-    } finally {
-      setSaving(false)
-    }
+  if (submitting) return
+  if (!quotation || !receipt) return toast.error("Missing receipt/quotation")
+
+  // VALIDATION
+  if (!date) return toast.error("Please select a payment date")
+  if (paymentAmount <= 0) return toast.error("Payment amount must be greater than zero")
+
+  const previousPaid = receipt.amountPaid            // what this receipt originally added
+  const originalPaidTotal = quotation.paidAmount     // total paid including this receipt
+  const originalBalance = quotation.balanceAmount
+  const restoredTotalBeforeEdit = originalBalance + previousPaid
+
+  if (paymentAmount > restoredTotalBeforeEdit) {
+    return toast.error("Payment amount cannot exceed total remaining amount")
   }
 
+  setSubmitting(true)
+
+  try {
+    /* ----------------------------------------------
+       1️⃣ UPDATE QUOTATION — UNDO OLD RECEIPT PAYMENT
+    ---------------------------------------------- */
+
+    const updatedPaidAmount =
+      originalPaidTotal - previousPaid + paymentAmount
+
+    const updatedBalanceAmount =
+      restoredTotalBeforeEdit - paymentAmount
+
+    let updatedStatus = "pending"
+    if (updatedBalanceAmount <= 0) updatedStatus = "cleared"
+    else if (updatedPaidAmount > 0) updatedStatus = "partial"
+
+    await api.quotations.update(quotation._id, {
+      paidAmount: updatedPaidAmount,
+      balanceAmount: updatedBalanceAmount,
+      status: updatedStatus,
+    })
+
+    /* ----------------------------------------------
+       2️⃣ UPDATE RECEIPT
+    ---------------------------------------------- */
+
+    const payload = {
+      amountPaid: paymentAmount,
+      paymentType: paymentType,
+      paymentMethod:
+        paymentMethod === "Cash"
+          ? "cash"
+          : paymentMethod === "Bank Transfer"
+            ? "bank-transfer"
+            : paymentMethod === "Cheque"
+              ? "cheque"
+              : paymentMethod === "UPI"
+                ? "upi"
+                : "card",
+      bankAccount,
+      referenceNumber,
+      date,
+      notes: note,
+    }
+
+    await api.receipts.update(receiptId, payload)
+
+    toast.success("Receipt updated successfully")
+    router.push(`/dashboard/receipts/${receiptId}`)
+
+  } catch (err: any) {
+    console.error(err)
+    toast.error("Failed to update receipt")
+  } finally {
+    setSubmitting(false)
+  }
+}
+  // -------- PAYMENT TYPE LOGIC --------
+  useEffect(() => {
+    if (!quotation) return
+
+    if (paymentType === "Full Payment") {
+      setPaymentAmount(receiptTotal)
+      setBalanceAmount(0)
+    } else {
+      const remaining = receiptTotal - paymentAmount
+      setBalanceAmount(remaining < 0 ? 0 : remaining)
+    }
+  }, [paymentType, paymentAmount, receiptTotal, quotation])
+
+  // Auto update status
+  useEffect(() => {
+    // nothing here yet (done in Part 2)
+  }, [paymentMethod])
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -79,7 +199,7 @@ export default function EditReceiptPage() {
     )
   }
 
-  if (!receipt) {
+  if (!receipt || !quotation) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Receipt Not Found</h2>
@@ -89,69 +209,238 @@ export default function EditReceiptPage() {
     )
   }
 
+  // Words
+  const numberToWords = (num: number): string =>
+    `${num.toLocaleString()} Rupees Only`
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
+
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Edit Receipt</h1>
           <p className="text-gray-600">{receipt.receiptNumber}</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Receipt Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Receipt Number</Label>
-                <Input value={receipt.receiptNumber} disabled />
-              </div>
-              <div>
-                <Label>Date</Label>
-                <Input value={new Date(receipt.date).toLocaleDateString()} disabled />
-              </div>
+      {/* QUOTATION DETAILS (Locked) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quotation / Agreement Details</CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+
+            <div>
+              <span className="text-gray-600">Quotation Number:</span>
+              <span className="ml-2 font-medium">{quotation.quotationNumber}</span>
             </div>
 
             <div>
-              <Label htmlFor="referenceNumber">Reference Number</Label>
+              <span className="text-gray-600">Client:</span>
+              <span className="ml-2 font-medium">{quotation.clientName}</span>
+            </div>
+
+            <div>
+              <span className="text-gray-600">Total Amount:</span>
+              <span className="ml-2 font-medium">
+                ₹{quotation.grandTotal?.toLocaleString()}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-600">Paid Before This Receipt:</span>
+              <span className="ml-2 font-medium">
+                ₹{(quotation.paidAmount - receipt.amountPaid)?.toLocaleString()}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-600">Paid In This Receipt:</span>
+              <span className="ml-2 font-medium text-purple-600">
+                ₹{receipt.amountPaid?.toLocaleString()}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-600 font-semibold">Current Balance:</span>
+              <span className="ml-2 font-semibold text-blue-600">
+                ₹{(quotation.balanceAmount + receipt.amountPaid)?.toLocaleString()}
+              </span>
+            </div>
+
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* PAYMENT SECTION */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Update Payment Details</CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+
+          {/* Date */}
+          <div>
+            <Label htmlFor="date">Payment Date *</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Method + Payment Type */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label>Payment Method *</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Payment Type *</Label>
+              <Select
+                value={paymentType}
+                onValueChange={(v: any) => setPaymentType(v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Full Payment">Full Payment</SelectItem>
+                  <SelectItem value="Partial">Partial Payment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Status</Label>
               <Input
-                id="referenceNumber"
-                value={formData.referenceNumber}
-                onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })}
-                placeholder="Enter reference number"
+                value={paymentMethod === "Cash" ? "Cleared" : "Received"}
+                disabled
+                className="bg-gray-50"
               />
             </div>
+          </div>
 
-            <div>
-              <Label htmlFor="note">Note</Label>
-              <Textarea
-                id="note"
-                value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                rows={4}
-                placeholder="Add any additional notes..."
-              />
-            </div>
+          {/* PARTIAL PAYMENT MODE */}
+          {paymentType === "Partial" && (
+            <div className="grid grid-cols-2 gap-4">
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => router.back()}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
+              <div>
+                <Label>Payment Amount *</Label>
+                <Input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) =>
+                    setPaymentAmount(
+                      Number.parseFloat(e.target.value) || 0
+                    )
+                  }
+                  min="0"
+                  step="0.01"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Max: ₹{receiptTotal.toLocaleString()}
+                </p>
+              </div>
+
+              <div>
+                <Label>Remaining Balance</Label>
+                <Input value={balanceAmount} disabled className="bg-gray-50" />
+              </div>
+
             </div>
-          </CardContent>
-        </Card>
-      </form>
+          )}
+
+          {/* Amount in Words */}
+          <div>
+            <Label>Amount in Words</Label>
+            <Input
+              value={numberToWords(paymentAmount)}
+              disabled
+              className="bg-gray-50"
+            />
+          </div>
+
+          {/* BANK DETAILS */}
+          {paymentMethod !== "Cash" && (
+            <div className="grid grid-cols-2 gap-4">
+
+              <div>
+                <Label>Bank Account</Label>
+                <Select value={bankAccount} onValueChange={setBankAccount}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((acc) => (
+                      <SelectItem
+                        key={acc._id}
+                        value={String(acc._id)}
+                      >
+                        {acc.bankName} - {acc.accountNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Reference Number</Label>
+                <Input
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="Transaction reference / cheque no."
+                />
+              </div>
+
+            </div>
+          )}
+
+          {/* Notes */}
+          <div>
+            <Label>Note</Label>
+            <Textarea
+              rows={4}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+
+        </CardContent>
+      </Card>
+      {/* SUBMIT BUTTON */}
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="button" variant="outline" onClick={() => router.back()}>
+          Cancel
+        </Button>
+
+        <Button
+          onClick={handleSubmit}
+          disabled={submitting}
+          className="min-w-[150px]"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {submitting ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
     </div>
   )
 }

@@ -23,7 +23,7 @@ export default function CreateReceiptPage() {
   const [selectedQuotationId, setSelectedQuotationId] = useState<string>("")
   const [quotations, setQuotations] = useState<any[]>([])
   const [selectedQuotation, setSelectedQuotation] = useState<any>(null)
-  
+    const [paymentType, setPaymentType] = useState<"Full Payment" | "Partial">("Full Payment")
   // Payment state
   const [paymentAmount, setPaymentAmount] = useState<number>(0)
   const [paymentMethod, setPaymentMethod] = useState("Cash")
@@ -32,12 +32,13 @@ export default function CreateReceiptPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [status, setStatus] = useState("Received")
   
+  const [receiptTotal, setReceiptTotal] = useState(0)
   // Quotation creation dialog state
   const [isQuotationDialogOpen, setIsQuotationDialogOpen] = useState(false)
   
   // Bank accounts
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
-  
+    const [balanceAmount, setBalanceAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Load data
@@ -89,7 +90,8 @@ export default function CreateReceiptPage() {
       
       if (quotation) {
         setSelectedQuotation(quotation)
-        setPaymentAmount(quotation.balanceAmount || 0)
+        setReceiptTotal(quotation.balanceAmount || 0)
+        setPaymentAmount(quotation.balanceAmount)
       }
     } else {
       setSelectedQuotation(null)
@@ -97,6 +99,15 @@ export default function CreateReceiptPage() {
     }
   }, [selectedQuotationId, quotations])
 
+    // Payment amount / balance logic
+  useEffect(() => {
+    if (paymentType === "Partial") {
+      setBalanceAmount(receiptTotal - paymentAmount)
+    } else {
+      setBalanceAmount(0)
+      setPaymentAmount(receiptTotal)
+    }
+  }, [paymentType, receiptTotal, paymentAmount])
   // Auto-set status based on payment method
   useEffect(() => {
     if (paymentMethod === "Cash") {
@@ -132,14 +143,14 @@ export default function CreateReceiptPage() {
     try {
       // Update quotation with payment
       const totalAmountPaid = (selectedQuotation.paidAmount || 0) + paymentAmount
-      const totalAmountBalance = (selectedQuotation.balanceAmount || 0) - paymentAmount
+      const totalAmountBalance = balanceAmount
       
       const quotationPayloadUpdate = {
         paidAmount: totalAmountPaid,
         balanceAmount: totalAmountBalance,
-        status: totalAmountBalance <= 0 ? "completed" : "partial"
+        // status: totalAmountBalance <= 0 ? "completed" : "partial"
       }
-      
+      console.log("Updating quotation with:", quotationPayloadUpdate)
       await api.quotations.update(selectedQuotation._id || selectedQuotation.id, quotationPayloadUpdate)
 
       // Create receipt
@@ -163,8 +174,9 @@ export default function CreateReceiptPage() {
           discount: it.discount || 0,
           taxRate: it.taxRate || 0,
         })),
+        balanceAmount: selectedQuotation.balanceAmount || 0,
         amountPaid: paymentAmount,
-        paymentType: paymentAmount >= (selectedQuotation.balanceAmount || 0) ? "full" : "partial",
+        // paymentType: paymentAmount >= (selectedQuotation.balanceAmount || 0) ? "full" : "partial",
         paymentMethod: paymentMethod.toLowerCase().replace(" ", "-"),
         bankAccount: paymentMethod !== "Cash" ? bankAccount : "",
         referenceNumber: paymentMethod !== "Cash" ? referenceNumber : "",
@@ -172,6 +184,7 @@ export default function CreateReceiptPage() {
         notes: "",
         date,
         subtotal: selectedQuotation.subtotal || 0,
+        paymentType: paymentType,
         taxAmount: selectedQuotation.taxAmount || 0,
         total: selectedQuotation.grandTotal || 0,
         status: status.toLowerCase(),
@@ -192,13 +205,14 @@ export default function CreateReceiptPage() {
     value: String(q._id || q.id),
     label: `${q.quotationNumber} - ${q.clientName || q.projectName || ''} (Balance: ₹${(q.balanceAmount || 0).toLocaleString()})`
   }))
+  const numberToWords = (num: number): string => `${num.toLocaleString()} Rupees Only`
 
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Create Receipt</h1>
-          <p className="text-gray-600">Record payment against a quotation</p>
+          <p className="text-gray-600">Record payment against a quotation/agreement</p>
         </div>
         <Link href="/dashboard/receipts">
           <Button variant="outline">Cancel</Button>
@@ -209,17 +223,17 @@ export default function CreateReceiptPage() {
         {/* Quotation Selection */}
         <Card>
           <CardHeader>
-            <CardTitle>Select Quotation *</CardTitle>
+            <CardTitle>Select Quotation/Agreement *</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <div className="flex-1">
                 <OwnSearchableSelect
                   options={quotationOptions}
                   value={selectedQuotationId}
                   onValueChange={setSelectedQuotationId}
-                  placeholder="Search and select a quotation..."
-                  searchPlaceholder="Type to search quotations..."
+                  placeholder="Search and select a quotation/agreement..."
+                  searchPlaceholder="Type to search quotations/agreements..."
                   emptyText="No pending quotations found."
                 />
               </div>
@@ -230,7 +244,7 @@ export default function CreateReceiptPage() {
                   <Button type="button" variant="outline">
                     
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Quotation
+                    Add Quotation/agreement
                   </Button>
                   </Link>
                 </DialogTrigger>
@@ -294,8 +308,8 @@ export default function CreateReceiptPage() {
               <CardTitle>Payment Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-3  gap-4">
+                {/* <div>
                   <Label htmlFor="paymentAmount">Payment Amount *</Label>
                   <Input
                     id="paymentAmount"
@@ -310,7 +324,7 @@ export default function CreateReceiptPage() {
                   <p className="text-xs text-gray-500 mt-1">
                     Maximum: ₹{(selectedQuotation.balanceAmount || 0).toLocaleString()}
                   </p>
-                </div>
+                </div> */}
 
                 <div>
                   <Label htmlFor="date">Payment Date *</Label>
@@ -324,7 +338,7 @@ export default function CreateReceiptPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="paymentMethod">Payment Method *</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -340,7 +354,18 @@ export default function CreateReceiptPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
+                <div>
+                  <Label htmlFor="paymentType">Payment Type *</Label>
+                  <Select value={paymentType} onValueChange={(value:any) => setPaymentType(value)} required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full Payment">Full Payment</SelectItem>
+                      <SelectItem value="Partial">Partial Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label htmlFor="status">Status</Label>
                   <Input
@@ -350,6 +375,25 @@ export default function CreateReceiptPage() {
                     className="bg-gray-50"
                   />
                 </div>
+              </div>
+              {paymentType === "Partial" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="paymentAmount">Payment Amount *</Label>
+                    <Input id="paymentAmount" type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(Number.parseFloat(e.target.value) || 0)} required min="0" max={receiptTotal} step="0.01" />
+                    <p className="text-xs text-gray-500 mt-1">Amount being paid now</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="balanceAmount">Balance Amount</Label>
+                    <Input id="balanceAmount" type="number" value={balanceAmount} disabled className="bg-gray-50" />
+                    <p className="text-xs text-red-600 mt-1">Remaining balance to be paid</p>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label>Amount in Words</Label>
+                <Input value={numberToWords(paymentType === "Partial" ? paymentAmount : receiptTotal)} disabled className="bg-gray-50" />
               </div>
 
               {paymentMethod !== "Cash" && (

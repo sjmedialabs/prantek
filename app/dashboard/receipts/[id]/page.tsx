@@ -160,13 +160,13 @@ export default function ReceiptDetailsPage() {
                       ? "Full Payment"
                       : receipt.paymentType === "partial"
                         ? "Partial"
-                        : "Advance Payment"}
+                        : "Partial Payment"}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
                   <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                    {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
+                    {(receipt.status || "").charAt(0).toUpperCase() + receipt.status.slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -175,17 +175,17 @@ export default function ReceiptDetailsPage() {
                   <Separator />
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-600">Quotation Number</p>
+                      <p className="text-sm text-gray-600">Quotation/Agreement Number</p>
                       <Link href={`/dashboard/quotations/${receipt.quotationNumber}`}>
                         <p className="font-semibold text-blue-600 hover:underline">{receipt.quotationNumber}</p>
                       </Link>
                     </div>
-                    {receipt.quotationAcceptedDate && (
+                    {/* {receipt.quotationAcceptedDate && (
                       <div>
                         <p className="text-sm text-gray-600">Quotation Accepted Date</p>
                         <p className="font-semibold">{new Date(receipt.quotationAcceptedDate).toLocaleDateString()}</p>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </>
               )}
@@ -204,7 +204,7 @@ export default function ReceiptDetailsPage() {
           {/* Client Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Client Details</CardTitle>
+              {/* <CardTitle>Client Details</CardTitle> */}
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
