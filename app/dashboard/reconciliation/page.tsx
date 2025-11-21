@@ -23,11 +23,11 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { Check, Download, RefreshCw, Search, X } from "lucide-react"
+import { Check, Download, Eye, RefreshCw, Search, X } from "lucide-react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
+import Link from "next/link";
 interface Transaction {
   _id: string
   type: "receipt" | "payment"
@@ -69,7 +69,9 @@ export default function ReconciliationPage() {
   const [statsView, setStatsView] = useState<"all" | "receipts" | "payments">("all")
   const [animatingIds, setAnimatingIds] = useState<Set<string>>(new Set())
   const { hasPermission, user } = useUser()
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // Show 10 rows per page
+  const [paymentMethod, setpaymentMethod] = useState<any[]>([])
   useEffect(() => {
     loadTransactions()
   }, [])
@@ -83,6 +85,8 @@ export default function ReconciliationPage() {
       setLoading(true)
       const data = await api.reconciliation.getAll()
       setTransactions(data)
+      const paymentMethods = await api.paymentMethods.getAll()
+      setpaymentMethod(paymentMethods)
     } catch (error) {
       console.error("Failed to load reconciliation data:", error)
       toast.error("Failed to load reconciliation data")
@@ -134,6 +138,16 @@ export default function ReconciliationPage() {
 
     setFilteredTransactions(filtered)
   }
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, typeFilter, statusFilter, paymentMethodFilter]);
+
 
   const handleClearTransaction = async (transaction: Transaction) => {
     if (!hasPermission("manage_reconciliation")) {
@@ -143,14 +157,14 @@ export default function ReconciliationPage() {
 
     try {
       const isCurrentlyCleared = transaction.status === "cleared" || transaction.status === "completed"
-      
+
       // Add to animating set
       setAnimatingIds(prev => new Set(prev).add(transaction._id))
-      
+
       // Optimistically update the UI
-      setTransactions(prevTransactions => 
-        prevTransactions.map(t => 
-          t._id === transaction._id 
+      setTransactions(prevTransactions =>
+        prevTransactions.map(t =>
+          t._id === transaction._id
             ? { ...t, status: isCurrentlyCleared ? "pending" : (t.type === "receipt" ? "cleared" : "completed") }
             : t
         )
@@ -170,11 +184,11 @@ export default function ReconciliationPage() {
           newSet.delete(transaction._id)
           return newSet
         })
-        
+
         // Reload to sync with server
         loadTransactions()
       }, 500) // 500ms for fade out animation
-      
+
       toast.success(
         isCurrentlyCleared
           ? `${transaction.type === "receipt" ? "Receipt" : "Payment"} marked as uncleared`
@@ -187,10 +201,10 @@ export default function ReconciliationPage() {
         newSet.delete(transaction._id)
         return newSet
       })
-      
+
       // Revert optimistic update
       await loadTransactions()
-      
+
       console.error("Failed to update transaction:", error)
       toast.error("Failed to update transaction")
     }
@@ -234,7 +248,7 @@ export default function ReconciliationPage() {
     const rows = filteredTransactions.map((t) => [
       t.type === "receipt" ? "Receipt" : "Payment",
       t.transactionNumber,
-      formatDate(t.date),
+      t.date,
       t.type === "receipt" ? t.clientName : t.recipientName,
       t.paymentMethod,
       t.bankAccount || "-",
@@ -327,7 +341,7 @@ export default function ReconciliationPage() {
             <div className="space-y-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-4 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Search..."
@@ -374,9 +388,9 @@ export default function ReconciliationPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {method.toUpperCase()}
+                  {paymentMethod.map((method) => (
+                    <SelectItem key={method._id} value={method.name}>
+                      {method.name.toUpperCase()}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -412,12 +426,13 @@ export default function ReconciliationPage() {
               <p>No transactions found</p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>S.No</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Transaction #</TableHead>
+                    <TableHead>Transaction</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Payment Method</TableHead>
@@ -429,18 +444,19 @@ export default function ReconciliationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.map((transaction) => {
+                  {paginatedTransactions.map((transaction, index) => {
+                    const serial = (currentPage - 1) * itemsPerPage + (index + 1)
                     const isCleared = transaction.status === "cleared" || transaction.status === "completed"
-                    
+
                     return (
-                      <TableRow 
+                      <TableRow
                         key={transaction._id}
-                        className={`transition-all duration-500 ${
-                          animatingIds.has(transaction._id) 
-                            ? 'opacity-0 scale-95 bg-green-50 dark:bg-green-950' 
-                            : 'opacity-100 scale-100'
-                        }`}
+                        className={`transition-all duration-500 ${animatingIds.has(transaction._id)
+                          ? 'opacity-0 scale-95 bg-green-50 dark:bg-green-950'
+                          : 'opacity-100 scale-100'
+                          }`}
                       >
+                        <TableCell>{serial}</TableCell>
                         <TableCell>
                           <Badge variant={transaction.type === "receipt" ? "default" : "secondary"}>
                             {transaction.type === "receipt" ? "Receipt" : "Payment"}
@@ -465,6 +481,17 @@ export default function ReconciliationPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
+                          <Link
+                            href={
+                              transaction.type === "receipt"
+                                ? `/dashboard/receipts/${transaction._id}`
+                                : `/dashboard/payments/${transaction._id}`
+                            }
+                          >
+                            <Button variant="ghost" size="sm" className="mr-4">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           {hasPermission("manage_reconciliation") && (
                             <Button
                               size="sm"
