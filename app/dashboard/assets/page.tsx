@@ -21,8 +21,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
-import { Plus, Search, Package, Laptop, Car, Building, Wrench, TrendingDown, AlertTriangle, UserPlus, UserX, UserCheck } from "lucide-react"
+import { Plus, Search, Package, Laptop, Car, Building, Wrench, TrendingDown, AlertTriangle, UserPlus, UserX, UserCheck, Edit } from "lucide-react"
 import { api } from "@/lib/api-client"
+import { toast } from "@/lib/toast"
 
 interface AssignmentHistory {
   employeeId: string
@@ -73,6 +74,9 @@ export default function AssetsPage() {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
   const [selectedAssetForAssignment, setSelectedAssetForAssignment] = useState<Asset | null>(null)
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("")
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null)
+
   const [newAsset, setNewAsset] = useState({
     name: "",
     category: "equipment" as const,
@@ -83,31 +87,34 @@ export default function AssetsPage() {
     serialNumber: "",
     warranty: "",
   })
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const rowsPerPage = 10
 
-useEffect(() => {
-  if (user?.id) {
-    loadData()
-  }
-}, [user])
+  useEffect(() => {
+    if (user?.id) {
+      loadData()
+    }
+  }, [user])
 
-const userid = user?.id
-const loadData = async () => {
-  const loadedCategories = await api.assetCategories.getAll()
-  setCategories(loadedCategories || [])
-  console.log("loadedCategories", loadedCategories)
-  const loadedConditions = await api.assetConditions.getAll()
-  setConditions(loadedConditions || [])
-  console.log("loadedConditions", loadedConditions)
-  const loadedEmployees = await api.employees.getAll()
-  setEmployees(loadedEmployees || [])
-  console.log("loadedEmployees", loadedEmployees)
+  const userid = user?.id
+  const loadData = async () => {
+    const loadedCategories = await api.assetCategories.getAll()
+    setCategories(loadedCategories || [])
+    console.log("loadedCategories", loadedCategories)
+    const loadedConditions = await api.assetConditions.getAll()
+    setConditions(loadedConditions || [])
+    console.log("loadedConditions", loadedConditions)
+    const loadedEmployees = await api.employees.getAll()
+    setEmployees(loadedEmployees || [])
+    console.log("loadedEmployees", loadedEmployees)
     console.log("user details are ", userid)
- const loadedAssets = await api.assets.getAll(user?.id)
-  console.log("loadedAssets", loadedAssets, user?.id)
-  setAssets(loadedAssets || [])
+    const loadedAssets = await api.assets.getAll(user?.id)
+    console.log("loadedAssets", loadedAssets, user?.id)
+    setAssets(loadedAssets || [])
 
-  setLoading(false)
-}
+    setLoading(false)
+  }
 
 
   // const saveAssets = (updatedAssets: Asset[]) => {
@@ -122,13 +129,15 @@ const loadData = async () => {
   const assignedAssets = assets.filter((asset) => asset.assignedTo && !asset.submittedDate).length
   const availableAssets = assets.filter((asset) => !asset.assignedTo || asset.submittedDate).length
 
-  const categoryData = [
-    { name: "Equipment", value: assets.filter((a) => a.category === "equipment").length, fill: COLORS[0] },
-    { name: "Vehicle", value: assets.filter((a) => a.category === "vehicle").length, fill: COLORS[1] },
-    { name: "Property", value: assets.filter((a) => a.category === "property").length, fill: COLORS[2] },
-    { name: "Software", value: assets.filter((a) => a.category === "software").length, fill: COLORS[3] },
-    { name: "Furniture", value: assets.filter((a) => a.category === "furniture").length, fill: COLORS[4] },
-  ].filter((item) => item.value > 0)
+const categoryData = categories
+  .filter((c) => c.isActive) // only active categories
+  .map((cat, index) => ({
+    name: cat.name,
+    value: assets.filter((a) => a.category?.toLowerCase() === cat.name.toLowerCase()).length,
+    fill: COLORS[index % COLORS.length], // rotate colors
+  }))
+  .filter((item) => item.value > 0) // show only if assets exist
+
 
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
@@ -141,98 +150,100 @@ const loadData = async () => {
     return matchesSearch && matchesCategory && matchesStatus
   })
 
-const handleAddAsset = async () => {
-  try {
+  const handleAddAsset = async () => {
+    try {
 
-    // 🔍 1. Check serial uniqueness
-    const serialExists = assets.some(
-      (a) => a.serialNumber?.toLowerCase() === newAsset.serialNumber.toLowerCase()
+      // 🔍 1. Check serial uniqueness
+      const serialExists = assets.some(
+        (a) => a.serialNumber?.toLowerCase() === newAsset.serialNumber.toLowerCase()
+      )
+
+      if (serialExists) {
+        alert("Serial number already exists! Please use a unique serial number.")
+        return
+      }
+
+      // 🔵 2. Continue with creating asset
+      const payload = {
+        userId: user?.id,
+        name: newAsset.name || "",
+        category: newAsset.category,
+        purchasePrice: newAsset.purchasePrice ? Number(newAsset.purchasePrice) : undefined,
+        currentValue: newAsset.purchasePrice ? Number(newAsset.purchasePrice) : undefined,
+        purchaseDate: newAsset.purchaseDate,
+        condition: newAsset.condition,
+        location: newAsset.location,
+        serialNumber: newAsset.serialNumber,
+        warranty: newAsset.warranty,
+        status: "available",
+        assignmentHistory: [],
+      }
+
+      console.log("sending payload", payload)
+      const created = await api.assets.create(payload)
+
+      const loadedAssets = await api.assets.getAll(user?.id)
+      setAssets(loadedAssets)
+
+      setIsAddAssetOpen(false)
+      toast.success("Asset created successfully!")
+
+    } catch (error: any) {
+      alert(error.message)
+    }
+  }
+
+
+
+  const handleAssignAsset = async () => {
+    console.log("enter in on click function ")
+    if (!selectedAssetForAssignment || !selectedEmployeeId) return
+    console.log("selectedAssetForAssignment", selectedAssetForAssignment)
+    const employee = employees.find(
+      (e) => String(e._id || e.id) === selectedEmployeeId
     )
 
-    if (serialExists) {
-      alert("Serial number already exists! Please use a unique serial number.")
-      return
+    const updatedData = {
+      userId: selectedAssetForAssignment.userId,
+      assignedTo: employee._id,
+      assignedToName: employee.employeeName + " " + employee.surname,
+      assignedDate: new Date().toISOString(),
+      submittedDate: null,
+      status: "assigned",
+
+      assignmentHistoryItem: {
+        employeeId: employee._id,
+        employeeName: employee.employeeName + " " + employee.surname,
+        assignedDate: new Date().toISOString(),
+        assignedBy: user?.email || "Admin",
+      }
     }
 
-    // 🔵 2. Continue with creating asset
-    const payload = {
-      userId: user?.id,
-      name: newAsset.name || "",
-      category: newAsset.category,
-      purchasePrice: newAsset.purchasePrice ? Number(newAsset.purchasePrice) : undefined,
-      currentValue: newAsset.purchasePrice ? Number(newAsset.purchasePrice) : undefined,
-      purchaseDate: newAsset.purchaseDate,
-      condition: newAsset.condition,
-      location: newAsset.location,
-      serialNumber: newAsset.serialNumber,
-      warranty: newAsset.warranty,
-      status: "available",
-      assignmentHistory: [],
-    }
-
-    console.log("sending payload", payload)
-    const created = await api.assets.create(payload)
+    console.log("updatedData", updatedData)
+    console.log("selectedAssetForAssignment id ", selectedAssetForAssignment._id)
+    await api.assets.update(selectedAssetForAssignment._id, updatedData)
 
     const loadedAssets = await api.assets.getAll(user?.id)
+
     setAssets(loadedAssets)
 
-    setIsAddAssetOpen(false)
-
-  } catch (error: any) {
-    alert(error.message)
+    setIsAssignDialogOpen(false)
+    setSelectedEmployeeId("")
+    toast.success("Asset assigned successfully!")
   }
-}
 
 
+  const handleSubmitAsset = async (assetId: string) => {
 
-const handleAssignAsset = async () => {
-  console.log("enter in on click function ")
-  if (!selectedAssetForAssignment || !selectedEmployeeId) return
-console.log("selectedAssetForAssignment", selectedAssetForAssignment)
-  const employee = employees.find(
-    (e) => String(e._id || e.id) === selectedEmployeeId
-  )
+    await api.assets.update(assetId, {
+      submittedDate: new Date().toISOString(),
+      userId: user?.id,
+      status: "available",
+    })
 
-const updatedData = {
-  userId: selectedAssetForAssignment.userId,
-  assignedTo: employee._id,
-  assignedToName: employee.employeeName + " " + employee.surname,
-  assignedDate: new Date().toISOString(),
-  submittedDate: null,
-  status: "assigned",
-
-  assignmentHistoryItem: {
-    employeeId: employee._id,
-    employeeName: employee.employeeName + " " + employee.surname,
-    assignedDate: new Date().toISOString(),
-    assignedBy: user?.email || "Admin",
+    const refreshedAssets = await api.assets.getAll(user?.id)
+    setAssets(refreshedAssets)
   }
-}
-
-  console.log("updatedData", updatedData)
-  console.log("selectedAssetForAssignment id ", selectedAssetForAssignment._id)
-  await api.assets.update(selectedAssetForAssignment._id, updatedData)
-
-const loadedAssets = await api.assets.getAll(user?.id)
-
-  setAssets(loadedAssets)
-
-  setIsAssignDialogOpen(false)
-  setSelectedEmployeeId("")
-}
-
-
-const handleSubmitAsset = async (assetId: string) => {
-  
-  await api.assets.update(assetId, {
-    submittedDate: new Date().toISOString(),
-    userId: user?.id,
-    status: "available",
-  })
-
-  const refreshedAssets = await api.assets.getAll(user?.id)
-  setAssets(refreshedAssets)
-}
 
 
   const handleReassignAsset = (asset: Asset) => {
@@ -240,6 +251,14 @@ const handleSubmitAsset = async (assetId: string) => {
     setSelectedEmployeeId("")
     setIsAssignDialogOpen(true)
   }
+  const totalPages = Math.ceil(filteredAssets.length / rowsPerPage)
+
+  const paginatedAssets = filteredAssets.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  )
+
+  const getSerial = (index: number) => (currentPage - 1) * rowsPerPage + index + 1
 
   const getCategoryIcon = (category?: string) => {
     switch (category) {
@@ -254,6 +273,56 @@ const handleSubmitAsset = async (assetId: string) => {
       default:
         return <Package className="h-4 w-4" />
     }
+  }
+  const handleUpdateAsset = async () => {
+    try {
+      if (!editingAssetId) return;
+
+      const payload = {
+        name: newAsset.name,
+        category: newAsset.category,
+        purchasePrice: Number(newAsset.purchasePrice),
+        currentValue: Number(newAsset.purchasePrice),
+        purchaseDate: newAsset.purchaseDate,
+        condition: newAsset.condition,
+        location: newAsset.location,
+        serialNumber: newAsset.serialNumber,
+        warranty: newAsset.warranty,
+      };
+
+      await api.assets.update(editingAssetId, payload)
+
+      const refreshed = await api.assets.getAll(user?.id)
+      setAssets(refreshed)
+
+      toast.success("Asset updated successfully!")
+      setIsAddAssetOpen(false)
+
+      // reset edit mode
+      setIsEditMode(false)
+      setEditingAssetId(null)
+
+    } catch (err: any) {
+      toast.error(err.message)
+    }
+  }
+
+  const handleEdit = (asset: Asset) => {
+    setIsEditMode(true)
+    setEditingAssetId(asset._id)
+
+    setNewAsset({
+      name: asset.name || "",
+      category: asset.category || "equipment",
+      purchasePrice: asset.purchasePrice?.toString() || "",
+      purchaseDate: asset.purchaseDate || new Date().toISOString().split("T")[0],
+      condition: asset.condition || "excellent",
+      location: asset.location || "",
+      serialNumber: asset.serialNumber || "",
+      warranty: asset.warranty || ""
+    })
+
+    setIsAddAssetOpen(true)
   }
 
   const getConditionColor = (condition?: string) => {
@@ -318,11 +387,27 @@ const handleSubmitAsset = async (assetId: string) => {
         </div>
         <Dialog open={isAddAssetOpen} onOpenChange={setIsAddAssetOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button
+              onClick={() => {
+                setIsEditMode(false)
+                setEditingAssetId(null)
+                setNewAsset({
+                  name: "",
+                  category: "equipment",
+                  purchasePrice: "",
+                  purchaseDate: new Date().toISOString().split("T")[0],
+                  condition: "excellent",
+                  location: "",
+                  serialNumber: "",
+                  warranty: "",
+                })
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Asset
             </Button>
           </DialogTrigger>
+
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add New Asset</DialogTitle>
@@ -428,7 +513,9 @@ const handleSubmitAsset = async (assetId: string) => {
                 <Button variant="outline" onClick={() => setIsAddAssetOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddAsset}>Add Asset</Button>
+                <Button onClick={isEditMode ? handleUpdateAsset : handleAddAsset}>
+                  {isEditMode ? "Update Asset" : "Add Asset"}
+                </Button>
               </div>
             </div>
           </DialogContent>
@@ -584,6 +671,7 @@ const handleSubmitAsset = async (assetId: string) => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>S.No</TableHead>
                     <TableHead>Asset</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Location</TableHead>
@@ -594,8 +682,10 @@ const handleSubmitAsset = async (assetId: string) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAssets.map((asset) => (
-                    <TableRow key={asset.id || asset._id }>
+                  {paginatedAssets.map((asset, index) => (
+
+                    <TableRow key={asset.id || asset._id}>
+                      <TableCell>{getSerial(index)}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           {getCategoryIcon(asset.category)}
@@ -652,12 +742,54 @@ const handleSubmitAsset = async (assetId: string) => {
                               Assign
                             </Button>
                           )}
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(asset)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-gray-600">
+                  Showing {paginatedAssets.length} of {filteredAssets.length} assets
+                </p>
+
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                  >
+                    Previous
+                  </Button>
+
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <Button
+                      key={i}
+                      variant={currentPage === i + 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+
             </CardContent>
           </Card>
         </TabsContent>
