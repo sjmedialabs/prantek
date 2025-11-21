@@ -33,6 +33,40 @@ interface NavItem {
   submenu?: NavItem[];
 }
 
+
+// Helper function to check if user has an active subscription
+function hasActiveSubscription(user: any): boolean {
+  // Super admins always have access
+  if (user?.role === "super-admin") {
+    return true
+  }
+
+  // No subscription plan
+  if (!user?.subscriptionPlanId) {
+    return false
+  }
+
+  const status = user.subscriptionStatus
+
+  // If cancelled, check if still within validity period
+  if (status === "cancelled") {
+    if (!user.subscriptionEndDate) {
+      return false
+    }
+    const endDate = new Date(user.subscriptionEndDate)
+    const now = new Date()
+    return now <= endDate
+  }
+
+  // If expired or inactive, no access
+  if (status === "expired" || status === "inactive") {
+    return false
+  }
+
+  // Active or trial status
+  return status === "active" || status === "trial"
+}
+
 const navigationItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
   { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: null },
@@ -204,6 +238,11 @@ export default function DashboardSidebar() {
   const renderNavItem = (item: NavItem, level: number = 0, parentKey: string = "") => {
     // Check permission
     if (item.permission && !hasPermission(item.permission)) {
+      return null;
+    }
+
+    // If user doesn't have active subscription, only show Dashboard and Cashbook
+    if (!hasActiveSubscription(user) && item.permission !== null) {
       return null;
     }
 
