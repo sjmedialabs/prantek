@@ -28,14 +28,14 @@ export async function getCompanyDetails(): Promise<CompanyDetails> {
   // console.log("Fetched Company Details:",fetchedCompanyDetails);
   // Return default/placeholder data if nothing is saved
   return { 
-    companyName: fetchedCompanyDetails.companyName || "My Company",
-    address: fetchedCompanyDetails.address || "123 Main St, City, Country",
-    state: fetchedCompanyDetails.state || "State",
-    city:fetchedCompanyDetails.city || "City",
-    pincode:fetchedCompanyDetails.pincode || "000000",
-    logo: fetchedCompanyDetails.logo || "",
-    mobileNo1: fetchedCompanyDetails.phone || "123-456-7890",
-    email:fetchedCompanyDetails.email || "",
+    companyName: fetchedCompanyDetails?.companyName || "My Company",
+    address: fetchedCompanyDetails?.address || "123 Main St, City, Country",
+    state: fetchedCompanyDetails?.state || "State",
+    city:fetchedCompanyDetails?.city || "City",
+    pincode:fetchedCompanyDetails?.pincode || "000000",
+    logo: fetchedCompanyDetails?.logo || "",
+    mobileNo1: fetchedCompanyDetails?.phone || "123-456-7890",
+    email:fetchedCompanyDetails?.email || "",
   }
 }
 

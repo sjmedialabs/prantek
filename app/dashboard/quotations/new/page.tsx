@@ -144,6 +144,7 @@ export default function NewQuotationPage() {
       total: 0,
     },
   ])
+const today = new Date().toISOString().split("T")[0]
 
   const [activeTab, setActiveTab] = useState("client")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -161,7 +162,15 @@ export default function NewQuotationPage() {
     gst: "",
     pan: "",
   });
+const [sellerState, setSellerState] = useState("")
 
+useEffect(() => {
+   const loadCompany = async () => {
+     const comp = await api.company.get()
+     setSellerState(comp.state)
+   }
+   loadCompany()
+}, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -251,29 +260,45 @@ export default function NewQuotationPage() {
               updatedItem.price = masterItem.price
               updatedItem.itemId = masterItem._id;
 
-              if (masterItem.applyTax) {
+if (masterItem.applyTax) {
 
+  // 🔹 Fetch seller & buyer states
+  const buyer = clients.find(c => c._id === selectedClientId)
+  const buyerState = buyer?.state || ""
 
-                // Show all taxes in UI
-                updatedItem.cgst = masterItem.cgst || 0
-                updatedItem.sgst = masterItem.sgst || 0
-                updatedItem.igst = masterItem.igst || 0
+  // const gstRate =
+  //   (masterItem.cgst || 0) +
+  //   (masterItem.sgst || 0) +
+  //   (masterItem.igst || 0)
 
-                // ✅ TaxRate = sum of all applicable taxes
-                updatedItem.taxRate =
-                  (masterItem.cgst || 0) +
-                  (masterItem.sgst || 0) +
-                  (masterItem.igst || 0)
+  // 🔹 Same state → CGST + SGST
+  if (sellerState && buyerState && sellerState === buyerState) {
+    updatedItem.cgst = masterItem.cgst || 0
+    updatedItem.sgst = masterItem.sgst || 0
+    updatedItem.igst = 0
 
-                updatedItem.taxName = "CGST + SGST + IGST"
-              } else {
+    updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
+    updatedItem.taxName = "CGST + SGST"
+  }
+  // 🔹 Different state → IGST
+  else {
+    updatedItem.cgst = 0
+    updatedItem.sgst = 0
+    updatedItem.igst = masterItem.igst || 0
 
-                updatedItem.cgst = 0
-                updatedItem.sgst = 0
-                updatedItem.igst = 0
-                updatedItem.taxRate = 0
-                updatedItem.taxName = ""
-              }
+    updatedItem.taxRate = (masterItem.igst || 0)
+    updatedItem.taxName = "IGST"
+  }
+
+} else {
+
+  updatedItem.cgst = 0
+  updatedItem.sgst = 0
+  updatedItem.igst = 0
+  updatedItem.taxRate = 0
+  updatedItem.taxName = ""
+}
+
             }
           }
 
@@ -1108,12 +1133,12 @@ export default function NewQuotationPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="quotationNumber">Quotation/Agreement Number *</Label>
+                      <Label htmlFor="quotationNumber" required>Quotation/Agreement Number</Label>
                       <Input id="quotationNumber" value={quotationNumber} disabled className="bg-gray-50" />
                       <p className="text-xs text-gray-500 mt-1">Auto-generated</p>
                     </div>
                     <div>
-                      <Label htmlFor="date">Date *</Label>
+                      <Label htmlFor="date" required>Date</Label>
                       <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                       <p className="text-xs text-gray-500 mt-1">Default system date</p>
                     </div>
@@ -1123,6 +1148,7 @@ export default function NewQuotationPage() {
                     <Input
                       id="validityDate"
                       type="date"
+                      min={today}
                       value={validityDate}
                       onChange={(e) => setValidityDate(e.target.value)}
                     />
