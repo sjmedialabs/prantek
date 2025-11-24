@@ -5,13 +5,18 @@ import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
 import { withAuth } from "@/lib/api-auth"
 
+// ✅ helper
+function getIdFromRequest(req: NextRequest): string {
+  const segments = req.nextUrl.pathname.split("/")
+  return segments[segments.length - 1]
+}
+
 /**
  * GET /api/users/:id
  * Get a specific user by ID
  */
-export const GET = withAuth(async (req: NextRequest, context: { params: { id: string } }) => {
-  const { params } = context
-  const id = params?.id
+export const GET = withAuth(async (req: NextRequest) => {
+  const id = getIdFromRequest(req)
   
   if (!id || !ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Invalid user ID" }, { status: 400 })
@@ -49,9 +54,8 @@ export const GET = withAuth(async (req: NextRequest, context: { params: { id: st
  * PUT /api/users/:id
  * Update a user
  */
-export const PUT = withAuth(async (req: NextRequest, context: { params: { id: string } }) => {
-  const { params } = context
-  const id = params?.id
+export const PUT = withAuth(async (req: NextRequest) => {
+  const id = getIdFromRequest(req)
   
   if (!id || !ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Invalid user ID" }, { status: 400 })
@@ -136,9 +140,8 @@ export const PUT = withAuth(async (req: NextRequest, context: { params: { id: st
  * DELETE /api/users/:id
  * Delete a user
  */
-export const DELETE = withAuth(async (req: NextRequest, context: { params: { id: string } }) => {
-  const { params } = context
-  const id = params?.id
+export const DELETE = withAuth(async (req: NextRequest) => {
+  const id = getIdFromRequest(req)
   
   if (!id || !ObjectId.isValid(id)) {
     return NextResponse.json({ error: "Invalid user ID" }, { status: 400 })
