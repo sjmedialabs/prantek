@@ -10,6 +10,7 @@ import { api } from "@/lib/api-client"
 import { useUser } from "@/components/auth/user-context"
 import Link from "next/link"
 import { json } from "node:stream/consumers"
+import { SubscriptionPlan } from "@/lib/models/types"
 
 export default function PlansPage() {
   const router = useRouter()
@@ -20,8 +21,8 @@ export default function PlansPage() {
   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
   const loginedUserLocalStorage = loginedUserLocalStorageString
-  ? JSON.parse(loginedUserLocalStorageString)
-  : null;
+    ? JSON.parse(loginedUserLocalStorageString)
+    : null;
 
 
 
@@ -31,14 +32,14 @@ export default function PlansPage() {
       try {
         const plans = await api.subscriptionPlans.getAll()
 
-const activePlans = plans.filter((p: any) => p.isActive)
+        const activePlans = plans.filter((p: any) => p.isActive)
 
-const currentPlan = plans.find((eachItem: any) =>
-  eachItem._id.toString() === loginedUserLocalStorage.subscriptionPlanId
-)
+        const currentPlan = plans.find((eachItem: any) =>
+          eachItem._id.toString() === loginedUserLocalStorage.subscriptionPlanId
+        )
 
-setPlans(activePlans)
-setCurrentPlan(currentPlan) // This is now the single plan object
+        setPlans(activePlans)
+        setCurrentPlan(currentPlan) // This is now the single plan object
 
         // Only fetch current plan if user has a subscription
         console.log("[PLANS] User subscriptionPlanId:", user?.subscriptionPlanId)
@@ -97,12 +98,12 @@ setCurrentPlan(currentPlan) // This is now the single plan object
 
   const isCurrentPlan = (plan: SubscriptionPlan): boolean => {
     if (!currentPlan) return false
-    
+
     const currentPlanId = (currentPlan.id || currentPlan._id?.toString() || "").toLowerCase()
     const planId = (plan.id || plan._id?.toString() || "").toLowerCase()
-    
+
     const result = currentPlanId === planId && currentPlanId !== ""
-    console.log("[PLANS] Comparing:", plan.name, "("+planId+")", "with current:", currentPlan.name, "("+currentPlanId+")", "=>", result)
+    console.log("[PLANS] Comparing:", plan.name, "(" + planId + ")", "with current:", currentPlan.name, "(" + currentPlanId + ")", "=>", result)
     return result
   }
 
@@ -121,8 +122,8 @@ setCurrentPlan(currentPlan) // This is now the single plan object
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="mb-4"
             onClick={() => router.push('/dashboard/profile')}
           >
@@ -148,16 +149,24 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                   <div>
                     <CardTitle className="text-xl">Your Current Plan</CardTitle>
                     <CardDescription>
-                      You are currently subscribed to {currentPlan.name}
-                      {user?.subscriptionStatus === 'trial' && ' (Trial Period)'}
+                      You are currently subscribed to {currentPlan.name} plan
+                      {user?.subscriptionStatus === "trial" && " (Trial Period)"}
+                      {user?.subscriptionStatus === "cancelled" && " (Cancelled – plan ended)"}
+                      {user?.subscriptionStatus === "active" && " (Active)"}
+
                     </CardDescription>
                   </div>
                 </div>
-                {user?.subscriptionStatus === 'trial' ? (
+                {user?.subscriptionStatus === "trial" && (
                   <Badge className="bg-emerald-600 text-white">Trial</Badge>
-                ) : (
+                )}
+                {user?.subscriptionStatus === "active" && (
                   <Badge className="bg-blue-600 text-white">Active</Badge>
                 )}
+                {user?.subscriptionStatus === "cancelled" && (
+                  <Badge className="bg-red-600 text-white">Cancelled</Badge>
+                )}
+
               </div>
             </CardHeader>
             <CardContent>
@@ -227,7 +236,7 @@ setCurrentPlan(currentPlan) // This is now the single plan object
                     {isCurrent ? (
                       <Button disabled className="w-full bg-gray-400 text-white" size="default">
                         Current Plan
-                      </Button> 
+                      </Button>
                     ) : isDowngrade ? (
                       <Button
                         onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}

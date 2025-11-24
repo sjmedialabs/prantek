@@ -34,7 +34,7 @@ export interface User extends BaseDocument {
   address?: string
   avatar?: string
   subscriptionPlanId?: string
-  subscriptionStatus?: "active" | "inactive" | "trial" | "expired"
+  subscriptionStatus?: "active" | "inactive" | "trial" | "expired" | "cancelled"
   subscriptionStartDate?: Date
   subscriptionEndDate?: Date
   trialEndsAt?: Date
