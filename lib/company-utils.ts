@@ -1,4 +1,5 @@
 // Utility to fetch company details from settings
+import { api } from "@/lib/api-client"
 export interface CompanyDetails {
   logo?: string
   companyName: string
@@ -8,6 +9,9 @@ export interface CompanyDetails {
   email: string
   website?: string
   description?: string
+  state?:string
+  city?:string
+  pincode?:string
 }
 
 export async function getCompanyDetails(): Promise<CompanyDetails> {
@@ -20,12 +24,18 @@ export async function getCompanyDetails(): Promise<CompanyDetails> {
     }
   }
 
+  const fetchedCompanyDetails=await api.company.get();
+  // console.log("Fetched Company Details:",fetchedCompanyDetails);
   // Return default/placeholder data if nothing is saved
-  return {
-    companyName: "Your Company Name",
-    address: "123 Business Street, City, State 12345",
-    mobileNo1: "+1 (555) 123-4567",
-    email: "info@company.com",
+  return { 
+    companyName: fetchedCompanyDetails.companyName || "My Company",
+    address: fetchedCompanyDetails.address || "123 Main St, City, Country",
+    state: fetchedCompanyDetails.state || "State",
+    city:fetchedCompanyDetails.city || "City",
+    pincode:fetchedCompanyDetails.pincode || "000000",
+    logo: fetchedCompanyDetails.logo || "",
+    mobileNo1: fetchedCompanyDetails.phone || "123-456-7890",
+    email:fetchedCompanyDetails.email || "",
   }
 }
 

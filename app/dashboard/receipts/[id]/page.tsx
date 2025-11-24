@@ -32,6 +32,7 @@ export default function ReceiptDetailsPage() {
       const data = await api.receipts.getById(receiptId)
       console.log("Getting recipt data from api",data)
       setReceipt(data)
+
     } catch (error) {
       setReceipt(null)
     } finally {
@@ -250,7 +251,7 @@ export default function ReceiptDetailsPage() {
                             {item.type}
                           </Badge>
                         </div>
-                        <p className="font-bold text-lg">₹{item.total?.toLocaleString() || "0"}</p>
+                        <p className="font-bold text-lg">₹{(((item.price*item.quantity)-item.discount)+(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100))?.toLocaleString() || "0"}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -268,11 +269,11 @@ export default function ReceiptDetailsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{item.amount?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{((item.price*item.quantity)-item.discount)?.toLocaleString() || "0"}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
-                          <p className="font-semibold">₹{item.taxAmount?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100)?.toLocaleString() || "0"}</p>
                         </div>
                       </div>
                     </div>
@@ -328,11 +329,11 @@ export default function ReceiptDetailsPage() {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-semibold">₹{(receipt.subtotal || 0).toLocaleString()}</span>
+                <span className="font-semibold">₹{((receipt.total-receipt.taxAmount) || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total Tax</span>
-                <span className="font-semibold">₹{(receipt.totalTax || 0).toLocaleString()}</span>
+                <span className="font-semibold">₹{(receipt.taxAmount || 0).toLocaleString()}</span>
               </div>
               <Separator />
               <div className="flex justify-between text-lg">
