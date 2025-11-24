@@ -156,7 +156,7 @@ export default function CreateReceiptPage() {
       const quotationPayloadUpdate = {
         paidAmount: totalAmountPaid,
         balanceAmount: totalAmountBalance,
-        // status: totalAmountBalance <= 0 ? "completed" : "partial"
+        status: totalAmountBalance <= 0 ? "completed" : "partial"
       }
       console.log("Updating quotation with:", quotationPayloadUpdate)
       await api.quotations.update(selectedQuotation._id || selectedQuotation.id, quotationPayloadUpdate)
@@ -231,7 +231,7 @@ export default function CreateReceiptPage() {
         {/* Quotation Selection */}
         <Card>
           <CardHeader>
-            <CardTitle>Select Quotation/Agreement *</CardTitle>
+            <CardTitle>Select Quotation/Agreement</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2 items-center">
@@ -335,7 +335,7 @@ export default function CreateReceiptPage() {
                 </div> */}
 
                 <div>
-                  <Label htmlFor="date">Payment Date *</Label>
+                  <Label htmlFor="date" required>Payment Date</Label>
                   <Input
                     id="date"
                     type="date"
@@ -348,7 +348,7 @@ export default function CreateReceiptPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="paymentMethod">Payment Method *</Label>
+                  <Label htmlFor="paymentMethod" required>Payment Method</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                     <SelectTrigger>
                       <SelectValue />
@@ -363,7 +363,7 @@ export default function CreateReceiptPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="paymentType">Payment Type *</Label>
+                  <Label htmlFor="paymentType" required>Payment Type</Label>
                   <Select value={paymentType} onValueChange={(value:any) => setPaymentType(value)} required>
                     <SelectTrigger>
                       <SelectValue />
@@ -387,7 +387,7 @@ export default function CreateReceiptPage() {
               {paymentType === "Partial" && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="paymentAmount">Payment Amount *</Label>
+                    <Label htmlFor="paymentAmount" required>Payment Amount</Label>
                     <Input id="paymentAmount" type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(Number.parseFloat(e.target.value) || 0)} required min="0" max={receiptTotal} step="0.01" />
                     <p className="text-xs text-gray-500 mt-1">Amount being paid now</p>
                   </div>
