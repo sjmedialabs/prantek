@@ -24,7 +24,21 @@ export default function QuotationDetailsPage() {
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [quotation, setQuotation] = useState<Quotation | null>(null)
   const [loading, setLoading] = useState(true)
-
+const [sellerState, setSellerState] = useState("")
+const [buyerState, setBuyerState] = useState("")
+useEffect(() => {
+  const client = async () => {
+    const clientData = await api.clients.getById(quotation?.clientId || "" )
+   setBuyerState(clientData.state || "")
+  }
+})
+useEffect(() => {
+   const loadCompany = async () => {
+     const comp = await api.company.get()
+     setSellerState(comp.state)
+   }
+   loadCompany()
+}, [])
   useEffect(() => {
     getCompanyDetails().then(setCompanyDetails)
     loadQuotation()
@@ -66,36 +80,80 @@ export default function QuotationDetailsPage() {
       </div>
     )
   }
+// Calculate total tax
+const invoiceTaxTotal = quotation.items.reduce((acc, item) => {
+  const net = item.quantity * item.price * (1 - (item.discount || 0) / 100);
 
-  const quotationForPrint = {
-    quotationNumber: quotation.quotationNumber,
-    date: quotation.date,
-    validityDate: quotation.validity,
-    note: quotation.note || "",
-    client: {
-      name: quotation.clientName,
-      address: quotation.clientAddress || "",
-      phone: quotation.clientPhone || "",
-      email: quotation.clientEmail,
-    },
-    items: (quotation.items || []).map((item) => ({
+  let gstRate = 0;
+
+  // Same state → CGST + SGST
+  const cgst = item.cgst || 0, sgst = item.sgst || 0, igst = item.igst || 0;
+
+  if (sellerState === buyerState) {
+ gstRate = cgst + sgst;
+  } else {
+    gstRate = igst;
+  }
+
+  const taxAmount = net * (cgst + sgst + igst) / 100;
+  return acc + taxAmount;
+}, 0);
+
+
+// Build print template object
+const quotationForPrint = {
+  quotationNumber: quotation.quotationNumber,
+  date: quotation.date,
+  validityDate: quotation.validity,
+  note: quotation.note || "",
+  client: {
+    name: quotation.clientName,
+    phone: quotation.clientPhone || "",
+    email: quotation.clientEmail,
+  },
+  items: quotation.items.map((item) => {
+    const net = item.quantity * item.price * (1 - (item.discount || 0) / 100);
+
+    let gstRate = 0;
+
+    const cgst = item.cgst || 0, sgst = item.sgst || 0, igst = item.igst || 0;
+    let taxName = "";
+
+    if (sellerState === buyerState) {
+      gstRate = cgst + sgst;
+      taxName = "CGST + SGST";
+    } else {
+      gstRate = igst;
+      taxName = "IGST";
+    }
+
+    const taxAmount = net * (cgst + sgst + igst) / 100;
+
+    return {
       name: item.itemName,
       description: item.description,
       quantity: item.quantity,
       price: item.price,
       discount: item.discount || 0,
-      taxName: item.taxName,
-      taxRate: item.taxRate,
-    })),
-    status: quotation.status === "accepted" ? "Accepted" : "Pending",
-    acceptedDate: quotation.acceptedDate,
-  }
-  const invoiceTaxTotal = quotation.items.reduce((acc, item) => {
-  const net = (item.quantity * item.price) * (1 - item.discount / 100);
-  return acc + (net * ((item.cgst + item.sgst + item.igst) / 100));
-}, 0);
+      net,
+      cgst,
+      sgst,
+      igst,
+      gstRate,
+      taxAmount,
+      itemTotal: net + taxAmount,
+      taxName,
+    };
+  }),
+  total: quotation.grandTotal - invoiceTaxTotal,
+  taxTotal: invoiceTaxTotal,
+  grandTotal: quotation.grandTotal,
+  status: quotation.status === "pending"? "Pending": "Cleared",
+  acceptedDate: quotation.acceptedDate,
+};
 
-  console.log("Quatation for Print ::",quotationForPrint.items[0].name);
+
+  console.log("Quatation for Print ::",quotationForPrint.items);
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":

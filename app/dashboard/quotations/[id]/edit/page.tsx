@@ -52,7 +52,8 @@ export default function EditQuotationPage() {
 
   const [clients, setClients] = useState<any[]>([])
   const [masterItems, setMasterItems] = useState<any[]>([])
-  
+  const [paidAmount, setPaidAmount] = useState(0);
+  const [balanceAmount, setBalanceAmount] = useState(0);
   const [activeTab, setActiveTab] = useState("client")
 
   interface QuotationItem {
@@ -106,7 +107,8 @@ export default function EditQuotationPage() {
       setDate(data.date ?? "")
       setValidityDate(data.validity ?? "")
       setNote(data.note ?? "")
-
+      setPaidAmount(data.paidAmount ?? 0)
+      setBalanceAmount(data.balanceAmount ?? 0)
       setSelectedClientId(data.clientId ?? "")
       setClientName(data.clientName ?? "")
       setClientAddress(data.clientAddress ?? "")
@@ -327,6 +329,8 @@ async function handleSave() {
       itemId: i.itemId,
     })),
     grandTotal: quotationTotal,
+    paidAmount: paidAmount,
+    balanceAmount: quotationTotal - paidAmount,
     status: "pending",
   }
 
