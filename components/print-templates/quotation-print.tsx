@@ -3,6 +3,9 @@ interface QuotationPrintProps {
     quotationNumber: string
     date: string
     validityDate?: string
+    grandTotal?: number
+    total?: number
+    taxTotal?: number
     note?: string
     client: {
       name: string
@@ -17,7 +20,8 @@ interface QuotationPrintProps {
       price: number
       discount: number
       taxName?: string
-      taxRate: number
+      gstRate: number
+      itemTotal: number
     }>
     status?: string
     acceptedDate?: string
@@ -45,9 +49,9 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
 
   const totalTax = quotation.items.reduce((sum, item) => {
     const amount = (item.price - item.discount) * item.quantity
-    return sum + amount * (item.taxRate / 100)
+    return sum + amount * (item.gstRate / 100)
   }, 0)
-
+console.log("items array", quotation.items)
   const grandTotal = subtotal + totalTax
 
   return (
@@ -63,8 +67,8 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
             />
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{companyDetails?.name || "Company Name"}</h1>
-            <p className="text-sm text-gray-600 mt-1">{companyDetails?.address}</p>
+            <h1 className="text-2xl font-bold text-gray-900 py-2">{companyDetails?.name || "Company Name"}</h1>
+            <p className="text-sm text-gray-600">{companyDetails?.address}</p>
             <p className="text-sm text-gray-600">
               Phone: {companyDetails?.phone} | Email: {companyDetails?.email}
             </p>
@@ -72,15 +76,15 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
           </div>
         </div>
         <div className="text-right">
-          <h2 className="text-3xl font-bold text-blue-600">QUOTATION</h2>
-          <p className="text-sm text-gray-600 mt-2">#{quotation.quotationNumber}</p>
+          <h2 className="text-3xl font-bold text-blue-600 py-2">QUOTATION</h2>
+          <p className="text-sm text-gray-600">#{quotation.quotationNumber}</p>
         </div>
       </div>
 
       {/* Quotation and Client Details */}
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">BILL TO:</h3>
+          <h3 className="text-sm font-semibold text-gray-700 py-2">BILL TO:</h3>
           <div className="text-sm">
             <p className="font-semibold text-gray-900">{quotation.client.name}</p>
             {quotation.client.address && <p className="text-gray-600">{quotation.client.address}</p>}
@@ -115,7 +119,7 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
       </div>
 
       {/* Items Table */}
-      <table className="w-full mb-8">
+      <table className="w-full pb-8">
         <thead>
           <tr className="bg-gray-100 border-b-2 border-gray-300">
             <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Item</th>
@@ -128,7 +132,7 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
         </thead>
         <tbody>
           {quotation.items.map((item, index) => (
-            <tr key={index} className="border-b border-gray-200">
+            <tr key={index} className="border-b border-t border-gray-200">
               <td className="py-3 px-4">
                 <p className="text-sm font-medium text-gray-900">{item.name}</p>
                 {item.description && <p className="text-xs text-gray-600">{item.description}</p>}
@@ -137,10 +141,10 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
               <td className="text-right py-3 px-4 text-sm text-gray-900">₹{item.price.toFixed(2)}</td>
               <td className="text-right py-3 px-4 text-sm text-gray-900">₹{item.discount.toFixed(2)}</td>
               <td className="text-right py-3 px-4 text-sm text-gray-600">
-                {item.taxName} ({item.taxRate}%)
+                {item.taxName} ({item.gstRate}%)
               </td>
               <td className="text-right py-3 px-4 text-sm font-medium text-gray-900">
-                ₹{calculateItemTotal(item).toFixed(2)}
+                ₹{item.itemTotal.toFixed(2)}
               </td>
             </tr>
           ))}
@@ -152,15 +156,15 @@ export function QuotationPrint({ quotation, companyDetails }: QuotationPrintProp
         <div className="w-64">
           <div className="flex justify-between py-2 text-sm">
             <span className="text-gray-700">Subtotal:</span>
-            <span className="text-gray-900 font-medium">₹{subtotal.toFixed(2)}</span>
+            <span className="text-gray-900 font-medium">₹{(quotation?.total || 0).toFixed(2)}</span>
           </div>
           <div className="flex justify-between py-2 text-sm">
             <span className="text-gray-700">Tax:</span>
-            <span className="text-gray-900 font-medium">₹{totalTax.toFixed(2)}</span>
+            <span className="text-gray-900 font-medium">₹{(quotation?.taxTotal || 0).toFixed(2)}</span>
           </div>
           <div className="flex justify-between py-3 border-t-2 border-gray-300">
             <span className="text-lg font-bold text-gray-900">Grand Total:</span>
-            <span className="text-lg font-bold text-blue-600">₹{grandTotal.toFixed(2)}</span>
+            <span className="text-lg font-bold text-blue-600">₹{(quotation?.grandTotal || 0).toFixed(2)}</span>
           </div>
         </div>
       </div>
