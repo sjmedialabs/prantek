@@ -4,6 +4,7 @@ import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   const { searchParams } = new URL(req.url)
   const page = Number.parseInt(searchParams.get("page") || "1")
@@ -12,13 +13,13 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
 
   const logs = await db
     .collection(Collections.ACTIVITY_LOGS)
-    .find({ userId: user.userId })
+    .find({ userId: filterUserId })
     .sort({ timestamp: -1 })
     .skip(skip)
     .limit(limit)
     .toArray()
 
-  const total = await db.collection(Collections.ACTIVITY_LOGS).countDocuments({ userId: user.userId })
+  const total = await db.collection(Collections.ACTIVITY_LOGS).countDocuments({ userId: filterUserId })
 
   return NextResponse.json({
     data: logs,

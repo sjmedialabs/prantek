@@ -16,6 +16,7 @@ function getIdFromRequest(req: NextRequest): string {
 ==================================================
 */
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
 
   const id = getIdFromRequest(req)
@@ -43,6 +44,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
 ==================================================
 */
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   const data = await req.json()
 

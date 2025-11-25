@@ -11,12 +11,16 @@ function getIdFromRequest(req: NextRequest): string {
 
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
     const id = getIdFromRequest(req)
   const employee = await db
 
     .collection(Collections.EMPLOYEES)
-    .findOne({ _id: new ObjectId(id), userId: String(user.id) },)
+    .findOne({ _id: new ObjectId(id), userId: String(filterUserId) },)
 
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 })
@@ -36,7 +40,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const result = await db
     .collection(Collections.EMPLOYEES)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), userId: String(user.id) },
+      { _id: new ObjectId(id), userId: String(filterUserId) },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" }
     )
@@ -55,7 +59,7 @@ export const DELETE = withAuth(async (req: NextRequest, user: any) => {
   const id = getIdFromRequest(req)
   const result = await db
     .collection(Collections.EMPLOYEES)
-    .deleteOne({ _id: new ObjectId(id), userId: String(user.id) },)
+    .deleteOne({ _id: new ObjectId(id), userId: String(filterUserId) },)
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 })

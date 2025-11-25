@@ -9,12 +9,16 @@ function getIdFromRequest(req: NextRequest) {
 }
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
   const id = getIdFromRequest(req)
 
   const item = await db.collection(Collections.PAYMENT_METHODS).findOne({
     _id: new ObjectId(id),
-    userId: String(user.id),
+    userId: String(filterUserId),
   })
 
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -32,7 +36,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   delete body.id
 
   const updated = await db.collection(Collections.PAYMENT_METHODS).findOneAndUpdate(
-    { _id: new ObjectId(id), userId: String(user.id) },
+    { _id: new ObjectId(id), userId: String(filterUserId) },
     { $set: { ...body, updatedAt: new Date() } },
     { returnDocument: "after" }
   )
@@ -50,7 +54,7 @@ export const DELETE = withAuth(async (req: NextRequest, user: any) => {
 
   await db.collection(Collections.PAYMENT_METHODS).deleteOne({
     _id: new ObjectId(id),
-    userId: String(user.id),
+    userId: String(filterUserId),
   })
 
   return NextResponse.json({ message: "Deleted successfully" })
