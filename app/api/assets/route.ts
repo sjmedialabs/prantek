@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
+import { createNotification } from "@/lib/notification-utils"
 
 // ------------------- GET (NO AUTH, BUT NEEDS USER ID) -------------------
 export const GET = async (req: NextRequest) => {
@@ -46,6 +47,17 @@ export const POST = async (req: NextRequest) => {
     }
 
     const result = await db.collection(Collections.ASSETS).insertOne(asset)
+    try{
+     await createNotification({
+        userId: data.userId,
+        type: "asset",
+        title: "New Asset Created",
+        message: "A new asset has been created: " + data.name,
+        link: `/dashboard/assets`
+     })
+    }catch(err){
+      console.error("Error creating notification for new asset:", err)
+    }
 
     return NextResponse.json({ ...asset, _id: result.insertedId, success: true })
   } catch (err: any) {
