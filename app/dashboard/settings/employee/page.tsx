@@ -17,7 +17,7 @@ import { api } from "@/lib/api-client"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { MultiDocumentUpload } from "@/components/multi-document-upload"
-import { Table, TableBody, TableCell, TableCell, TableHead, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
 
 interface DocumentItem {
   id: string

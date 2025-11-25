@@ -7,13 +7,17 @@ function getId(req: NextRequest) {
   return req.nextUrl.pathname.split("/").pop()!
 }
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
     const id = getId(req)
   const bankAccount = await db
     .collection(Collections.BANK_ACCOUNTS)
     .findOne({
     _id: new ObjectId(id),
-    userId: String(user.id),
+    userId: String(filterUserId),
   })
 
   if (!bankAccount) {
@@ -33,7 +37,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
     .findOneAndUpdate(
 {
     _id: new ObjectId(id),
-    userId: String(user.id),
+    userId: String(filterUserId),
   },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },

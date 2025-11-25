@@ -5,13 +5,14 @@ import { withAuth } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 
 export const PUT = withAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   const data = await req.json()
 
   const result = await db
     .collection(Collections.TEAM_MEMBERS)
     .findOneAndUpdate(
-      { _id: new ObjectId(params.id), userId: user.userId },
+      { _id: new ObjectId(params.id), userId: filterUserId },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -24,11 +25,12 @@ export const PUT = withAuth(async (req: NextRequest, user: any, { params }: { pa
 })
 
 export const DELETE = withAuth(async (req: NextRequest, user: any, { params }: { params: { id: string } }) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
 
   const result = await db
     .collection(Collections.TEAM_MEMBERS)
-    .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
+    .deleteOne({ _id: new ObjectId(params.id), userId: filterUserId })
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Team member not found" }, { status: 404 })

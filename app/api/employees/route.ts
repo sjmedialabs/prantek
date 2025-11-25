@@ -5,10 +5,11 @@ import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   
   // Super admins can see all employees, others see only their own
-  const query = user.role === "super-admin" ? {} : { userId: user.userId }
+  const query = user.role === "super-admin" ? {} : { userId: filterUserId }
   const employees = await db.collection(Collections.EMPLOYEES).find(query).toArray()
 
   return NextResponse.json(employees)

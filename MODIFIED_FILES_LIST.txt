@@ -1,0 +1,44 @@
+MODIFIED API ROUTE FILES - Admin User Role Support
+==================================================
+
+Total: 20+ route files updated with filterUserId logic
+
+CORE SETTINGS & CONFIGURATION:
+- app/api/tax-settings/route.ts
+- app/api/company/route.ts
+- app/api/tax-rates/[id]/route.ts
+- app/api/receipt-categories/[id]/route.ts
+- app/api/payment-categories/[id]/route.ts
+
+USER & ROLE MANAGEMENT:
+- app/api/roles/route.ts
+- app/api/roles/[id]/route.ts
+- app/api/member-types/[id]/route.ts
+- app/api/team-members/route.ts
+- app/api/team-members/[id]/route.ts
+
+FINANCIAL & PAYMENT MANAGEMENT:
+- app/api/payment-methods/[id]/route.ts
+- app/api/recipient-types/[id]/route.ts
+- app/api/payments/[id]/route.ts
+- app/api/bank-accounts/[id]/route.ts
+- app/api/reconciliation/route.ts
+
+EMPLOYEE & ASSET MANAGEMENT:
+- app/api/employees/route.ts
+- app/api/employees/[id]/route.ts
+- app/api/employees/send-credentials/route.ts
+- app/api/items/[id]/route.ts
+
+OTHER:
+- app/api/website-content/[id]/route.ts
+- app/api/activity-logs/route.ts
+
+DOCUMENTATION:
++ ADMIN_USER_ROLE_UPDATE_SUMMARY.md (NEW)
++ MODIFIED_FILES_LIST.txt (NEW)
+
+VERIFICATION:
+✓ 68 route handlers with filterUserId pattern
+✓ 0 remaining user.id usage
+✓ All GET, POST, PUT, DELETE operations covered

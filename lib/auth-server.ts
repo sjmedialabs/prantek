@@ -59,6 +59,7 @@ async function authenticateAdminUser(email: string, password: string): Promise<A
     role: "admin-user",
     userType: "admin-user",
     companyId: adminUser.companyId,
+    isAdminUser: true, // ✅ CRITICAL: This enables admin-user to access parent's data
     permissions: adminUser.permissions || [],
     roleId: adminUser.roleId || null,
     ...subscriptionData
@@ -104,6 +105,7 @@ async function authenticateCompanyOwner(email: string, password: string): Promis
     role: user.role || "admin",
     userType: user.userType,
     companyId: user._id.toString(), // owner is root
+    isAdminUser: false, // ✅ Regular admin, not an admin-user
     permissions: user.permissions || [],
     subscriptionPlanId: user.subscriptionPlanId,
     subscriptionStatus: user.subscriptionStatus,

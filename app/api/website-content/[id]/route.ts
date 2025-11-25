@@ -9,6 +9,10 @@ function getIdFromRequest(req: NextRequest): string {
 }
 
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
   const data = await req.json()
   const id = getIdFromRequest(req)
@@ -16,7 +20,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   // Build filter - super-admin can update any content
   const filter: any = { _id: new ObjectId(id) }
   if (user.role !== "super-admin") {
-    filter.userId = String(user.id)
+    filter.userId = String(filterUserId)
   }
   
   const contentData = await db
@@ -35,13 +39,17 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
 })
 
 export const DELETE = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
   const id = getIdFromRequest(req)
   
   // Build filter - super-admin can delete any content
   const filter: any = { _id: new ObjectId(id) }
   if (user.role !== "super-admin") {
-    filter.userId = user.userId
+    filter.userId = String(filterUserId)
   }
   
   const result = await db

@@ -11,13 +11,17 @@ function getIdFromRequest(req: NextRequest): string {
 }
 
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
   const data = await req.json()
   const id = getIdFromRequest(req)
   const Data = await db
     .collection(Collections.RECIPIENT_TYPES)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), userId: String(user.id) },
+      { _id: new ObjectId(id), userId: String(filterUserId) },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )

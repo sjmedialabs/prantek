@@ -10,13 +10,17 @@ function getIdFromRequest(req: NextRequest): string {
 }
 
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const db = await connectDB()
   const data = await req.json()
   const id = getIdFromRequest(req)
   const result = await db
     .collection(Collections.MEMBER_TYPES)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), userId: String(user.id) },
+      { _id: new ObjectId(id), userId: String(filterUserId) },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -33,7 +37,7 @@ export const DELETE = withAuth(async (req: NextRequest, user: any) => {
   const id = getIdFromRequest(req)
   const result = await db
     .collection(Collections.MEMBER_TYPES)
-    .deleteOne({ _id: new ObjectId(id), userId: String(user.id) },)
+    .deleteOne({ _id: new ObjectId(id), userId: String(filterUserId) },)
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Member type not found" }, { status: 404 })
