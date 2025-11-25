@@ -137,3 +137,65 @@ export async function authenticateUser(email: string, password: string) {
 
   return null
 }
+
+// Super admin authentication (checks both collections)
+export async function authenticateSuperAdmin(email: string, password: string): Promise<AuthTokens | null> {
+  console.log('[AUTH-SERVER] authenticateSuperAdmin() called for:', email)
+  
+  const db = await connectDB()
+  
+  // Check ADMIN_USERS collection first
+  let admin = await db.collection(Collections.ADMIN_USERS).findOne({ 
+    email,
+    role: "super-admin"
+  })
+
+  // Fallback to USERS collection for backward compatibility
+  if (!admin) {
+    admin = await db.collection(Collections.USERS).findOne({ 
+      email,
+      $or: [{ role: "superadmin" }, { role: "super-admin" }]
+    })
+  }
+
+  if (!admin) {
+    console.log('[AUTH-SERVER] No super admin found with email:', email)
+    return null
+  }
+
+  console.log('[AUTH-SERVER] Super admin found:', admin.email, 'with role:', admin.role)
+  console.log('[AUTH-SERVER] Testing password...')
+  
+  const isPasswordValid = await bcrypt.compare(password, admin.password)
+  console.log('[AUTH-SERVER] Password comparison result:', isPasswordValid)
+  
+  if (!isPasswordValid) {
+    console.log('[AUTH-SERVER] Password invalid')
+    return null
+  }
+
+  console.log('[AUTH-SERVER] Generating tokens...')
+  const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
+    userId: admin._id.toString(),
+    email: admin.email,
+    role: "super-admin" as const,
+    permissions: admin.permissions || [],
+  }
+
+  const accessToken = await generateAccessToken(tokenPayload, "15m")
+  const refreshToken = await generateRefreshToken(tokenPayload, "7d")
+
+  console.log('[AUTH-SERVER] Tokens generated successfully')
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: admin._id.toString(),
+      email: admin.email,
+      name: admin.name,
+      role: "super-admin" as const,
+      permissions: admin.permissions || [],
+    },
+  }
+}
