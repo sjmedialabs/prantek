@@ -57,7 +57,7 @@ interface Role {
 
 const DESIGNATIONS = [
   "System Administrator",
-  "HR Manager", 
+  "HR Manager",
   "Finance Manager",
   "Operations Manager",
   "Accountant",
@@ -88,18 +88,19 @@ export default function UsersPage() {
     fetchRoles()
   }, [])
 
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("/api/users")
-      const data = await response.json()
-      if (data.success) {
-        setUsers(data.users || data.data || [])
-      }
-    } catch (error) {
-      toast.error("Failed to fetch users")
-      console.error(error)
+const fetchUsers = async () => {
+  try {
+    const response = await fetch("/api/users?userType=admin-user")
+    const data = await response.json()
+
+    if (data.success) {
+      setUsers(data.users || [])
     }
+  } catch (error) {
+    toast.error("Failed to fetch admin users")
   }
+}
+
 
   const fetchRoles = async () => {
     try {
@@ -113,37 +114,42 @@ export default function UsersPage() {
     }
   }
 
-  const handleAddUser = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error("Name, email, and password are required")
-      return
-    }
+const handleAddUser = async () => {
+  if (!formData.name || !formData.email || !formData.password) {
+    toast.error("Name, email, and password are required")
+    return
+  }
 
-    try {
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-        ...formData,
+  try {
+    const response = await fetch("/api/users?userType=admin-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        userType: "admin-user",
         roleId: formData.roleId === "none" ? null : formData.roleId
       }),
-      })
+    })
 
-      const data = await response.json()
+    const data = await response.json()
 
-      if (data.success) {
-        toast.success("Admin user created successfully")
-        setIsAddDialogOpen(false)
-        resetForm()
-        fetchUsers()
-      } else {
-        toast.error(data.error || "Failed to create user")
-      }
-    } catch (error) {
-      toast.error("Failed to create user")
-      console.error(error)
+    if (data.success) {
+      toast.success("Admin user created successfully")
+      setIsAddDialogOpen(false)
+      resetForm()
+      fetchUsers()
+    } else {
+      toast.error(data.error || "Failed to create user")
     }
+  } catch (error) {
+    toast.error("Failed to create user")
+    console.error(error)
   }
+}
+
 
   const handleEditUser = async () => {
     if (!editingUser) return
@@ -157,6 +163,7 @@ export default function UsersPage() {
         role: formData.role,
         roleId: formData.roleId === "none" ? null : (formData.roleId || null),
         isActive: formData.isActive,
+        userType: "admin-user",
       }
 
       // Only include password if it's been changed
@@ -324,8 +331,8 @@ export default function UsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {user.lastLogin 
-                        ? new Date(user.lastLogin).toLocaleDateString() 
+                      {user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleDateString()
                         : "Never"}
                     </TableCell>
                     <TableCell className="text-right">
@@ -363,7 +370,7 @@ export default function UsersPage() {
               Create a new user with dashboard access and credentials
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 overflow-y-scroll max-h-[70vh]">
             <div className="grid gap-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -413,23 +420,8 @@ export default function UsersPage() {
                 placeholder="+1234567890"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="role">Access Level</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: "admin" | "super-admin") =>
-                  setFormData({ ...formData, role: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super-admin">Super Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Hidden. Admin-user has fixed role */}
+            <input type="hidden" value="admin-user" />
             <div className="grid gap-2">
               <Label htmlFor="roleId">Assign Role (Optional)</Label>
               <Select

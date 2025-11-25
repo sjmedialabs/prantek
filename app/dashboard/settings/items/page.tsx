@@ -246,7 +246,7 @@ const handleSave = async () => {
               Add Product/Service
             </Button>
           </DialogTrigger>
-          <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+          <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
             <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
               <DialogHeader>
                 <DialogTitle>{editingItem ? "Edit Product/Service" : "Add New Product/Service"}</DialogTitle>
@@ -312,8 +312,9 @@ const handleSave = async () => {
                     required
                   />
                 </div>
-
-                <div className="space-y-2">
+                
+                {formData.type === "product" ? (
+                  <div className="space-y-2">
                   <Label htmlFor="hsnCode">HSN Code</Label>
                   <Input
                     id="hsnCode"
@@ -322,6 +323,17 @@ const handleSave = async () => {
                     placeholder="Enter HSN code"
                   />
                 </div>
+                ): (
+                  <div className="space-y-2">
+                  <Label htmlFor="hsnCode">SAC Code</Label>
+                  <Input
+                    id="hsnCode"
+                    value={formData.hsnCode}
+                    onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                    placeholder="Enter SAC code"
+                  />
+                </div>
+                )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>

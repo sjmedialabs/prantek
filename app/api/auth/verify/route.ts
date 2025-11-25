@@ -1,54 +1,62 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { verifyToken } from "@/lib/jwt"
 import { connectDB } from "@/lib/mongodb"
-import { COLLECTIONS } from "@/lib/db-config"
+import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {
   try {
-    // Try to get token from Authorization header first
-    const authHeader = request.headers.get("authorization")
-    let token = null
-    
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.substring(7)
-    }
-    
-    // If no token in header, try cookies
-    if (!token) {
-      token = request.cookies.get("auth_token")?.value || request.cookies.get("accessToken")?.value || null
-    }
-    
+    let token =
+      request.headers.get("authorization")?.replace("Bearer ", "") ||
+      request.cookies.get("auth_token")?.value ||
+      request.cookies.get("accessToken")?.value ||
+      null
+
     if (!token) {
       return NextResponse.json({ error: "No token provided" }, { status: 401 })
     }
 
     const payload = await verifyToken(token)
-
     if (!payload) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    // Fetch user from database (check ADMIN_USERS first, then regular users)
     const db = await connectDB()
+
     let user = null
     let isAdminUser = false
-    
+
+    /**************************************
+     * 1️⃣ TRY ADMIN_USERS COLLECTION
+     **************************************/
     try {
-      // Fetch user from USERS collection
-      user = await db.collection(COLLECTIONS.USERS).findOne({ 
+      user = await db.collection(Collections.ADMIN_USERS).findOne({
         _id: new ObjectId(payload.userId)
       })
     } catch {
-      // If ObjectId conversion fails, try searching by string id
-      user = await db.collection(COLLECTIONS.USERS).findOne({ 
+      user = await db.collection(Collections.ADMIN_USERS).findOne({
         _id: payload.userId as any
       })
     }
-    
-    // Determine if user is an admin user based on userType field
+
     if (user) {
-      isAdminUser = user.userType === "admin" // Admin users created via User Management
+      isAdminUser = true
+    }
+
+    /**************************************
+     * 2️⃣ IF NOT FOUND → TRY USERS COLLECTION
+     **************************************/
+    if (!user) {
+      try {
+        user = await db.collection(Collections.USERS).findOne({
+          _id: new ObjectId(payload.userId)
+        })
+      } catch {
+        user = await db.collection(Collections.USERS).findOne({
+          _id: payload.userId as any
+        })
+      }
+      isAdminUser = false
     }
 
     if (!user) {
@@ -60,21 +68,23 @@ export async function GET(request: NextRequest) {
         id: user._id.toString(),
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: isAdminUser ? "admin-user" : user.role,
+        userType: isAdminUser ? "admin-user" : user.userType,
         roleId: user.roleId,
         permissions: user.permissions || payload.permissions || [],
-        isAdminUser: isAdminUser, // Distinguish admin users from account owners
-        clientId: user.clientId,
-        companyId: user.companyId,
+        isAdminUser,
+        companyId: user.companyId || payload.companyId,
         phone: user.phone,
         address: user.address,
         profilePicture: user.profilePicture,
-        subscriptionPlanId: user.subscriptionPlanId || payload.subscriptionPlanId,
-        subscriptionStatus: user.subscriptionStatus || payload.subscriptionStatus,
-        subscriptionStartDate: user.subscriptionStartDate || payload.subscriptionStartDate,
-        subscriptionEndDate: user.subscriptionEndDate || payload.subscriptionEndDate,
-        trialEndsAt: user.trialEndsAt || payload.trialEndsAt,
-      },
+
+        // Subscription info (from payload or parent account)
+        subscriptionPlanId: payload.subscriptionPlanId || user.subscriptionPlanId,
+        subscriptionStatus: payload.subscriptionStatus || user.subscriptionStatus,
+        subscriptionStartDate: payload.subscriptionStartDate || user.subscriptionStartDate,
+        subscriptionEndDate: payload.subscriptionEndDate || user.subscriptionEndDate,
+        trialEndsAt: payload.trialEndsAt || user.trialEndsAt,
+      }
     })
   } catch (error) {
     console.error("[AUTH-VERIFY] Error:", error)

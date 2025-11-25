@@ -14,6 +14,7 @@ interface User {
   permissions?: string[]
   isAdminUser?: boolean // True if created via User Management, false if account owner
   phone?: string
+  userType?: "admin-user" | "subscriber" | "admin" | "super-admin"
   address?: string
   avatar?: string
   subscriptionPlanId?: string
