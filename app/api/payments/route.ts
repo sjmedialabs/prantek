@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity, generateNextNumber } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
-import { notifyAdminsNewPayment } from "@/lib/notification-utils"
+import { createNotification, notifyAdminsNewPayment } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -53,12 +53,13 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Notify admins about new payment
     try {
-      await notifyAdminsNewPayment(
-        payment._id?.toString() || "",
-        body.paymentNumber,
-        body.amount,
-        user.companyId
-      )
+      await createNotification({
+        userId: user.userId,
+        type: "payment",
+        title: "New Payment Created",
+        message: "A new payment has been created: " + body.paymentNumber,
+        link: `/dashboard/payments/${payment?._id?.toString()}`
+      })
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)
       // Don't fail the request if notification fails

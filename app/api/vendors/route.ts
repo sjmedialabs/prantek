@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
+import { createNotification } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -42,6 +43,17 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const vendor = await mongoStore.create("vendors", { ...body, userId: filterUserId })
 
     await logActivity(filterUserId, "create", "vendor", vendor._id?.toString(), { name: body.name })
+    try{
+       await createNotification({
+        userId: user.userId,
+        type: "vendor",
+        title: "New Vendor Created",
+        message: "A new vendor has been created: " + body.name,
+        link: `/dashboard/vendor/${vendor?._id?.toString()}`
+       })
+    }catch(err){
+      console.error("Error logging activity for vendor creation:", err)
+    }
 
     return NextResponse.json({ success: true, data: vendor })
   } catch (error) {
