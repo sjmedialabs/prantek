@@ -167,14 +167,14 @@ const navigationItems: NavItem[] = [
             permission: "tenant_settings",
             submenu: [
               {
-                name: "User List",
-                href: "/dashboard/hr/users",
-                permission: "tenant_settings",
-              },
-              {
                 name: "User Roles",
                 href: "/dashboard/hr/user-roles",
                 permission: "manage_roles",
+              },
+              {
+                name: "User List",
+                href: "/dashboard/hr/users",
+                permission: "tenant_settings",
               },
             ],
           },
@@ -183,8 +183,8 @@ const navigationItems: NavItem[] = [
             permission: "tenant_settings",
             submenu: [
               {
-                name: "Employee List",
-                href: "/dashboard/hr/employees",
+                name: "Employment Type",
+                href: "/dashboard/hr/member-types",
                 permission: "tenant_settings",
               },
               {
@@ -193,8 +193,8 @@ const navigationItems: NavItem[] = [
                 permission: "manage_roles",
               },
               {
-                name: "Employment Type",
-                href: "/dashboard/hr/member-types",
+                name: "Employee List",
+                href: "/dashboard/hr/employees",
                 permission: "tenant_settings",
               },
             ],
@@ -217,6 +217,12 @@ const navigationItems: NavItem[] = [
             permission: "tenant_settings",
           },
         ],
+      },
+      {
+        name: "Plans",
+        icon: Settings,
+        href: "/dashboard/plans",
+        permission: null,
       },
     ],
   },
@@ -276,7 +282,7 @@ export default function DashboardSidebar() {
           </button>
           {!collapsed && isExpanded && (
             <div className="mt-1 space-y-1">
-              {item.submenu.map((subItem) => renderNavItem(subItem, level + 1, menuKey))}
+              {(item.submenu || []).map((subItem) => renderNavItem(subItem, level + 1, menuKey))}
             </div>
           )}
         </div>

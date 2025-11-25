@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { api } from "@/lib/api-client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { InfoTooltip } from "@/components/ui/info-tooltip"
 
 interface Category {
   _id: string
@@ -320,7 +321,7 @@ const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="categoryName" required>Ledger Name</Label>
+              <Label htmlFor="categoryName" required>Ledger Name <InfoTooltip content="Specify what this ledger head represents. It can be a category like Stationery, EMI payments, Salary expenses, Client refunds, or any other financial head used in your accounts." side="right" /></Label>
               <Input
                 id="categoryName"
                 value={categoryName}

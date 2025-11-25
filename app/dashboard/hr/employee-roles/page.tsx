@@ -17,8 +17,8 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Search, Edit, Trash2, Plus, Briefcase } from "lucide-react"
-import { toast } from "sonner"
+import { Search, Edit, Trash2, Plus, Briefcase, PowerOff, Power } from "lucide-react"
+import { toast } from "@/lib/toast"
 
 interface EmployeeRole {
   _id: string
@@ -50,6 +50,8 @@ export default function EmployeeRolesPage() {
     code: "",
     description: "",
   })
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10) // You can change page size here
 
   useEffect(() => {
     fetchRoles()
@@ -58,7 +60,8 @@ export default function EmployeeRolesPage() {
   const fetchRoles = async () => {
     try {
       const response = await fetch("/api/employee-roles", {
-        credentials: "include", credentials: "include" })
+        credentials: "include"
+      })
       const data = await response.json()
       if (data.success) {
         setRoles(data.roles || [])
@@ -100,6 +103,28 @@ export default function EmployeeRolesPage() {
       console.error(error)
     }
   }
+const handleToggleStatus = async (role: EmployeeRole) => {
+  try {
+    const response = await fetch(`/api/employee-roles/${role._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        isActive: !role.isActive
+      }),
+    })
+
+    const data = await response.json()
+    if (data.success === true) {
+    toast.success("Employee role status updated successfully")
+      fetchRoles()
+    } else {
+      toast.error(data.error || "Failed to update status")
+    }
+  } catch (error) {
+    toast.error("Failed to update status")
+    console.error(error)
+  }
+}
 
   const handleEditRole = async () => {
     if (!editingRole) return
@@ -172,6 +197,12 @@ export default function EmployeeRolesPage() {
     role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     role.code.toLowerCase().includes(searchQuery.toLowerCase())
   )
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+
+  const currentRoles = filteredRoles.slice(indexOfFirstItem, indexOfLastItem)
+
+  const totalPages = Math.ceil(filteredRoles.length / itemsPerPage)
 
   return (
     <div className="space-y-6 p-6">
@@ -212,6 +243,7 @@ export default function EmployeeRolesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>S.No</TableHead>
                 <TableHead>Role Name</TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Description</TableHead>
@@ -227,8 +259,9 @@ export default function EmployeeRolesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRoles.map((role) => (
+                currentRoles.map((role, index) => (
                   <TableRow key={role._id}>
+                    <TableCell>{indexOfFirstItem + index + 1}</TableCell>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -256,10 +289,16 @@ export default function EmployeeRolesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteRole(role._id)}
+                          onClick={() => handleToggleStatus(role)}
+                          title={role.isActive ? "Deactivate" : "Activate"}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          {role.isActive ? (
+                            <PowerOff className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <Power className="h-4 w-4 text-green-500" />
+                          )}
                         </Button>
+
                       </div>
                     </TableCell>
                   </TableRow>
@@ -267,6 +306,36 @@ export default function EmployeeRolesPage() {
               )}
             </TableBody>
           </Table>
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredRoles.length)} of {filteredRoles.length}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                Previous
+              </Button>
+
+              <span className="text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+
         </CardContent>
       </Card>
 
