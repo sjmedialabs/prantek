@@ -40,7 +40,6 @@ export default function CreateReceiptPage() {
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
     const [balanceAmount, setBalanceAmount] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const[taxAmount,setTaxAmount]=useState(0);
 
   // Load data
   useEffect(() => {
@@ -88,14 +87,7 @@ export default function CreateReceiptPage() {
       const quotation = quotations.find(
         (q: any) => String(q._id || q.id) === String(selectedQuotationId)
       )
-      console.log("Selected quotation:", quotation);
-      let tempToatalTaxAmount=0;
-      quotation.items.map((eachItem:any)=>{
-        const itemTotal = eachItem.price * eachItem.quantity;
-        const itemTax = (itemTotal * (eachItem.sgst+eachItem.igst+eachItem.cgst)) / 100;
-        tempToatalTaxAmount += itemTax; 
-      })
-      setTaxAmount(tempToatalTaxAmount);
+      
       if (quotation) {
         setSelectedQuotation(quotation)
         setReceiptTotal(quotation.balanceAmount || 0)
@@ -180,9 +172,9 @@ export default function CreateReceiptPage() {
           quantity: it.quantity,
           price: it.price,
           discount: it.discount || 0,
-          taxRate: (it.igst+it.cgst+it.sgst) || 0,
+          taxRate: it.taxRate || 0,
         })),
-        balanceAmount: balanceAmount || 0,
+        balanceAmount: selectedQuotation.balanceAmount || 0,
         amountPaid: paymentAmount,
         // paymentType: paymentAmount >= (selectedQuotation.balanceAmount || 0) ? "full" : "partial",
         paymentMethod: paymentMethod.toLowerCase().replace(" ", "-"),
@@ -193,7 +185,7 @@ export default function CreateReceiptPage() {
         date,
         subtotal: selectedQuotation.subtotal || 0,
         paymentType: paymentType,
-        taxAmount: taxAmount || 0,
+        taxAmount: selectedQuotation.taxAmount || 0,
         total: selectedQuotation.grandTotal || 0,
         status: status.toLowerCase(),
         userId: user?.id || "",
