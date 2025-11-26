@@ -1,5 +1,7 @@
 "use client"
 
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,8 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
+import type { SubscriptionPlan } from "@/lib/models/types"
 
 export function PricingSection() {
+  const { trialDays } = useTrialPeriod()
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -37,7 +41,7 @@ export function PricingSection() {
             Choose the Perfect Plan to Suit Your Needs
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto text-pretty">
-            Start with our Standard plan and upgrade as your business grows. All plans include core features with 14-day
+            Start with our Standard plan and upgrade as your business grows. All plans include core features with {trialDays}-day
             free trial.
           </p>
         </div>
@@ -163,7 +167,7 @@ export function PricingSection() {
 
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">
-            All plans include 14-day free trial • Cancel anytime
+            All plans include {trialDays}-day free trial • Cancel anytime
           </p>
         </div>
       </div>

@@ -167,11 +167,6 @@ const navigationItems: NavItem[] = [
             permission: "tenant_settings",
             submenu: [
               {
-                name: "User Roles",
-                href: "/dashboard/hr/user-roles",
-                permission: "manage_roles",
-              },
-              {
                 name: "User List",
                 href: "/dashboard/hr/users",
                 permission: "tenant_settings",
@@ -233,6 +228,7 @@ export default function DashboardSidebar() {
   const { user, hasPermission, loading } = useUser();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const [planFeatures, setPlanFeatures] = useState<any>(null);
 
   const toggleMenu = (menuName: string) => {
     setExpandedMenus((prev) => ({
@@ -241,14 +237,65 @@ export default function DashboardSidebar() {
     }));
   };
 
+  // Fetch user's plan features
+  useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const response = await fetch('/api/user/plan-features');
+        const data = await response.json();
+        if (data.success) {
+          setPlanFeatures(data.planFeatures);
+        }
+      } catch (error) {
+        console.error('Error fetching plan features:', error);
+      }
+    };
+    
+    if (user) {
+      fetchPlanFeatures();
+    }
+  }, [user]);
+
+  // Check if a feature is available in user's plan
+  const hasFeatureAccess = (featureName: string): boolean => {
+    if (!planFeatures) return false;
+    
+    // Map menu items to plan features
+    const featureMap: Record<string, string> = {
+      'Clients': 'clients',
+      'Vendors': 'vendors',
+      'Quotation': 'quotations',
+      'Receipts': 'receipts',
+      'Payments': 'payments',
+      'Reconciliation': 'reconciliation',
+      'Assets': 'assets',
+      'Reports': 'reports',
+      'Settings': 'settings',
+      'HR Settings': 'hrSettings'
+    };
+    
+    const featureKey = featureMap[featureName];
+    if (!featureKey) return true; // If not in map, allow access
+    
+    return planFeatures[featureKey] === true;
+  };
+
   const renderNavItem = (item: NavItem, level: number = 0, parentKey: string = "") => {
-    // Check permission
-    if (item.permission && !hasPermission(item.permission)) {
+    // LEVEL 1: Check if user has active subscription
+    // Only Dashboard and Cash Book are accessible without active subscription
+    if (!hasActiveSubscription(user) && item.permission !== null) {
       return null;
     }
 
-    // If user doesn't have active subscription, only show Dashboard and Cashbook
-    if (!hasActiveSubscription(user) && item.permission !== null) {
+    // LEVEL 2: Check if feature is enabled in user's subscription plan
+    // Dashboard and Cash Book are always accessible (no plan check needed)
+    if (planFeatures && item.name && !hasFeatureAccess(item.name) && item.name !== 'Dashboard' && item.name !== 'Cash Book') {
+      return null;
+    }
+
+    // LEVEL 3: Check admin user's specific permission for this feature
+    // Even if feature is in the plan, admin user must have the specific permission
+    if (item.permission && !hasPermission(item.permission)) {
       return null;
     }
 

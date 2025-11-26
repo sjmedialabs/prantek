@@ -340,13 +340,44 @@ export interface Payment extends BaseDocument {
   referenceNumber?: string
 }
 
+// Plan-specific feature flags for granular access control
+export interface PlanFeatures {
+  userCreation: boolean
+  advancedAnalytics: boolean
+  exportReports: boolean
+  apiAccess: boolean
+  customBranding: boolean
+  rbac: boolean
+}
+
+// Feature keys constant for validation and iteration
+export const PLAN_FEATURE_KEYS = [
+  'userCreation',
+  'advancedAnalytics',
+  'exportReports',
+  'apiAccess',
+  'customBranding',
+  'rbac',
+] as const
+
+// Human-readable feature descriptions
+export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
+  userCreation: 'User Creation',
+  advancedAnalytics: 'Advanced Analytics',
+  exportReports: 'Export Reports',
+  apiAccess: 'API Access',
+  customBranding: 'Custom Branding',
+  rbac: 'Role-Based Access Control',
+}
+
 export interface SubscriptionPlan extends BaseDocument {
   id?: string
   name: string
   price: number
   duration: number
   billingCycle: "monthly" | "yearly"
-  features: string[]
+  features: string[] // Legacy feature list for backward compatibility
+  planFeatures?: PlanFeatures // New granular feature flags
   maxUsers: number
   maxClients: number
   maxReceipts: number
@@ -355,6 +386,7 @@ export interface SubscriptionPlan extends BaseDocument {
   maxStorage?: string
   subscriberCount?: number
   revenue?: number
+  order?: number // Display order for sorting
 }
 
 export interface PaymentMethod extends BaseDocument {

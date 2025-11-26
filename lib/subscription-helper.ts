@@ -160,3 +160,83 @@ export async function hasFeatureAccess(
     return false
   }
 }
+
+/**
+ * Check if a specific plan feature is enabled for the user
+ * Uses the new granular planFeatures object
+ * @param userId - User ID to check
+ * @param featureKey - Feature key from PlanFeatures (e.g., 'userCreation', 'advancedAnalytics')
+ * @returns Promise<boolean> - true if feature is enabled, false otherwise
+ */
+export async function checkPlanFeature(
+  userId: string,
+  featureKey: string
+): Promise<boolean> {
+  try {
+    const db = await connectDB()
+    
+    const user = await db.collection(Collections.USERS).findOne({
+      _id: new ObjectId(userId)
+    })
+
+    if (!user) {
+      return false
+    }
+
+    // Super admins have access to all features
+    if (user.role === "super-admin") {
+      return true
+    }
+
+    // Check if user has active subscription
+    if (!await hasActiveSubscription(user)) {
+      return false
+    }
+
+    if (!user.subscriptionPlanId) {
+      return false
+    }
+
+    const plan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({
+      _id: new ObjectId(user.subscriptionPlanId)
+    })
+
+    if (!plan) {
+      return false
+    }
+
+    // Check the new planFeatures object
+    if (plan.planFeatures && typeof plan.planFeatures === "object") {
+      return plan.planFeatures[featureKey] === true
+    }
+
+    // Fallback: if planFeatures doesn't exist, deny access
+    return false
+  } catch (error) {
+    console.error("Error checking plan feature:", error)
+    return false
+  }
+}
+
+/**
+ * Get all enabled features for a user's plan
+ * @param userId - User ID to check
+ * @returns Promise<string[]> - Array of enabled feature keys
+ */
+export async function getUserEnabledFeatures(userId: string): Promise<string[]> {
+  try {
+    const plan = await getUserSubscriptionPlan(userId)
+    
+    if (!plan || !plan.planFeatures) {
+      return []
+    }
+
+    // Return array of enabled feature keys
+    return Object.entries(plan.planFeatures)
+      .filter(([_, enabled]) => enabled === true)
+      .map(([key, _]) => key)
+  } catch (error) {
+    console.error("Error getting enabled features:", error)
+    return []
+  }
+}
