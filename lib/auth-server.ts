@@ -140,64 +140,54 @@ export async function authenticateUser(email: string, password: string) {
   return null
 }
 
-// Super admin authentication (checks both collections)
+/************************************************************
+ * SUPER ADMIN AUTHENTICATION
+ * Validates against environment variables for super admin access
+ ************************************************************/
 export async function authenticateSuperAdmin(email: string, password: string): Promise<AuthTokens | null> {
-  console.log('[AUTH-SERVER] authenticateSuperAdmin() called for:', email)
-  
-  const db = await connectDB()
-  
-  // Check ADMIN_USERS collection first
-  let admin = await db.collection(Collections.ADMIN_USERS).findOne({ 
-    email,
-    role: "super-admin"
-  })
+  console.log("[AUTH] Attempting super-admin login:", email)
 
-  // Fallback to USERS collection for backward compatibility
-  if (!admin) {
-    admin = await db.collection(Collections.USERS).findOne({ 
-      email,
-      $or: [{ role: "superadmin" }, { role: "super-admin" }]
-    })
-  }
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
 
-  if (!admin) {
-    console.log('[AUTH-SERVER] No super admin found with email:', email)
+  if (!superAdminEmail || !superAdminPassword) {
+    console.error("[AUTH] Super admin credentials not configured in environment")
     return null
   }
 
-  console.log('[AUTH-SERVER] Super admin found:', admin.email, 'with role:', admin.role)
-  console.log('[AUTH-SERVER] Testing password...')
-  
-  const isPasswordValid = await bcrypt.compare(password, admin.password)
-  console.log('[AUTH-SERVER] Password comparison result:', isPasswordValid)
-  
-  if (!isPasswordValid) {
-    console.log('[AUTH-SERVER] Password invalid')
+  // Check if email matches (case-insensitive)
+  if (email.toLowerCase() !== superAdminEmail.toLowerCase()) {
+    console.log("[AUTH] Super admin email mismatch")
     return null
   }
 
-  console.log('[AUTH-SERVER] Generating tokens...')
-  const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
-    userId: admin._id.toString(),
-    email: admin.email,
-    role: "super-admin" as const,
-    permissions: admin.permissions || [],
+  // Check if password matches (plain text comparison for simplicity)
+  if (password !== superAdminPassword) {
+    console.log("[AUTH] Super admin password mismatch")
+    return null
   }
 
-  const accessToken = await generateAccessToken(tokenPayload, "15m")
-  const refreshToken = await generateRefreshToken(tokenPayload, "7d")
+  console.log("[AUTH] Super admin authentication successful")
 
-  console.log('[AUTH-SERVER] Tokens generated successfully')
+  // Create JWT payload for super admin
+  const payload: JWTPayload = {
+    userId: "super-admin",
+    id: "super-admin",
+    email: superAdminEmail,
+    role: "super-admin",
+    userType: "super-admin",
+    companyId: null,
+    isAdminUser: false,
+    permissions: ["*"], // Full permissions
+    isSuperAdmin: true
+  }
 
   return {
-    accessToken,
-    refreshToken,
+    accessToken: await generateAccessToken(payload, "30m"),
+    refreshToken: await generateRefreshToken(payload, "7d"),
     user: {
-      id: admin._id.toString(),
-      email: admin.email,
-      name: admin.name,
-      role: "super-admin" as const,
-      permissions: admin.permissions || [],
-    },
+      ...payload,
+      name: "Super Admin"
+    }
   }
 }

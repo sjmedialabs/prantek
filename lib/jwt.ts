@@ -13,6 +13,7 @@ export interface JWTPayload {
   roleId?: string // Reference to assigned role
   companyId?: string // Reference to parent account for admin users
   isAdminUser?: boolean // Distinguishes admin users from account owners
+  isSuperAdmin?: boolean // Distinguishes super admin from other users
   subscriptionStartDate?: Date
   trialEndsAt?: Date
   subscriptionPlanId?: string // For legacy user system

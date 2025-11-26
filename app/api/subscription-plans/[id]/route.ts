@@ -4,10 +4,11 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const db = await connectDB()
-    const plan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({ _id: new ObjectId(params.id) })
+    const plan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({ _id: new ObjectId(id) })
     
     if (!plan) {
       return NextResponse.json({ success: false, error: "Plan not found" }, { status: 404 })
@@ -24,13 +25,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const db = await connectDB()
     const data = await request.json()
     
     const result = await db.collection(Collections.SUBSCRIPTION_PLANS).updateOne(
-      { _id: new ObjectId(params.id) },
+      { _id: new ObjectId(id) },
       { $set: { ...data, updatedAt: new Date() } }
     )
     
@@ -38,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, error: "Plan not found" }, { status: 404 })
     }
     
-    const updatedPlan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({ _id: new ObjectId(params.id) })
+    const updatedPlan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({ _id: new ObjectId(id) })
     
     return NextResponse.json({ 
       success: true, 
@@ -51,11 +53,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const db = await connectDB()
     
-    const result = await db.collection(Collections.SUBSCRIPTION_PLANS).deleteOne({ _id: new ObjectId(params.id) })
+    const result = await db.collection(Collections.SUBSCRIPTION_PLANS).deleteOne({ _id: new ObjectId(id) })
     
     if (result.deletedCount === 0) {
       return NextResponse.json({ success: false, error: "Plan not found" }, { status: 404 })
