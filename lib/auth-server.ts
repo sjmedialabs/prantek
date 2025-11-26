@@ -139,3 +139,55 @@ export async function authenticateUser(email: string, password: string) {
 
   return null
 }
+
+/************************************************************
+ * SUPER ADMIN AUTHENTICATION
+ * Validates against environment variables for super admin access
+ ************************************************************/
+export async function authenticateSuperAdmin(email: string, password: string): Promise<AuthTokens | null> {
+  console.log("[AUTH] Attempting super-admin login:", email)
+
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
+
+  if (!superAdminEmail || !superAdminPassword) {
+    console.error("[AUTH] Super admin credentials not configured in environment")
+    return null
+  }
+
+  // Check if email matches (case-insensitive)
+  if (email.toLowerCase() !== superAdminEmail.toLowerCase()) {
+    console.log("[AUTH] Super admin email mismatch")
+    return null
+  }
+
+  // Check if password matches (plain text comparison for simplicity)
+  if (password !== superAdminPassword) {
+    console.log("[AUTH] Super admin password mismatch")
+    return null
+  }
+
+  console.log("[AUTH] Super admin authentication successful")
+
+  // Create JWT payload for super admin
+  const payload: JWTPayload = {
+    userId: "super-admin",
+    id: "super-admin",
+    email: superAdminEmail,
+    role: "super-admin",
+    userType: "super-admin",
+    companyId: null,
+    isAdminUser: false,
+    permissions: ["*"], // Full permissions
+    isSuperAdmin: true
+  }
+
+  return {
+    accessToken: await generateAccessToken(payload, "30m"),
+    refreshToken: await generateRefreshToken(payload, "7d"),
+    user: {
+      ...payload,
+      name: "Super Admin"
+    }
+  }
+}

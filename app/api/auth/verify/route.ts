@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
       request.headers.get("authorization")?.replace("Bearer ", "") ||
       request.cookies.get("auth_token")?.value ||
       request.cookies.get("accessToken")?.value ||
+      request.cookies.get("super_admin_auth_token")?.value ||
+      request.cookies.get("super_admin_accessToken")?.value ||
       null
 
     if (!token) {
@@ -21,14 +23,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
+    /**************************************
+     * HANDLE SUPER-ADMIN (special case)
+     **************************************/
+    if (payload.userId === "super-admin" || payload.role === "super-admin") {
+      return NextResponse.json({
+        user: {
+          id: "super-admin",
+          email: payload.email,
+          name: "Super Admin",
+          role: "super-admin",
+          userType: "super-admin",
+          permissions: ["*"],
+          isAdminUser: false,
+        }
+      })
+    }
+
+    /**************************************
+     * HANDLE REGULAR USERS
+     **************************************/
     const db = await connectDB()
 
     let user = null
     let isAdminUser = false
 
-    /**************************************
-     * 1️⃣ TRY ADMIN_USERS COLLECTION
-     **************************************/
+    // 1️⃣ TRY ADMIN_USERS COLLECTION
     try {
       user = await db.collection(Collections.ADMIN_USERS).findOne({
         _id: new ObjectId(payload.userId)
@@ -43,9 +63,7 @@ export async function GET(request: NextRequest) {
       isAdminUser = true
     }
 
-    /**************************************
-     * 2️⃣ IF NOT FOUND → TRY USERS COLLECTION
-     **************************************/
+    // 2️⃣ IF NOT FOUND → TRY USERS COLLECTION
     if (!user) {
       try {
         user = await db.collection(Collections.USERS).findOne({
@@ -68,7 +86,7 @@ export async function GET(request: NextRequest) {
         id: user._id.toString(),
         email: user.email,
         name: user.name,
-        role: isAdminUser ? "admin-user" : user.role,
+        role: user.role || (isAdminUser ? "admin" : "employee"),
         userType: isAdminUser ? "admin-user" : user.userType,
         roleId: user.roleId,
         permissions: user.permissions || payload.permissions || [],

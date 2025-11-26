@@ -44,32 +44,42 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const loadUser = async () => {
+      console.log("[USER_CONTEXT] Loading user, pathname:", pathname, "isSuperAdmin:", isSuperAdmin)
       setLoading(true)
       try {
         const accessToken = tokenStorage.getAccessToken(isSuperAdmin)
+        console.log("[USER_CONTEXT] Access token exists:", !!accessToken)
 
         if (accessToken) {
           const userData = await verifyUser(accessToken)
+          console.log("[USER_CONTEXT] User data from verify:", userData)
           if (userData) {
             setUser(userData as User)
           } else {
             // Token is invalid, clear it
-            tokenStorage.clearTokens()
+            console.log("[USER_CONTEXT] Token invalid, clearing")
+            tokenStorage.clearTokens(isSuperAdmin)
             setUser(null)
           }
         } else {
+          console.log("[USER_CONTEXT] No access token found")
           setUser(null)
         }
       } catch (error) {
-        tokenStorage.clearTokens()
+        console.error("[USER_CONTEXT] Error loading user:", error)
+        tokenStorage.clearTokens(isSuperAdmin)
         setUser(null)
       } finally {
         setLoading(false)
+        console.log("[USER_CONTEXT] Loading complete, user:", user)
       }
     }
 
-    loadUser()
-  }, [])
+    // Only load if pathname is available (to avoid SSR issues)
+    if (pathname !== null) {
+      loadUser()
+    }
+  }, [pathname])
 
   const refreshUser = async () => {
     try {
