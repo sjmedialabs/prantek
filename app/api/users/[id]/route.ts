@@ -4,6 +4,8 @@ import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
 import { withAuth } from "@/lib/api-auth"
+import { createNotification } from "@/lib/notification-utils"
+import { sub } from "date-fns"
 
 // ✅ helper
 function getIdFromRequest(req: NextRequest): string {
@@ -64,6 +66,7 @@ export const PUT = withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json()
     const { password, _id, ...updateData } = body
+    console.log("Update data for user:", id, updateData);
 
     // Set updated timestamp
     updateData.updatedAt = new Date()
@@ -94,11 +97,15 @@ export const PUT = withAuth(async (req: NextRequest) => {
       }
     }
 
+    //update subscription details if provided
+
+
     const db = await connectDB()
     
     // Try to find user in admin_users collection first
     let collection = Collections.ADMIN_USERS
     let user = await db.collection(collection).findOne({ _id: new ObjectId(id) })
+    
     
     // If not found, try users collection (for account owners with subscriptions)
     if (!user) {
@@ -109,12 +116,28 @@ export const PUT = withAuth(async (req: NextRequest) => {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
-
+    
     // Update the user in the appropriate collection
     const result = await db.collection(collection).updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     )
+
+    if(updateData.subscriptionPlanId){
+      
+      let subscriptionPlans= await db.collection(Collections.SUBSCRIPTION_PLANS).find().toArray();
+      let filteredPlans=subscriptionPlans?.filter((eachItem:any)=>eachItem._id.toString()===updateData.subscriptionPlanId);
+      console.log("Subscription plan details for notification:",filteredPlans)
+      let superAdmindetails= await db.collection(Collections.USERS).findOne({role:"super-admin"});
+      await createNotification({
+         userId:superAdmindetails?._id.toString()||"",
+          type:"subscription-updated",
+          title:"Subscription Updated",
+          message:`User with email ${user?.email} has updated subscription to plan ${filteredPlans[0]?.name}`,
+          link:"/super-admin/clients"
+      })
+      
+    }
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
