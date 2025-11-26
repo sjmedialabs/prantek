@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api-client"
 import { Item } from "@/lib/models/types"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { BulkUploadDialogItem } from "@/components/admin/bulk-upload-items"
 
 export default function ItemsPage() {
   const { user, loading, hasPermission } = useUser()
@@ -34,7 +35,7 @@ export default function ItemsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | "product" | "service">("all")
   const [page, setPage] = useState(1)
-const itemsPerPage = 10
+  const itemsPerPage = 10
   const [formData, setFormData] = useState({
     type: "" as "product" | "service",
     unitType: "",
@@ -55,48 +56,48 @@ const itemsPerPage = 10
     // loadTaxRates()
   }, [])
 
-const loadItems = async () => {
-  const data = await api.items.getAll()
+  const loadItems = async () => {
+    const data = await api.items.getAll()
 
-  const mapped = data.map((i:any)=> ({
-    ...i,
-    id: i._id?.toString?.() || i.id   // ✅ keep both
-  }))
+    const mapped = data.map((i: any) => ({
+      ...i,
+      id: i._id?.toString?.() || i.id   // ✅ keep both
+    }))
 
-  setItems(mapped)
-}
-
-const validateItem = (data: any) => {
-  if (!data.type || !["product", "service"].includes(data.type)) {
-    return "Please select a valid item type."
+    setItems(mapped)
   }
 
-  if (!data.name || data.name.trim().length < 2) {
-    return "Item name must be at least 2 characters long."
+  const validateItem = (data: any) => {
+    if (!data.type || !["product", "service"].includes(data.type)) {
+      return "Please select a valid item type."
+    }
+
+    if (!data.name || data.name.trim().length < 2) {
+      return "Item name must be at least 2 characters long."
+    }
+
+    // 🚨 Duplicate prevention (case-insensitive)
+    const duplicate = items.some(
+      (i) =>
+        i.name.trim().toLowerCase() === data.name.trim().toLowerCase() &&
+        i.id !== editingItem?.id
+    )
+    if (duplicate) return "Item name already exists."
+
+    if (!data.price || data.price <= 0) {
+      return "Price must be greater than 0."
+    }
+
+    if (data.type === "product" && !data.unitType) {
+      return "Please select a unit type."
+    }
+
+    if (data.applyTax && !data.cgst && !data.sgst && !data.igst) {
+      return "At least one tax must be selected."
+    }
+
+    return null
   }
-
-  // 🚨 Duplicate prevention (case-insensitive)
-  const duplicate = items.some(
-    (i) =>
-      i.name.trim().toLowerCase() === data.name.trim().toLowerCase() &&
-      i.id !== editingItem?.id
-  )
-  if (duplicate) return "Item name already exists."
-
-  if (!data.price || data.price <= 0) {
-    return "Price must be greater than 0."
-  }
-
-  if (data.type === "product" && !data.unitType) {
-    return "Please select a unit type."
-  }
-
-  if (data.applyTax && !data.cgst && !data.sgst && !data.igst) {
-    return "At least one tax must be selected."
-  }
-
-  return null
-}
 
   // const loadTaxRates = async () => {
   //   const rates = (await api.taxRates.getAll()) || []
@@ -104,36 +105,36 @@ const validateItem = (data: any) => {
   // }
 
   useEffect(() => {
-  const loadTaxData = async () => {
-    try {
-      const rates = await api.taxRates.getAll()
-      console.log("Loaded Tax Rates:", rates)
+    const loadTaxData = async () => {
+      try {
+        const rates = await api.taxRates.getAll()
+        console.log("Loaded Tax Rates:", rates)
 
-      setTaxRates(Array.isArray(rates) ? rates : [])
-      console.log("Tax Rates:", taxRates)
-    } catch (err) {
-      console.error("Failed loading tax data:", err)
+        setTaxRates(Array.isArray(rates) ? rates : [])
+        console.log("Tax Rates:", taxRates)
+      } catch (err) {
+        console.error("Failed loading tax data:", err)
+      }
     }
-  }
 
-  loadTaxData()
-}, [])
+    loadTaxData()
+  }, [])
 
-const filteredItems = items.filter(item => {
-  const matchesSearch =
-    searchQuery === "" ||
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = items.filter(item => {
+    const matchesSearch =
+      searchQuery === "" ||
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
 
-  const matchesType = typeFilter === "all" || item.type === typeFilter
+    const matchesType = typeFilter === "all" || item.type === typeFilter
 
-  return matchesSearch && matchesType
-})
+    return matchesSearch && matchesType
+  })
 
-const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
-const startIndex = (page - 1) * itemsPerPage
-const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage)
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage)
 
   const handleEdit = (item: Item) => {
     setEditingItem(item)
@@ -157,44 +158,44 @@ const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage
   const toggleActive = (id: string) => {
     const item = items.find((i) => i._id === id)
     if (item) {
-      api.items.update(id, { isActive: !item.isActive  })
-    setItems(items.map((i) => (i._id === id ? { ...i, isActive: !i.isActive } : i)))
-     toast({ title: "Success", description: "Item status updated successfully!", variant: "success" })
+      api.items.update(id, { isActive: !item.isActive })
+      setItems(items.map((i) => (i._id === id ? { ...i, isActive: !i.isActive } : i)))
+      toast({ title: "Success", description: "Item status updated successfully!", variant: "success" })
     }
   }
 
-const handleSave = async () => {
-  try {
-    // ✅ VALIDATE FIRST
-    const errMsg = validateItem(formData)
-    if (errMsg) {
-      toast({ title: "Notification", description: errMsg, variant: "default" })
-      return
+  const handleSave = async () => {
+    try {
+      // ✅ VALIDATE FIRST
+      const errMsg = validateItem(formData)
+      if (errMsg) {
+        toast({ title: "Notification", description: errMsg, variant: "default" })
+        return
+      }
+
+      if (editingItem?.id) {
+        await api.items.update(editingItem.id, {
+          ...formData,
+        })
+      } else {
+        await api.items.create({
+          ...formData,
+        })
+      }
+
+      await loadItems()
+      resetForm()
+      setEditingItem(null)
+      setIsDialogOpen(false)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+      toast({ title: "Success", description: "Item saved successfully!" })
+
+    } catch (err) {
+      console.error("Failed to save", err)
+      toast({ title: "Error", description: "Failed to save item", variant: "destructive" })
     }
-
-    if (editingItem?.id) {
-      await api.items.update(editingItem.id, {
-        ...formData,
-      })
-    } else {
-      await api.items.create({
-        ...formData,
-      })
-    }
-
-    await loadItems()
-    resetForm()
-    setEditingItem(null)
-    setIsDialogOpen(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
-    toast({ title: "Success", description: "Item saved successfully!" })
-
-  } catch (err) {
-    console.error("Failed to save", err)
-    toast({ title: "Error", description: "Failed to save item", variant: "destructive" })
   }
-}
 
 
   const resetForm = () => {
@@ -213,7 +214,54 @@ const handleSave = async () => {
       userId: user?.id
     })
   }
-      if (loading) {
+  const fetchItems = async () => {
+  const res = await api.items.getAll()
+  setItems(res.items || res)
+}
+// All supported unit types (short => full name)
+const UNIT_TYPES = {
+  gm: "Grams",
+  gram: "Grams",
+  grams: "Grams",
+
+  kg: "Kilograms",
+  kilogram: "Kilograms",
+  kilograms: "Kilograms",
+
+  liters: "Liters",
+  litre: "Liters",
+  ltr: "Liters",
+
+  ml: "Milliliters",
+  milliliter: "Milliliters",
+  milliliters: "Milliliters",
+
+  qty: "Quantity",
+  quantity: "Quantity",
+
+  pcs: "Pieces",
+  piece: "Pieces",
+  pieces: "Pieces",
+
+  box: "Box",
+  boxes: "Box",
+
+  dozen: "Dozen",
+};
+
+// Normalize & resolve value
+function normalizeUnit(input: string): string {
+  if (!input) return "other";
+
+  const key = input.trim().toLowerCase();
+
+  return UNIT_TYPES[key]
+    ? UNIT_TYPES[key]               // known unit
+    : "other";                      // unknown unit → Other
+}
+
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -239,6 +287,11 @@ const handleSave = async () => {
           <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
           <p className="text-gray-600">Manage products and services</p>
         </div>
+        <div className="flex gap-2">
+          {/* Bulk Upload Button */}
+          <BulkUploadDialogItem onSuccess={fetchItems} />
+
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -279,61 +332,66 @@ const handleSave = async () => {
                 {formData.type === "product" && (
                   <div className="space-y-2">
                     <Label htmlFor="unitType" required>Unit Type</Label>
-                    <Select
-                      value={formData.unitType}
-                      onValueChange={(value) => setFormData({ ...formData, unitType: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gm">Grams (gm)</SelectItem>
-                        <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                        <SelectItem value="liters">Liters</SelectItem>
-                        <SelectItem value="ml">Milliliters (ml)</SelectItem>
-                        <SelectItem value="qty">Quantity (qty)</SelectItem>
-                        <SelectItem value="pcs">Pieces (pcs)</SelectItem>
-                        <SelectItem value="box">Box</SelectItem>
-                        <SelectItem value="dozen">Dozen</SelectItem>
-                      </SelectContent>
-                    </Select>
+<Select
+  value={normalizeUnit(formData.unitType)}
+  onValueChange={(value) => setFormData({ ...formData, unitType: value })}
+>
+  <SelectTrigger>
+    <SelectValue placeholder="Select unit type" />
+  </SelectTrigger>
+
+  <SelectContent>
+    <SelectItem value="Grams">Grams (gm)</SelectItem>
+    <SelectItem value="Kilograms">Kilograms (kg)</SelectItem>
+    <SelectItem value="Liters">Liters (ltr)</SelectItem>
+    <SelectItem value="Milliliters">Milliliters (ml)</SelectItem>
+    <SelectItem value="Quantity">Quantity (qty)</SelectItem>
+    <SelectItem value="Pieces">Pieces (pcs)</SelectItem>
+    <SelectItem value="Box">Box</SelectItem>
+    <SelectItem value="Dozen">Dozen</SelectItem>
+
+    {/* NEW */}
+    <SelectItem value="other">Other</SelectItem>
+  </SelectContent>
+</Select>
+
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">
-                    Item Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter item name"
-                    required
-                  />
-                </div>
-                
-                {formData.type === "product" ? (
                   <div className="space-y-2">
-                  <Label htmlFor="hsnCode">HSN Code</Label>
-                  <Input
-                    id="hsnCode"
-                    value={formData.hsnCode}
-                    onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
-                    placeholder="Enter HSN code"
-                  />
-                </div>
-                ): (
-                  <div className="space-y-2">
-                  <Label htmlFor="hsnCode">SAC Code</Label>
-                  <Input
-                    id="hsnCode"
-                    value={formData.hsnCode}
-                    onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
-                    placeholder="Enter SAC code"
-                  />
-                </div>
-                )}
+                    <Label htmlFor="name">
+                      Item Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter item name"
+                      required
+                    />
+                  </div>
+
+                  {formData.type === "product" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="hsnCode">HSN Code</Label>
+                      <Input
+                        id="hsnCode"
+                        value={formData.hsnCode}
+                        onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                        placeholder="Enter HSN code"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="hsnCode">SAC Code</Label>
+                      <Input
+                        id="hsnCode"
+                        value={formData.hsnCode}
+                        onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                        placeholder="Enter SAC code"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
@@ -455,6 +513,7 @@ const handleSave = async () => {
             </div>
           </DialogContent>
         </Dialog>
+                </div>
       </div>
 
       {saved && (
@@ -470,7 +529,7 @@ const handleSave = async () => {
               <CardTitle className="flex items-center">
                 <Package className="h-5 w-5 mr-2" />
                 Product/Service List ({items.filter(item => {
-                  const matchesSearch = searchQuery === "" || 
+                  const matchesSearch = searchQuery === "" ||
                     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -503,117 +562,117 @@ const handleSave = async () => {
             </Select>
           </div>
         </CardHeader>
-<CardContent>
-  {filteredItems.length === 0 ? (
-    <div className="text-center py-12 text-gray-500">
-      <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-      <p>No products/services found.</p>
-    </div>
-  ) : (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="p-2 text-left">S.No</TableHead>
-            <TableHead className="p-2 text-left">Type</TableHead>
-            <TableHead className="p-2 text-left">Name</TableHead>
-            <TableHead className="p-2 text-left">HSN</TableHead>
-            <TableHead className="p-2 text-left">Unit</TableHead>
-            <TableHead className="p-2 text-left">Price</TableHead>
-            <TableHead className="p-2 text-left">Tax</TableHead>
-            <TableHead className="p-2 text-left">Status</TableHead>
-            <TableHead className="p-2 text-left">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
+        <CardContent>
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <p>No products/services found.</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="p-2 text-left">S.No</TableHead>
+                    <TableHead className="p-2 text-left">Type</TableHead>
+                    <TableHead className="p-2 text-left">Name</TableHead>
+                    <TableHead className="p-2 text-left">HSN</TableHead>
+                    <TableHead className="p-2 text-left">Unit</TableHead>
+                    <TableHead className="p-2 text-left">Price</TableHead>
+                    <TableHead className="p-2 text-left">Tax</TableHead>
+                    <TableHead className="p-2 text-left">Status</TableHead>
+                    <TableHead className="p-2 text-left">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-        <TableBody>
-          {paginatedItems.map((item, index) => (
-            <TableRow
-              key={item.id}
-              className={`border-b ${item.isActive === false ? "opacity-50 bg-gray-50" : ""}`}
-            >
-              <TableCell className="p-2">{startIndex + index + 1}</TableCell>
+                <TableBody>
+                  {paginatedItems.map((item, index) => (
+                    <TableRow
+                      key={item._id || index}
+                      className={`border-b ${item.isActive === false ? "opacity-50 bg-gray-50" : ""}`}
+                    >
+                      <TableCell className="p-2">{startIndex + index + 1}</TableCell>
 
-              <TableCell className="p-2">
-                {item.type === "product" ? (
-                  <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">Product</span>
-                ) : (
-                  <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Service</span>
-                )}
-              </TableCell>
+                      <TableCell className="p-2">
+                        {item.type === "product" ? (
+                          <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">Product</span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Service</span>
+                        )}
+                      </TableCell>
 
-              <TableCell className="p-2 font-medium">{item.name}</TableCell>
-              <TableCell className="p-2">{item.hsnCode || "-"}</TableCell>
-              <TableCell className="p-2">{item.unitType || "-"}</TableCell>
-              <TableCell className="p-2">₹{item.price.toFixed(2)}</TableCell>
+                      <TableCell className="p-2 font-medium">{item.name}</TableCell>
+                      <TableCell className="p-2">{item.hsnCode || "-"}</TableCell>
+                      <TableCell className="p-2">{item.unitType || "-"}</TableCell>
+                      <TableCell className="p-2">₹{item.price.toFixed(2)}</TableCell>
 
-              <TableCell className="p-2 text-sm">
-                {item.applyTax ? (
-                  <>
-                    CGST {item.cgst}%<br />
-                    SGST {item.sgst}%<br />
-                    IGST {item.igst}%
-                  </>
-                ) : (
-                  "-"
-                )}
-              </TableCell>
+                      <TableCell className="p-2 text-sm">
+                        {item.applyTax ? (
+                          <>
+                            CGST {item.cgst}%<br />
+                            SGST {item.sgst}%<br />
+                            IGST {item.igst}%
+                          </>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
 
-              <TableCell className="p-2">
-                {item.isActive ? (
-                  <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Active</span>
-                ) : (
-                  <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Disabled</span>
-                )}
-              </TableCell>
+                      <TableCell className="p-2">
+                        {item.isActive ? (
+                          <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-700">Active</span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-700">Disabled</span>
+                        )}
+                      </TableCell>
 
-              <TableCell className="p-2">
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                      <TableCell className="p-2">
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleActive(item?._id)}
-                  >
-                    {item.isActive ? (
-                      <PowerOff className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <Power className="h-4 w-4 text-green-500" />
-                    )}
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleActive(item?._id)}
+                          >
+                            {item.isActive ? (
+                              <PowerOff className="h-4 w-4 text-red-500" />
+                            ) : (
+                              <Power className="h-4 w-4 text-green-500" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-      {/* Pagination Controls */}
-      <div className="flex justify-between mt-4">
-        <Button
-          variant="outline"
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Previous
-        </Button>
+              {/* Pagination Controls */}
+              <div className="flex justify-between mt-4">
+                <Button
+                  variant="outline"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Previous
+                </Button>
 
-        <span>Page {page} of {totalPages}</span>
+                <span>Page {page} of {totalPages}</span>
 
-        <Button
-          variant="outline"
-          disabled={page === totalPages}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </Button>
-      </div>
-    </>
-  )}
-</CardContent>
+                <Button
+                  variant="outline"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
 
       </Card>
     </div>
