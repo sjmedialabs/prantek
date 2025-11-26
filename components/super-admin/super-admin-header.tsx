@@ -41,7 +41,9 @@ export default function SuperAdminHeader() {
         })
         if (response.ok) {
           const data = await response.json()
-          setNotifications(data)
+          const filteredData = data.filter((eachItem:any)=>eachItem.isRead===false);
+          console.log("Fetched notifications for SuperAdminHeader:", data)
+          setNotifications(filteredData)
           setUnreadCount(data.filter((n: Notification) => !n.isRead).length)
         }
       } catch (error) {
@@ -49,7 +51,7 @@ export default function SuperAdminHeader() {
       }
     }
 
-    if (user && user.role !== "super-admin") {
+    if ( user?.role === "super-admin") {
       fetchNotifications()
       // Poll for new notifications every 30 seconds
       const interval = setInterval(fetchNotifications, 30000)
@@ -98,7 +100,7 @@ export default function SuperAdminHeader() {
       router.push(targetLink)
     }
   }
-
+  console.log("Notifications in SuperAdminHeader:", notifications)
   const formatNotificationTime = (date: Date) => {
     const now = new Date()
     const notifDate = new Date(date)

@@ -230,6 +230,8 @@ useEffect(() => {
           timestamp: new Date().toISOString(),
         }),
       )
+      localStorage.removeItem("loginedUser")
+      localStorage.setItem("loginedUser",JSON.stringify({...loginedUserLocalStorage,subscriptionPlanId:plan.id,subscriptionStatus:"active"}))
 
       toast.success("Payment successful! Your subscription is now active.")
       localStorage.removeItem("selected_plan_id")
