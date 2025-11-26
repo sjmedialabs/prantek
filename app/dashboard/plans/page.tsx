@@ -45,7 +45,7 @@ export default function PlansPage() {
         console.log("[PLANS] User subscriptionPlanId:", user?.subscriptionPlanId)
         if (user?.subscriptionPlanId) {
           try {
-            const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
+            const plan = await api.subscriptionPlans.getById(loginedUserLocalStorage.subscriptionPlanId)
             console.log("[PLANS] Fetched plan from API:", plan)
             console.log("[PLANS] Current plan details:", { id: plan?.id, _id: plan?._id, name: plan?.name, price: plan?.price })
             if (plan && plan.price !== undefined) {
