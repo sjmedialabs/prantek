@@ -28,7 +28,13 @@ export default function CheckoutPage() {
   const [error, setError] = useState("")
   const [amountFromPreviousSubscription, setAmountFromPreviousSubscription] = useState(0)
   const [previousPlan, setPreviousPlan] = useState<SubscriptionPlan | null>(null)
+  // const[totalAmount,setTotalAmount]=useState(0);
   const [loginedUserLocalStorage, setLoginedUserLocalStorage] = useState<any>(null)
+   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+
+  const loginedUserLocalStorageDetails = loginedUserLocalStorageString
+    ? JSON.parse(loginedUserLocalStorageString)
+    : null;
   const [isClient, setIsClient] = useState(false)
   // 1️⃣ Mark client-side render finished
   useEffect(() => {
@@ -162,8 +168,12 @@ useEffect(() => {
     setError("")
 
     try {
-      const totalAmount = Math.round(plan.price * 1.18)
-
+      let totalAmount = Math.round(plan.price * 1.18)
+      console.log("handle payment called:::")
+      if((Math.round((plan.price * 1.18)) - amountFromPreviousSubscription)>0){
+        totalAmount=totalAmount - amountFromPreviousSubscription
+      }
+      // setTotalAmount(totalAmountTopaid);
       const options = {
         key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
         amount: totalAmount * 100, // Amount in paise
@@ -208,6 +218,7 @@ useEffect(() => {
   }
 
   const handlePaymentSuccess = async (response: any) => {
+    
     if (user && plan) {
       const updatedUser = await api.users.update( user.id, {
         subscriptionPlanId: plan._id,
@@ -215,6 +226,8 @@ useEffect(() => {
         subscriptionStartDate: new Date().toISOString(),
         subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
+      
+      console.log("Updated user after payment plan-id:", plan._id)
 
       if (updatedUser) {
         await api.auth.setCurrentUser(updatedUser)
@@ -230,16 +243,21 @@ useEffect(() => {
           timestamp: new Date().toISOString(),
         }),
       )
+      localStorage.removeItem("loginedUser")
+      const temp={...loginedUserLocalStorageDetails,subscriptionPlanId:plan._id,subscriptionStatus:"active"}
+      console.log("updated user details to store in local:",temp)
+      localStorage.setItem("loginedUser",JSON.stringify({...loginedUserLocalStorageDetails,subscriptionPlanId:plan._id,subscriptionStatus:"active"}))
 
       toast.success("Payment successful! Your subscription is now active.")
       localStorage.removeItem("selected_plan_id")
-      window.location.reload()
+      // window.location.reload()
       setTimeout(() => {
         router.push("/dashboard/plans")
       }, 1500)
     }
     setProcessing(false)
   }
+
 
   if (loading) {
     return (
@@ -295,11 +313,11 @@ useEffect(() => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Previous plan Amount</span>
-                  <span className="font-semibold">-₹{amountFromPreviousSubscription}</span>
+                  <span className="font-semibold">-₹{Math.round((plan.price * 1.18)-amountFromPreviousSubscription)>0?amountFromPreviousSubscription:0}</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>₹{Math.round((plan.price * 1.18)-amountFromPreviousSubscription).toLocaleString()}</span>
+                  <span>₹{(Math.round((plan.price * 1.18)-amountFromPreviousSubscription)>0?Math.round((plan.price * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))}</span>
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -356,7 +374,7 @@ useEffect(() => {
                     Loading Payment Gateway...
                   </>
                 ) : (
-                  `Pay ₹${Math.round(plan.price * 1.18).toLocaleString()}`
+                  `Pay ₹${((Math.round((plan.price * 1.18)-amountFromPreviousSubscription)>0?Math.round((plan.price * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))).toLocaleString()}`
                 )}
               </Button>
 
