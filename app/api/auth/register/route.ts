@@ -3,7 +3,8 @@ import { NextRequest } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
-import {createNotification, notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
+import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
+import { calculateTrialEndDate } from "@/lib/trial-helper"
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,17 +73,14 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
-    const adminUserId=await db.collection(Collections.USERS).findOne({role:"super-admin"});
-    console.log("Super admin details for registration notification:",adminUserId);
+    
     // Notify super admins about new registration
     try {
-      await createNotification({
-        userId: adminUserId?._id.toString() || "",
-        type:"new-registration",
-        title:"New User Registration",
-        message:`A new user has registered with the email: ${newUser.email}`,
-        link:"/super-admin/clients"
-      })
+      await notifySuperAdminsNewRegistration(
+        result.insertedId.toString(),
+        newUser.name,
+        newUser.email
+      )
     } catch (notifError) {
       console.error("Failed to send registration notification:", notifError)
       // Don't fail the registration if notification fails
