@@ -1,6 +1,6 @@
 "use client"
 import { toast } from "@/lib/toast"
-
+import ProductImageUpload from "@/components/admin/product-image-upload"
 import { useState, useEffect } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -95,6 +95,10 @@ export default function ItemsPage() {
     if (data.applyTax && !data.cgst && !data.sgst && !data.igst) {
       return "At least one tax must be selected."
     }
+        // ⭐ NEW VALIDATION: CGST & SGST must always be equal
+    if (data.cgst !== data.sgst) {
+      return "CGST and SGST values must be equal."
+    }
 
     return null
   }
@@ -166,36 +170,53 @@ export default function ItemsPage() {
 
   const handleSave = async () => {
     try {
-      // ✅ VALIDATE FIRST
       const errMsg = validateItem(formData)
       if (errMsg) {
-        toast({ title: "Notification", description: errMsg, variant: "default" })
+        toast({ title: "Error", description: errMsg })
         return
       }
 
+      const fd = new FormData()
+      Object.keys(formData).forEach(key => {
+        if (key === "imageFile") return
+        fd.append(key, (formData as any)[key])
+      })
+
+      if (formData.imageFile) fd.append("image", formData.imageFile)
+      if (formData.folder) fd.append("folder", formData.folder)
+      if (formData.newFolder) fd.append("newFolder", formData.newFolder)
+
+      let res
+
       if (editingItem?.id) {
-        await api.items.update(editingItem.id, {
-          ...formData,
+        res = await fetch(`/api/items/update/${editingItem.id}`, {
+          method: "POST",
+          body: fd
         })
       } else {
-        await api.items.create({
-          ...formData,
+        res = await fetch("/api/items/create", {
+          method: "POST",
+          body: fd
         })
       }
 
-      await loadItems()
-      resetForm()
-      setEditingItem(null)
-      setIsDialogOpen(false)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      const data = await res.json()
+
+      if (!data.success) {
+        toast({ title: "Error", description: data.error })
+        return
+      }
+
       toast({ title: "Success", description: "Item saved successfully!" })
+      loadItems()
+      setIsDialogOpen(false)
 
     } catch (err) {
-      console.error("Failed to save", err)
-      toast({ title: "Error", description: "Failed to save item", variant: "destructive" })
+      console.error(err)
+      toast({ title: "Error", description: "Failed to save" })
     }
   }
+
 
 
   const resetForm = () => {
@@ -215,50 +236,50 @@ export default function ItemsPage() {
     })
   }
   const fetchItems = async () => {
-  const res = await api.items.getAll()
-  setItems(res.items || res)
-}
-// All supported unit types (short => full name)
-const UNIT_TYPES = {
-  gm: "Grams",
-  gram: "Grams",
-  grams: "Grams",
+    const res = await api.items.getAll()
+    setItems(res.items || res)
+  }
+  // All supported unit types (short => full name)
+  const UNIT_TYPES = {
+    gm: "Grams",
+    gram: "Grams",
+    grams: "Grams",
 
-  kg: "Kilograms",
-  kilogram: "Kilograms",
-  kilograms: "Kilograms",
+    kg: "Kilograms",
+    kilogram: "Kilograms",
+    kilograms: "Kilograms",
 
-  liters: "Liters",
-  litre: "Liters",
-  ltr: "Liters",
+    liters: "Liters",
+    litre: "Liters",
+    ltr: "Liters",
 
-  ml: "Milliliters",
-  milliliter: "Milliliters",
-  milliliters: "Milliliters",
+    ml: "Milliliters",
+    milliliter: "Milliliters",
+    milliliters: "Milliliters",
 
-  qty: "Quantity",
-  quantity: "Quantity",
+    qty: "Quantity",
+    quantity: "Quantity",
 
-  pcs: "Pieces",
-  piece: "Pieces",
-  pieces: "Pieces",
+    pcs: "Pieces",
+    piece: "Pieces",
+    pieces: "Pieces",
 
-  box: "Box",
-  boxes: "Box",
+    box: "Box",
+    boxes: "Box",
 
-  dozen: "Dozen",
-};
+    dozen: "Dozen",
+  };
 
-// Normalize & resolve value
-function normalizeUnit(input: string): string {
-  if (!input) return "other";
+  // Normalize & resolve value
+  function normalizeUnit(input: string): string {
+    if (!input) return "other";
 
-  const key = input.trim().toLowerCase();
+    const key = input.trim().toLowerCase();
 
-  return UNIT_TYPES[key]
-    ? UNIT_TYPES[key]               // known unit
-    : "other";                      // unknown unit → Other
-}
+    return UNIT_TYPES[key]
+      ? UNIT_TYPES[key]               // known unit
+      : "other";                      // unknown unit → Other
+  }
 
 
   if (loading) {
@@ -292,228 +313,240 @@ function normalizeUnit(input: string): string {
           <BulkUploadDialogItem onSuccess={fetchItems} />
 
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product/Service
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
-              <DialogHeader>
-                <DialogTitle>{editingItem ? "Edit Product/Service" : "Add New Product/Service"}</DialogTitle>
-                <DialogDescription>Enter item details below. Fields marked with * are required.</DialogDescription>
-              </DialogHeader>
-            </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product/Service
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+                <DialogHeader>
+                  <DialogTitle>{editingItem ? "Edit Product/Service" : "Add New Product/Service"}</DialogTitle>
+                  <DialogDescription>Enter item details below. Fields marked with * are required.</DialogDescription>
+                </DialogHeader>
+              </div>
 
-            <div className="flex-1 min-h-0 max-h-full mb-20 overflow-y-auto px-6 py-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">
-                    Select Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value: "product" | "service") =>
-                      setFormData({ ...formData, type: value, unitType: value === "service" ? "" : formData.unitType })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Product/Service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="product">Product</SelectItem>
-                      <SelectItem value="service">Service</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.type === "product" && (
+              <div className="flex-1 min-h-0 max-h-full mb-20 overflow-y-auto px-6 py-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="unitType" required>Unit Type</Label>
-<Select
-  value={normalizeUnit(formData.unitType)}
-  onValueChange={(value) => setFormData({ ...formData, unitType: value })}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select unit type" />
-  </SelectTrigger>
-
-  <SelectContent>
-    <SelectItem value="Grams">Grams (gm)</SelectItem>
-    <SelectItem value="Kilograms">Kilograms (kg)</SelectItem>
-    <SelectItem value="Liters">Liters (ltr)</SelectItem>
-    <SelectItem value="Milliliters">Milliliters (ml)</SelectItem>
-    <SelectItem value="Quantity">Quantity (qty)</SelectItem>
-    <SelectItem value="Pieces">Pieces (pcs)</SelectItem>
-    <SelectItem value="Box">Box</SelectItem>
-    <SelectItem value="Dozen">Dozen</SelectItem>
-
-    {/* NEW */}
-    <SelectItem value="other">Other</SelectItem>
-  </SelectContent>
-</Select>
-
+                    <Label htmlFor="type">
+                      Select Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={(value: "product" | "service") =>
+                        setFormData({ ...formData, type: value, unitType: value === "service" ? "" : formData.unitType })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Product/Service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="product">Product</SelectItem>
+                        <SelectItem value="service">Service</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  {formData.type === "product" && (
+                    <div className="space-y-2 flex gap-4 items-center">
+                      <div className="mb-4">
+                        <Label htmlFor="unitType" required>Unit Type</Label>
+                        <Select
+                          value={normalizeUnit(formData.unitType)}
+                          onValueChange={(value) => setFormData({ ...formData, unitType: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit type" />
+                          </SelectTrigger>
+
+                          <SelectContent>
+                            <SelectItem value="Grams">Grams (gm)</SelectItem>
+                            <SelectItem value="Kilograms">Kilograms (kg)</SelectItem>
+                            <SelectItem value="Liters">Liters (ltr)</SelectItem>
+                            <SelectItem value="Milliliters">Milliliters (ml)</SelectItem>
+                            <SelectItem value="Quantity">Quantity (qty)</SelectItem>
+                            <SelectItem value="Pieces">Pieces (pcs)</SelectItem>
+                            <SelectItem value="Box">Box</SelectItem>
+                            <SelectItem value="Dozen">Dozen</SelectItem>
+
+                            {/* NEW */}
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <ProductImageUpload
+                        onSelect={(imgFile, folder, newFolder) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            imageFile: imgFile,
+                            folder,
+                            newFolder
+                          }))
+                        }}
+                      />
+
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">
+                        Item Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Enter item name"
+                        required
+                      />
+                    </div>
+
+                    {formData.type === "product" ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="hsnCode">HSN Code</Label>
+                        <Input
+                          id="hsnCode"
+                          value={formData.hsnCode}
+                          onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                          placeholder="Enter HSN code"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label htmlFor="hsnCode">SAC Code</Label>
+                        <Input
+                          id="hsnCode"
+                          value={formData.hsnCode}
+                          onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
+                          placeholder="Enter SAC code"
+                        />
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="name">
-                      Item Name <span className="text-red-500">*</span>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Enter item description"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="price">
+                      Price (₹) <span className="text-red-500">*</span>
                     </Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter item name"
+                      id="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
                       required
                     />
                   </div>
 
-                  {formData.type === "product" ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="hsnCode">HSN Code</Label>
-                      <Input
-                        id="hsnCode"
-                        value={formData.hsnCode}
-                        onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
-                        placeholder="Enter HSN code"
+                  <div className="space-y-4 border-t pt-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="applyTax"
+                        checked={formData.applyTax}
+                        onCheckedChange={(checked) => setFormData({ ...formData, applyTax: checked as boolean })}
                       />
+                      <Label htmlFor="applyTax" className="cursor-pointer">
+                        Apply Tax
+                      </Label>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label htmlFor="hsnCode">SAC Code</Label>
-                      <Input
-                        id="hsnCode"
-                        value={formData.hsnCode}
-                        onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
-                        placeholder="Enter SAC code"
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Enter item description"
-                    rows={3}
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="price">
-                    Price (₹) <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: Number.parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
+                    {formData.applyTax && (
+                      <div className="grid grid-cols-3 gap-4 pl-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="cgst">CGST (%)</Label>
+                          <Select
+                            value={formData.cgst.toString()}
+                            onValueChange={(value) => setFormData({ ...formData, cgst: Number.parseFloat(value) })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select CGST" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {taxRates
+                                .filter((rate) => rate.type === "CGST" && rate.isActive)
+                                .map((rate) => (
+                                  <SelectItem key={rate._id} value={rate.rate.toString()}>
+                                    {rate.rate}%
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                <div className="space-y-4 border-t pt-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="applyTax"
-                      checked={formData.applyTax}
-                      onCheckedChange={(checked) => setFormData({ ...formData, applyTax: checked as boolean })}
-                    />
-                    <Label htmlFor="applyTax" className="cursor-pointer">
-                      Apply Tax
-                    </Label>
+                        <div className="space-y-2">
+                          <Label htmlFor="sgst">SGST (%)</Label>
+                          <Select
+                            value={formData.sgst.toString()}
+                            onValueChange={(value) => setFormData({ ...formData, sgst: Number.parseFloat(value) })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select SGST" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {taxRates
+                                .filter((rate) => rate.type === "SGST" && rate.isActive)
+                                .map((rate) => (
+                                  <SelectItem key={rate._id} value={rate.rate.toString()}>
+                                    {rate.rate}%
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="igst">IGST (%)</Label>
+                          <Select
+                            value={formData.igst.toString()}
+                            onValueChange={(value) => setFormData({ ...formData, igst: Number.parseFloat(value) })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select IGST" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {taxRates
+                                .filter((rate) => rate.type === "IGST" && rate.isActive)
+                                .map((rate) => (
+                                  <SelectItem key={rate._id} value={rate.rate.toString()}>
+                                    {rate.rate}%
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {formData.applyTax && (
-                    <div className="grid grid-cols-3 gap-4 pl-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="cgst">CGST (%)</Label>
-                        <Select
-                          value={formData.cgst.toString()}
-                          onValueChange={(value) => setFormData({ ...formData, cgst: Number.parseFloat(value) })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select CGST" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {taxRates
-                              .filter((rate) => rate.type === "CGST" && rate.isActive)
-                              .map((rate) => (
-                                <SelectItem key={rate._id} value={rate.rate.toString()}>
-                                  {rate.rate}%
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="sgst">SGST (%)</Label>
-                        <Select
-                          value={formData.sgst.toString()}
-                          onValueChange={(value) => setFormData({ ...formData, sgst: Number.parseFloat(value) })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select SGST" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {taxRates
-                              .filter((rate) => rate.type === "SGST" && rate.isActive)
-                              .map((rate) => (
-                                <SelectItem key={rate._id} value={rate.rate.toString()}>
-                                  {rate.rate}%
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="igst">IGST (%)</Label>
-                        <Select
-                          value={formData.igst.toString()}
-                          onValueChange={(value) => setFormData({ ...formData, igst: Number.parseFloat(value) })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select IGST" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {taxRates
-                              .filter((rate) => rate.type === "IGST" && rate.isActive)
-                              .map((rate) => (
-                                <SelectItem key={rate._id} value={rate.rate.toString()}>
-                                  {rate.rate}%
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg">
-              <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Item
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg">
+                <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Item
+                  </Button>
                 </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {saved && (
