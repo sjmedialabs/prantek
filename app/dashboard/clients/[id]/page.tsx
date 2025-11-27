@@ -119,9 +119,9 @@ export default function ClientDetailsPage() {
               date: q.date,
               items: q.items?.map((item: any) => item.itemName) || [],
               amount: q.grandTotal || 0,
-              paidAmount: q.amountPaid || 0,
+              paidAmount: q.paidAmount || 0,
               balanceAmount: q.balanceAmount || 0,
-              status: q.status === "accepted" ? "completed" : q.amountPaid > 0 ? "partial" : "pending",
+              status: q.status === "completed" ? "completed" : q.paidAmount > 0 ? "partial" : "pending",
             }))
 
           setTransactions(clientQuotations)
