@@ -138,19 +138,19 @@ export async function createNotification({
 /**
  * Notify super admins about new registration
  */
-// export async function notifySuperAdminsNewRegistration(
-//   userId: string,
-//   userName: string,
-//   userEmail: string
-// ): Promise<void> {
-//   const superAdminIds = await getSuperAdminUsers()
-//   await createNotification(
-//     superAdminIds,
-//     "registration",
-//     "New User Registration",
-//     `${userName} (${userEmail}) has successfully registered`,
-//     userId,
-//     "user",
-//     `/super-admin/clients`
-//   )
-// }
+export async function notifySuperAdminsNewRegistration(
+  userId: string,
+  userName: string,
+  userEmail: string
+): Promise<void> {
+  const superAdminIds = await getSuperAdminUsers()
+  await createNotification(
+    superAdminIds,
+    "registration",
+    "New User Registration",
+    `${userName} (${userEmail}) has successfully registered`,
+    userId,
+    "user",
+    `/super-admin/clients`
+  )
+}
