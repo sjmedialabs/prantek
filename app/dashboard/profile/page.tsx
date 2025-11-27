@@ -14,6 +14,7 @@ import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { toast } from "@/lib/toast"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 interface SubscriptionPlan {
   id: string
@@ -380,10 +381,12 @@ export default function ProfilePage() {
             </div>
             {currentPlan && user?.subscriptionStatus === "active" ? (
               <div className="flex space-x-2">
-                <Button onClick={() => setShowPlanDialog(true)} variant="outline">
+                <Link href="/dashboard/plans">
+                <Button  variant="outline">
                   <Zap className="h-4 w-4 mr-2" />
                   Upgrade Plan
                 </Button>
+                </Link>
                 <Button onClick={handleRemovePlan} variant="destructive">
                   Cancel Plan
                 </Button>
