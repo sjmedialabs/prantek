@@ -65,7 +65,6 @@ export default function VendorDetailsPage() {
           </h1>
         </div>
 
-        )}
       </div>
 
       {/* Vendor Info Card */}
