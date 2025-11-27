@@ -333,6 +333,8 @@ export interface Payment extends BaseDocument {
   date: string
   amount: number
   paymentMethod: string
+  screenshotFile?: string
+  billFile?: string
   bankAccount?: string
   createdBy: string
   category?: string
