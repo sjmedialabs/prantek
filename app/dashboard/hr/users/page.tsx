@@ -26,7 +26,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 
-
+import { Switch } from "@/components/ui/switch"
+import { toast } from "@/lib/toast"
 
 interface Employee {
   _id: string
@@ -358,6 +359,7 @@ export default function UsersPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
+                  <th className="p-4 text-left font-medium">Sr.No</th>
                   <th className="p-4 text-left font-medium">Name</th>
                   <th className="p-4 text-left font-medium">Email</th>
                   <th className="p-4 text-left font-medium">Employee</th>
@@ -375,8 +377,9 @@ export default function UsersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
+                  filteredUsers.map((user,index) => (
                     <tr key={user._id} className="border-b hover:bg-muted/50">
+                      <td className="p-4">{index + 1}</td>
                       <td className="p-4 font-medium">{user.name}</td>
                       <td className="p-4">{user.email}</td>
                       <td className="p-4">
@@ -433,13 +436,29 @@ export default function UsersPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(user)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <Switch className="mt-2"
+                              checked={user.isActive}
+                              onCheckedChange={async (checked) => {
+                                try {
+                                  const newStatus = checked ? true : false
+                                  const response = await fetch("/api/users", {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({isActive: newStatus, _id: user._id, userType: "admin-user"})
+                                  })
+                                  if(response.ok){
+                                    setUsers((prevUsers)=>prevUsers.map((u)=>
+                                      u._id === user._id ? {...u, isActive: newStatus} : u
+                                    ))
+                                    // await fetchUsers()
+                                    
+                                  }
+                                  
+                                } catch (err) {
+                                  console.log(err)
+                                }
+                              }}
+                            />
                         </div>
                       </td>
                     </tr>
