@@ -19,6 +19,18 @@ const { user, loading, hasPermission } = useUser()
 
   // ✅ ADDED error message state
   const [errors, setErrors] = useState<string[]>([])
+const [fieldErrors, setFieldErrors] = useState({
+  companyName: "",
+  email: "",
+  address: "",
+  phone: "",
+  city: "",
+  state: "",
+  pincode: "",
+  gstin: "",
+  pan: "",
+  tan: "",
+})
 
   const [companyData, setCompanyData] = useState<CompanySetting>({
     userId: "",
@@ -53,52 +65,72 @@ const { user, loading, hasPermission } = useUser()
   }, [])
 
   // ✅ VALIDATION FUNCTION
-  const validateFields = () => {
-    const newErrors: string[] = []
-
-    if (!companyData.companyName.trim()) newErrors.push("Company Name is required")
-    if (!companyData.email.trim()) newErrors.push("Email is required")
-    if (!(companyData.address ?? "").trim()) newErrors.push("Address is required")
-    if (!(companyData.phone ?? "").trim()) newErrors.push("Phone is required")
-    if (!(companyData.city ?? "").trim()) newErrors.push("City is required")
-    if (!(companyData.state ?? "").trim()) newErrors.push("State is required")
-    if (!(companyData.pincode ?? "").trim()) newErrors.push("Pincode is required")
-    if (!(companyData.gstin ?? "").trim()) newErrors.push("GSTIN is required")
-    if (!(companyData.pan ?? "").trim()) newErrors.push("PAN is required")
-    if (!(companyData.tan ?? "").trim()) newErrors.push("TAN is required")
-
-    // ✅ Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(companyData.email)) newErrors.push("Invalid Email format")
-
-    // ✅ Phone validation (10 digits India)
-    const phoneRegex = /^[6-9]\d{9}$/
-    if (!phoneRegex.test(companyData.phone ?? "")) newErrors.push("Invalid Phone (must be 10 digits)")
-
-    // ✅ Pincode (6 digits)
-    const pincodeRegex = /^\d{6}$/
-    if (!pincodeRegex.test(companyData.pincode ?? "")) newErrors.push("Invalid Pincode (must be 6 digits)")
-
-    // ✅ PAN validation
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
-    if (!panRegex.test(companyData.pan ?? "")) newErrors.push("Invalid PAN format")
-
-    // ✅ GSTIN validation
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
-    if (!gstRegex.test(companyData.gstin ?? "")) newErrors.push("Invalid GSTIN format")
-        const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
-    if (!tanRegex.test(companyData.tan ?? "")) newErrors.push("Invalid TAN format")
-    setErrors(newErrors)
-    return newErrors.length === 0
+const validateFields = () => {
+  const newErrors: any = {
+    companyName: "",
+    email: "",
+    address: "",
+    phone: "",
+    city: "",
+    state: "",
+    pincode: "",
+    gstin: "",
+    pan: "",
+    tan: "",
   }
+
+  // Required validations
+  if (!companyData.companyName.trim()) newErrors.companyName = "Company name is required"
+  if (!companyData.email.trim()) newErrors.email = "Email is required"
+  if (!companyData.address?.trim()) newErrors.address = "Address is required"
+  if (!companyData.phone?.trim()) newErrors.phone = "Phone is required"
+  if (!companyData.city?.trim()) newErrors.city = "City is required"
+  if (!companyData.state?.trim()) newErrors.state = "State is required"
+  if (!companyData.pincode?.trim()) newErrors.pincode = "Pincode is required"
+  if (!companyData.gstin?.trim()) newErrors.gstin = "GSTIN is required"
+  if (!companyData.pan?.trim()) newErrors.pan = "PAN is required"
+  if (!companyData.tan?.trim()) newErrors.tan = "TAN is required"
+
+  // Pattern validations
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (companyData.email && !emailRegex.test(companyData.email))
+    newErrors.email = "Invalid email format"
+
+  const phoneRegex = /^[6-9]\d{9}$/
+  if (companyData.phone && !phoneRegex.test(companyData.phone))
+    newErrors.phone = "Phone must be valid 10-digit Indian mobile no."
+
+  const pincodeRegex = /^\d{6}$/
+  if (companyData.pincode && !pincodeRegex.test(companyData.pincode))
+    newErrors.pincode = "Pincode must be 6 digits"
+
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
+  if (companyData.pan && !panRegex.test(companyData.pan))
+    newErrors.pan = "Invalid PAN format"
+
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+  if (companyData.gstin && !gstRegex.test(companyData.gstin))
+    newErrors.gstin = "Invalid GSTIN format"
+
+  const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
+  if (companyData.tan && !tanRegex.test(companyData.tan))
+    newErrors.tan = "Invalid TAN format"
+
+  setFieldErrors(newErrors)
+
+  // If ANY error has a value → fail
+  return Object.values(newErrors).every((x) => x === "")
+}
+
 
 const handleSave = async () => {
   console.log("button clicked")
 
-  if (!validateFields()) {
-    toast({ title: "Validation Error", description: errors.join(", "), variant: "destructive" })
-    return
-  }
+if (!validateFields()) {
+  toast({ title: "Validation Error", description: "Please fix the highlighted errors.", variant: "destructive" })
+  return
+}
+
 
   console.log("Updating company details:", companyData)
 
@@ -228,6 +260,9 @@ const handleSave = async () => {
                 placeholder="Enter company name"
                 required
               />
+                {fieldErrors.companyName && (
+    <p className="text-red-500 text-sm">{fieldErrors.companyName}</p>
+  )}
             </div>
 
             {/* ✅ EMAIL */}
@@ -243,6 +278,7 @@ const handleSave = async () => {
                 placeholder="company@example.com"
                 required
               />
+              {fieldErrors.email && <p className="text-red-500 text-sm">{fieldErrors.email}</p>}
             </div>
           </div>
 
@@ -259,6 +295,7 @@ const handleSave = async () => {
               rows={3}
               required
             />
+            {fieldErrors.address && <p className="text-red-500 text-sm">{fieldErrors.address}</p>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
   {/* ✅ City */}
@@ -270,6 +307,8 @@ const handleSave = async () => {
       onChange={(e) => setCompanyData({ ...companyData, city: e.target.value })}
       placeholder="Enter city"
     />
+    {fieldErrors.city && <p className="text-red-500 text-sm">{fieldErrors.city}</p>}
+
   </div>
 
   {/* ✅ State */}
@@ -281,6 +320,8 @@ const handleSave = async () => {
       onChange={(e) => setCompanyData({ ...companyData, state: e.target.value })}
       placeholder="Enter state"
     />
+    {fieldErrors.state && <p className="text-red-500 text-sm">{fieldErrors.state}</p>}
+
   </div>
 
   {/* ✅ Pincode */}
@@ -292,6 +333,7 @@ const handleSave = async () => {
       onChange={(e) => setCompanyData({ ...companyData, pincode: e.target.value })}
       placeholder="Enter pincode"
     />
+    {fieldErrors.pincode && <p className="text-red-500 text-sm">{fieldErrors.pincode}</p>}
   </div>
 </div>
 
@@ -310,6 +352,7 @@ const handleSave = async () => {
                 placeholder="+91 98765 43210"
                 required
               />
+              {fieldErrors.phone && <p className="text-red-500 text-sm">{fieldErrors.phone}</p>}
             </div>
 
             {/* ✅ WEBSITE */}
@@ -334,6 +377,7 @@ const handleSave = async () => {
       onChange={(e) => setCompanyData({ ...companyData, gstin: e.target.value })}
       placeholder="Enter GSTIN"
     />
+    {fieldErrors.gstin && <p className="text-red-500 text-sm">{fieldErrors.gstin}</p>}
   </div>
 
   {/* ✅ PAN */}
@@ -345,6 +389,7 @@ const handleSave = async () => {
       onChange={(e) => setCompanyData({ ...companyData, pan: e.target.value })}
       placeholder="Enter PAN"
     />
+    {fieldErrors.pan && <p className="text-red-500 text-sm">{fieldErrors.pan}</p>}
   </div>
     {/* ✅ TAN */}
   <div className="space-y-2">
@@ -355,6 +400,7 @@ const handleSave = async () => {
       onChange={(e) => setCompanyData({ ...companyData, tan: e.target.value })}
       placeholder="Enter TAN"
     />
+    {fieldErrors.tan && <p className="text-red-500 text-sm">{fieldErrors.tan}</p>}
   </div>
 </div>
 

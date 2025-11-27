@@ -10,6 +10,7 @@ import { api } from "@/lib/api-client"
 import Link from "next/link"
 import { toast } from "@/lib/toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { SubscriptionPlan } from "@/lib/models/types"
 
 declare global {
   interface Window {
@@ -25,76 +26,108 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false)
   const [scriptLoaded, setScriptLoaded] = useState(false)
   const [error, setError] = useState("")
-  const[amountFromPreviousSubscription,setAmountFromPreviousSubscription]=useState(0);
-   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
-
-  const loginedUserLocalStorage = loginedUserLocalStorageString
-  ? JSON.parse(loginedUserLocalStorageString)
-  : null;
-
+  const [amountFromPreviousSubscription, setAmountFromPreviousSubscription] = useState(0)
+  const [previousPlan, setPreviousPlan] = useState<SubscriptionPlan | null>(null)
+  const [loginedUserLocalStorage, setLoginedUserLocalStorage] = useState<any>(null)
+  const [isClient, setIsClient] = useState(false)
+  // 1️⃣ Mark client-side render finished
   useEffect(() => {
-    const loadPlan = async () => {
-      if (typeof window !== "undefined") {
-        const planId = localStorage.getItem("selected_plan_id")
-        // console.log("local stored planId is",loginedUserLocalStorage.subscriptionPlanId)
-        if (!planId) {
-          router.push("/dashboard/plans")
-          return
-        }
+    setIsClient(true)
+  }, [])
 
-        try {
-          const selectedPlan = await api.subscriptionPlans.getById(planId)
-          const previousPlan=await api.subscriptionPlans.getById(loginedUserLocalStorage.subscriptionPlanId)
-          console.log("Current Plan is:::",selectedPlan)
-          if(loginedUserLocalStorage.subscriptionStatus!="trial"){
-            // 2️⃣ Parse dates
-            const subscriptionEndDate = new Date(loginedUserLocalStorage.subscriptionEndDate);
-            const subscriptionStartDate = new Date(loginedUserLocalStorage.subscriptionStartDate);
-            const currentDate = new Date();
+  // 2️⃣ Load all localStorage values
+  useEffect(() => {
+    const loginString = localStorage.getItem("loginedUser")
+    setLoginedUserLocalStorage(loginString ? JSON.parse(loginString) : null)
+  }, [])
+console.log("loginedUserLocalStorage:", loginedUserLocalStorage)
+  // 3️⃣ Load plan and calculate balance
+useEffect(() => {
+  if (!loginedUserLocalStorage) return;
 
-            // 3️⃣ Calculate total days based on billingCycle (for fallback)
-            let totalDays;
-            if (previousPlan.billingCycle === "monthly") {
-              totalDays = 30;
-            } else if (previousPlan.billingCycle === "yearly") {
-              totalDays = 365;
-            } else {
-              // default fallback
-              totalDays = Math.ceil(
-                (subscriptionEndDate - subscriptionStartDate) / (1000 * 60 * 60 * 24)
-              );
-            }
+  const loadPlan = async () => {
+    try {
+      const planId = localStorage.getItem("selected_plan_id");
 
-            // 4️⃣ Calculate days left in current plan
-            const daysLeft = Math.max(
-              Math.ceil((subscriptionEndDate - currentDate) / (1000 * 60 * 60 * 24)),
-              0
+      if (!planId) {
+        router.push("/dashboard/plans");
+        return;
+      }
+
+      const selectedPlan = await api.subscriptionPlans.getById(planId);
+      setPlan(selectedPlan);
+
+      const subscriptionStatus = user?.subscriptionStatus;
+      const subscriptionPlanId = user?.subscriptionPlanId || "";
+
+      console.log("User subscriptionStatus:", subscriptionStatus);
+      console.log("User subscriptionPlanId:", subscriptionPlanId);
+
+      // 1️⃣ If cancelled → no previous plan
+      if (subscriptionStatus === "cancelled") {
+        console.log("User subscription is cancelled → no previous plan.");
+        setPreviousPlan(null);
+        setAmountFromPreviousSubscription(0);
+        return;
+      }
+
+      // 2️⃣ If trial → no previous amount
+      if (subscriptionStatus === "trial") {
+        console.log("User is in trial → no previous plan amount.");
+        setPreviousPlan(null);
+        setAmountFromPreviousSubscription(0);
+        return;
+      }
+
+      // 3️⃣ If no plan linked → no previous plan
+      if (!subscriptionPlanId || subscriptionPlanId.trim() === "") {
+        console.log("No existing subscription plan → no previous plan.");
+        setPreviousPlan(null);
+        setAmountFromPreviousSubscription(0);
+        return;
+      }
+
+      // 4️⃣ Valid previous plan → fetch 
+      const prevPlan = await api.subscriptionPlans.getById(subscriptionPlanId);
+      setPreviousPlan(prevPlan);
+
+      // Fetch dates
+      const subscriptionEndDate = new Date(loginedUserLocalStorage.subscriptionEndDate);
+      const subscriptionStartDate = new Date(loginedUserLocalStorage.subscriptionStartDate);
+      const currentDate = new Date();
+
+      let totalDays =
+        prevPlan.billingCycle === "monthly"
+          ? 30
+          : prevPlan.billingCycle === "yearly"
+          ? 365
+          : Math.ceil(
+              (subscriptionEndDate - subscriptionStartDate) /
+                (1000 * 60 * 60 * 24)
             );
 
-            console.log("Days that are left from the current plan:::",daysLeft)
-            // 5️⃣ Calculate remaining balance
-            const remainingBalance = Math.ceil((previousPlan.price * daysLeft) / totalDays);
-            console.log("Saved amount from the previous plan:::",remainingBalance);
-            setAmountFromPreviousSubscription(remainingBalance);
-            // 6️⃣ Fetch new plan details
-            // const newPlan = await api.subscriptionPlans.getById(selectedNewPlanId);
+      const daysLeft = Math.max(
+        Math.ceil(
+          (subscriptionEndDate - currentDate) /
+            (1000 * 60 * 60 * 24)
+        ),
+        0
+      );
 
-            // // 7️⃣ Final payable amount (cannot be negative)
-            // const finalPayableAmount = Math.max(newPlan.price - remainingBalance, 0);
+      const remainingBalance = Math.ceil(
+        ((prevPlan.price || 0) * daysLeft) / totalDays
+      );
 
-          }
-          if (selectedPlan) {
-            setPlan(selectedPlan)
-          }
-        } catch (error) {
-          console.error("Failed to load plan:", error)
-        } finally {
-          setLoading(false)
-        }
-      }
+      setAmountFromPreviousSubscription(remainingBalance);
+    } catch (err) {
+      console.error("Failed to load plan:", err);
+    } finally {
+      setLoading(false);
     }
-    loadPlan()
-  }, [router])
+  };
+
+  loadPlan();
+}, [loginedUserLocalStorage, router, user]);
 
   useEffect(() => {
     const script = document.createElement("script")
@@ -177,7 +210,7 @@ export default function CheckoutPage() {
   const handlePaymentSuccess = async (response: any) => {
     if (user && plan) {
       const updatedUser = await api.users.update( user.id, {
-        subscriptionPlanId: plan.id,
+        subscriptionPlanId: plan._id,
         subscriptionStatus: "active",
         subscriptionStartDate: new Date().toISOString(),
         subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -200,9 +233,9 @@ export default function CheckoutPage() {
 
       toast.success("Payment successful! Your subscription is now active.")
       localStorage.removeItem("selected_plan_id")
-
+      window.location.reload()
       setTimeout(() => {
-        router.push("/dashboard/settings")
+        router.push("/dashboard/plans")
       }, 1500)
     }
     setProcessing(false)

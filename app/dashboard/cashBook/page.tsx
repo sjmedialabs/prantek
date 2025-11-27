@@ -7,16 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter, X, Download } from "lucide-react"
+import { Search, Filter, X, Download, Receipt, Plus, CreditCard, Eye } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
-
+import Link from "next/link";
 interface CashEntry {
   id: string
   entryType: "receipt" | "payment"
   date: string
   partyType: "client" | "vendor" | "team"
   partyName: string
+  receiptNumber?: string
+  paymentNumber?: string
   category: string
   description: string
   amount: number
@@ -40,6 +42,8 @@ export default function CashbookPage() {
   const [dateToFilter, setDateToFilter] = useState("")
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // choose how many entries per page
 
   useEffect(() => {
     loadCashbookData()
@@ -48,23 +52,25 @@ export default function CashbookPage() {
   const loadCashbookData = async () => {
     const receipts = await api.receipts.getAll()
     const payments = await api.payments.getAll()
-    console.log("All receipt and pyments",receipts, payments)
+    console.log("All receipt and pyments", receipts, payments)
     const formattedReceipts = receipts.map((r: any) => ({
       id: r._id,
       entryType: "receipt",
       date: r.createdAt,
       partyType: "client",
+      receiptNumber: r.receiptNumber,
       partyName: r.clientName,
       category: r.category || "Client Payment",
       description: r.notes,
       amount: r.amountPaid,
       referenceNumber: r.referenceNumber,
-    //   createdBy: r.createdBy
+      //   createdBy: r.createdBy
     }))
-    console.log("formattedReceipts",formattedReceipts)
+    console.log("formattedReceipts", formattedReceipts)
     const formattedPayments = payments.map((p: any) => ({
       id: p._id,
       entryType: "payment",
+      paymentNumber: p.paymentNumber,
       date: p.createdAt,
       partyType: p.recipientType || "client",
       partyName: p.recipientName || "",
@@ -72,9 +78,9 @@ export default function CashbookPage() {
       description: p.description || "",
       amount: p.amount || 0,
       referenceNumber: p.referenceNumber || "",
-    //   createdBy: p.createdBy
+      //   createdBy: p.createdBy
     }))
-    console.log("formattedPayments",formattedPayments)
+    console.log("formattedPayments", formattedPayments)
     const combined = [...formattedReceipts, ...formattedPayments].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
@@ -86,8 +92,10 @@ export default function CashbookPage() {
   const filteredEntries = entries.filter((entry) => {
     const matchesSearch =
       (entry.partyName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (entry.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (entry.category || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (entry.date || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (entry.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (entry.receiptNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (entry.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesType = typeFilter === "all" || entry.entryType === typeFilter
     const matchesPartyType = partyTypeFilter === "all" || entry.partyType === partyTypeFilter
@@ -110,6 +118,15 @@ export default function CashbookPage() {
       matchesMaxAmount
     )
   })
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, typeFilter, partyTypeFilter, categoryFilter, dateFromFilter, dateToFilter, minAmountFilter, maxAmountFilter]);
+
+  const paginatedEntries = filteredEntries.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Unique lists
   const uniqueCategories = Array.from(new Set(entries.map((e) => e.category)))
@@ -119,7 +136,7 @@ export default function CashbookPage() {
   const totalReceipts = filteredEntries.filter((e) => e.entryType === "receipt").reduce((s, e) => s + e.amount, 0)
   const totalPayments = filteredEntries.filter((e) => e.entryType === "payment").reduce((s, e) => s + e.amount, 0)
   const netBalance = totalReceipts - totalPayments
-
+  console.log("filtered entries", filteredEntries)
   const clearFilters = () => {
     setTypeFilter("all")
     setPartyTypeFilter("all")
@@ -132,45 +149,45 @@ export default function CashbookPage() {
   }
 
   const exportCSV = () => {
-  if (entries.length === 0) {
-    alert("No data available to export.")
-    return
+    if (entries.length === 0) {
+      alert("No data available to export.")
+      return
+    }
+
+    const headers = [
+      "Date",
+      "Type",
+      "Party Name",
+      "Party Type",
+      "Category",
+      "Description",
+      "Reference No",
+      "Amount"
+    ]
+
+    const rows = entries.map((e) => [
+      e.date,
+      e.entryType,
+      e.partyName || "",
+      e.partyType || "",
+      e.category || "",
+      e.description || "",
+      e.referenceNumber || "",
+      e.amount || 0
+    ])
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers, ...rows].map((row) => row.join(",")).join("\n")
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "cashbook_export.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
-
-  const headers = [
-    "Date",
-    "Type",
-    "Party Name",
-    "Party Type",
-    "Category",
-    "Description",
-    "Reference No",
-    "Amount"
-  ]
-
-  const rows = entries.map((e) => [
-    e.date,
-    e.entryType,
-    e.partyName || "",
-    e.partyType || "",
-    e.category || "",
-    e.description || "",
-    e.referenceNumber || "",
-    e.amount || 0
-  ])
-
-  const csvContent =
-    "data:text/csv;charset=utf-8," +
-    [headers, ...rows].map((row) => row.join(",")).join("\n")
-
-  const encodedUri = encodeURI(csvContent)
-  const link = document.createElement("a")
-  link.setAttribute("href", encodedUri)
-  link.setAttribute("download", "cashbook_export.csv")
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
 
 
   if (loading) {
@@ -184,14 +201,14 @@ export default function CashbookPage() {
     )
   }
 
-//   if (!hasPermission("view_cashbo)) {
-//     return (
-//       <div className="text-center py-12">
-//         <h2 className="text-2xl font-bold">Access Denied</h2>
-//         <p className="text-gray-600">You cannot view cashbook records.</p>
-//       </div>
-//     )
-//   }
+  //   if (!hasPermission("view_cashbo)) {
+  //     return (
+  //       <div className="text-center py-12">
+  //         <h2 className="text-2xl font-bold">Access Denied</h2>
+  //         <p className="text-gray-600">You cannot view cashbook records.</p>
+  //       </div>
+  //     )
+  //   }
 
   return (
     <div className="space-y-6">
@@ -225,6 +242,56 @@ export default function CashbookPage() {
           <CardContent><div className="text-2xl font-bold">₹{netBalance.toLocaleString()}</div></CardContent>
         </Card>
       </div>
+      {/* Quick Action Cards */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <Link href="/dashboard/receipts/new">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-400">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Create Receipt
+                </CardTitle>
+                <Receipt className="h-5 w-5 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-600">
+                    Record incoming payments
+                  </p>
+                  <div className="bg-green-100 p-2 rounded-full">
+                    <Plus className="h-5 w-5 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/dashboard/payments/new">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-red-400">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Create Payment
+                </CardTitle>
+                <CreditCard className="h-5 w-5 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-600">
+                    Record outgoing payments
+                  </p>
+                  <div className="bg-red-100 p-2 rounded-full">
+                    <Plus className="h-5 w-5 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
 
       {/* Table */}
       <Card>
@@ -239,7 +306,7 @@ export default function CashbookPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, description, category..."
+                placeholder="Search by name, receipt/payment number, ledger and date..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -258,11 +325,11 @@ export default function CashbookPage() {
               dateToFilter ||
               minAmountFilter ||
               maxAmountFilter) && (
-              <Button variant="outline" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-2" />
-                Clear
-              </Button>
-            )}
+                <Button variant="outline" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              )}
           </div>
 
           {/* Filters */}
@@ -294,13 +361,13 @@ export default function CashbookPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Category</label>
+                <label className="text-sm font-medium">Ledger</label>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="All Ledgers" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     {uniqueCategories.map((cat) => (
-                      <SelectItem key={cat} value={(cat || "no category")}>{(cat) || "No Category" }</SelectItem>
+                      <SelectItem key={cat} value={(cat || "no ledger")}>{(cat) || "No Ledger"}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -332,49 +399,90 @@ export default function CashbookPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>S.No</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Receipt/Payment No.</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead>Party Type</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Ref No.</TableHead>
+                <TableHead>Ledger</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {filteredEntries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+              {paginatedEntries.map((entry, index) => {
+                const serial = (currentPage - 1) * itemsPerPage + (index + 1)
+                return (
+                  <TableRow key={entry.id}>
+                    <TableCell>{serial}</TableCell>
+                    <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{entry.entryType === "receipt" ? entry.receiptNumber : entry.paymentNumber}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={entry.entryType === "receipt" ? "default" : "destructive"}
+                        className="capitalize"
+                      >
+                        {entry.entryType}
+                      </Badge>
+                    </TableCell>
 
-                  <TableCell>
-                    <Badge
-                      variant={entry.entryType === "receipt" ? "default" : "destructive"}
-                      className="capitalize"
-                    >
-                      {entry.entryType}
-                    </Badge>
-                  </TableCell>
+                    <TableCell>{entry.partyName}</TableCell>
+                    <TableCell className="capitalize">{entry.partyType}</TableCell>
 
-                  <TableCell>{entry.partyName}</TableCell>
-                  <TableCell className="capitalize">{entry.partyType}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{entry.category}</Badge>
+                    </TableCell>
 
-                  <TableCell>
-                    <Badge variant="outline">{entry.category}</Badge>
-                  </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      ₹{(entry.amount || 0).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={
+                          entry.entryType === "receipt"
+                            ? `/dashboard/receipts/${entry.id}`
+                            : `/dashboard/payments/${entry.id}`
+                        }
+                      >
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </TableCell>
 
-                  <TableCell>{entry.description}</TableCell>
-                  <TableCell>{entry.referenceNumber || "—"}</TableCell>
-
-                  <TableCell className="text-right font-semibold">
-                    ₹{(entry.amount || 0).toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              ))}
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
 
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

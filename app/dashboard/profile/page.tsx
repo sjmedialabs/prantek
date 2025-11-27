@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { toast } from "@/lib/toast"
+import { useRouter } from "next/navigation"
 
 interface SubscriptionPlan {
   id: string
@@ -34,7 +35,7 @@ export default function ProfilePage() {
     address: user?.address || "",
     avatar: user?.avatar || "",
   })
-
+  const router = useRouter()
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([])
   const [showPlanDialog, setShowPlanDialog] = useState(false)
@@ -53,6 +54,7 @@ export default function ProfilePage() {
         avatar: user.avatar || "",
       })
     }
+    console.log("[Profile] User data loaded:", user)
   }, [user])
 
   const loadPlans = async () => {
@@ -63,7 +65,7 @@ export default function ProfilePage() {
       setAvailablePlans(plans || [])
 
       if (user?.subscriptionPlanId) {
-        console.log("[Profile] User has subscription plan ID:", user.subscriptionPlanId)
+        console.log("[Profile] User has subscription plan ID:", user.subscriptionPlanId, user.id)
         const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
         console.log("[Profile] Current plan:", plan)
         setCurrentPlan(plan || null)
@@ -127,23 +129,13 @@ export default function ProfilePage() {
     if (!user) return
 
     try {
-      const startDate = new Date()
-      const endDate = new Date()
-      endDate.setMonth(endDate.getMonth() + (plan.billingCycle === "yearly" ? 12 : 1))
-
-      // Update user subscription via API
-      await api.users.update(user.id, {
-        subscriptionPlanId: plan.id,
-        subscriptionStartDate: startDate.toISOString(),
-        subscriptionEndDate: endDate.toISOString(),
-      })
-
-      setCurrentPlan(plan)
-      setShowPlanDialog(false)
-      toast({ title: "Success", description: `Successfully subscribed to ${plan.name} plan` })
-
-      // Reload page to update user context
-      window.location.reload()
+    console.log("[PLANS] Selected plan:", plan._id)
+    // Store selected plan and redirect to payment
+    if (typeof window !== "undefined") {
+      localStorage.setItem("selected_plan_id", plan._id)
+      console.log("Stored selected_plan_id in localStorage:", localStorage.getItem("selected_plan_id"))
+      router.push("/dashboard/checkout")
+    }
     } catch (error) {
       console.error("Error updating subscription:", error)
       toast({ title: "Error", description: "Failed to update subscription plan", variant: "destructive" })
@@ -154,23 +146,21 @@ export default function ProfilePage() {
     if (!user || !currentPlan) return
 
     try {
-      // Remove subscription via API
+      // Cancel subscription but maintain access until end date
       await api.users.update(user.id, {
-        subscriptionPlanId: null,
-        subscriptionStartDate: null,
-        subscriptionEndDate: null,
+        subscriptionStatus: "cancelled",
       })
 
-      setCurrentPlan(null)
-      toast({ title: "Success", description: "Subscription cancelled successfully" })
+      toast({ title: "Success", description: "Subscription cancelled. You can use your plan until the end date." })
 
-      // Reload page to update user context
-      window.location.reload()
+      setCurrentPlan(null)
+     
     } catch (error) {
       console.error("Error removing subscription:", error)
       toast({ title: "Error", description: "Failed to cancel subscription", variant: "destructive" })
     }
   }
+
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -388,7 +378,7 @@ export default function ProfilePage() {
               <CardTitle>Subscription Plan</CardTitle>
               <CardDescription>Manage your subscription and billing</CardDescription>
             </div>
-            {currentPlan ? (
+            {currentPlan && user?.subscriptionStatus === "active" ? (
               <div className="flex space-x-2">
                 <Button onClick={() => setShowPlanDialog(true)} variant="outline">
                   <Zap className="h-4 w-4 mr-2" />
@@ -413,7 +403,7 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <h3 className="text-lg font-semibold text-gray-900">{currentPlan.name} Plan</h3>
-                    <Badge variant="default">Active</Badge>
+                    <Badge variant="default">{user?.subscriptionStatus}</Badge>
                   </div>
                   <p className="text-sm text-gray-600">{currentPlan.description}</p>
                   <div className="flex items-baseline space-x-1">
@@ -471,7 +461,7 @@ export default function ProfilePage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {availablePlans.length === 0 ? (
               <div key="no-plans" className="col-span-3 text-center py-8">
                 <p className="text-gray-600 mb-2">No subscription plans available</p>

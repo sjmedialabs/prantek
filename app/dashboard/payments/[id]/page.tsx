@@ -29,7 +29,7 @@ export default function PaymentDetailsPage() {
     const loadPayment = async () => {
       try {
         const paymentData = await api.payments.getById(paymentId)
-        setPayment(paymentData)
+        setPayment(paymentData.payment)
       } catch (error) {
         console.error("[v0] Error loading payment:", error)
       } finally {
@@ -61,10 +61,10 @@ export default function PaymentDetailsPage() {
     paymentNumber: payment.paymentNumber,
     date: payment.date,
     client: {
-      name: payment.clientName,
-      address: payment.clientAddress || "",
-      phone: payment.clientPhone || "",
-      email: payment.clientEmail || "",
+      name: payment.recipientName,
+      type: payment.recipientType || "",
+      id: payment.recipientId || "",
+      // email: payment.clientEmail || "",
     },
     paymentCategory: payment.category,
     description: payment.description,
@@ -72,7 +72,7 @@ export default function PaymentDetailsPage() {
     paymentMethod: payment.paymentMethod,
     referenceNumber: payment.referenceNumber || "",
     status: payment.status,
-    createdBy: payment.createdBy || "N/A",
+    // createdBy: payment.createdBy || "N/A",
   }
 
   const handleDownloadPDF = async () => {
@@ -82,7 +82,7 @@ export default function PaymentDetailsPage() {
   const handlePrint = () => {
     printDocument("print-content")
   }
-
+console.log("paymentDetails", payment);
   const companyDetailsForPrint = companyDetails || {
     logo: "/generic-company-logo.png",
     companyName: "Your Company Name",
@@ -145,7 +145,7 @@ export default function PaymentDetailsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
-                  <Badge variant={payment.status === "Cleared" ? "default" : "secondary"}>{payment.status}</Badge>
+                  <Badge variant={payment.status === "completed" ? "default" : "secondary"}>{payment.status}</Badge>
                 </div>
               </div>
               <Separator />
@@ -159,31 +159,31 @@ export default function PaymentDetailsPage() {
           {/* Client Details */}
           <Card>
             <CardHeader>
-              <CardTitle>Client Details</CardTitle>
+              <CardTitle>Party Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-gray-600">Client Name</p>
-                <p className="font-semibold">{payment.clientName}</p>
+                <p className="text-sm text-gray-600">Party Name</p>
+                <p className="font-semibold">{payment.recipientName}</p>
               </div>
-              {payment.clientEmail && (
+              {payment.recipientType && (
                 <div>
-                  <p className="text-sm text-gray-600">Email</p>
-                  <p className="font-semibold">{payment.clientEmail}</p>
+                  <p className="text-sm text-gray-600">Party Type</p>
+                  <p className="font-semibold">{payment.recipientType}</p>
                 </div>
               )}
-              {payment.clientPhone && (
+              {payment.recipientId && (
                 <div>
-                  <p className="text-sm text-gray-600">Phone</p>
-                  <p className="font-semibold">{payment.clientPhone}</p>
+                  <p className="text-sm text-gray-600">Party ID</p>
+                  <p className="font-semibold">{payment.recipientId}</p>
                 </div>
               )}
-              {payment.clientAddress && (
+              {/* {payment.clientAddress && (
                 <div>
                   <p className="text-sm text-gray-600">Address</p>
                   <p className="font-semibold">{payment.clientAddress}</p>
                 </div>
-              )}
+              )} */}
             </CardContent>
           </Card>
 
@@ -210,12 +210,12 @@ export default function PaymentDetailsPage() {
                     <p className="font-semibold">{payment.referenceNumber}</p>
                   </div>
                 )}
-                {payment.createdBy && (
+                {/* {payment.createdBy && (
                   <div>
                     <p className="text-sm text-gray-600">Created By</p>
                     <p className="font-semibold">{payment.createdBy}</p>
                   </div>
-                )}
+                )} */}
                 <div>
                   <p className="text-sm text-gray-600">Created At</p>
                   <p className="font-semibold">{new Date(payment.createdAt).toLocaleString()}</p>
@@ -238,10 +238,10 @@ export default function PaymentDetailsPage() {
                 <p className="text-3xl font-bold text-gray-900">₹{payment.amount?.toLocaleString() || "0"}</p>
               </div>
               <Separator />
-              <div>
+              {/* <div>
                 <p className="text-sm text-gray-600 mb-1">Amount in Words</p>
                 <p className="font-semibold text-gray-900">{payment.amountInWords}</p>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
 
@@ -254,9 +254,9 @@ export default function PaymentDetailsPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Current Status</span>
-                  <Badge variant={payment.status === "Cleared" ? "default" : "secondary"}>{payment.status}</Badge>
+                  <Badge variant={payment.status === "completed" ? "default" : "secondary"}>{payment.status}</Badge>
                 </div>
-                {payment.status === "Cleared" && (
+                {payment.status === "completed" && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-800 font-medium">Payment Cleared Successfully</p>
                   </div>

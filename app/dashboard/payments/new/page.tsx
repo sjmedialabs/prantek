@@ -100,17 +100,20 @@ export default function NewPaymentPage() {
         const uniqueTeams = Array.from(new Map(activeEmployees.map((t: any) => [t._id, t])).values());
 
         setTeamMembers(uniqueTeams);
+const activeRecipientTypes = recipientTypesData.filter((t) => t.isEnabled);
 
-        // ⬅️ 4. ACTIVE recipient types only + dedupe by value field
-        const activeRecipientTypes = recipientTypesData.filter((t: any) => t.isActive);
+const uniqueRecipientTypes = Array.from(
+  new Map(
+    activeRecipientTypes
+      .filter((t) => t.value)  // remove items missing value
+      .map((t) => [t.value.toLowerCase(), t])
+  ).values()
+);
 
-        const uniqueRecipientTypes = Array.from(
-          new Map(activeRecipientTypes.map((t: any) => [t.value, t])).values()
-        );
+setRecipientTypes(uniqueRecipientTypes);
 
-        setRecipientTypes(uniqueRecipientTypes);
 
-        const activePaymentCategories = paymentCategories.filter((t: any) => t.isActive);
+        const activePaymentCategories = paymentCategories.filter((t: any) => t.isEnabled);
 
         const uniquePaymentCategories = Array.from(
           new Map(activePaymentCategories.map((t: any) => [t._id, t])).values()
@@ -131,9 +134,10 @@ export default function NewPaymentPage() {
     loadData();
   }, []);
 
-  const uniqueRecipientTypes = Array.from(
-    new Map(recipientTypes.map((type) => [type.value, type])).values()
-  )
+  // const uniqueRecipientTypes = Array.from(
+  //   new Map(recipientTypes.map((type) => [type.value, type])).values()
+  // )
+  console.log("uniqueRecipientTypes", recipientTypes);
 
   // Validation functions for each tab
   const validatePaymentDetails = (): boolean => {
@@ -566,11 +570,16 @@ export default function NewPaymentPage() {
                             <SelectValue placeholder="Select party type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {uniqueRecipientTypes.map((type) => (
-                              <SelectItem key={type._id || type.id} value={type.value}>
-                                {type.name}
+                         
+                              <SelectItem value="client">
+                                Client
                               </SelectItem>
-                            ))}
+                              <SelectItem value="vendor">
+                                Vendor
+                              </SelectItem>
+                              <SelectItem value="team">
+                                Team
+                              </SelectItem>
                           </SelectContent>
                         </Select>
                         {validationErrors.recipientType && (

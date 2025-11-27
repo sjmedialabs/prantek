@@ -33,10 +33,45 @@ interface NavItem {
   submenu?: NavItem[];
 }
 
+
+// Helper function to check if user has an active subscription
+function hasActiveSubscription(user: any): boolean {
+  // Super admins always have access
+  if (user?.role === "super-admin") {
+    return true
+  }
+
+  // No subscription plan
+  if (!user?.subscriptionPlanId) {
+    return false
+  }
+
+  const status = user.subscriptionStatus
+
+  // If cancelled, check if still within validity period
+  if (status === "cancelled") {
+    if (!user.subscriptionEndDate) {
+      return false
+    }
+    const endDate = new Date(user.subscriptionEndDate)
+    const now = new Date()
+    return now <= endDate
+  }
+
+  // If expired or inactive, no access
+  if (status === "expired" || status === "inactive") {
+    return false
+  }
+
+  // Active or trial status
+  return status === "active" || status === "trial"
+}
+
 const navigationItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
   { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: null },
-  { name: "Client", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
+  { name: "Clients", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
+  { name: "Vendors", href: "/dashboard/vendor", icon: Users, permission: "view_clients" },
   { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
@@ -203,6 +238,11 @@ export default function DashboardSidebar() {
   const renderNavItem = (item: NavItem, level: number = 0, parentKey: string = "") => {
     // Check permission
     if (item.permission && !hasPermission(item.permission)) {
+      return null;
+    }
+
+    // If user doesn't have active subscription, only show Dashboard and Cashbook
+    if (!hasActiveSubscription(user) && item.permission !== null) {
       return null;
     }
 

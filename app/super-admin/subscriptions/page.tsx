@@ -64,9 +64,9 @@ export default function SubscriptionPlansPage() {
     
     // Enrich plans with subscriber count and revenue
     const enrichedPlans = data.map((plan: any) => {
-      // Count subscribers for this plan (excluding the first user)
-      const subscribers = loadusers.slice(1).filter(
-        (user: any) => user.subscriptionPlanId === (plan._id || plan.id)
+      // Count subscribers for this plan (only subscriber-type users)
+      const subscribers = loadusers.filter(
+        (user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId === (plan._id || plan.id)
       )
       
       const subscriberCount = subscribers.length
@@ -86,11 +86,12 @@ export default function SubscriptionPlansPage() {
   const calculateTotalRevenue = () => {
   if (!plans.length || !users.length) return 0;
 
-  const usersExcludingFirst = users.slice(1); // skip first object
+  // Only count revenue from subscribers, not admin users
+  const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
 
   let total = 0;
 
-  usersExcludingFirst.forEach((user: any) => {
+  subscriberUsers.forEach((user: any) => {
     const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
     if (userPlan && userPlan.price) {
       total += Number(userPlan.price);
@@ -204,7 +205,7 @@ export default function SubscriptionPlansPage() {
 
   const totalRevenue = calculateTotalRevenue()
 
-  const totalSubscribers = users.slice(1).filter((user: any) => user.subscriptionPlanId).length;
+  const totalSubscribers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId).length;
 
   const activePlans = plans.filter((plan) => plan.isActive).length
 
@@ -464,9 +465,9 @@ export default function SubscriptionPlansPage() {
           </Card>
         </TabsContent>
       {plans.map((plan) => {
-  // Count subscribers for this plan (excluding the first user)
-  const subscribers = users.slice(1).filter(
-    (user: any) => user.subscriptionPlanId === plan._id
+  // Count subscribers for this plan (only subscriber-type users)
+  const subscribers = users.filter(
+    (user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId === plan._id
   );
 
   const subscriberCount = subscribers.length;

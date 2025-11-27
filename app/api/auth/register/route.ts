@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
       name: data.name,
       role: data.role || "admin",
+      userType: "subscriber",
       phone: data.phone || "",
       address: data.address || "",
       subscriptionPlanId: data.subscriptionPlanId || "",

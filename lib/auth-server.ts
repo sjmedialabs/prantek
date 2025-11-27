@@ -22,8 +22,10 @@ export async function authenticateAdminUser(email: string, password: string): Pr
   console.log('[AUTH-SERVER] authenticateAdminUser() called for:', email)
   
   const db = await connectDB()
-  const adminUser = await db.collection(Collections.ADMIN_USERS).findOne({ 
-    email: { $regex: new RegExp(`^${email}$`, 'i') } 
+  // Query USERS collection and filter for admin user type
+  const adminUser = await db.collection(Collections.USERS).findOne({ 
+    email: { $regex: new RegExp(`^${email}$`, 'i') },
+    userType: "admin" // Only admin users created via User Management
   })
 
   if (!adminUser) {
@@ -73,7 +75,7 @@ export async function authenticateAdminUser(email: string, password: string): Pr
   }
 
   // Update last login
-  await db.collection(Collections.ADMIN_USERS).updateOne(
+  await db.collection(Collections.USERS).updateOne(
     { _id: adminUser._id },
     { $set: { lastLogin: new Date() } }
   )
@@ -115,8 +117,10 @@ export async function authenticate(email: string, password: string): Promise<Aut
   console.log('[AUTH-SERVER] authenticate() called for:', email)
   
   const db = await connectDB()
+  // Query for subscriber-type users (account owners with subscriptions)
   const user = await db.collection(Collections.USERS).findOne({ 
-    email: { $regex: new RegExp(`^${email}$`, 'i') } 
+    email: { $regex: new RegExp(`^${email}$`, 'i') },
+    userType: "subscriber" // Only account owners, not admin users
   })
 
   if (!user) {

@@ -64,11 +64,12 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
               src={companyDetails.logo || "/placeholder.svg"}
               alt="Company Logo"
               className="w-20 h-20 object-contain"
+              style={{width:"120px",height:"120px"}}
             />
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{companyDetails?.name || "Company Name"}</h1>
-            <p className="text-sm text-gray-600 mt-1">{companyDetails?.address}</p>
+            <h1 className="text-2xl py-2 font-bold text-gray-900">{companyDetails?.name || "Company Name"}</h1>
+            <p className="text-sm text-gray-600">{companyDetails?.address}</p>
             <p className="text-sm text-gray-600">
               Phone: {companyDetails?.phone} | Email: {companyDetails?.email}
             </p>
@@ -76,15 +77,15 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
           </div>
         </div>
         <div className="text-right">
-          <h2 className="text-3xl font-bold text-green-600">RECEIPT</h2>
-          <p className="text-sm text-gray-600 mt-2">#{receipt.receiptNumber}</p>
+          <h2 className="text-3xl font-bold text-green-600 py-2">RECEIPT</h2>
+          <p className="text-sm text-gray-600">#{receipt.receiptNumber}</p>
         </div>
       </div>
 
       {/* Receipt and Client Details */}
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">RECEIVED FROM:</h3>
+          <h3 className="text-sm font-semibold text-gray-700 py-2">RECEIVED FROM:</h3>
           <div className="text-sm">
             <p className="font-semibold text-gray-900">{receipt.client.name}</p>
             {receipt.client.address && <p className="text-gray-600">{receipt.client.address}</p>}

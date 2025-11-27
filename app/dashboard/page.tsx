@@ -444,6 +444,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Right Side - Setup Progress (Compact) */}
+            {!user?.isAdminUser && (
             <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
@@ -454,12 +455,13 @@ export default function DashboardPage() {
                 {Object.values(progress).filter((v) => v).length} of 3 steps completed
               </p>
             </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
-      {!user?.isAdminUser && <OnboardingProgressCards />}
+      {/* {!user?.isAdminUser && <OnboardingProgressCards />} */}
 
       {/* Quick Action Cards */}
       <div>

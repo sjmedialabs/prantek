@@ -24,6 +24,7 @@ interface Category {
   id: string
   name: string
   isActive: boolean
+  userId: string
   createdAt: string
   updatedAt: string
 }
@@ -36,38 +37,40 @@ export default function AssetCategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [categoryName, setCategoryName] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-const [statusFilter, setStatusFilter] = useState("all") // all | active | inactive
+  const [statusFilter, setStatusFilter] = useState("all") // all | active | inactive
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     loadCategories()
   }, [])
 
   const validateCategory = (name: string, categories: Category[], editingId?: string) => {
-  if (!name || name.trim().length < 2) {
-    return "Category name must be at least 2 characters."
+    if (!name || name.trim().length < 2) {
+      return "Category name must be at least 2 characters."
+    }
+
+    // 🔥 Duplicate check — ignores the category currently being edited
+    const duplicate = categories.some(
+      (c) =>
+        c.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+        c._id !== editingId
+    )
+
+    if (duplicate) return "Category name already exists."
+
+    return null
   }
-
-  // 🔥 Duplicate check — ignores the category currently being edited
-  const duplicate = categories.some(
-    (c) =>
-      c.name.trim().toLowerCase() === name.trim().toLowerCase() &&
-      c._id !== editingId
-  )
-
-  if (duplicate) return "Category name already exists."
-
-  return null
-}
 
 
   const loadCategories = async () => {
     const data = await api.assetCategories.getAll()
     if (data.length === 0) {
       // Initialize with default categories
-      const defaultCategories = ["Equipment", "Vehicle", "Property", "Software", "Furniture", "Office Supplies", "Electronics"]
-      for (const name of defaultCategories) {
-        await api.assetCategories.create({ name, isActive: true })
-      }
+      // const defaultCategories = ["Equipment", "Vehicle", "Property", "Software", "Furniture", "Office Supplies", "Electronics"]
+      // for (const name of defaultCategories) {
+      //   await api.assetCategories.create({ name, isActive: true })
+      // }
       const newData = await api.assetCategories.getAll()
       setCategories(newData)
     } else {
@@ -75,50 +78,50 @@ const [statusFilter, setStatusFilter] = useState("all") // all | active | inacti
     }
   }
 
-const handleSave = async () => {
-  const trimmedName = categoryName.trim()
+  const handleSave = async () => {
+    const trimmedName = categoryName.trim()
 
-  // Validation
-  const error = validateCategory(trimmedName, categories, editingCategory?._id)
-  if (error) {
-    toast({ title: "Validation Error", description: error, variant: "destructive" })
-    return
-  }
-
-  try {
-    if (editingCategory) {
-      // Update category
-      const updated = await api.assetCategories.update(editingCategory._id, { name: trimmedName })
-      if (updated) {
-        setCategories(categories.map((cat) => (cat._id === updated._id ? updated : cat)))
-      }
-    } else {
-      // Create category
-      const newCategory = await api.assetCategories.create({ name: trimmedName, isActive: true })
-      setCategories([...categories, newCategory])
+    // Validation
+    const error = validateCategory(trimmedName, categories, editingCategory?._id)
+    if (error) {
+      toast({ title: "Validation Error", description: error, variant: "destructive" })
+      return
     }
 
-    toast({ title: "Success", description: "Asset category saved successfully" })
-    setIsDialogOpen(false)
-    resetForm()
-    
-  } catch (err: any) {
-    toast({
-      title: "Error",
-      description: err?.message || "Failed to save category",
-      variant: "destructive"
-    })
+    try {
+      if (editingCategory) {
+        // Update category
+        const updated = await api.assetCategories.update(editingCategory._id, { name: trimmedName })
+        if (updated) {
+          setCategories(categories.map((cat) => (cat._id === updated._id ? updated : cat)))
+        }
+      } else {
+        // Create category
+        const newCategory = await api.assetCategories.create({ name: trimmedName, isActive: true })
+        setCategories([...categories, newCategory])
+      }
+
+      toast({ title: "Success", description: "Asset category saved successfully" })
+      setIsDialogOpen(false)
+      resetForm()
+
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "Failed to save category",
+        variant: "destructive"
+      })
+    }
   }
-}
-const filteredCategories = categories
-  .filter(cat =>
-    cat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-  .filter(cat => {
-    if (statusFilter === "active") return cat.isActive
-    if (statusFilter === "inactive") return !cat.isActive
-    return true
-  })
+  const filteredCategories = categories
+    .filter(cat =>
+      cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(cat => {
+      if (statusFilter === "active") return cat.isActive
+      if (statusFilter === "inactive") return !cat.isActive
+      return true
+    })
 
   const resetForm = () => {
     setCategoryName("")
@@ -138,6 +141,9 @@ const filteredCategories = categories
       toast({ title: "Success", description: `Category ${updated.isActive ? "activated" : "deactivated"}` })
     }
   }
+  const startIndex = (page - 1) * itemsPerPage
+  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage)
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
 
   const handleDelete = async (category: Category) => {
     if (confirm(`Are you sure you want to delete "${category.name}"?`)) {
@@ -146,7 +152,7 @@ const filteredCategories = categories
       toast({ title: "Success", description: "Category deleted successfully" })
     }
   }
-    if (loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -172,103 +178,106 @@ const filteredCategories = categories
     <div className="space-y-6">
       <div className="flex justify-between">
         <div>
-        <h1 className="text-2xl font-bold text-gray-900">Asset Categories</h1>
-        <p className="text-gray-600">Manage categories for asset classification</p>
+          <h1 className="text-2xl font-bold text-gray-900">Asset Categories</h1>
+          <p className="text-gray-600">Manage categories for asset classification</p>
         </div>
-        
-      {/* Add Button */}
-      <Button
-        onClick={() => {
-          resetForm()
-          setIsDialogOpen(true)
-        }}
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Add Category
-      </Button>
+
+        {/* Add Button */}
+        <Button
+          onClick={() => {
+            resetForm()
+            setIsDialogOpen(true)
+          }}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Category
+        </Button>
       </div>
 
-        <Card>
-<CardHeader>
-  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <div>
-      <div>
-      <CardTitle>Category List ({filteredCategories.length})</CardTitle>
-      <CardDescription>Create and manage asset categories for your organization</CardDescription>
-      </div>
-      
-    </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div>
+                <CardTitle>Category List ({filteredCategories.length})</CardTitle>
+                <CardDescription>Create and manage asset categories for your organization</CardDescription>
+              </div>
 
-    <div className="flex items-center gap-3">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="Search category..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 w-72"
-        />
-      </div>
+            </div>
 
-      {/* Status Filter */}
-      <select
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="border rounded-lg px-2  py-3 text-sm"
-      >
-        <option value="all">All Status</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
-    </div>
-  </div>
-</CardHeader>
+            <div className="flex items-center gap-3">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search category..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-72"
+                />
+              </div>
 
-          <CardContent>
-            <div className="space-y-2">
-              {filteredCategories.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  <p>No asset categories found</p>
-                  <p className="text-sm">Click "Add Category" to create one</p>
-                </div>
-              ) : (
-                filteredCategories.map((category) => (
-                  <div key={category._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <Package className="h-5 w-5 text-purple-600" />
-                      <div>
-                        <p className="font-medium text-gray-900">{category.name}</p>
-                        <p className="text-sm text-gray-500">
-                          Created {new Date(category.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={category.isActive ? "default" : "secondary"}>
-                        {category.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleToggleActive(category)}
-                      >
-                        {category.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                      </Button>
-                      {/* <Button variant="ghost" size="sm" onClick={() => handleDelete(category)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button> */}
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border rounded-lg px-2  py-3 text-sm"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="space-y-2">
+            {paginatedCategories.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>No asset categories found</p>
+                <p className="text-sm">Click "Add Category" to create one</p>
+              </div>
+            ) : (
+              paginatedCategories.map((category, index) => (
+                <div key={category._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center space-x-3">
+                    {/* Serial Number */}
+                    <span className=" font-semibold">
+                      {startIndex + index + 1}
+                    </span>
+                    <div>
+                      <p className="font-medium text-gray-900">{category.name}</p>
+                      <p className="text-sm text-gray-500">
+                        Created {new Date(category.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={category.isActive ? "default" : "secondary"}>
+                      {category.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(category)}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleActive(category)}
+                    >
+                      {category.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                    </Button>
+                    {/* <Button variant="ghost" size="sm" onClick={() => handleDelete(category)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button> */}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>

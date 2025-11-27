@@ -146,3 +146,71 @@
   min-width: 80vw !important;
   min-height: 80vh !important;
 }
+.pdf-safe {
+  --background: rgb(255, 255, 255) !important;
+  --foreground: rgb(0, 0, 0) !important;
+  --card: rgb(255, 255, 255) !important;
+  --card-foreground: rgb(0, 0, 0) !important;
+  --popover: rgb(255, 255, 255) !important;
+  --popover-foreground: rgb(0, 0, 0) !important;
+  --primary: rgb(0, 0, 0) !important;
+  --primary-foreground: rgb(255, 255, 255) !important;
+  --secondary: rgb(245, 245, 245) !important;
+  --secondary-foreground: rgb(0, 0, 0) !important;
+  --muted: rgb(240, 240, 240) !important;
+  --muted-foreground: rgb(0, 0, 0) !important;
+  --accent: rgb(255, 255, 255) !important;
+  --accent-foreground: rgb(0, 0, 0) !important;
+  --destructive: rgb(255, 80, 80) !important;
+  --destructive-foreground: rgb(255, 255, 255) !important;
+  --border: rgb(200, 200, 200) !important;
+  --input: rgb(240, 240, 240) !important;
+  --ring: rgb(0, 0, 0) !important;
+}
+
+.pdf-safe * {
+  color: rgb(20, 20, 20) !important;
+  background-image: none !important;
+  background-color: rgb(255, 255, 255) !important;
+  border-color: rgb(200, 200, 200) !important;
+  box-shadow: none !important;
+}
+/* FIX OVERLAPPING WHEN HTML2CANVAS RENDERS */
+.pdf-layout *,
+.pdf-layout *::before,
+.pdf-layout *::after {
+  box-sizing: border-box !important;
+}
+
+/* Force exact sizes instead of tailwind dynamic grid/flex */
+.pdf-layout * {
+  box-sizing: border-box !important;
+}
+
+.pdf-layout table {
+  border-collapse: collapse !important;
+}
+
+
+/* .pdf-layout th,
+.pdf-layout td {
+  padding: 6px 8px !important;
+  white-space: nowrap !important;
+} */
+
+/* Prevent text overlapping */
+/* .pdf-layout p,
+.pdf-layout span,
+.pdf-layout div {
+  line-height: 1.4 !important;
+} */
+
+/* Force widths */
+.pdf-layout [class*="w-"] {
+  width: auto !important;
+}
+
+/* Fix Tailwind gaps */
+.pdf-layout [class*="gap-"] {
+  gap: 0 !important;
+}

@@ -87,7 +87,7 @@ const [conversionFunnel, setConversionFunnel] = useState([])
       try {
         // Get all users and plans
         const allUsers = await api.users.getAll()
-        const adminUsers = allUsers.filter((u) => u.role === "admin")
+        const adminUsers = allUsers.filter((u) => u.userType === "subscriber" && u.role !== "super-admin")
         const plans = await api.subscriptionPlans.getAll()
 
         // Calculate metrics from real data

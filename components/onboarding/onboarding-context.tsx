@@ -49,7 +49,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         // New user - check if they just signed up
         const isNewUser = localStorage.getItem(`new_user_${user.id}`)
         if (isNewUser === "true") {
-          setShowWelcome(true)
+          setShowWelcome(false)
           localStorage.removeItem(`new_user_${user.id}`)
         }
       }
