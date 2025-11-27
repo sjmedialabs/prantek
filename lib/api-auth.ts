@@ -12,9 +12,14 @@ export async function verifyApiRequest(request: NextRequest): Promise<JWTPayload
   const authHeader = request.headers.get("authorization")
   let token = extractTokenFromHeader(authHeader)
 
-  // If no token in header, try cookies
+  // If no token in header, try cookies (including super admin cookies)
   if (!token) {
-    token = request.cookies.get("auth_token")?.value || request.cookies.get("accessToken")?.value || null
+    token = 
+      request.cookies.get("super_admin_auth_token")?.value ||
+      request.cookies.get("super_admin_accessToken")?.value ||
+      request.cookies.get("auth_token")?.value || 
+      request.cookies.get("accessToken")?.value || 
+      null
   }
 
   if (!token) {

@@ -393,8 +393,10 @@ export default function SignUpPage() {
       localStorage.setItem("pending_signup", JSON.stringify(signupData));
 
       // Calculate the final amount based on billing cycle
-      const finalAmount =
-        billingCycle === "yearly" ? plan.price * 12 : plan.price;
+      // Apply 17% discount for yearly billing
+      const yearlyTotal = plan.price * 12;
+      const discount = billingCycle === "yearly" ? Math.round(yearlyTotal * 0.17) : 0;
+      const finalAmount = billingCycle === "yearly" ? yearlyTotal - discount : plan.price;
 
       // Save current state to sessionStorage so we can return to step 2
       sessionStorage.setItem(

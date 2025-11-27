@@ -4,7 +4,7 @@ import type React from "react"
 
 import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
-import SuperAdminSidebar from "@/components/super-admin/super-admin-sidebar"
+import { SuperAdminSidebar } from "@/components/super-admin/super-admin-sidebar"
 import SuperAdminHeader from "@/components/super-admin/super-admin-header"
 import { Toaster } from "@/components/ui/toaster"
 import { useSessionTimeout } from "@/hooks/use-session-timeout"

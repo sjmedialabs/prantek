@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { FeaturesSidebar } from "@/components/auth/features-sidebar"
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod"
 
 declare global {
   interface Window {
@@ -20,6 +21,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [scriptLoaded, setScriptLoaded] = useState(false)
+  const { trialDays } = useTrialPeriod()
 
   const plan = searchParams.get("plan") || "standard"
   const planId = searchParams.get("planId") || ""
@@ -75,7 +77,7 @@ export default function PaymentPage() {
         amount: selectedPlan.trialPrice, // ₹1 in paise (100 paise)
         currency: "INR",
         name: "Prantek Academy",
-        description: `${selectedPlan.name} - 14 Day Trial (₹1)`,
+        description: `${selectedPlan.name} - ${trialDays} Day Trial (₹1)`,
         image: "https://31.97.224.169:9080/images/prantek-logo.png",
         prefill: {
           name: companyName,
@@ -229,7 +231,7 @@ export default function PaymentPage() {
                   <span className="text-sm font-semibold text-green-800">Trial Payment (Today)</span>
                   <span className="text-xl font-bold text-green-600">{selectedPlan.displayTrialPrice}</span>
                 </div>
-                <p className="text-xs text-green-700">Start your 14-day free trial with just ₹1</p>
+                <p className="text-xs text-green-700">Start your {trialDays}-day free trial with just ₹1</p>
               </div>
               <div className="flex justify-between items-center">
                 <div>
