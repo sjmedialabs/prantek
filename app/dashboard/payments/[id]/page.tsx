@@ -11,7 +11,7 @@ import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { PaymentPrint } from "@/components/print-templates/payment-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
-import type { Payment } from "@/lib/data-store"
+import type { Payment } from "@/lib/models/types"
 
 export default function PaymentDetailsPage() {
   const params = useParams()
@@ -91,7 +91,20 @@ console.log("paymentDetails", payment);
     email: "info@company.com",
     website: "www.company.com",
   }
+// Normalize stored file values (string OR object)
+console.log("payment.billFile :", payment?.billFile);
+console.log("payment.screenshotFile :", payment?.screenshotFile);
+const billUrl =
+  typeof payment?.billFile === "string"
+    ? payment?.billFile
+    : payment?.billFile || "";
 
+const screenshotUrl =
+  typeof payment?.screenshotFile === "string"
+    ? payment?.screenshotFile
+    : payment?.screenshotFile || "";
+console.log("billUrl :", billUrl);
+console.log("screenshotUrl :", screenshotUrl);
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -264,6 +277,67 @@ console.log("paymentDetails", payment);
               </div>
             </CardContent>
           </Card>
+          {/* Uploaded Files */}
+<Card>
+  <CardHeader>
+    <CardTitle>Uploaded Files</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+
+    {/* BILL FILE */}
+    {billUrl ? (
+      <div>
+        <p className="text-sm text-gray-600 mb-1">Bill File</p>
+
+        {/\.(jpg|jpeg|png|webp|gif)$/i.test(billUrl) ? (
+          <img
+            src={billUrl}
+            className="w-full rounded-lg border"
+            alt="Bill File"
+          />
+        ) : (
+          <a
+            href={billUrl}
+            target="_blank"
+            className="text-blue-600 underline"
+          >
+            View Bill File
+          </a>
+        )}
+      </div>
+    ) : null}
+
+    {/* SCREENSHOT FILE */}
+    {screenshotUrl ? (
+      <div>
+        <p className="text-sm text-gray-600 mb-1">Screenshot File</p>
+
+        {/\.(jpg|jpeg|png|webp|gif)$/i.test(screenshotUrl) ? (
+          <img
+            src={screenshotUrl}
+            className="w-full rounded-lg border"
+            alt="Screenshot File"
+          />
+        ) : (
+          <a
+            href={screenshotUrl}
+            target="_blank"
+            className="text-blue-600 underline"
+          >
+            View Screenshot File
+          </a>
+        )}
+      </div>
+    ) : null}
+
+    {!billUrl && !screenshotUrl && (
+      <p className="text-gray-500 text-sm">No files uploaded.</p>
+    )}
+
+  </CardContent>
+</Card>
+
+
         </div>
       </div>
 
