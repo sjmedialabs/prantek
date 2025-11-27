@@ -164,12 +164,12 @@ const navigationItems: NavItem[] = [
         submenu: [
           {
             name: "User Management",
-            permission: "tenant_settings",
+            permission: "manage_users",
             submenu: [
               {
                 name: "User List",
                 href: "/dashboard/hr/users",
-                permission: "tenant_settings",
+                permission: "manage_users",
               },
             ],
           },

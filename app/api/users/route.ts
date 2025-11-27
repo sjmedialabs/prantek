@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
+import { hasPermission } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
 
@@ -19,6 +20,10 @@ function getCollection(db: any, userType: string) {
  *************************************************************/
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check manage_users permission
+    if (!hasPermission(user, "manage_users")) {
+      return NextResponse.json({ success: false, error: "Forbidden - manage_users permission required" }, { status: 403 })
+    }
     const db = await connectDB()
 
     const userType = request.nextUrl.searchParams.get("userType") || "admin"  
@@ -94,6 +99,10 @@ export const GET = withAuth(async (request: NextRequest, user) => {
  *************************************************************/
 export const POST = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check manage_users permission
+    if (!hasPermission(user, "manage_users")) {
+      return NextResponse.json({ success: false, error: "Forbidden - manage_users permission required" }, { status: 403 })
+    }
     const db = await connectDB()
     const body = await request.json()
 

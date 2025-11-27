@@ -84,3 +84,40 @@ export function unauthorizedResponse(message = "Unauthorized") {
 export function forbiddenResponse(message = "Forbidden") {
   return NextResponse.json({ error: message }, { status: 403 })
 }
+
+/**
+ * Check if user has a specific permission
+ */
+export function hasPermission(user: JWTPayload, permission: string): boolean {
+  // Super-admin has ALL permissions
+  if (user.role === "super-admin" || user.isSuperAdmin) return true
+  
+  // Account owners (non-admin users) have full access to everything
+  if (!user.isAdminUser) return true
+  
+  // For admin users, check their assigned permissions
+  if (user.permissions && Array.isArray(user.permissions)) {
+    return user.permissions.includes(permission)
+  }
+  
+  return false
+}
+
+/**
+ * Middleware wrapper for protected API routes with permission check
+ */
+export function withPermission(permission: string, handler: (request: NextRequest, user: JWTPayload, context?: any) => Promise<NextResponse>) {
+  return async (request: NextRequest, context?: any) => {
+    const user = await verifyApiRequest(request)
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized - Invalid or missing token" }, { status: 401 })
+    }
+
+    if (!hasPermission(user, permission)) {
+      return NextResponse.json({ error: `Forbidden - ${permission} permission required` }, { status: 403 })
+    }
+
+    return handler(request, user, context)
+  }
+}

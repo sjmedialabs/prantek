@@ -914,27 +914,25 @@ activityLogs: {
 },
 
   assets: {
-getAll: async (userId: string) => {
-  const res = await fetch(`/api/assets?userId=${userId}`)
-  const json = await res.json()
-  return json.assets || []
-},
+    getAll: async () => {
+      const data = await fetchAPI("/api/assets")
+      return data.assets || []
+    },
 
     create: async (asset: any) => {
-      const data = await fetch("/api/assets", {
+      const data = await fetchAPI("/api/assets", {
         method: "POST",
         body: JSON.stringify(asset),
       })
-      return  data
+      return data
     },
 
-    update: async (id: string, data: any) => {
-      console.log("data from assets", data)
-      const res = await fetch(`/api/assets/${id}`, {
+    update: async (id: string, updateData: any) => {
+      const data = await fetchAPI(`/api/assets/${id}`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: JSON.stringify(updateData),
       })
-      return res.json() || data || res
+      return data.asset || data
     },
   },
 

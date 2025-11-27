@@ -83,7 +83,7 @@ export default function ReceiptsPage() {
 
   const loadClients = async () => {
     try {
-      const response = await fetch("/api/clients")
+      const response = await fetch("/api/clients", { credentials: "include" })
       const result = await response.json()
       if (result.success) {
         setClients(result.data)
@@ -95,7 +95,7 @@ export default function ReceiptsPage() {
 
   const loadItems = async () => {
     try {
-      const response = await fetch("/api/items")
+      const response = await fetch("/api/items", { credentials: "include" })
       const result = await response.json()
       if (result.success) {
         setItems(result.data)
@@ -107,7 +107,7 @@ export default function ReceiptsPage() {
 
   const loadQuotations = async () => {
     try {
-      const response = await fetch("/api/quotations")
+      const response = await fetch("/api/quotations", { credentials: "include" })
       const result = await response.json()
       if (result.success) {
         // Only show approved quotations

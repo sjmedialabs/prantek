@@ -37,20 +37,19 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10)
     
-    // Handle trial registration - Always give 14-day trial when a plan is selected
+    // Handle trial registration - Give trial based on system configuration when a plan is selected
     let subscriptionStatus = "inactive"
     let trialEndsAt = null
     let subscriptionStartDate = null
     let subscriptionEndDate = null
     
     if (data.subscriptionPlanId) {
-      // User selected a plan - automatically start 14-day trial
+      // User selected a plan - automatically start trial with configured period
       subscriptionStatus = "trial"
       subscriptionStartDate = new Date()
       
-      // Set trial end date to 14 days from now
-      const trialEndDate = new Date()
-      trialEndDate.setDate(trialEndDate.getDate() + 14)
+      // Set trial end date based on system configuration
+      const trialEndDate = await calculateTrialEndDate()
       trialEndsAt = trialEndDate
       subscriptionEndDate = trialEndDate
     }
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
           amount: 0, // Trial is free
           category: "subscription",
           status: "success",
-          details: `14-day free trial started for ${planDetails?.planName || "subscription plan"}`,
+          details: `Free trial started for ${planDetails?.planName || "subscription plan"}`,
           ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown",
           timestamp: new Date(),
           createdAt: new Date()

@@ -109,7 +109,7 @@ export default function AssetsPage() {
     setEmployees(loadedEmployees || [])
     console.log("loadedEmployees", loadedEmployees)
     console.log("user details are ", userid)
-    const loadedAssets = await api.assets.getAll(user?.id)
+    const loadedAssets = await api.assets.getAll()
     console.log("loadedAssets", loadedAssets, user?.id)
     setAssets(loadedAssets || [])
 
@@ -182,7 +182,7 @@ const categoryData = categories
       console.log("sending payload", payload)
       const created = await api.assets.create(payload)
 
-      const loadedAssets = await api.assets.getAll(user?.id)
+      const loadedAssets = await api.assets.getAll()
       setAssets(loadedAssets)
 
       setIsAddAssetOpen(false)
@@ -223,7 +223,7 @@ const categoryData = categories
     console.log("selectedAssetForAssignment id ", selectedAssetForAssignment._id)
     await api.assets.update(selectedAssetForAssignment._id, updatedData)
 
-    const loadedAssets = await api.assets.getAll(user?.id)
+    const loadedAssets = await api.assets.getAll()
 
     setAssets(loadedAssets)
 
@@ -241,7 +241,7 @@ const categoryData = categories
       status: "available",
     })
 
-    const refreshedAssets = await api.assets.getAll(user?.id)
+    const refreshedAssets = await api.assets.getAll()
     setAssets(refreshedAssets)
   }
 
@@ -292,7 +292,7 @@ const categoryData = categories
 
       await api.assets.update(editingAssetId, payload)
 
-      const refreshed = await api.assets.getAll(user?.id)
+      const refreshed = await api.assets.getAll()
       setAssets(refreshed)
 
       toast.success("Asset updated successfully!")

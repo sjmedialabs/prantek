@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
-import { withAuth } from "@/lib/api-auth"
+import { withAuth, hasPermission } from "@/lib/api-auth"
 import { createNotification } from "@/lib/notification-utils"
 import { sub } from "date-fns"
 
@@ -17,7 +17,12 @@ function getIdFromRequest(req: NextRequest): string {
  * GET /api/users/:id
  * Get a specific user by ID
  */
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withAuth(async (req: NextRequest, user) => {
+  // Check manage_users permission
+  if (!hasPermission(user, "manage_users")) {
+    return NextResponse.json({ success: false, error: "Forbidden - manage_users permission required" }, { status: 403 })
+  }
+
   const id = getIdFromRequest(req)
   
   if (!id || !ObjectId.isValid(id)) {
@@ -51,12 +56,15 @@ export const GET = withAuth(async (req: NextRequest) => {
     )
   }
 })
-
 /**
  * PUT /api/users/:id
  * Update a user
  */
-export const PUT = withAuth(async (req: NextRequest) => {
+export const PUT = withAuth(async (req: NextRequest, user) => {
+  // Check manage_users permission
+  if (!hasPermission(user, "manage_users")) {
+    return NextResponse.json({ success: false, error: "Forbidden - manage_users permission required" }, { status: 403 })
+  }
   const id = getIdFromRequest(req)
   
   if (!id || !ObjectId.isValid(id)) {
@@ -163,7 +171,11 @@ export const PUT = withAuth(async (req: NextRequest) => {
  * DELETE /api/users/:id
  * Delete a user
  */
-export const DELETE = withAuth(async (req: NextRequest) => {
+export const DELETE = withAuth(async (req: NextRequest, user) => {
+  // Check manage_users permission
+  if (!hasPermission(user, "manage_users")) {
+    return NextResponse.json({ success: false, error: "Forbidden - manage_users permission required" }, { status: 403 })
+  }
   const id = getIdFromRequest(req)
   
   if (!id || !ObjectId.isValid(id)) {
