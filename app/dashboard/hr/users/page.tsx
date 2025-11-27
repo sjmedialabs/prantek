@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/table"
 import { UserPlus, Pencil, Trash2, Search, Shield, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
+// import { toast } from "@/lib/toast"
+import { Switch } from "@/components/ui/switch"
 
 interface AdminUser {
   _id: string
@@ -274,7 +276,7 @@ const handleAddUser = async () => {
               </CardDescription>
             </div>
             <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 top-4.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
                 value={searchQuery}
@@ -288,6 +290,7 @@ const handleAddUser = async () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Sr.No</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
@@ -305,8 +308,9 @@ const handleAddUser = async () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                filteredUsers.map((user,index) => (
                   <TableRow key={user._id}>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
@@ -344,13 +348,27 @@ const handleAddUser = async () => {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user._id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <Switch className="mt-2"
+                              checked={user.isActive}
+                              onCheckedChange={async (checked) => {
+                                try {
+                                  const newStatus = checked ? true : false
+
+                                  const response = await fetch("/api/users",{
+                                    method:"PUT",
+                                    headers:{"Content-Type":"application/json"},
+                                    body:JSON.stringify({_id:user._id,isActive:newStatus,userType:"admin-user"})
+                                  })
+                                  if(response.ok){
+                                    toast.success(`User ${newStatus ? "activated" : "deactivated"} successfully`);
+                                    await fetchUsers(); 
+                                  }
+                                } catch (err) {
+                                  toast.error("Failed to update user status");
+                                   console.log(err)
+                                }
+                              }}
+                            />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -460,7 +478,7 @@ const handleAddUser = async () => {
               Update user information and access settings
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 overflow-y-scroll max-h-[70vh]">
             <div className="grid gap-2">
               <Label htmlFor="edit-name">Name</Label>
               <Input
