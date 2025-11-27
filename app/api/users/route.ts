@@ -33,10 +33,12 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
     const adminUsers = await collection.find(filter).toArray()
 
-    const usersWithRoles = await Promise.all(
+    const usersWithDetails = await Promise.all(
       adminUsers.map(async (adminUser) => {
         let roleName = null
+        let employeeData = null
 
+        // Fetch role name if roleId exists (backward compatibility)
         if (adminUser.roleId) {
           try {
             const role = await db.collection(Collections.ROLES).findOne({
@@ -48,17 +50,38 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           }
         }
 
+        // Fetch employee data if employeeId exists (new flow)
+        if (adminUser.employeeId) {
+          try {
+            const employee = await db.collection(Collections.EMPLOYEES).findOne({
+              _id: new ObjectId(adminUser.employeeId as string)
+            })
+            if (employee) {
+              employeeData = {
+                employeeId: employee._id?.toString(),
+                employeeNumber: employee.employeeNumber,
+                employeeName: employee.employeeName,
+                surname: employee.surname,
+                designation: employee.designation
+              }
+            }
+          } catch (e) {
+            console.error("Error fetching employee:", e)
+          }
+        }
+
         const { password, ...safe } = adminUser
         return {
           ...safe,
           id: adminUser._id?.toString(),
           _id: adminUser._id?.toString(),
-          roleName
+          roleName,
+          employee: employeeData
         }
       })
     )
 
-    return NextResponse.json({ success: true, users: usersWithRoles })
+    return NextResponse.json({ success: true, users: usersWithDetails })
   } catch (error) {
     console.error("Error fetching users:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch users" }, { status: 500 })
@@ -75,9 +98,88 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const body = await request.json()
 
     const userType = body.userType || "admin-user"
-
     const collection = getCollection(db, userType)
 
+    // NEW FLOW: Using employeeId
+    if (body.employeeId) {
+      if (!body.password) {
+        return NextResponse.json({
+          success: false,
+          error: "Password is required"
+        }, { status: 400 })
+      }
+
+      // Fetch employee data
+      const employee = await db.collection(Collections.EMPLOYEES).findOne({
+        _id: new ObjectId(body.employeeId)
+      })
+
+      if (!employee) {
+        return NextResponse.json({
+          success: false,
+          error: "Employee not found"
+        }, { status: 404 })
+      }
+
+      if (!employee.email) {
+        return NextResponse.json({
+          success: false,
+          error: "Employee does not have an email address"
+        }, { status: 400 })
+      }
+
+      // Check if employee already has admin access
+      const existingUser = await collection.findOne({ 
+        employeeId: body.employeeId 
+      })
+
+      if (existingUser) {
+        return NextResponse.json({
+          success: false,
+          error: "This employee already has admin access"
+        }, { status: 409 })
+      }
+
+      // Check if email already exists
+      const emailAlready = await collection.findOne({ 
+        email: employee.email.toLowerCase() 
+      })
+
+      if (emailAlready) {
+        return NextResponse.json({
+          success: false,
+          error: "Email already exists"
+        }, { status: 409 })
+      }
+
+      const hashedPassword = await bcrypt.hash(body.password, 10)
+      const companyId = user.companyId || user.userId
+
+      const newUser = {
+        email: employee.email.toLowerCase(),
+        password: hashedPassword,
+        name: `${employee.employeeName} ${employee.surname || ''}`.trim(),
+        userType: "admin-user",
+        companyId,
+        employeeId: body.employeeId,
+        permissions: body.permissions || [],
+        phone: employee.phone || null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+
+      const result = await collection.insertOne(newUser)
+
+      const { password: _, ...safe } = newUser
+
+      return NextResponse.json({
+        success: true,
+        data: { ...safe, _id: result.insertedId.toString(), id: result.insertedId.toString() }
+      })
+    }
+
+    // OLD FLOW: Manual entry with roleId (backward compatibility)
     if (!body.email || !body.password || !body.name) {
       return NextResponse.json({
         success: false,
@@ -156,8 +258,13 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
       updateData.password = await bcrypt.hash(password, 10)
     }
 
-    // Get permissions from roleId
-    if (body.roleId) {
+    // Handle permissions update
+    // If permissions array is provided directly, use it
+    if (body.permissions && Array.isArray(body.permissions)) {
+      updateData.permissions = body.permissions
+    }
+    // Otherwise, get permissions from roleId (backward compatibility)
+    else if (body.roleId) {
       const role = await db.collection(Collections.ROLES).findOne({
         _id: new ObjectId(body.roleId)
       })

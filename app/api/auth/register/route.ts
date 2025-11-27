@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
 import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
+import { calculateTrialEndDate } from "@/lib/trial-helper"
 
 export async function POST(request: NextRequest) {
   try {

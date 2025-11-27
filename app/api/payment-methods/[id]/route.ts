@@ -30,7 +30,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const id = getIdFromRequest(req)
   const body = await req.json()
-
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   // Required to avoid Mongo _id update crash
   delete body._id
   delete body.id
@@ -51,7 +51,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
 export const DELETE = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const id = getIdFromRequest(req)
-
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   await db.collection(Collections.PAYMENT_METHODS).deleteOne({
     _id: new ObjectId(id),
     userId: String(filterUserId),
