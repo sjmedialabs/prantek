@@ -147,11 +147,64 @@ export async function authenticateUser(email: string, password: string) {
 export async function authenticateSuperAdmin(email: string, password: string): Promise<AuthTokens | null> {
   console.log("[AUTH] Attempting super-admin login:", email)
 
+  try {
+    // First, try to authenticate from database
+    const db = await connectDB()
+    const superAdmin = await db.collection(Collections.SUPER_ADMINS).findOne({ 
+      email: email.toLowerCase() 
+    })
+
+    if (superAdmin) {
+      console.log("[AUTH] Found super admin in database")
+      
+      // Verify password (assuming it's hashed in database)
+      const isPasswordValid = await bcrypt.compare(password, superAdmin.password)
+      
+      if (!isPasswordValid) {
+        console.log("[AUTH] Super admin password mismatch (DB)")
+        return null
+      }
+
+      console.log("[AUTH] Super admin authentication successful (DB)")
+
+      // Create JWT payload for super admin
+      const payload: JWTPayload = {
+        userId: superAdmin._id?.toString() || "super-admin",
+        id: superAdmin._id?.toString() || "super-admin",
+        email: superAdmin.email,
+        role: "super-admin",
+        userType: "super-admin",
+        companyId: null,
+        isAdminUser: false,
+        permissions: ["*"], // Full permissions
+        isSuperAdmin: true
+      }
+
+      return {
+        accessToken: await generateAccessToken(payload, "30m"),
+        refreshToken: await generateRefreshToken(payload, "7d"),
+        user: {
+          id: payload.userId,
+          email: payload.email,
+          name: superAdmin.name || "Super Admin",
+          role: "super-admin",
+          userType: "super-admin",
+          permissions: ["*"],
+          isSuperAdmin: true
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[AUTH] Error checking database for super admin:", error)
+  }
+
+  // Fallback to environment variables (for backward compatibility)
+  console.log("[AUTH] Checking environment variables for super admin")
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
   const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
 
   if (!superAdminEmail || !superAdminPassword) {
-    console.error("[AUTH] Super admin credentials not configured in environment")
+    console.error("[AUTH] Super admin credentials not configured in environment or database")
     return null
   }
 
@@ -161,13 +214,13 @@ export async function authenticateSuperAdmin(email: string, password: string): P
     return null
   }
 
-  // Check if password matches (plain text comparison for simplicity)
+  // Check if password matches (plain text comparison for env fallback)
   if (password !== superAdminPassword) {
     console.log("[AUTH] Super admin password mismatch")
     return null
   }
 
-  console.log("[AUTH] Super admin authentication successful")
+  console.log("[AUTH] Super admin authentication successful (ENV)")
 
   // Create JWT payload for super admin
   const payload: JWTPayload = {
@@ -186,8 +239,13 @@ export async function authenticateSuperAdmin(email: string, password: string): P
     accessToken: await generateAccessToken(payload, "30m"),
     refreshToken: await generateRefreshToken(payload, "7d"),
     user: {
-      ...payload,
-      name: "Super Admin"
+      id: "super-admin",
+      email: superAdminEmail,
+      name: "Super Admin",
+      role: "super-admin",
+      userType: "super-admin",
+      permissions: ["*"],
+      isSuperAdmin: true
     }
   }
 }

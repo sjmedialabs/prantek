@@ -90,7 +90,7 @@ export default function UsersPage() {
 
   const fetchPermissions = async () => {
     try {
-      const response = await fetch("/api/permissions")
+      const response = await fetch("/api/permissions", { credentials: "include" })
       const data = await response.json()
       if (data.success) {
         setAvailablePermissions(data.permissions || [])
@@ -103,7 +103,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/users?userType=admin-user")
+      const response = await fetch("/api/users?userType=admin-user", { credentials: "include" })
       const data = await response.json()
 
       if (data.success) {
@@ -129,7 +129,7 @@ export default function UsersPage() {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch("/api/employees")
+      const response = await fetch("/api/employees", { credentials: "include" })
       const data = await response.json()
       setEmployees(data || [])
     } catch (error) {
@@ -139,7 +139,7 @@ export default function UsersPage() {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch("/api/roles")
+      const response = await fetch("/api/roles", { credentials: "include" })
       const data = await response.json()
       setRoles(data.roles || [])
     } catch (error) {
@@ -166,6 +166,7 @@ export default function UsersPage() {
       const response = await fetch("/api/users?userType=admin-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           employeeId: selectedEmployee,
           password,
@@ -219,6 +220,7 @@ export default function UsersPage() {
       const response = await fetch("/api/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(updateData),
       })
 
@@ -255,6 +257,7 @@ export default function UsersPage() {
     try {
       const response = await fetch(`/api/users?id=${selectedUser._id}`, {
         method: "DELETE",
+        credentials: "include",
       })
 
       if (response.ok) {
@@ -444,6 +447,7 @@ export default function UsersPage() {
                                   const response = await fetch("/api/users", {
                                     method: "PUT",
                                     headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
                                     body: JSON.stringify({isActive: newStatus, _id: user._id, userType: "admin-user"})
                                   })
                                   if(response.ok){

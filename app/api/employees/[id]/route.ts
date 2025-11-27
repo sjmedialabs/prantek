@@ -9,18 +9,16 @@ function getIdFromRequest(req: NextRequest): string {
   return segments[segments.length - 1]
 }
 
-
 export const GET = withAuth(async (req: NextRequest, user: any) => {
   // For admin users, filter by companyId (parent account)
   // For regular users, filter by userId (their own account)
   const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
   const db = await connectDB()
-    const id = getIdFromRequest(req)
+  const id = getIdFromRequest(req)
   const employee = await db
-
     .collection(Collections.EMPLOYEES)
-    .findOne({ _id: new ObjectId(id), userId: String(filterUserId) },)
+    .findOne({ _id: new ObjectId(id), userId: String(filterUserId) })
 
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 })
@@ -34,8 +32,12 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const data = await req.json()
   const id = getIdFromRequest(req)
 
-  delete data._id      // ✅ <—
-  delete data.id       // ✅ <—
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
+  delete data._id
+  delete data.id
 
   const result = await db
     .collection(Collections.EMPLOYEES)
@@ -52,14 +54,17 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   return NextResponse.json({ data: result }, { status: 200 })
 })
 
-
-
 export const DELETE = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const id = getIdFromRequest(req)
+  
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   const result = await db
     .collection(Collections.EMPLOYEES)
-    .deleteOne({ _id: new ObjectId(id), userId: String(filterUserId) },)
+    .deleteOne({ _id: new ObjectId(id), userId: String(filterUserId) })
 
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 })

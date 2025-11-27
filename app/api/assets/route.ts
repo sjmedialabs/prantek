@@ -2,45 +2,38 @@ import { NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { createNotification } from "@/lib/notification-utils"
+import { withAuth } from "@/lib/api-auth"
 
-// ------------------- GET (NO AUTH, BUT NEEDS USER ID) -------------------
-export const GET = async (req: NextRequest) => {
+// ------------------- GET (WITH AUTH) -------------------
+export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
-
-  const { searchParams } = new URL(req.url)
-  const userId = searchParams.get("userId")
-
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 })
-  }
+  
+  // Use company ID for admin users, user ID for account owners
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
   const assets = await db
     .collection(Collections.ASSETS)
-    .find({ userId })
+    .find({ userId: filterUserId })
     .toArray()
 
   return NextResponse.json({ assets })
-}
+})
 
 
-// ------------------- POST (NO AUTH, BUT REQUIRES userId) -------------------
-export const POST = async (req: NextRequest) => {
+// ------------------- POST (WITH AUTH) -------------------
+export const POST = withAuth(async (req: NextRequest, user: any) => {
   try {
     const db = await connectDB()
     const data = await req.json()
 
-    // userId must be sent by frontend
-    if (!data.userId) {
-      return NextResponse.json(
-        { error: "userId is required in POST data" },
-        { status: 400 }
-      )
-    }
+    // Use company ID for admin users, user ID for account owners
+    const userId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
     const { id, _id, ...cleanData } = data
 
     const asset = {
       ...cleanData,
+      userId,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -49,7 +42,7 @@ export const POST = async (req: NextRequest) => {
     const result = await db.collection(Collections.ASSETS).insertOne(asset)
     try{
      await createNotification({
-        userId: data.userId,
+        userId: userId,
         type: "asset",
         title: "New Asset Created",
         message: "A new asset has been created: " + data.name,
@@ -67,4 +60,4 @@ export const POST = async (req: NextRequest) => {
       { status: 500 }
     )
   }
-}
+})

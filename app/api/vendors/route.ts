@@ -1,10 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
-import { withAuth } from "@/lib/api-auth"
+import { withAuth, hasPermission } from "@/lib/api-auth"
 import { createNotification } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check view_vendors permission
+    if (!hasPermission(user, "view_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - view_vendors permission required" }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const page = Number.parseInt(searchParams.get("page") || "1")
     const limit = Number.parseInt(searchParams.get("limit") || "100")
@@ -34,6 +39,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
 export const POST = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check manage_vendors permission
+    if (!hasPermission(user, "manage_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - manage_vendors permission required" }, { status: 403 })
+    }
+
     const body = await request.json()
     
     // For admin users, use companyId (parent account)

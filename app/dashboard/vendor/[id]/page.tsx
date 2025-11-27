@@ -65,11 +65,6 @@ export default function VendorDetailsPage() {
           </h1>
         </div>
 
-        {hasPermission("manage_vendors") && (
-          <Button onClick={() => router.push(`/dashboard/vendors/edit/${vendor._id}`)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Vendor
-          </Button>
         )}
       </div>
 
