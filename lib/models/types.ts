@@ -249,8 +249,9 @@ export interface ReceiptItem {
 export interface Receipt extends BaseDocument {
   id: string
   receiptNumber: string
-  quotationId: string // Made mandatory - every receipt must reference a quotation
-  quotationNumber: string
+  receiptType: "quotation" | "items" | "quick" // Type of receipt creation
+  quotationId?: string // Optional - only for receipts from quotations
+  quotationNumber?: string
   clientId: string
   clientName: string
   clientEmail: string
@@ -298,7 +299,7 @@ export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
 
-  quotationNumber: string
+  quotationNumber?: string
   date: string | Date
   validity?: string | Date
   note?: string

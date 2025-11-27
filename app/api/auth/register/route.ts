@@ -5,6 +5,7 @@ import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
 import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
 import { calculateTrialEndDate } from "@/lib/trial-helper"
+import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,11 +74,43 @@ export async function POST(request: NextRequest) {
     }
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
+    const userId = result.insertedId.toString()
+    
+    // Log subscription activity if trial started
+    if (subscriptionStatus === "trial" && data.subscriptionPlanId) {
+      try {
+        // Get subscription plan details
+        const planDetails = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({
+          _id: new ObjectId(data.subscriptionPlanId)
+        })
+        
+        const activityLog = {
+          userId: userId,
+          userName: newUser.name,
+          userEmail: newUser.email,
+          action: "Trial Started",
+          resource: planDetails?.planName || "Subscription Plan",
+          planName: planDetails?.planName || "Unknown Plan",
+          amount: 0, // Trial is free
+          category: "subscription",
+          status: "success",
+          details: `14-day free trial started for ${planDetails?.planName || "subscription plan"}`,
+          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown",
+          timestamp: new Date(),
+          createdAt: new Date()
+        }
+        
+        await db.collection(Collections.ACTIVITY_LOGS).insertOne(activityLog)
+      } catch (logError) {
+        console.error("Failed to log trial activity:", logError)
+        // Don't fail the main operation if logging fails
+      }
+    }
     
     // Notify super admins about new registration
     try {
       await notifySuperAdminsNewRegistration(
-        result.insertedId.toString(),
+        userId,
         newUser.name,
         newUser.email
       )
@@ -97,7 +130,7 @@ export async function POST(request: NextRequest) {
       user: {
         ...userWithoutPassword,
         _id: result.insertedId,
-        id: result.insertedId.toString()
+        id: userId
       }
     })
   } catch (error) {

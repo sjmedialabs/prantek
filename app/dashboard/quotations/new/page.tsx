@@ -167,7 +167,7 @@ const [sellerState, setSellerState] = useState("")
 useEffect(() => {
    const loadCompany = async () => {
      const comp = await api.company.get()
-     setSellerState(comp.state)
+     setSellerState(comp?.state || "")
    }
    loadCompany()
 }, [])
