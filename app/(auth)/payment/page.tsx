@@ -124,17 +124,24 @@ export default function PaymentPage() {
       if (!pendingSignupStr) {
         console.error("[v0] No pending signup data found")
         setError("Signup data not found. Please try signing up again.")
-        return
+        return 
       }
 
       const signupData = JSON.parse(pendingSignupStr)
+      const tempdate = new Date();
+      tempdate.setDate(tempdate.getDate() + trialDays);
+      const updatedSignupData ={
+        ...signupData,
+        trialEndDate: tempdate,
+        subscriptionEndDate: tempdate
+      }
       console.log("[v0] Found pending signup data, creating account...")
 
       // Create account directly via register API
       const registerResponse = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupData),
+        body: JSON.stringify(updatedSignupData),
       })
 
       if (!registerResponse.ok) {

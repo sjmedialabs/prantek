@@ -19,7 +19,7 @@ export function HeroSection() {
     api.websiteContent
       .getAll()
       .then((data) => data[0] || {})
-      .then((websiteContent) => {
+      .then((websiteContent) => { 
         console.log("[v0] Hero section loaded content:", {
           heroRightImage: websiteContent.heroRightImage,
           heroBackgroundImage: websiteContent.heroBackgroundImage,

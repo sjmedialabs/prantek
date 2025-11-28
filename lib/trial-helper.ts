@@ -1,4 +1,5 @@
-import { MongoClient } from 'mongodb';
+ import { MongoClient } from 'mongodb';
+// import { useTrialPeriod } from './hooks/useTrialPeriod';
 
 const DEFAULT_TRIAL_DAYS = 14;
 
@@ -52,7 +53,8 @@ export async function getTrialPeriodDays(): Promise<number> {
  * Calculate trial end date based on the configured trial period
  */
 export async function calculateTrialEndDate(): Promise<Date> {
-  const trialDays = await getTrialPeriodDays();
+  // const{trialDays}=useTrialPeriod();
+   const trialDays = await getTrialPeriodDays();
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + trialDays);
   return endDate;
