@@ -287,10 +287,18 @@ export default function DashboardSidebar() {
       return null;
     }
 
-    // LEVEL 2: Check if feature is enabled in user's subscription plan
-    // Dashboard and Cash Book are always accessible (no plan check needed)
-    if (planFeatures && item.name && !hasFeatureAccess(item.name) && item.name !== 'Dashboard' && item.name !== 'Cash Book') {
-      return null;
+
+    // LEVEL 2: Check plan features - strictly gate based on subscription plan
+    // Dashboard and Cash Book are always accessible
+    if (item.name !== 'Dashboard' && item.name !== 'Cash Book') {
+      // If planFeatures hasn't loaded yet, hide menu items to prevent showing restricted features
+      if (!planFeatures) {
+        return null;
+      }
+      // If planFeatures loaded, check if user has access to this feature
+      if (!hasFeatureAccess(item.name)) {
+        return null;
+      }
     }
 
     // LEVEL 3: Check admin user's specific permission for this feature

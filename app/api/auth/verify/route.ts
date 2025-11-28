@@ -61,6 +61,12 @@ export async function GET(request: NextRequest) {
 
     if (user) {
       isAdminUser = true
+      console.log("[AUTH-VERIFY] Admin user found:", {
+        email: user.email,
+        permissions: user.permissions,
+        hasPermissions: !!user.permissions,
+        permissionCount: user.permissions?.length || 0
+      })
     }
 
     // 2️⃣ IF NOT FOUND → TRY USERS COLLECTION
@@ -81,7 +87,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    return NextResponse.json({
+    const userResponse = {
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -103,7 +109,16 @@ export async function GET(request: NextRequest) {
         subscriptionEndDate: payload.subscriptionEndDate || user.subscriptionEndDate,
         trialEndsAt: payload.trialEndsAt || user.trialEndsAt,
       }
+    }
+
+    console.log("[AUTH-VERIFY] Returning user:", {
+      email: userResponse.user.email,
+      isAdminUser: userResponse.user.isAdminUser,
+      permissions: userResponse.user.permissions,
+      permissionCount: userResponse.user.permissions?.length || 0
     })
+
+    return NextResponse.json(userResponse)
   } catch (error) {
     console.error("[AUTH-VERIFY] Error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

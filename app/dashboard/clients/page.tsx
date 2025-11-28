@@ -325,7 +325,7 @@ export default function ClientsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
           <p className="text-gray-600">Manage customers and vendors</p>
         </div>
-        {hasPermission("manage_clients") && (
+        {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
           <div className="flex gap-4">
           <BulkUploadDialogClient onSuccess={loadClients} />
           <Dialog
@@ -582,13 +582,13 @@ export default function ClientsPage() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Created</TableHead>
-                  {hasPermission("manage_clients") && <TableHead>Actions</TableHead>}
+                  {(hasPermission("add_clients") || hasPermission("edit_clients")) && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedClients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={hasPermission("manage_clients") ? 7 : 6} className="text-center py-12 text-gray-500">
+                    <TableCell colSpan={hasPermission("add_clients") || hasPermission("edit_clients") ? 7 : 6} className="text-center py-12 text-gray-500">
                       No clients found. Add your first client to get started.
                     </TableCell>
                   </TableRow>
@@ -619,7 +619,7 @@ export default function ClientsPage() {
                       <TableCell>{client.phone}</TableCell>
                       <TableCell>{client.email}</TableCell>
                       <TableCell>{new Date(client.createdAt).toLocaleDateString()}</TableCell>
-                      {hasPermission("manage_clients") && (
+                      {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Link href={`/dashboard/clients/${client._id}`}>

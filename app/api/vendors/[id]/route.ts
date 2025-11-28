@@ -37,9 +37,9 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 // ---------------- UPDATE VENDOR ----------------
 export const PUT = withAuth(async (request: NextRequest, user) => {
   try {
-    // Check manage_vendors permission
-    if (!hasPermission(user, "manage_vendors")) {
-      return NextResponse.json({ success: false, error: "Forbidden - manage_vendors permission required" }, { status: 403 })
+    // Check edit_vendors permission
+    if (!hasPermission(user, "edit_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - edit_vendors permission required" }, { status: 403 })
     }
 
     const id = getIdFromRequest(request)
@@ -69,9 +69,9 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 // ---------------- DELETE VENDOR ----------------
 export const DELETE = withAuth(async (request: NextRequest, user, params) => {
   try {
-    // Check manage_vendors permission
-    if (!hasPermission(user, "manage_vendors")) {
-      return NextResponse.json({ success: false, error: "Forbidden - manage_vendors permission required" }, { status: 403 })
+    // Check edit_vendors permission
+    if (!hasPermission(user, "edit_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - edit_vendors permission required" }, { status: 403 })
     }
 
     const id = params.id
