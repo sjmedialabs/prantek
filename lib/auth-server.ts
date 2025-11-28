@@ -2,242 +2,250 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { generateAccessToken, generateRefreshToken, type JWTPayload } from "@/lib/jwt"
 import bcrypt from "bcryptjs"
+import { ObjectId } from "mongodb"
 
 export interface AuthTokens {
   accessToken: string
   refreshToken: string
-  user: {
-    id: string
-    email: string
-    name: string
-    role: "user" | "admin" | "super-admin"
-    clientId?: string
-    permissions?: string[]
-    roleId?: string
-  }
+  user: any
 }
 
-// Authenticate admin users with dashboard access
-export async function authenticateAdminUser(email: string, password: string): Promise<AuthTokens | null> {
-  console.log('[AUTH-SERVER] authenticateAdminUser() called for:', email)
-  
+/************************************************************
+ * STEP 1 — Authenticate ADMIN-USER from ADMIN_USERS
+ ************************************************************/
+async function authenticateAdminUser(email: string, password: string): Promise<AuthTokens | null> {
+  console.log("[AUTH] Trying admin-user login:", email)
+
   const db = await connectDB()
-  // Query USERS collection and filter for admin user type
-  const adminUser = await db.collection(Collections.USERS).findOne({ 
-    email: { $regex: new RegExp(`^${email}$`, 'i') },
-    userType: "admin" // Only admin users created via User Management
+
+  const adminUser = await db.collection(Collections.ADMIN_USERS).findOne({
+    email: { $regex: new RegExp(`^${email}$`, "i") }
   })
 
-  if (!adminUser) {
-    console.log('[AUTH-SERVER] Admin user not found')
-    return null
-  }
+  if (!adminUser) return null
 
-  // Check if user is active
   if (!adminUser.isActive) {
-    console.log('[AUTH-SERVER] Admin user is inactive')
+    console.log("[AUTH] Admin-user inactive")
     return null
   }
 
-  console.log('[AUTH-SERVER] Admin user found, verifying password')
   const isPasswordValid = await bcrypt.compare(password, adminUser.password)
-  console.log('[AUTH-SERVER] Password valid:', isPasswordValid)
-  
-  if (!isPasswordValid) {
-    return null
-  }
+  if (!isPasswordValid) return null
 
-  // Fetch parent account (company owner) to get subscription details
-  let subscriptionData = {}
-  if (adminUser.companyId) {
-    try {
-      const parentAccount = await db.collection(Collections.USERS).findOne({ 
-        _id: new ObjectId(adminUser.companyId)
-      })
-      
-      if (parentAccount) {
-        console.log('[AUTH-SERVER] Found parent account with subscription:', {
-          subscriptionPlanId: parentAccount.subscriptionPlanId,
-          subscriptionStatus: parentAccount.subscriptionStatus
-        })
-        
-        subscriptionData = {
-          subscriptionPlanId: parentAccount.subscriptionPlanId,
-          subscriptionStatus: parentAccount.subscriptionStatus,
-          subscriptionStartDate: parentAccount.subscriptionStartDate,
-          subscriptionEndDate: parentAccount.subscriptionEndDate,
-          trialEndsAt: parentAccount.trialEndsAt,
-        }
+  // Fetch parent company owner
+  const parentAccount = await db.collection(Collections.USERS).findOne({
+    _id: new ObjectId(adminUser.companyId)
+  })
+
+  const subscriptionData = parentAccount
+    ? {
+        subscriptionPlanId: parentAccount.subscriptionPlanId,
+        subscriptionStatus: parentAccount.subscriptionStatus,
+        subscriptionStartDate: parentAccount.subscriptionStartDate,
+        subscriptionEndDate: parentAccount.subscriptionEndDate,
+        trialEndsAt: parentAccount.trialEndsAt
       }
-    } catch (error) {
-      console.error('[AUTH-SERVER] Error fetching parent account:', error)
-    }
-  }
+    : {}
 
   // Update last login
-  await db.collection(Collections.USERS).updateOne(
+  await db.collection(Collections.ADMIN_USERS).updateOne(
     { _id: adminUser._id },
     { $set: { lastLogin: new Date() } }
   )
 
-  const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
+  const payload: Omit<JWTPayload, "exp" | "iat"> = {
     userId: adminUser._id.toString(),
     email: adminUser.email,
-    role: adminUser.role || "admin",
-    permissions: adminUser.permissions || [],
-    roleId: adminUser.roleId?.toString(),
-    isAdminUser: true, // Flag to identify users created via User Management
+    role: "admin-user",
+    userType: "admin-user",
     companyId: adminUser.companyId,
-    ...subscriptionData,
+    isAdminUser: true, // ✅ CRITICAL: This enables admin-user to access parent's data
+    permissions: adminUser.permissions || [],
+    roleId: adminUser.roleId || null,
+    ...subscriptionData
   }
-  console.log("[AUTH-SERVER] Token payload:", JSON.stringify(tokenPayload))
-
-  const accessToken = await generateAccessToken(tokenPayload, "1d") 
-  const refreshToken = await generateRefreshToken(tokenPayload, "7d")
 
   return {
-    accessToken,
-    refreshToken,
+    accessToken: await generateAccessToken(payload, "1d"),
+    refreshToken: await generateRefreshToken(payload, "7d"),
     user: {
+      ...payload,
       id: adminUser._id.toString(),
-      email: adminUser.email, 
-      name: adminUser.name,
-      role: adminUser.role || "admin",
-      permissions: adminUser.permissions || [],
-      roleId: adminUser.roleId?.toString(),
-    isAdminUser: true, // Flag to identify users created via User Management
-      companyId: adminUser.companyId,
-      ...subscriptionData,
-    },
+      name: adminUser.name
+    }
   }
 }
 
-// Legacy authentication for regular users (account owners with subscriptions)
-export async function authenticate(email: string, password: string): Promise<AuthTokens | null> {
-  console.log('[AUTH-SERVER] authenticate() called for:', email)
-  
+/************************************************************
+ * STEP 2 — Authenticate COMPANY OWNER (subscriber/admin)
+ ************************************************************/
+async function authenticateCompanyOwner(email: string, password: string): Promise<AuthTokens | null> {
+  console.log("[AUTH] Trying company-owner:", email)
+
   const db = await connectDB()
-  // Query for subscriber-type users (account owners with subscriptions)
-  const user = await db.collection(Collections.USERS).findOne({ 
-    email: { $regex: new RegExp(`^${email}$`, 'i') },
-    userType: "subscriber" // Only account owners, not admin users
+
+  const user = await db.collection(Collections.USERS).findOne({
+    email: { $regex: new RegExp(`^${email}$`, "i") },
+    userType: { $in: ["subscriber", "admin"] }
   })
 
-  if (!user) {
-    console.log('[AUTH-SERVER] User not found')
-    return null
-  }
+  if (!user) return null
 
-  console.log('[AUTH-SERVER] User found, verifying password')
   const isPasswordValid = await bcrypt.compare(password, user.password)
-  console.log('[AUTH-SERVER] Password valid:', isPasswordValid)
-  
-  if (!isPasswordValid) {
-    return null
-  }
-  
-  console.log("[AUTH-SERVER] User subscription data:", { 
-    subscriptionPlanId: user.subscriptionPlanId, 
-    subscriptionStatus: user.subscriptionStatus 
-  })
+  if (!isPasswordValid) return null
 
-  const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
+  await db.collection(Collections.USERS).updateOne(
+    { _id: user._id },
+    { $set: { lastLogin: new Date() } }
+  )
+
+  const payload: Omit<JWTPayload, "exp" | "iat"> = {
     userId: user._id.toString(),
     email: user.email,
-    role: user.role || "user",
+    role: user.role || "admin",
+    userType: user.userType,
+    companyId: user._id.toString(), // owner is root
+    isAdminUser: false, // ✅ Regular admin, not an admin-user
+    permissions: user.permissions || [],
     subscriptionPlanId: user.subscriptionPlanId,
     subscriptionStatus: user.subscriptionStatus,
     subscriptionEndDate: user.subscriptionEndDate,
+    trialEndsAt: user.trialEndsAt
   }
-  console.log("[AUTH-SERVER] Token payload:", JSON.stringify(tokenPayload))
-
-  const accessToken = await generateAccessToken(tokenPayload, "1d") 
-  const refreshToken = await generateRefreshToken(tokenPayload, "7d")
 
   return {
-    accessToken,
-    refreshToken,
+    accessToken: await generateAccessToken(payload, "1d"),
+    refreshToken: await generateRefreshToken(payload, "7d"),
     user: {
+      ...payload,
       id: user._id.toString(),
-      email: user.email, 
-      name: user.name,
-      role: user.role || "user",
-      clientId: user.clientId,
-      isAdminUser: false, // Account owner, not from User Management
-    },
+      name: user.name
+    }
   }
 }
 
-// Super admin authentication (checks both collections)
+/************************************************************
+ * MAIN AUTH ENTRYPOINT
+ * Login priority:
+ * 1. admin-user → ADMIN_USERS
+ * 2. admin/subscriber → USERS
+ ************************************************************/
+export async function authenticateUser(email: string, password: string) {
+  const adminUser = await authenticateAdminUser(email, password)
+  if (adminUser) return adminUser
+
+  const companyOwner = await authenticateCompanyOwner(email, password)
+  if (companyOwner) return companyOwner
+
+  return null
+}
+
+/************************************************************
+ * SUPER ADMIN AUTHENTICATION
+ * Validates against environment variables for super admin access
+ ************************************************************/
 export async function authenticateSuperAdmin(email: string, password: string): Promise<AuthTokens | null> {
-  console.log('[AUTH-SERVER] authenticateSuperAdmin() called for:', email)
-  
-  const db = await connectDB()
-  
-  // Check ADMIN_USERS collection first
-  let admin = await db.collection(Collections.ADMIN_USERS).findOne({ 
-    email,
-    role: "super-admin"
-  })
+  console.log("[AUTH] Attempting super-admin login:", email)
 
-  // Fallback to USERS collection for backward compatibility
-  if (!admin) {
-    admin = await db.collection(Collections.USERS).findOne({ 
-      email,
-      $or: [{ role: "superadmin" }, { role: "super-admin" }]
+  try {
+    // First, try to authenticate from database
+    const db = await connectDB()
+    const superAdmin = await db.collection(Collections.SUPER_ADMINS).findOne({ 
+      email: email.toLowerCase() 
     })
+
+    if (superAdmin) {
+      console.log("[AUTH] Found super admin in database")
+      
+      // Verify password (assuming it's hashed in database)
+      const isPasswordValid = await bcrypt.compare(password, superAdmin.password)
+      
+      if (!isPasswordValid) {
+        console.log("[AUTH] Super admin password mismatch (DB)")
+        return null
+      }
+
+      console.log("[AUTH] Super admin authentication successful (DB)")
+
+      // Create JWT payload for super admin
+      const payload: JWTPayload = {
+        userId: superAdmin._id?.toString() || "super-admin",
+        id: superAdmin._id?.toString() || "super-admin",
+        email: superAdmin.email,
+        role: "super-admin",
+        userType: "super-admin",
+        companyId: null,
+        isAdminUser: false,
+        permissions: ["*"], // Full permissions
+        isSuperAdmin: true
+      }
+
+      return {
+        accessToken: await generateAccessToken(payload, "30m"),
+        refreshToken: await generateRefreshToken(payload, "7d"),
+        user: {
+          id: payload.userId,
+          email: payload.email,
+          name: superAdmin.name || "Super Admin",
+          role: "super-admin",
+          userType: "super-admin",
+          permissions: ["*"],
+          isSuperAdmin: true
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[AUTH] Error checking database for super admin:", error)
   }
 
-  if (!admin) {
-    console.log('[AUTH-SERVER] No super admin found with email:', email)
+  // Fallback to environment variables (for backward compatibility)
+  console.log("[AUTH] Checking environment variables for super admin")
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD
+
+  if (!superAdminEmail || !superAdminPassword) {
+    console.error("[AUTH] Super admin credentials not configured in environment or database")
     return null
   }
 
-  console.log('[AUTH-SERVER] Super admin found:', admin.email, 'with role:', admin.role)
-  console.log('[AUTH-SERVER] Testing password...')
-  
-  const isPasswordValid = await bcrypt.compare(password, admin.password)
-  console.log('[AUTH-SERVER] Password comparison result:', isPasswordValid)
-  
-  if (!isPasswordValid) {
-    console.log('[AUTH-SERVER] Password invalid')
+  // Check if email matches (case-insensitive)
+  if (email.toLowerCase() !== superAdminEmail.toLowerCase()) {
+    console.log("[AUTH] Super admin email mismatch")
     return null
   }
 
-  console.log('[AUTH-SERVER] Generating tokens...')
-  const tokenPayload: Omit<JWTPayload, "iat" | "exp"> = {
-    userId: admin._id.toString(),
-    email: admin.email,
-    role: "super-admin" as const,
-    permissions: admin.permissions || [],
+  // Check if password matches (plain text comparison for env fallback)
+  if (password !== superAdminPassword) {
+    console.log("[AUTH] Super admin password mismatch")
+    return null
   }
 
-  const accessToken = await generateAccessToken(tokenPayload, "15m")
-  const refreshToken = await generateRefreshToken(tokenPayload, "7d")
+  console.log("[AUTH] Super admin authentication successful (ENV)")
 
-  console.log('[AUTH-SERVER] Tokens generated successfully')
+  // Create JWT payload for super admin
+  const payload: JWTPayload = {
+    userId: "super-admin",
+    id: "super-admin",
+    email: superAdminEmail,
+    role: "super-admin",
+    userType: "super-admin",
+    companyId: null,
+    isAdminUser: false,
+    permissions: ["*"], // Full permissions
+    isSuperAdmin: true
+  }
 
   return {
-    accessToken,
-    refreshToken,
+    accessToken: await generateAccessToken(payload, "30m"),
+    refreshToken: await generateRefreshToken(payload, "7d"),
     user: {
-      id: admin._id.toString(),
-      email: admin.email,
-      name: admin.name,
-      role: "super-admin" as const,
-      permissions: admin.permissions || [],
-    },
+      id: "super-admin",
+      email: superAdminEmail,
+      name: "Super Admin",
+      role: "super-admin",
+      userType: "super-admin",
+      permissions: ["*"],
+      isSuperAdmin: true
+    }
   }
-}
-
-// Main authentication function - tries admin users first, then regular users
-export async function authenticateUser(email: string, password: string): Promise<AuthTokens | null> {
-  // Try admin user authentication first
-  const adminAuth = await authenticateAdminUser(email, password)
-  if (adminAuth) {
-    return adminAuth
-  }
-  
-  // Fallback to regular user authentication for backward compatibility
-  return authenticate(email, password)
 }

@@ -289,7 +289,7 @@ async function handleSubmit(e?: any) {
 
           {/* Date */}
           <div>
-            <Label htmlFor="date">Payment Date *</Label>
+            <Label htmlFor="date" required>Payment Date</Label>
             <Input
               id="date"
               type="date"
@@ -302,7 +302,7 @@ async function handleSubmit(e?: any) {
           {/* Method + Payment Type */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <Label>Payment Method *</Label>
+              <Label required>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -316,7 +316,7 @@ async function handleSubmit(e?: any) {
             </div>
 
             <div>
-              <Label>Payment Type *</Label>
+              <Label required>Payment Type</Label>
               <Select
                 value={paymentType}
                 onValueChange={(v: any) => setPaymentType(v)}
@@ -344,7 +344,7 @@ async function handleSubmit(e?: any) {
             <div className="grid grid-cols-2 gap-4">
 
               <div>
-                <Label>Payment Amount *</Label>
+                <Label required>Payment Amount</Label>
                 <Input
                   type="number"
                   value={paymentAmount}

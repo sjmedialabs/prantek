@@ -139,6 +139,50 @@ export default function PaymentsPage() {
   const completedAmount = filteredPayments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0)
   const pendingAmount = filteredPayments.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0)
   const failedAmount = filteredPayments.filter((p) => p.status === "failed").reduce((sum, p) => sum + p.amount, 0)
+const exportToCSV = () => {
+  if (filteredPayments.length === 0) {
+    alert("No payments to export.");
+    return;
+  }
+
+  const headers = [
+    "Payment Number",
+    "Date",
+    "Party Type",
+    "Party Name",
+    "Category",
+    "Description",
+    "Payment Method",
+    "Status",
+    "Amount",
+  ];
+
+  const rows = filteredPayments.map((p) => [
+    p.paymentNumber || "",
+    p.date ? new Date(p.date).toLocaleDateString() : "",
+    p.recipientType || "",
+    p.recipientName || "",
+    p.category || "",
+    p.description || "",
+    p.paymentMethod || "",
+    p.status || "",
+    p.amount || 0,
+  ]);
+
+  const csvContent =
+    [headers, ...rows].map((r) => r.join(",")).join("\n");
+
+  const blob = new Blob([decodeURIComponent(encodeURI(csvContent))], {
+    type: "text/csv;charset=utf-8;",
+  });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `payments_export_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 
   if (loading) {
@@ -169,7 +213,7 @@ export default function PaymentsPage() {
           <p className="text-gray-600">Manage all payment transactions</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportToCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>

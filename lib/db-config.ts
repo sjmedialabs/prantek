@@ -3,6 +3,7 @@ export const DB_NAME = "prantek"
 export const COLLECTIONS = {
   USERS: "users",  // Legacy user collection for subscription/account owners
   ADMIN_USERS: "admin_users",  // New collection for admin users with dashboard access
+  SUPER_ADMINS: "super_admins",  // Super admin accounts
   CLIENTS: "clients",
   VENDORS: "vendors",
   ITEMS: "items",
@@ -40,6 +41,11 @@ export const INDEXES = {
     { key: { email: 1 }, unique: true },
     { key: { roleId: 1 } },
     { key: { companyId: 1 } },
+    { key: { isActive: 1 } },
+    { key: { createdAt: -1 } },
+  ],
+  SUPER_ADMINS: [
+    { key: { email: 1 }, unique: true },
     { key: { isActive: 1 } },
     { key: { createdAt: -1 } },
   ],

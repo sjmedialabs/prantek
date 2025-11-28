@@ -17,6 +17,7 @@ import { api } from "@/lib/api-client"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { MultiDocumentUpload } from "@/components/multi-document-upload"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface DocumentItem {
   id: string
@@ -37,6 +38,14 @@ interface Employee {
   mobileNo: string
   email: string
   address: string
+
+  // Newly Added
+  state: string
+  city: string
+  pincode: string
+  emergencyName: string
+  emergencyNo: string
+
   aadharNo: string
   aadharUpload: string
   joiningDate: string
@@ -46,7 +55,15 @@ interface Employee {
   role: string
   resume?: string
   panCard?: string
-  bankAccountDetails?: string
+  panCardNo: string
+
+  // New Identity & Banking
+  bankName?: string
+  branchName?: string
+  accountHolderName?: string
+  accountNumber?: string
+  ifscCode?: string
+
   educationCertificates: DocumentItem[]
   experienceCertificates: DocumentItem[]
   isActive: boolean
@@ -62,45 +79,61 @@ export default function EmployeePage() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [memberTypes, setMemberTypes] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
-  const [formData, setFormData] = useState<Employee>({
-    id: "",
-    _id: "",
-    employeeNumber: "",
-    employeeName: "",
-    surname: "",
-    photo: "",
-    mobileNo: "",
-    email: "",
-    address: "",
-    aadharNo: "",
-    aadharUpload: "",
-    joiningDate: "",
-    relievingDate: "",
-    description: "",
-    isSystem: false,
-    userCount: 0,
-    memberType: "",
-    role: "",
-    resume: "",
-    panCard: "",
-    bankAccountDetails: "",
-    educationCertificates: [],
-    experienceCertificates: [],
-    isActive: true,
-    createdAt: "",
-    updatedAt: "",
-  })
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+const [formData, setFormData] = useState<Employee>({
+  id: "",
+  _id: "",
+  employeeNumber: "",
+  employeeName: "",
+  surname: "",
+  photo: "",
+  mobileNo: "",
+  email: "",
+  address: "",
+  state: "",
+  city: "",
+  pincode: "",
+  emergencyName: "",
+  emergencyNo: "",
+  aadharNo: "",
+  aadharUpload: "",
+  joiningDate: "",
+  relievingDate: "",
+  description: "",
+  memberType: "",
+  role: "",
+  resume: "",
+  panCard: "",
+  panCardNo: "",
+  bankName: "",
+  branchName: "",
+  accountHolderName: "",
+  accountNumber: "",
+  ifscCode: "",
+  educationCertificates: [],
+  experienceCertificates: [],
+  isActive: true,
+  isSystem: false,
+  userCount: 0,
+  createdAt: "",
+  updatedAt: "",
+})
+const loadEmployees = async () => {
+  const loadedEmployees = await api.employees.getAll()
+  setEmployees(loadedEmployees)
+}
+
 
   useEffect(() => {
     const loadData = async () => {
-      const loadedEmployees = await api.employees.getAll()
-      console.log("loadedEmployees", loadedEmployees)
+      await loadEmployees()
+      console.log("loadedEmployees", employees)
       const loadedMemberTypes = await api.memberTypes.getAll()
       console.log("loadedMemberTypes", loadedMemberTypes)
       const loadedRoles = await api.employeeRoles.getAll()
       console.log("loadedRoles", loadedRoles)
-        setRoles(loadedRoles)
-      setEmployees(loadedEmployees)
+      setRoles(loadedRoles)
       setMemberTypes(loadedMemberTypes)
     }
     loadData()
@@ -156,6 +189,41 @@ export default function EmployeePage() {
       toast({ title: "Validation Error", description: "Please enter address", variant: "destructive" })
       return
     }
+    if (!(formData.emergencyName).trim()) {
+  toast({ title: "Validation Error", description: "Please enter emergency contact name", variant: "destructive" })
+  return
+}
+
+if (!formData.emergencyNo.trim()) {
+  toast({ title: "Validation Error", description: "Please enter emergency contact number", variant: "destructive" })
+  return
+}
+
+if (!formData.state.trim()) {
+  toast({ title: "Validation Error", description: "Please enter state", variant: "destructive" })
+  return
+}
+
+if (!formData.city.trim()) {
+  toast({ title: "Validation Error", description: "Please enter city", variant: "destructive" })
+  return
+}
+
+if (!formData.pincode.trim()) {
+  toast({ title: "Validation Error", description: "Please enter pincode", variant: "destructive" })
+  return
+}
+
+if (formData.pincode.length !== 6) {
+  toast({ title: "Validation Error", description: "Pincode must be 6 digits", variant: "destructive" })
+  return
+}
+
+if (!formData.panCardNo.trim()) {
+  toast({ title: "Validation Error", description: "Please enter PAN Card number", variant: "destructive" })
+  return
+}
+
     if (!formData.aadharNo.trim()) {
       toast({ title: "Validation Error", description: "Please enter Aadhar number", variant: "destructive" })
       return
@@ -174,58 +242,72 @@ export default function EmployeePage() {
     }
     console.log("Saving employee as editing employee:", editingEmployee)
     console.log("Saving employee:", formData)
-    if (editingEmployee?._id) {
-      const updated = await api.employees.update( editingEmployee?._id, formData)
-      if (updated) {
-        setEmployees(employees.map((emp) => (emp._id === editingEmployee._id ? updated : emp)))
-      }
-    } else {
-      const newEmployee = await api.employees.create( {
-        ...formData,
-        employeeNumber: generateEmployeeNumber(),
-      })
-      setEmployees([...employees, newEmployee])
-    }
+if (editingEmployee?._id) {
+  await api.employees.update(editingEmployee._id, formData)
+} else {
+  await api.employees.create({
+    ...formData,
+    employeeNumber: generateEmployeeNumber(),
+  })
+}
 
+// REFRESH LIST
+await loadEmployees()
+
+// Reset pagination
+setCurrentPage(1)
+
+    console.log("Employee saved successfully", employees)
     setIsDialogOpen(false)
     setEditingEmployee(null)
     resetForm()
     setSaved(true)
     toast({ title: "Success", description: "Employee saved successfully!" })
     setTimeout(() => setSaved(false), 3000)
-    window.location.reload()
+    // window.location.reload()
   }
 
-  const resetForm = () => {
-    setFormData({
-      id: "",
-      employeeNumber: "",
-      employeeName: "",
-      surname: "",
-      photo: "",
-      _id: "",
-      isSystem: false,
-      userCount: 0,
-      mobileNo: "",
-      email: "",
-      address: "",
-      aadharNo: "",
-      aadharUpload: "",
-      joiningDate: "",
-      relievingDate: "",
-      description: "",
-      memberType: "",
-      role: "",
-      resume: "",
-      panCard: "",
-      bankAccountDetails: "",
-      educationCertificates: [],
-      experienceCertificates: [],
-      isActive: true,
-      createdAt: "",
-      updatedAt: "",
-    })
-  }
+const resetForm = () => {
+  setFormData({
+    id: "",
+    _id: "",
+    employeeNumber: "",
+    employeeName: "",
+    surname: "",
+    photo: "",
+    mobileNo: "",
+    email: "",
+    address: "",
+    state: "",
+    city: "",
+    pincode: "",
+    emergencyName: "",
+    emergencyNo: "",
+    aadharNo: "",
+    aadharUpload: "",
+    joiningDate: "",
+    relievingDate: "",
+    description: "",
+    memberType: "",
+    role: "",
+    resume: "",
+    panCard: "",
+    panCardNo: "",
+    bankName: "",
+    branchName: "",
+    accountHolderName: "",
+    accountNumber: "",
+    ifscCode: "",
+    educationCertificates: [],
+    experienceCertificates: [],
+    isActive: true,
+    isSystem: false,
+    userCount: 0,
+    createdAt: "",
+    updatedAt: "",
+  })
+}
+
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee)
@@ -235,20 +317,26 @@ export default function EmployeePage() {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     console.log("Toggling  for employee:", id)
-      try {
-    const updated = await api.employees.toggle(id, isActive)
+    try {
+      const updated = await api.employees.toggle(id, isActive)
 
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        emp._id === id ? { ...emp, isActive } : emp
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp._id === id ? { ...emp, isActive } : emp
+        )
       )
-    )
-    toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
-    window.location.reload()
-  } catch (err: any) {
-    toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
+      toast({ title: "Success", description: "Status updated successfully!" })   // ✅ ADDED
+      // window.location.reload()
+    } catch (err: any) {
+      toast({ title: "Error", description: `Failed to update status: ${err.message || "Something went wrong"}`, variant: "destructive" })   // ✅ ADDED
+    }
   }
-  }
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentEmployees = employees?.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(employees?.length / itemsPerPage)
+
 
   if (!hasPermission("tenant_settings")) {
     return (
@@ -315,7 +403,7 @@ export default function EmployeePage() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Employee Number *</Label>
+                        <Label className="text-sm font-medium" required>Employee Number</Label>
                         <Input
                           value={editingEmployee ? formData.employeeNumber : "Auto-generated on save"}
                           disabled
@@ -326,8 +414,8 @@ export default function EmployeePage() {
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="employeeName" className="text-sm font-medium">
-                          Employee Name *
+                        <Label htmlFor="employeeName" className="text-sm font-medium" required>
+                          Employee Name
                         </Label>
                         <Input
                           id="employeeName"
@@ -338,8 +426,8 @@ export default function EmployeePage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="surname" className="text-sm font-medium">
-                          Surname *
+                        <Label htmlFor="surname" className="text-sm font-medium" required>
+                          Surname
                         </Label>
                         <Input
                           id="surname"
@@ -353,50 +441,50 @@ export default function EmployeePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="memberType" className="text-sm font-medium">
-                          Employment Type *
+                        <Label htmlFor="memberType" className="text-sm font-medium" required>
+                          Employment Type
                         </Label>
-<Select
-  value={formData.memberType ?? ""}
-  onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
->
-  <SelectTrigger>
-    <SelectValue/>
-  </SelectTrigger>
-  <SelectContent>
-    {memberTypes.map((type) => (
-      <SelectItem key={type._id} value={String(type._id)}>
-        {type.name}
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+                        <Select
+                          value={formData.memberType ?? ""}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue  placeholder="Employment type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {memberTypes.map((type) => (
+                              <SelectItem key={type._id} value={String(type._id)}>
+                                {type.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="role" className="text-sm font-medium">
-                          Role *
+                        <Label htmlFor="role" className="text-sm font-medium" required>
+                          Role
                         </Label>
-<Select
-  value={formData.role ?? ""}
-  onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select role" />
-  </SelectTrigger>
-  <SelectContent>
-    {roles.length === 0 ? (
-      <SelectItem value="no-roles" disabled>
-        No roles available. Please create roles first.
-      </SelectItem>
-    ) : (
-      roles.map((role) => (
-        <SelectItem key={role._id} value={String(role._id)}>
-          {role.name}
-        </SelectItem>
-      ))
-    )}
-  </SelectContent>
-</Select>
+                        <Select
+                          value={formData.role ?? ""}
+                          onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.length === 0 ? (
+                              <SelectItem value="no-roles" disabled>
+                                No roles available. Please create roles first.
+                              </SelectItem>
+                            ) : (
+                              roles.map((role) => (
+                                <SelectItem key={role._id} value={String(role._id)}>
+                                  {role.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </CardContent>
@@ -407,11 +495,15 @@ export default function EmployeePage() {
                   <CardHeader>
                     <CardTitle className="text-lg font-semibold">Contact Information</CardTitle>
                   </CardHeader>
+
                   <CardContent className="space-y-4">
+
+                    {/* Primary Contact Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                       <div className="space-y-2">
-                        <Label htmlFor="mobileNo" className="text-sm font-medium">
-                          Mobile No *
+                        <Label htmlFor="mobileNo" className="text-sm font-medium" required>
+                          Mobile No
                         </Label>
                         <Input
                           id="mobileNo"
@@ -422,9 +514,10 @@ export default function EmployeePage() {
                           required
                         />
                       </div>
+
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">
-                          Email *
+                        <Label htmlFor="email" className="text-sm font-medium" required>
+                          Email
                         </Label>
                         <Input
                           id="email"
@@ -436,9 +529,43 @@ export default function EmployeePage() {
                         />
                       </div>
                     </div>
+
+                    {/* Emergency Contact */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                      <div className="space-y-2">
+                        <Label htmlFor="emergencyName" className="text-sm font-medium" required>
+                          Emergency Contact Person
+                        </Label>
+                        <Input
+                          id="emergencyName"
+                          value={formData.emergencyName || ""}
+                          onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
+                          placeholder="Person to contact in emergency"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="emergencyNo" className="text-sm font-medium" required>
+                          Emergency Contact Number
+                        </Label>
+                        <Input
+                          id="emergencyNo"
+                          type="tel"
+                          value={formData.emergencyNo || ""}
+                          onChange={(e) => setFormData({ ...formData, emergencyNo: e.target.value })}
+                          placeholder="+91 98765 43210"
+                          required
+                        />
+                      </div>
+
+                    </div>
+
+                    {/* Address */}
                     <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm font-medium">
-                        Address *
+                      <Label htmlFor="address" className="text-sm font-medium" required>
+                        Address
                       </Label>
                       <Textarea
                         id="address"
@@ -449,6 +576,53 @@ export default function EmployeePage() {
                         required
                       />
                     </div>
+
+                    {/* State / City / Pincode */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                      <div className="space-y-2">
+                        <Label htmlFor="state" className="text-sm font-medium" required>
+                          State
+                        </Label>
+                        <Input
+                          id="state"
+                          value={formData.state || ""}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                          placeholder="State"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="city" className="text-sm font-medium" required>
+                          City
+                        </Label>
+                        <Input
+                          id="city"
+                          value={formData.city || ""}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          placeholder="City"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="pincode" className="text-sm font-medium" required>
+                          Pincode
+                        </Label>
+                        <Input
+                          id="pincode"
+                          type="text"
+                          maxLength={6}
+                          value={formData.pincode || ""}
+                          onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                          placeholder="6-digit pincode"
+                          required
+                        />
+                      </div>
+
+                    </div>
+
                   </CardContent>
                 </Card>
 
@@ -515,7 +689,7 @@ export default function EmployeePage() {
                 />
 
                 {/* Identity & Banking Section */}
-                <Card>
+                {/* <Card>
                   <CardHeader>
                     <CardTitle className="text-lg font-semibold">Identity & Banking Details</CardTitle>
                   </CardHeader>
@@ -548,6 +722,101 @@ export default function EmployeePage() {
                       </div>
                     </div>
                   </CardContent>
+                </Card> */}
+                {/* Identity Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">Identity Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex gap-4">
+                    <div className="space-y-2 md:basis-1/2">
+                      <Label htmlFor="aadharNo" className="text-sm font-medium" required>
+                        Aadhar No (12 digits)
+                      </Label>
+                      <Input
+                        id="aadharNo"
+                        value={formData.aadharNo}
+                        onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
+                        placeholder="XXXX XXXX XXXX"
+                        maxLength={14}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:basis-1/2">
+                      <Label htmlFor="panCardNo" className="text-sm font-medium" required>
+                        PAN Card No
+                      </Label>
+                      <Input
+                        id="panCardNo"
+                        value={formData.panCardNo || ""}
+                        onChange={(e) => setFormData({ ...formData, panCardNo: e.target.value })}
+                        placeholder="ABCDE1234F"
+                        maxLength={10}
+                        required
+                      />
+                    </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                {/* Banking Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">Banking Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Bank Name</Label>
+                        <Input
+                          value={formData.bankName || ""}
+                          onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+                          placeholder="Bank Name"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Branch Name</Label>
+                        <Input
+                          value={formData.branchName || ""}
+                          onChange={(e) => setFormData({ ...formData, branchName: e.target.value })}
+                          placeholder="Branch Name"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Account Holder Name</Label>
+                        <Input
+                          value={formData.accountHolderName || ""}
+                          onChange={(e) => setFormData({ ...formData, accountHolderName: e.target.value })}
+                          placeholder="As per bank record"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Account Number</Label>
+                        <Input
+                          value={formData.accountNumber || ""}
+                          onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
+                          placeholder="XXXXXXXXXXXX"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">IFSC Code</Label>
+                        <Input
+                          value={formData.ifscCode || ""}
+                          onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value })}
+                          placeholder="SBIN000000"
+                        />
+                      </div>
+
+                    </div>
+
+                  </CardContent>
                 </Card>
 
                 {/* Employment Dates Section */}
@@ -558,8 +827,8 @@ export default function EmployeePage() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="joiningDate" className="text-sm font-medium">
-                          Joining Date *
+                        <Label htmlFor="joiningDate" className="text-sm font-medium" required>
+                          Joining Date
                         </Label>
                         <Input
                           id="joiningDate"
@@ -641,67 +910,127 @@ export default function EmployeePage() {
           <CardDescription>All employees in your organization</CardDescription>
         </CardHeader>
         <CardContent>
-          {employees.length === 0 ? (
+          {employees?.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p>No employees added yet. Click "Add Employee" to get started.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {employees.map((employee) => (
-                <div
-                  key={employee._id?.toString() || employee.employeeNumber}
-                  className={`flex items-center justify-between p-4 border rounded-lg ${
-                    !employee?.isActive ? "bg-gray-50 opacity-60" : ""
-                  }`}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="font-semibold">{employee.employeeNumber}</span>
-                      <span className="font-medium">
-                        {employee.employeeName} {employee.surname}
-                      </span>
-                      {employee.memberType && (
-                        <Badge variant="secondary" className="text-xs">
-                          {memberTypes.find((t) => String(t._id) === String(employee.memberType))?.name || employee.memberType}
-                        </Badge>
-                      )}
-                      {employee.role && (
-                        <Badge variant="outline" className="text-xs">
-                          {roles.find((r) => String(r._id) === String(employee.role))?.name || employee.role}
-                        </Badge>
-                      )}
-                      {!employee.isActive && (
-                        <Badge variant="destructive" className="text-xs">
-                          Inactive
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">
-                      <p>{employee.email}</p>
-                      <p>{employee.mobileNo}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor={`active-${employee._id}`} className="text-sm">
-                        {employee.isActive ? "Active" : "Inactive"}
-                      </Label>
-<Switch
-  checked={!!employee.isActive}   // ✅ ensures boolean
-  onCheckedChange={(checked) => handleToggleActive(employee?._id, checked)}
-  disabled={employee.isSystem || employee.userCount > 0}
-/>
-                    </div>
-                  </div>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="p-3 text-left font-medium">S.No</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Employee No</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Name</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Email</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Mobile</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Role</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Member Type</TableHead>
+                      <TableHead className="p-3 text-left font-medium">Status</TableHead>
+                      <TableHead className="p-3 font-medium text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentEmployees?.map((employee, index) => (
+                      <TableRow
+                        key={employee?._id || index}
+                        className= ""
+                      >
+                        <TableCell className="p-3 font-medium">{indexOfFirstItem + index + 1}</TableCell>
+                        <TableCell className="p-3">{employee?.employeeNumber}</TableCell>
+                        <TableCell className="p-3 font-semibold">
+                          {employee?.employeeName} {employee?.surname}
+                        </TableCell>
+                        <TableCell className="p-3">{employee?.email}</TableCell>
+                        <TableCell className="p-3">{employee?.mobileNo}</TableCell>
+                        <TableCell className="p-3">
+                          {employee?.role ? (
+                            <Badge variant="outline" className="text-xs">
+                              {roles.find((r) => String(r._id) === String(employee?.role))?.name ||
+                                employee?.role}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="p-3">
+                          {employee?.memberType ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {memberTypes.find((t) => String(t._id) === String(employee?.memberType))
+                                ?.name || employee?.memberType}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="p-3">
+                          {employee?.isActive ? (
+                            <Badge className="text-xs">Active</Badge>
+                          ) : (
+                            <Badge variant="destructive" className="text-xs">
+                              Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={!!employee?.isActive}
+                                onCheckedChange={(checked) =>
+                                  handleToggleActive(employee?._id, checked)
+                                }
+                                disabled={employee?.isSystem || employee?.userCount > 0}
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              <div className="flex justify-between items-center mt-4">
+                <div className="text-sm text-gray-600">
+                  Showing {indexOfFirstItem + 1} –{" "}
+                  {Math.min(indexOfLastItem, employees?.length)} of {employees?.length}
                 </div>
-              ))}
-            </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                  >
+                    Previous
+                  </Button>
+
+                  <span className="text-sm font-medium">
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
+
       </Card>
     </div>
   )

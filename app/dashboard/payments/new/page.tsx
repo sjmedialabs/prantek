@@ -26,6 +26,7 @@ import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { ClientSelectSimple } from "@/components/client-select-simple"
+import { ImageUpload } from "@/components/ui/image-upload"
 
 export default function NewPaymentPage() {
   const router = useRouter()
@@ -46,6 +47,7 @@ export default function NewPaymentPage() {
     bankAccount: "",
     referenceNumber: "",
     billFile: null as File | null,
+    screenshotFile: null as File | null,
   })
   const [amountInWords, setAmountInWords] = useState("")
   const [activeTab, setActiveTab] = useState("payment-details")
@@ -100,7 +102,7 @@ export default function NewPaymentPage() {
         const uniqueTeams = Array.from(new Map(activeEmployees.map((t: any) => [t._id, t])).values());
 
         setTeamMembers(uniqueTeams);
-const activeRecipientTypes = recipientTypesData.filter((t) => t.isEnabled);
+const activeRecipientTypes = recipientTypesData.filter((t : any) => t.isEnabled);
 
 const uniqueRecipientTypes = Array.from(
   new Map(
@@ -259,9 +261,10 @@ setRecipientTypes(uniqueRecipientTypes);
       setPaymentData({
         ...paymentData,
         recipientId,
-        recipientName: recipient.name,
+        recipientName: recipient.name || (recipient.employeeName + " " + recipient.surname),
         recipientDetails: details,
       })
+
       // Clear recipient validation error
       if (validationErrors.recipientId) {
         setValidationErrors({ ...validationErrors, recipientId: "" })
@@ -319,6 +322,8 @@ setRecipientTypes(uniqueRecipientTypes);
         paymentMethod: paymentData.paymentMethod as any,
         category: paymentData.category,
         description: paymentData.description,
+        screenshotFile: paymentData.screenshotFile,
+        billFile: paymentData.billFile,
         status: paymentData.paymentMethod === "Cash" ? "completed" : "pending",
         bankAccount: paymentData.bankAccount,
         referenceNumber: paymentData.referenceNumber,
@@ -340,7 +345,7 @@ setRecipientTypes(uniqueRecipientTypes);
     }
   }
 
-  const requiresReference = ["Bank Transfer", "UPI", "Check"].includes(paymentData.paymentMethod)
+  const requiresReference = ["Bank Transfer", "UPI", "Check", "Cheque", "Card"].includes(paymentData.paymentMethod)
   const status = paymentData.paymentMethod === "Cash" ? "Cleared" : "Paid"
 
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false)
@@ -380,7 +385,7 @@ setRecipientTypes(uniqueRecipientTypes);
     })
   }
 
-  const handleCreateNewVendor = () => {
+  const handleCreateNewVendor = async () => {
     if (!newVendor.name || !newVendor.phone || !newVendor.category) {
       toast({
         title: "Validation Error",
@@ -390,7 +395,7 @@ setRecipientTypes(uniqueRecipientTypes);
       return
     }
 
-    const vendor = api.vendors.create(newVendor)
+    const vendor = await api.vendors.create(newVendor)
     setVendors([...vendors, vendor])
     handleRecipientChange(vendor._id)
     setIsCreateVendorOpen(false)
@@ -527,7 +532,7 @@ setRecipientTypes(uniqueRecipientTypes);
                           }}
                           required
                         >
-                          <SelectTrigger className={validationErrors.category ? "border-red-500" : ""}>
+                          <SelectTrigger className={validationErrors.category ? "border-red-500" : "w-36"}>
                             <SelectValue placeholder="Select ledger head" />
                           </SelectTrigger>
 
@@ -566,7 +571,7 @@ setRecipientTypes(uniqueRecipientTypes);
                           }}
                           required
                         >
-                          <SelectTrigger className={validationErrors.recipientType ? "border-red-500" : ""}>
+                          <SelectTrigger className={validationErrors.recipientType ? "border-red-500" : "w-36"}>
                             <SelectValue placeholder="Select party type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -605,7 +610,7 @@ setRecipientTypes(uniqueRecipientTypes);
                                   placeholder="Search and select a client..."
                                   searchPlaceholder="Type to search clients..."
                                   emptyText="No clients found."
-                                  className={validationErrors.recipientId ? "border-red-500" : ""}
+                                  className={validationErrors.recipientId ? "border-red-500" : "w-60"}
                                 />
                               </div>
 
@@ -696,7 +701,7 @@ setRecipientTypes(uniqueRecipientTypes);
                                   placeholder="Search and select a vendor..."
                                   searchPlaceholder="Type to search vendors..."
                                   emptyText="No vendors found."
-                                  className={validationErrors.recipientId ? "border-red-500" : ""}
+                                  className={validationErrors.recipientId ? "border-red-500" : "w-60"}
                                 />
                               </div>
 
@@ -805,7 +810,7 @@ setRecipientTypes(uniqueRecipientTypes);
                               placeholder="Search and select a team member..."
                               searchPlaceholder="Type to search team members..."
                               emptyText="No active team members found."
-                              className={validationErrors.recipientId ? "border-red-500" : ""}
+                              className={validationErrors.recipientId ? "border-red-500" : "w-60"}
                             />
                             {validationErrors.recipientId && (
                               <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
@@ -817,7 +822,7 @@ setRecipientTypes(uniqueRecipientTypes);
                       {paymentData.recipientId && (
                         <div className="space-y-2">
                           <Label>Recipient Details</Label>
-                          <Textarea value={paymentData.recipientDetails} disabled rows={4} />
+                          <Textarea value={paymentData.recipientName+" "+paymentData.recipientDetails} disabled rows={4} />
                         </div>
                       )}
                     </div>
@@ -950,42 +955,56 @@ setRecipientTypes(uniqueRecipientTypes);
                     )}
 
                     {requiresReference && (
-                      <div className="space-y-2">
-                        <Label htmlFor="billUpload">
-                          Bill Upload <span className="text-red-500">*</span>
-                        </Label>
-                        <div className={`border-2 border-dashed rounded-lg p-6 text-center ${validationErrors.billFile ? "border-red-500" : "border-gray-300"}`}>
-                          <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-600 mb-2">Click to upload or drag and drop</p>
-                          <Input
-                            id="billUpload"
-                            type="file"
-                            accept="image/*,.pdf"
-                            onChange={(e) => {
-                              setPaymentData({ ...paymentData, billFile: e.target.files?.[0] || null })
-                              if (validationErrors.billFile) {
-                                setValidationErrors({ ...validationErrors, billFile: "" })
-                              }
-                            }}
-                            className="hidden"
-                            required
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => document.getElementById("billUpload")?.click()}
-                          >
-                            Choose File
-                          </Button>
-                          {paymentData.billFile && (
-                            <p className="text-sm text-green-600 mt-2">{paymentData.billFile.name}</p>
-                          )}
-                        </div>
-                        {validationErrors.billFile && (
-                          <p className="text-xs text-red-500">{validationErrors.billFile}</p>
-                        )}
-                      </div>
+<div className="space-y-2 flex gap-6">
+
+  {/* BILL UPLOAD */}
+  <div>
+    <Label>Bill Upload <span className="text-red-500">*</span></Label>
+
+    <ImageUpload
+      label="Bill File"
+      value={paymentData.billFile}
+      onChange={(value) => {
+        setPaymentData({ ...paymentData, billFile: value })
+        if (validationErrors.billFile) {
+          setValidationErrors({ ...validationErrors, billFile: "" })
+        }
+      }}
+      previewClassName="w-32 h-32 rounded-lg"
+      allowedTypes={["image/*", "application/pdf"]}
+      maxSizeMB={10}
+    />
+
+    {validationErrors.billFile && (
+      <p className="text-xs text-red-500">{validationErrors.billFile}</p>
+    )}
+  </div>
+
+  {/* SCREENSHOT UPLOAD */}
+  <div>
+    <Label>Screenshot Upload</Label>
+
+    <ImageUpload
+      label="Screenshot File"
+      value={paymentData.screenshotFile}
+      onChange={(value) => {
+        setPaymentData({ ...paymentData, screenshotFile: value })
+        if (validationErrors.screenshotFile) {
+          setValidationErrors({ ...validationErrors, screenshotFile: "" })
+        }
+      }}
+      previewClassName="w-32 h-32 rounded-lg"
+      allowedTypes={["image/*", "application/pdf"]}
+      maxSizeMB={10}
+    />
+
+    {validationErrors.screenshotFile && (
+      <p className="text-xs text-red-500">{validationErrors.screenshotFile}</p>
+    )}
+  </div>
+
+</div>
+
                     )}
 
                     <div className="space-y-2">

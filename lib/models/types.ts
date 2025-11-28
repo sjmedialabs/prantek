@@ -14,8 +14,9 @@ export interface AdminUser extends BaseDocument {
   companyId?: string
   userType?: "subscriber" | "admin"  // Distinguish between account owners and admin users
   role: "super-admin" | "admin"  // admin users have specific roles
-  roleId?: string  // Reference to Role collection
-  permissions?: string[]  // Cached permissions from role
+  roleId?: string  // Reference to Role collection (for backward compatibility)
+  employeeId?: string  // Reference to Employee collection (new flow)
+  permissions?: string[]  // Direct permissions array or cached from role
   phone?: string
   avatar?: string
   isActive: boolean
@@ -248,8 +249,9 @@ export interface ReceiptItem {
 export interface Receipt extends BaseDocument {
   id: string
   receiptNumber: string
-  quotationId: string // Made mandatory - every receipt must reference a quotation
-  quotationNumber: string
+  receiptType: "quotation" | "items" | "quick" // Type of receipt creation
+  quotationId?: string // Optional - only for receipts from quotations
+  quotationNumber?: string
   clientId: string
   clientName: string
   clientEmail: string
@@ -297,7 +299,7 @@ export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
 
-  quotationNumber: string
+  quotationNumber?: string
   date: string | Date
   validity?: string | Date
   note?: string
@@ -332,6 +334,8 @@ export interface Payment extends BaseDocument {
   date: string
   amount: number
   paymentMethod: string
+  screenshotFile?: string
+  billFile?: string
   bankAccount?: string
   createdBy: string
   category?: string
@@ -340,13 +344,69 @@ export interface Payment extends BaseDocument {
   referenceNumber?: string
 }
 
+// Plan-specific feature flags for granular access control
+export interface PlanFeatures {
+  cashBook: boolean
+  clients: boolean
+  vendors: boolean
+  quotations: boolean
+  receipts: boolean
+  payments: boolean
+  reconciliation: boolean
+  assets: boolean
+  reports: boolean
+  settings: boolean
+  hrSettings: boolean
+}
+
+export const PLAN_FEATURE_KEYS = [
+  'cashBook',
+  'clients',
+  'vendors',
+  'quotations',
+  'receipts',
+  'payments',
+  'reconciliation',
+  'assets',
+  'reports',
+  'settings',
+  'hrSettings',
+] as const
+
+export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
+  cashBook: 'Cash Book',
+  clients: 'Clients Management',
+  vendors: 'Vendors Management',
+  quotations: 'Quotations',
+  receipts: 'Receipts',
+  payments: 'Payments',
+  reconciliation: 'Reconciliation',
+  assets: 'Assets Management',
+  reports: 'Reports',
+  settings: 'Settings',
+}
+
+export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
+  cashBook: 'Access to cash book for tracking daily transactions',
+  clients: 'Manage client database and relationships',
+  vendors: 'Manage vendor database and relationships',
+  quotations: 'Create and manage quotations',
+  receipts: 'Create and manage receipts',
+  payments: 'Process and track payments',
+  reconciliation: 'Bank reconciliation features',
+  assets: 'Manage company assets inventory',
+  reports: 'Generate business reports',
+  settings: 'Access to system settings and configuration',
+}
+
 export interface SubscriptionPlan extends BaseDocument {
   id?: string
   name: string
   price: number
   duration: number
   billingCycle: "monthly" | "yearly"
-  features: string[]
+  features: string[] // Legacy feature list for backward compatibility
+  planFeatures?: PlanFeatures // New granular feature flags
   maxUsers: number
   maxClients: number
   maxReceipts: number
@@ -355,6 +415,7 @@ export interface SubscriptionPlan extends BaseDocument {
   maxStorage?: string
   subscriberCount?: number
   revenue?: number
+  order?: number // Display order for sorting
 }
 
 export interface PaymentMethod extends BaseDocument {

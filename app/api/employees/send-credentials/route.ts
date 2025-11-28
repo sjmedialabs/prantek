@@ -37,6 +37,7 @@ function generateTempPassword(): string {
  * Send login credentials to an employee
  */
 export const POST = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   try {
     const db = await connectDB()
     const { employeeId } = await req.json()
@@ -51,7 +52,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     // Get employee details
     const employee = await db.collection(Collections.EMPLOYEES).findOne({
       _id: new ObjectId(employeeId),
-      userId: user.userId
+      userId: filterUserId
     })
 
     if (!employee) {

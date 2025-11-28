@@ -12,6 +12,7 @@ import { tokenStorage } from "@/lib/token-storage"
 import { FeaturesSidebar } from "@/components/auth/features-sidebar"
 import { useRouter } from "next/navigation"
 import { isSessionValid } from "@/lib/session-timeout"
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod"
 
 function SignInForm() {
   const router = useRouter()
@@ -24,6 +25,7 @@ function SignInForm() {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
+  const{trialDays}=useTrialPeriod();
 
   // Check for session expired error
   useEffect(() => {

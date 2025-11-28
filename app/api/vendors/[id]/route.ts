@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
-import { withAuth } from "@/lib/api-auth"
+import { withAuth, hasPermission } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 // ✅ helper
 function getIdFromRequest(req: NextRequest): string {
@@ -10,6 +10,11 @@ function getIdFromRequest(req: NextRequest): string {
 // ---------------- GET ONE VENDOR ----------------
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check view_vendors permission
+    if (!hasPermission(user, "view_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - view_vendors permission required" }, { status: 403 })
+    }
+
     const id = getIdFromRequest(request)
     console.log("Fetching vendor with ID:", id)
     // Admin -> filter by companyId
@@ -32,6 +37,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 // ---------------- UPDATE VENDOR ----------------
 export const PUT = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check manage_vendors permission
+    if (!hasPermission(user, "manage_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - manage_vendors permission required" }, { status: 403 })
+    }
+
     const id = getIdFromRequest(request)
     const body = await request.json()
 
@@ -59,6 +69,11 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 // ---------------- DELETE VENDOR ----------------
 export const DELETE = withAuth(async (request: NextRequest, user, params) => {
   try {
+    // Check manage_vendors permission
+    if (!hasPermission(user, "manage_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - manage_vendors permission required" }, { status: 403 })
+    }
+
     const id = params.id
 
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId

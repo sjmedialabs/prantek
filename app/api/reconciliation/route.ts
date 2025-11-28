@@ -5,10 +5,11 @@ import { withAuth } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
 
-  const receipts = await db.collection(Collections.RECEIPTS).find({ userId: user.userId }).toArray()
-  const payments = await db.collection(Collections.PAYMENTS).find({ userId: user.userId }).toArray()
+  const receipts = await db.collection(Collections.RECEIPTS).find({ userId: filterUserId }).toArray()
+  const payments = await db.collection(Collections.PAYMENTS).find({ userId: filterUserId }).toArray()
 
   const reconciliation = [
     ...receipts.map((r) => ({
@@ -48,6 +49,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
 })
 
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   const { id, type, cleared } = await req.json()
 
@@ -62,7 +64,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const result = await db
     .collection(collection)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), userId: user.userId },
+      { _id: new ObjectId(id), userId: filterUserId },
       { $set: { status: newStatus, updatedAt: new Date() } },
       { returnDocument: "after" },
     )

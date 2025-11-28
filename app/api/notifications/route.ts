@@ -30,7 +30,8 @@ async function getUserIdFromRequest(request: NextRequest): Promise<string | null
 export async function GET(request: NextRequest) {
   try {
     const userId = await getUserIdFromRequest(request)
-    
+    console.log("[NOTIFICATIONS] Retrieved userId from request:", userId);
+
     if (!userId) {
       console.log("[NOTIFICATIONS] No valid token found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -125,3 +126,4 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Failed to update notification" }, { status: 500 })
   }
 }
+ 

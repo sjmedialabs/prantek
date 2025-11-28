@@ -20,11 +20,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    const response = NextResponse.json({
-      user: result.user,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-    })
+const response = NextResponse.json({
+  user: result.user,
+  accessToken: result.accessToken,
+  refreshToken: result.refreshToken
+})
+
+response.cookies.set("userType", result.user.userType, { path: "/" })
+response.cookies.set("companyId", result.user.companyId, { path: "/" })
+
 
     // Set tokens in httpOnly cookies for security
     // Note: Secure flag removed for HTTP access (add it back for HTTPS)

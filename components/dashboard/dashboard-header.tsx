@@ -40,7 +40,8 @@ export default function DashboardHeader() {
         });
         if (response.ok) {
           const data = await response.json();
-          setNotifications(data);
+          const filteredData = data.filter((eachItem:any)=>eachItem.isRead===false);
+          setNotifications(filteredData);
           setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
         }
       } catch (error) {

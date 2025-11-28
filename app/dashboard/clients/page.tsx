@@ -24,6 +24,7 @@ import { api } from "@/lib/api-client"
 import type { Client } from "@/lib/models/types"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
+import { BulkUploadDialogClient } from "@/components/admin/bulk-upload-clients"
 
 export default function ClientsPage() {
   const { hasPermission, loading } = useUser()
@@ -325,6 +326,8 @@ export default function ClientsPage() {
           <p className="text-gray-600">Manage customers and vendors</p>
         </div>
         {hasPermission("manage_clients") && (
+          <div className="flex gap-4">
+          <BulkUploadDialogClient onSuccess={loadClients} />
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -531,6 +534,7 @@ export default function ClientsPage() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 

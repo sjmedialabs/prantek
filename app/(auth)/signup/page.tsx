@@ -30,6 +30,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { SubscriptionPlan } from "@/lib/data-store";
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod";
 import { FeaturesSidebar } from "@/components/auth/features-sidebar";
 import { tokenStorage } from "@/lib/token-storage";
 
@@ -68,6 +69,7 @@ export default function SignUpPage() {
   const [checkedEmails, setCheckedEmails] = useState<Map<string, boolean>>(new Map());
   const [checkedPhones, setCheckedPhones] = useState<Map<string, boolean>>(new Map());
   const router = useRouter();
+  const { trialDays } = useTrialPeriod();
 
   // Clear any existing sessions when signup page loads
   useEffect(() => {
@@ -393,8 +395,10 @@ export default function SignUpPage() {
       localStorage.setItem("pending_signup", JSON.stringify(signupData));
 
       // Calculate the final amount based on billing cycle
-      const finalAmount =
-        billingCycle === "yearly" ? plan.price * 12 : plan.price;
+      // Apply 17% discount for yearly billing
+      const yearlyTotal = plan.price * 12;
+      const discount = billingCycle === "yearly" ? Math.round(yearlyTotal * 0.17) : 0;
+      const finalAmount = billingCycle === "yearly" ? yearlyTotal - discount : plan.price;
 
       // Save current state to sessionStorage so we can return to step 2
       sessionStorage.setItem(
@@ -470,7 +474,7 @@ export default function SignUpPage() {
                     Complete Business Management Solution
                   </h1>
                   <p className="text-gray-700 text-base">
-                    Experience all premium features free for 14 days.
+                    Experience all premium features free for {trialDays} days.
                   </p>
                 </div>
 
@@ -482,7 +486,7 @@ export default function SignUpPage() {
                     </div>
                     <div>
                       <h3 className="text-gray-900 font-semibold text-base mb-0.5">
-                        14-Day Free Trial
+                        {trialDays}-Day Free Trial
                       </h3>
                       <p className="text-gray-600 text-xs">
                         Get full access to all features. Billing starts only
@@ -942,7 +946,7 @@ export default function SignUpPage() {
                 Choose Your Plan
               </h2>
               <p className="text-gray-600 mb-4">
-                Start with a <strong>14-day free trial</strong>. After the
+                Start with a <strong>{trialDays}-day free trial</strong>. After the
                 trial, billing will automatically start based on your selected
                 plan.
               </p>
@@ -1016,7 +1020,7 @@ export default function SignUpPage() {
                       {/* Corner Trial Badge */}
                       <div className="absolute top-0 right-0">
                         <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-md">
-                          14-DAY TRIAL
+                          {trialDays}-DAY TRIAL
                         </div>
                       </div>
 
