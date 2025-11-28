@@ -5,8 +5,20 @@ import { createNotification } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // Check view_vendors permission
-    if (!hasPermission(user, "view_vendors")) {
+    console.log("[VENDOR GET] User:", JSON.stringify({
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      userType: user.userType,
+      isAdminUser: user.isAdminUser,
+      permissions: user.permissions
+    }))
+    
+    const hasVendorPermission = hasPermission(user, "view_vendors")
+    console.log("[VENDOR GET] Has view_vendors permission:", hasVendorPermission)
+    
+    if (!hasVendorPermission) {
+      console.log("[VENDOR GET] Permission denied for user:", user.userId)
       return NextResponse.json({ success: false, error: "Forbidden - view_vendors permission required" }, { status: 403 })
     }
 
@@ -15,41 +27,30 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const limit = Number.parseInt(searchParams.get("limit") || "100")
     const skip = (page - 1) * limit
 
-    // For admin users, filter by companyId (parent account)
-    // For regular users, filter by userId (their own account)
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
     const vendors = await mongoStore.getAll("vendors", { userId: filterUserId }, { skip, limit, sort: { createdAt: -1 } })
     const total = await mongoStore.count("vendors", { userId: filterUserId })
 
     return NextResponse.json({
       success: true,
       data: vendors,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     })
   } catch (error) {
+    console.error("[VENDOR GET] Error:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch vendors" }, { status: 500 })
   }
 })
 
 export const POST = withAuth(async (request: NextRequest, user) => {
   try {
-    // Check manage_vendors permission
-    if (!hasPermission(user, "manage_vendors")) {
-      return NextResponse.json({ success: false, error: "Forbidden - manage_vendors permission required" }, { status: 403 })
+    // Check add_vendors permission
+    if (!hasPermission(user, "add_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - add_vendors permission required" }, { status: 403 })
     }
 
     const body = await request.json()
-    
-    // For admin users, use companyId (parent account)
-    // For regular users, use userId (their own account)
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-    
     const vendor = await mongoStore.create("vendors", { ...body, userId: filterUserId })
 
     await logActivity(filterUserId, "create", "vendor", vendor._id?.toString(), { name: body.name })
