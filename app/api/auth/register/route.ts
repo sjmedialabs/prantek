@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     
     // Handle trial registration - Give trial based on system configuration when a plan is selected
     let subscriptionStatus = "inactive"
-    let trialEndsAt = null
+    // let trialEndsAt = null
     let subscriptionStartDate = null
-    let subscriptionEndDate = null
+    // let subscriptionEndDate = null
     
     if (data.subscriptionPlanId) {
       // User selected a plan - automatically start trial with configured period
@@ -49,9 +49,9 @@ export async function POST(request: NextRequest) {
       subscriptionStartDate = new Date()
       
       // Set trial end date based on system configuration
-      const trialEndDate = await calculateTrialEndDate()
-      trialEndsAt = trialEndDate
-      subscriptionEndDate = trialEndDate
+      // const trialEndDate = await calculateTrialEndDate()
+      // trialEndsAt = trialEndDate
+      // subscriptionEndDate = trialEndDate
     }
     
     // Create new user with normalized email
@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
       address: data.address || "",
       subscriptionPlanId: data.subscriptionPlanId || "",
       subscriptionStatus,
-      trialEndsAt,
+      trialEndsAt:data.trialEndDate || null,
       subscriptionStartDate,
-      subscriptionEndDate,
+      subscriptionEndDate: data.subscriptionEndDate || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

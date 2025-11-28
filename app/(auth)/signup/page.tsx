@@ -946,7 +946,7 @@ export default function SignUpPage() {
                 Choose Your Plan
               </h2>
               <p className="text-gray-600 mb-4">
-                Start with a <strong>14-day free trial</strong>. After the
+                Start with a <strong>{trialDays}-day free trial</strong>. After the
                 trial, billing will automatically start based on your selected
                 plan.
               </p>
@@ -1020,7 +1020,7 @@ export default function SignUpPage() {
                       {/* Corner Trial Badge */}
                       <div className="absolute top-0 right-0">
                         <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white text-[9px] font-bold px-3 py-1 rounded-bl-xl shadow-md">
-                          14-DAY TRIAL
+                          {trialDays}-DAY TRIAL
                         </div>
                       </div>
 
