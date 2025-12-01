@@ -182,8 +182,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     setIsDialogOpen(false)
     setEditingVendor(null)
     resetForm()
-  } catch (err) {
-    toast.error("Error", "Failed to save vendor")
+  } catch (error) {
+    toast.error("Error","Vendor with the same email or phone already exists" )
   }
 }
 
@@ -265,7 +265,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           <p className="text-gray-600">Manage supplier and vendor records</p>
         </div>
 
-        {hasPermission("manage_vendors") && (
+        {(hasPermission("add_vendors") || hasPermission("edit_vendors")) && (
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -484,7 +484,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Created</TableHead>
-                  {hasPermission("manage_vendors") && <TableHead>Actions</TableHead>}
+                  {(hasPermission("add_vendors") || hasPermission("edit_vendors")) && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
 
@@ -508,7 +508,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <TableCell>{vendor.phone}</TableCell>
                         <TableCell>{new Date(vendor.createdAt).toLocaleDateString()}</TableCell>
 
-                        {hasPermission("manage_vendors") && (
+                        {(hasPermission("add_vendors") || hasPermission("edit_vendors")) && (
                           <TableCell>
                             <div className="flex space-x-2">
                               <Link href={`/dashboard/vendor/${vendor._id}`}>

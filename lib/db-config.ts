@@ -27,6 +27,7 @@ export const COLLECTIONS = {
   WEBSITE_CONTENT: "website_content",
   ASSETS: "assets",
   COUNTERS: "counters", // New collection for global sequences
+  NOTIFICATIONSETTINGS:"notification_settings"
 } as const
 
 export const INDEXES = {
@@ -92,10 +93,11 @@ export const INDEXES = {
     { key: { isActive: 1 } },
   ],
   ACTIVITY_LOGS: [{ key: { userId: 1 } }, { key: { action: 1 } }, { key: { timestamp: -1 } }],
+  NOTIFICATIONSETTINGS: [{ key: { userId: 1 }}],
   WEBSITE_CONTENT: [{ key: { key: 1 }, unique: true }],
   ASSETS: [{ key: { userId: 1 }, unique: true }],
   COUNTERS: [{ key: { _id: 1 }, unique: true }], // Index for counters collection
 }
 
 // Alias for backward compatibility
-export { COLLECTIONS as Collections }
+export { COLLECTIONS as Collections } 

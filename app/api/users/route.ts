@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
+import { expandPermissions } from "@/lib/permission-utils"
 
 /*************************************************************
  * Helper: Pick collection based on userType
@@ -171,7 +172,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         userType: "admin-user",
         companyId,
         employeeId: body.employeeId,
-        permissions: body.permissions || [],
+        permissions: expandPermissions(body.permissions || []),
         phone: employee.phone || null,
         isActive: true,
         createdAt: new Date(),
@@ -270,7 +271,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
     // Handle permissions update
     // If permissions array is provided directly, use it
     if (body.permissions && Array.isArray(body.permissions)) {
-      updateData.permissions = body.permissions
+      updateData.permissions = expandPermissions(body.permissions)
     }
     // Otherwise, get permissions from roleId (backward compatibility)
     else if (body.roleId) {

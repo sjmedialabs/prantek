@@ -37,7 +37,7 @@ export default function ItemsPage() {
   const [page, setPage] = useState(1)
   const itemsPerPage = 10
   const [formData, setFormData] = useState({
-    type: "" as "product" | "service",
+    type: "product" as "product" | "service",
     unitType: "",
     name: "",
     description: "",
@@ -187,11 +187,13 @@ export default function ItemsPage() {
       if (formData.newFolder) fd.append("newFolder", formData.newFolder)
 
       let res
-
+       console.log("For Data to send formData::::",formData)
+        console.log("Creating item with data fd:::", fd)
       if (editingItem?.id) {
-        res = await fetch(`/api/items/update/${editingItem.id}`, {
-          method: "POST",
-          body: fd
+        console.log("Updating item with ID:", editingItem.id)
+        res = await fetch(`/api/items/${editingItem.id}`, {
+          method: "PUT",
+          body: JSON.stringify(formData)
         })
       } else {
         res = await fetch("/api/items/create", {
@@ -208,6 +210,7 @@ export default function ItemsPage() {
       }
 
       toast({ title: "Success", description: "Item saved successfully!" })
+      resetForm()
       loadItems()
       setIsDialogOpen(false)
 
@@ -334,12 +337,17 @@ export default function ItemsPage() {
                     <Label htmlFor="type">
                       Select Type <span className="text-red-500">*</span>
                     </Label>
-                    <Select
+                   <Select
                       value={formData.type}
                       onValueChange={(value: "product" | "service") =>
-                        setFormData({ ...formData, type: value, unitType: value === "service" ? "" : formData.unitType })
+                        setFormData({
+                          ...formData,
+                          type: value,
+                          unitType: value === "service" ? "" : formData.unitType,
+                        })
                       }
                     >
+
                       <SelectTrigger>
                         <SelectValue placeholder="Select Product/Service" />
                       </SelectTrigger>
@@ -393,7 +401,7 @@ export default function ItemsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">
-                        Item Name <span className="text-red-500">*</span>
+                        {`${formData.type==="product"?"Item Name":"Service Name"}`} <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="name"
