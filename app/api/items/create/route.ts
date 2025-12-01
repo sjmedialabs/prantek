@@ -20,6 +20,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     // --------------------------
     const name = String(form.get("name") || "").trim()
     const description = String(form.get("description") || "").trim()
+    const type= String(form.get("type") || "product").trim() 
     const unitType = String(form.get("unitType") || "").trim()
     const price = Number(form.get("price") || 0)
     const hsnCode = String(form.get("hsnCode") || "").trim()
@@ -90,7 +91,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
       userId,
       name,
       description,
-      type: "product",
+      type,
       unitType,
       price,
       hsnCode,
