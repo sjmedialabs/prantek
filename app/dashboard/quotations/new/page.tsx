@@ -600,7 +600,7 @@ if (masterItem.applyTax) {
       const match = updatedClients.find(
         (c) =>
           (c.name || "").toLowerCase() ===
-          (newClient.name || newClient.companyName || "").toLowerCase()
+          (newClient.name || newClient.contactName || "").toLowerCase()
       );
 
       if (match) setSelectedClientId(match._id);
