@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
 import { withAuth, hasPermission } from "@/lib/api-auth"
 import { createNotification } from "@/lib/notification-utils"
+import { Phone } from "lucide-react"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -51,6 +52,19 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     const body = await request.json()
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
+   const existingVendor = await mongoStore.getAll("vendors", {
+      userId: filterUserId,
+      $or: [
+        { email: body.email },
+        { phone: body.phone }
+      ]
+    });
+
+    console.log("Existing vendor check:", existingVendor)
+    if (existingVendor.length > 0) {
+      return NextResponse.json({ success: false, error: "Vendor with the same email or phone already exists"}, { status: 400 })
+    }
     const vendor = await mongoStore.create("vendors", { ...body, userId: filterUserId })
 
     await logActivity(filterUserId, "create", "vendor", vendor._id?.toString(), { name: body.name })
