@@ -163,7 +163,7 @@ const today = new Date().toISOString().split("T")[0]
     pan: "",
   });
 const [sellerState, setSellerState] = useState("")
-
+ const[loadingClients, setLoadingClients]=useState(false);
 useEffect(() => {
    const loadCompany = async () => {
      const comp = await api.company.get()
@@ -174,6 +174,7 @@ useEffect(() => {
 
   useEffect(() => {
     const loadData = async () => {
+      setLoadingClients(true);
       try {
         const loadedClients = await api.clients.getAll()
         const filteredClinets = loadedClients.filter((eachItem: any) => eachItem.status === "active")
@@ -190,9 +191,13 @@ useEffect(() => {
       } catch (error) {
         console.error("Error loading data:", error)
         toast.error("Failed to load clients and items")
+        setLoadingClients(false);
         setClients([])
         setMasterItems([])
         setQuotationNumber("Auto-generated")
+      }
+      finally{
+        setLoadingClients(false);
       }
     }
     loadData()
@@ -302,7 +307,7 @@ if (masterItem.applyTax) {
             }
           }
 
-          updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
+          updatedItem.amount = (updatedItem.price *updatedItem.quantity) -updatedItem.discount
           updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
           updatedItem.total = updatedItem.amount + updatedItem.taxAmount
 
@@ -595,7 +600,7 @@ if (masterItem.applyTax) {
       const match = updatedClients.find(
         (c) =>
           (c.name || "").toLowerCase() ===
-          (newClient.name || newClient.companyName || "").toLowerCase()
+          (newClient.name || newClient.contactName || "").toLowerCase()
       );
 
       if (match) setSelectedClientId(match._id);
@@ -699,7 +704,7 @@ if (masterItem.applyTax) {
                         onValueChange={setSelectedClientId}
                         placeholder="Search and select a client..."
                         searchPlaceholder="Type to filter..."
-                        emptyText="No clients found."
+                        emptyText={loadingClients ? "Loading clients..." : "No clients found"}
                       />
                       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <DialogTrigger asChild>
@@ -1080,7 +1085,7 @@ if (masterItem.applyTax) {
                                   updateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
                                 }
                                 min="0"
-                                step="0.01"
+                                step="1"
                                 placeholder="0"
                                 className="bg-white"
                               />
