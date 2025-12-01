@@ -80,6 +80,22 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
       createdAt: new Date(),
       updatedAt: new Date(),
     }
+    
+    // check the employee with same email,phone,pan,adhar number
+
+    const existingEmployee = await db.collection(Collections.EMPLOYEES).findOne({
+      userId: user.userId,
+      $or:[
+        { email: employee.email },
+        {mobileNo:employee.mobileNo },
+        {aadharNo:employee.aadharNo },
+        {panCardNo:employee.panCardNo}
+      ]
+    })
+
+    if(existingEmployee){
+      return NextResponse.json({success:false, error:"Employee with same email, phone, PAN or Aadhar number already exists"}, {status:400});
+    }
 
     const result = await db.collection(Collections.EMPLOYEES).insertOne(employee)
     

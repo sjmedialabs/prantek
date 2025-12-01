@@ -23,6 +23,13 @@ export interface AdminUser extends BaseDocument {
   lastLogin?: Date
 }
 
+export interface notificationSettings extends BaseDocument {
+  userId: string,
+  quotationNotifications: boolean,
+  receiptNotifications: boolean,
+  paymentNotifications: boolean, 
+}
+
 // Legacy User type for backward compatibility with subscription system
 export interface User extends BaseDocument {
   email: string

@@ -74,6 +74,12 @@ export async function POST(request: NextRequest) {
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
     const userId = result.insertedId.toString()
+    const notificationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).insertOne({
+      userId: userId,
+      quotationNotifications: true,
+      receiptNotifications: true,
+      paymentNotifications: true,
+    })
     
     // Log subscription activity if trial started
     if (subscriptionStatus === "trial" && data.subscriptionPlanId) {
