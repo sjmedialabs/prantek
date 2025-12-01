@@ -92,17 +92,17 @@ export function PaymentPrint({ payment, companyDetails }: PaymentPrintProps) {
             />
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{companyDetails?.name || "Company Name"}</h1>
-            <p className="text-sm text-gray-600 mt-1">{companyDetails?.address}</p>
-            <p className="text-sm text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{companyDetails?.name || "Company Name"}</h1>
+            <p className="text-sm text-gray-600 mb-2">{companyDetails?.address}</p>
+            <p className="text-sm text-gray-600 mb-2">
               Phone: {companyDetails?.phone} | Email: {companyDetails?.email}
             </p>
             {companyDetails?.website && <p className="text-sm text-gray-600">Website: {companyDetails.website}</p>}
           </div>
         </div>
         <div className="text-right">
-          <h2 className="text-3xl font-bold text-red-600">PAYMENT</h2>
-          <p className="text-sm text-gray-600 mt-2">#{payment.paymentNumber}</p>
+          <h2 className="text-3xl font-bold text-red-600 mb-2">PAYMENT</h2>
+          <p className="text-sm text-gray-600 mb-2">#{payment.paymentNumber}</p>
         </div>
       </div>
 

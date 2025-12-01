@@ -898,7 +898,7 @@ setRecipientTypes(uniqueRecipientTypes);
                       )}
                     </div>
 
-                    {["Bank Transfer", "UPI"].includes(paymentData.paymentMethod) && (
+                    {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
                       <div className="space-y-2">
                         <Label htmlFor="bankAccount">
                           Bank Account <span className="text-red-500">*</span>
@@ -930,7 +930,7 @@ setRecipientTypes(uniqueRecipientTypes);
                       </div>
                     )}
 
-                    {requiresReference && (
+                    {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
                       <div className="space-y-2">
                         <Label htmlFor="referenceNumber">
                           Reference Number <span className="text-red-500">*</span>
@@ -953,12 +953,8 @@ setRecipientTypes(uniqueRecipientTypes);
                         )}
                       </div>
                     )}
-
-                    {requiresReference && (
-<div className="space-y-2 flex gap-6">
-
-  {/* BILL UPLOAD */}
-  <div>
+                    {/* BILL UPLOAD */}
+  <div className="mb-2">
     <Label>Bill Upload <span className="text-red-500">*</span></Label>
 
     <ImageUpload
@@ -979,6 +975,11 @@ setRecipientTypes(uniqueRecipientTypes);
       <p className="text-xs text-red-500">{validationErrors.billFile}</p>
     )}
   </div>
+
+                    {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
+<div className="mt-5 mb-5">
+
+  
 
   {/* SCREENSHOT UPLOAD */}
   <div>
