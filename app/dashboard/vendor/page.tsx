@@ -182,8 +182,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     setIsDialogOpen(false)
     setEditingVendor(null)
     resetForm()
-  } catch (err) {
-    toast.error("Error", "Failed to save vendor")
+  } catch (error) {
+    toast.error("Error","Vendor with the same email or phone already exists" )
   }
 }
 
