@@ -199,6 +199,7 @@ const handleSubmit = async () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -206,6 +207,7 @@ const handleSubmit = async () => {
               {memberTypes.map((type) => (
                 <TableRow key={type.id || type._id}>
                   <TableCell className="font-medium">{type.name}</TableCell>
+                  <TableCell>{type.isActive?( <Badge className="text-xs">Active</Badge>):(<Badge variant="destructive" className="text-xs">Inactive</Badge>)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(type)}>

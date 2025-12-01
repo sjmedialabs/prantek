@@ -163,17 +163,6 @@ const navigationItems: NavItem[] = [
         icon: Settings,
         submenu: [
           {
-            name: "User Management",
-            permission: "manage_users",
-            submenu: [
-              {
-                name: "User List",
-                href: "/dashboard/hr/users",
-                permission: "manage_users",
-              },
-            ],
-          },
-          {
             name: "Employee Management",
             permission: "tenant_settings",
             submenu: [
@@ -194,6 +183,18 @@ const navigationItems: NavItem[] = [
               },
             ],
           },
+          {
+            name: "User Management",
+            permission: "manage_users",
+            submenu: [
+              {
+                name: "User List",
+                href: "/dashboard/hr/users",
+                permission: "manage_users",
+              },
+            ],
+          }
+          
         ],
       },
       {

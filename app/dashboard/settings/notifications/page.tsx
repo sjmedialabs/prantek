@@ -1,28 +1,84 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Bell, Save } from "lucide-react"
+import { set } from "date-fns"
+import { toast } from "@/lib/toast"
 
 export default function NotificationsPage() {
-  const { loading, hasPermission, user } = useUser()
+  const { hasPermission, user } = useUser()
   const [saved, setSaved] = useState(false)
-  const [settings, setSettings] = useState({
-    quotationAlerts: true,
-    paymentAlerts: true,
-    receiptAlerts: true,
-  })
+  const [settings, setSettings] = useState<any>()
+  const [loading, setLoading] = useState(true)
 
-  const handleSave = () => {
+  useEffect(()=>{
+    const loadNotificationSettings= async()=>{
+      setLoading(true)
+     try{
+       const response = await fetch('/api/notification-settings', {
+        method:'GET',
+        headers:{
+          'Content-Type':'application/json'
+        }
+      })
+      const data = await response.json()
+       setLoading(false)
+       setSettings(data)
+      console.log("loaded notification settings",data);
+     }catch(error){
+      setLoading(false)
+      console.error("Error loading notification settings:", error)
+     }
+
+    }
+    loadNotificationSettings()
+  },[])
+   
+
+  const handleSave = async() => {
     // Save notification settings
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    // setSaved(true)
+    // setTimeout(() => setSaved(false), 3000)
+   
+    
+    try{
+        console.log("sending data to backend:",settings);
+        const payloadTosend={
+          quotationNotifications:settings.quotationNotifications,
+          receiptNotifications:settings.receiptNotifications,
+          paymentNotifications:settings.paymentNotifications
+        }
+        const response= await fetch('/api/notification-settings', {
+          method:'PUT',
+          headers:{
+            'Content-Type':'application/json'
+          },
+          body:JSON.stringify(payloadTosend)
+        })
+        const data = await response.json()
+        console.log("save response",data);
+        if(response.ok){
+          toast.success("Notification settings saved successfully")
+        }
+    }catch(error){
+      console.error("Error saving notification settings:", error)
+      toast.error("Failed to save notification settings")
+    }
+   
+    // const getresponse = await fetch('/api/notification-settings', {
+    //   method:'GET',
+    //   headers:{
+    //     'Content-Type':'application/json'
+    //   }
+    // })     
+    // console.log("fetched settings",await getresponse.json());
   }
-        if (loading) {
+    if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -75,8 +131,8 @@ export default function NotificationsPage() {
                 <p className="text-sm text-gray-600">Get notified about new quotations</p>
               </div>
               <Switch
-                checked={settings.quotationAlerts}
-                onCheckedChange={(checked) => setSettings({ ...settings, quotationAlerts: checked })}
+                checked={settings.quotationNotifications}
+                onCheckedChange={(checked) => setSettings({ ...settings, quotationNotifications: checked })}
               />
             </div>
 
@@ -86,8 +142,8 @@ export default function NotificationsPage() {
                 <p className="text-sm text-gray-600">Get notified about new receipts</p>
               </div>
               <Switch
-                checked={settings.receiptAlerts}
-                onCheckedChange={(checked) => setSettings({ ...settings, receiptAlerts: checked })}
+                checked={settings.receiptNotifications}
+                onCheckedChange={(checked) => setSettings({ ...settings, receiptNotifications: checked })}
               />
             </div>
 
@@ -97,8 +153,8 @@ export default function NotificationsPage() {
                 <p className="text-sm text-gray-600">Get notified about payments received</p>
               </div>
               <Switch
-                checked={settings.paymentAlerts}
-                onCheckedChange={(checked) => setSettings({ ...settings, paymentAlerts: checked })}
+                checked={settings.paymentNotifications}
+                onCheckedChange={(checked) => setSettings({ ...settings, paymentNotifications: checked })}
               />
             </div>
           </CardContent>

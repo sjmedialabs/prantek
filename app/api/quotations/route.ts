@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity, generateNextNumber } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
 import {createNotification, notifyAdminsNewQuotation } from "@/lib/notification-utils"
+import { Collections } from "@/lib/db-config"
+import { connectDB } from "@/lib/mongodb"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -65,13 +67,20 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Notify admins about new quotation
     try {
-      await createNotification({
+       const db = await connectDB()
+      const quotationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).findOne({userId:filterUserId})
+      console.log("quotation settings are:",quotationSettings);
+      // const settings = quotationSettings[0]
+      if(quotationSettings?.quotationNotifications){
+        console.log("sending notification for new quotation");
+        await createNotification({
         userId:user.userId,
         type: "quotation",
         title: "New Quotation Created",
         message: "A new quotation has been created: " + body.quotationNumber,
         link: `/dashboard/quotations/${quotation?._id?.toString()}`
       })
+      }
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)
       // Don't fail the request if notification fails
