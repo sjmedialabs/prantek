@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Trash2, ArrowLeft } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Client, Item, Quotation, Receipt } from "@/lib/models/types"
+import { api } from "@/lib/api-client"
 
 export default function ReceiptsPage() {
   const router = useRouter()
@@ -22,6 +23,14 @@ export default function ReceiptsPage() {
   const [items, setItems] = useState<Item[]>([])
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(false)
+  const[paymentType,setPaymentType]=useState<any>("FullPayment")// Ful, Payment or Partial Payment
+  const[amountToPay,setAmountToPay]=useState(0)// if partial amount is selected then need to enter amount they paying currently
+  const[balanceToPay,setBalanceToPay]=useState(0)
+  const[paymentMethods,setPaymentMethods]=useState<any>([])
+  const[selectedPaymentMethod,setSelectedPaymentMethod]=useState("Cash")
+  const[referenceNumber,setReferenceNumber]=useState("");
+  const[bankAccounts,setBankAccounts]=useState<any>([]);
+  const[selectedBankAcount,setSelectedBankAccount]=useState<any>();
   
   // Tab state
   const [activeTab, setActiveTab] = useState("quotation")
@@ -42,12 +51,17 @@ export default function ReceiptsPage() {
   }>>([])
   const [scenario2PaymentMethod, setScenario2PaymentMethod] = useState("cash")
   const [scenario2AmountPaid, setScenario2AmountPaid] = useState("")
-  
+  const[scenario2ReferenceNumber,setScenario2ReferenceNumber]=useState("")
+  const[scenario2BankAccount,setScenario2BankAccount]=useState("")
+   
+  console.log("scenario 2 payment method is::::",scenario2PaymentMethod)
   // Scenario 3: Quick Receipt state
   const [scenario3Client, setScenario3Client] = useState("")
   const [scenario3Amount, setScenario3Amount] = useState("")
   const [scenario3AmountPaid, setScenario3AmountPaid] = useState("")
   const [scenario3PaymentMethod, setScenario3PaymentMethod] = useState("cash")
+  const[scenario3ReferenceNumber,setScenario3ReferenceNumber]=useState("");
+  const[scenario3BankAccount,setScenario3BankAccount]=useState("")
   
   // Dialogs
   const [showClientDialog, setShowClientDialog] = useState(false)
@@ -79,7 +93,10 @@ export default function ReceiptsPage() {
     loadClients()
     loadItems()
     loadQuotations()
+    loadPaymentMethods();
   }, [])
+
+ 
 
   const loadClients = async () => {
     try {
@@ -111,12 +128,21 @@ export default function ReceiptsPage() {
       const result = await response.json()
       if (result.success) {
         // Only show approved quotations
-        setQuotations(result.data.filter((q: Quotation) => q.status === "approved"))
+        setQuotations(result.data.filter((q: Quotation) => q.isActive === "active"))
       }
     } catch (error) {
       console.error("Error loading quotations:", error)
     }
   }
+  const loadPaymentMethods=async()=>{
+     const data=await api.paymentMethods.getAll();
+     const bankAccountsData=await api.bankAccounts.getAll();
+    
+     console.log("bank Accounts Avaible Are:::",bankAccountsData);
+     setPaymentMethods(data.filter((eachItem:any)=>(eachItem.isEnabled===true)));
+    setBankAccounts(bankAccountsData.filter((eachItem:any)=>(eachItem.isActive===true)))
+  }
+  //  console.log("Avavilbele Payment Methods are:::",paymentMethods)
 
   // Create client inline
   const handleCreateClient = async () => {
@@ -187,19 +213,40 @@ export default function ReceiptsPage() {
     }
   }
 
+// Amount To Pay Handle
+
+const amountPayHandle=(event:any)=>{
+  setAmountToPay(parseInt(event.target.value))
+  // setBalanceToPay(quotationDetails?.grandTotal-amountToPay)
+}
+
   // Scenario 1: Load quotation details
   const handleQuotationSelect = async (quotationId: string) => {
     setSelectedQuotation(quotationId)
     const quotation = quotations.find(q => q._id === quotationId)
-    setQuotationDetails(quotation || null)
-  }
+    const tempTotalTaxAmount = quotation?.items.reduce((acc, item) => {
+      const totalTaxPercent = item.igst + item.cgst + item.sgst; // percentage
+      const taxAmountForItem = (totalTaxPercent / 100) * item.price;
 
+      return acc + taxAmountForItem;
+}, 0);
+  
+    setQuotationDetails({...quotation,taxAmount:tempTotalTaxAmount} || null)
+    setAmountToPay(parseInt(quotation?.balanceAmount))
+  }
+  
+  // console.log("Selected Bank Account:::",selectedBankAcount);
+   console.log("Quotation Details Are :::",quotationDetails)
   // Scenario 1: Create receipt from quotation
   const handleCreateFromQuotation = async () => {
     if (!quotationDetails) return
     
     setLoading(true)
+
     try {
+      const tempSubTotal=quotationDetails.grandTotal-quotationDetails.taxAmount;
+      const tempBalanceAmount=quotationDetails.grandTotal-amountToPay;
+    
       const receiptData = {
         receiptType: "quotation",
         quotationId: quotationDetails._id,
@@ -207,15 +254,17 @@ export default function ReceiptsPage() {
         clientId: quotationDetails.clientId,
         clientName: quotationDetails.clientName,
         items: quotationDetails.items,
-        subtotal: quotationDetails.subtotal,
+        subtotal:tempSubTotal ,
         taxAmount: quotationDetails.taxAmount,
-        total: quotationDetails.total,
-        amountPaid: quotationDetails.total,
-        balanceAmount: 0,
-        paymentType: "full",
-        paymentMethod: "cash",
+        total: quotationDetails.grandTotal,
+        amountPaid: amountToPay,
+        balanceAmount: tempBalanceAmount,
+        paymentType: paymentType,
+        paymentMethod: selectedPaymentMethod,
+        bankAccount:selectedBankAcount,
+        referenceNumber:referenceNumber,
         date: new Date().toISOString(),
-        status: "pending"
+        status: `${selectedPaymentMethod.trim().toLocaleLowerCase()==="cash"?"cleared":"pending"}`
       }
 
       const response = await fetch("/api/receipts", {
@@ -223,8 +272,18 @@ export default function ReceiptsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(receiptData)
       })
-
       const result = await response.json()
+
+      const tempPaidAmount=quotationDetails.paidAmount+amountToPay
+
+     const quotationPayload={
+      paidAmount:tempPaidAmount,
+      balanceAmount:quotationDetails.grandTotal-tempPaidAmount
+     }
+     
+     await api.quotations.update(quotationDetails._id,quotationPayload);
+     loadQuotations()
+      
       if (result.success) {
         toast({ title: "Success", description: "Receipt created successfully" })
         router.push("/dashboard/receipts")
@@ -244,11 +303,13 @@ export default function ReceiptsPage() {
     if (!item) return
 
     const newItem = {
+      ...item,
       itemId: item._id!,
       name: item.name,
       quantity: 1,
+      discount:0,
       price: item.price,
-      taxRate: item.taxRate,
+      taxRate: item.igst+item.cgst+item.sgst,
       total: item.price
     }
     setScenario2Items([...scenario2Items, newItem])
@@ -272,6 +333,7 @@ export default function ReceiptsPage() {
     setScenario2Items(scenario2Items.filter((_, i) => i !== index))
   }
 
+  console.log("Scenario 2 Items:::",scenario2Items);
   // Scenario 2: Calculate totals
   const calculateScenario2Totals = () => {
     const subtotal = scenario2Items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
@@ -307,8 +369,10 @@ export default function ReceiptsPage() {
         balanceAmount: total - amountPaid,
         paymentType: amountPaid < total ? "partial" : "full",
         paymentMethod: scenario2PaymentMethod,
+        referenceNumber:scenario2ReferenceNumber,
+        bankAccount:scenario2BankAccount,
         date: new Date().toISOString(),
-        status: "pending"
+        status: `${scenario2PaymentMethod.trim().toLowerCase()==="cash"?"Cleared":"Pending"}`
       }
 
       const response = await fetch("/api/receipts", {
@@ -417,22 +481,112 @@ export default function ReceiptsPage() {
                     <SelectContent>
                       {quotations.map((q) => (
                         <SelectItem key={q._id} value={q._id!}>
-                          {q.quotationNumber} - {q.clientName} - ₹{q.total}
+                          {q.quotationNumber} - {q.clientName} - ₹{q.balanceAmount}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                 <div>
+                    <Label>
+                      Select payment Type <span className="text-red-500">*</span>
+                    </Label>
+                   <Select
+                      value={paymentType}
+                      onValueChange={(value: "Full Payment" | "Partial Payment") =>
+                        setPaymentType(value)
+                      }
+                    >
 
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select FullPayment/Partial" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FullPayment">Full Payment</SelectItem>
+                        <SelectItem value="PartialPayment">Partial Payment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                 </div>
+                  <div className="space-y-2">
+                        <Label htmlFor="paymentMethod">
+                          Payment Method <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={selectedPaymentMethod}
+                          onValueChange={(value)=>setSelectedPaymentMethod(value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentMethods.map((method) => (
+                              <SelectItem key={method._id} value={method.name}>
+                                {method.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                  </div>
+                 <div>
+                  {paymentType==="PartialPayment" &&(
+                   <div>
+                    <Label>Enter Your Amount</Label>
+                  <Input
+                  value={amountToPay}
+                  type="number"
+                  min="1"
+                  onChange={amountPayHandle}
+                  placeholder="Enter Your Amount"
+                  />
+                   </div>
+                 )}
+                 </div>
+                 {selectedPaymentMethod.trim().toLowerCase()!="cash" && (
+                  <div className="flex space-x-4">
+                    <div>
+                      <Label>Reference Number </Label>
+                    <Input
+                    type="text"
+                    value={referenceNumber}
+                    onChange={(e)=>(setReferenceNumber(e.target.value))}
+                    placeholder="Enter Your Regerence Number"
+                    required/>
+                    </div>
+                    <div>
+                      <Label htmlFor="paymentMethod">
+                          Bank Account <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={selectedBankAcount}
+                          onValueChange={(value)=>setSelectedBankAccount(value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Slect Bank Accounts" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map((method) => (
+                              <SelectItem key={method._id} value={method.accountNumber}>
+                                {method.bankName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
+                 )}
                 {quotationDetails && (
                   <div className="border rounded-lg p-4 space-y-2">
                     <h3 className="font-semibold">Quotation Details</h3>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>Client: {quotationDetails.clientName}</div>
                       <div>Quotation: {quotationDetails.quotationNumber}</div>
-                      <div>Subtotal: ₹{quotationDetails.subtotal}</div>
+                      <div>Subtotal: ₹{quotationDetails.grandTotal-quotationDetails.taxAmount}</div>
                       <div>Tax: ₹{quotationDetails.taxAmount}</div>
-                      <div className="font-semibold">Total: ₹{quotationDetails.total}</div>
+                      {paymentType==="PartialPayment" && (<div>Balance Amount: ₹{quotationDetails.balanceAmount-amountToPay} </div>)}
+                      <div className="font-semibold">Total: ₹{quotationDetails.grandTotal}</div>
                     </div>
                   </div>
                 )}
@@ -645,16 +799,51 @@ export default function ReceiptsPage() {
                     <Label>Payment Method</Label>
                     <Select value={scenario2PaymentMethod} onValueChange={setScenario2PaymentMethod}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Slect Payment Method"/>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank">Bank Transfer</SelectItem>
-                        <SelectItem value="upi">UPI</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                      </SelectContent>
+                            {paymentMethods.map((method) => (
+                              <SelectItem key={method._id} value={method.name}>
+                                {method.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
                     </Select>
                   </div>
+                  {scenario2PaymentMethod.trim().toLowerCase()!="cash" && (
+                  <div className="flex space-x-4">
+                    <div>
+                      <Label>Reference Number </Label>
+                    <Input
+                    type="text"
+                    value={scenario2ReferenceNumber}
+                    onChange={(e)=>(setScenario2ReferenceNumber(e.target.value))}
+                    placeholder="Enter Your Reference Number"
+                    required/>
+                    </div>
+                    <div>
+                      <Label htmlFor="paymentMethod">
+                          Bank Account <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={scenario2BankAccount}
+                          onValueChange={(value)=>setScenario2BankAccount(value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Slect Bank Accounts" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map((method) => (
+                              <SelectItem key={method._id} value={method.accountNumber}>
+                                {method.bankName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
+                 )}
                   <div>
                     <Label>Amount Paid</Label>
                     <Input
@@ -766,16 +955,51 @@ export default function ReceiptsPage() {
                     <Label>Payment Method</Label>
                     <Select value={scenario3PaymentMethod} onValueChange={setScenario3PaymentMethod}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Slect Payment Method"/>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="bank">Bank Transfer</SelectItem>
-                        <SelectItem value="upi">UPI</SelectItem>
-                        <SelectItem value="card">Card</SelectItem>
-                      </SelectContent>
+                            {paymentMethods.map((method) => (
+                              <SelectItem key={method._id} value={method.name}>
+                                {method.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
                     </Select>
                   </div>
+                   {scenario3PaymentMethod.trim().toLowerCase()!="cash" && (
+                  <div className="flex space-x-4">
+                    <div>
+                      <Label>Reference Number </Label>
+                    <Input
+                    type="text"
+                    value={scenario3ReferenceNumber}
+                    onChange={(e)=>(setScenario3ReferenceNumber(e.target.value))}
+                    placeholder="Enter Your Reference Number"
+                    required/>
+                    </div>
+                    <div>
+                      <Label htmlFor="paymentMethod">
+                          Bank Account <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={scenario3BankAccount}
+                          onValueChange={(value)=>setScenario3BankAccount(value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Slect Bank Accounts" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map((method) => (
+                              <SelectItem key={method._id} value={method.accountNumber}>
+                                {method.bankName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
+                 )}
                   <div>
                     <Label>Amount Paid</Label>
                     <Input
