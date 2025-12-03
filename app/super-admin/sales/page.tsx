@@ -79,8 +79,10 @@ export default function SalesDashboardPage() {
 const [conversionFunnel, setConversionFunnel] = useState([])
   const [salesMetrics, setSalesMetrics] = useState<SalesMetric[]>([])
   const [clientOnboardingData, setClientOnboardingData] = useState<ClientOnboardingData[]>([])
+  const[activeClients,setActiveClients]=useState(0);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([])
   const [planDistribution, setPlanDistribution] = useState<PlanDistribution[]>([])
+  // console.log("Active Clients are::::",activeClient)
 
   useEffect(() => {
     const loadRealData = async () => {
@@ -89,6 +91,10 @@ const [conversionFunnel, setConversionFunnel] = useState([])
         const allUsers = await api.users.getAll()
         const adminUsers = allUsers.filter((u) => u.userType === "subscriber" && u.role !== "super-admin")
         const plans = await api.subscriptionPlans.getAll()
+        const tempactiveClients = adminUsers.filter(
+          (u) => u.subscriptionEndDate && new Date(u.subscriptionEndDate) > new Date()
+        );
+        setActiveClients(tempactiveClients.length);
 
         // Calculate metrics from real data
         const totalClients = adminUsers.length
@@ -315,10 +321,19 @@ setConversionFunnel(conversionFunnelData)
                 <Icon className="h-4 w-4 text-gray-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
-                <div className={`flex items-center text-xs mt-1 ${getTrendColor(metric.trend)}`}>
-                  {getTrendIcon(metric.trend)}
+                <div className="flex flex-row items-center justify-between">
+                  <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                 
+                </div>
+                <div className={`flex flex-row justify-between items-center text-xs ${getTrendColor(metric.trend)}`}>
+                  <div className="flex items-center mt-4">
+                    {getTrendIcon(metric.trend)}
                   <span className="ml-1">{metric.change} from last month</span>
+                  </div>
+                   {metric.name==="Total Clients Onboarded" && (<div>
+                  <p className="text-[12px] font-bold">Active: {activeClients}</p>
+                  <p className="text-[12px] font-bold">InActive: {parseInt(metric.value)-activeClients}</p>
+                </div>)}
                 </div>
               </CardContent>
             </Card>
