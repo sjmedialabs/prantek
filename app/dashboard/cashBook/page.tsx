@@ -43,6 +43,8 @@ export default function CashbookPage() {
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1);
+  const[totlaRecieptsValue,setTotalRecieptsValue]=useState<any>();
+  const[netBalanceValue,setNetBalanceValue]=useState<any>()
   const itemsPerPage = 10; // choose how many entries per page
 
   useEffect(() => {
@@ -133,10 +135,16 @@ export default function CashbookPage() {
   const partyTypes = ["client", "vendor", "team"]
 
   // Summary values
-  const totalReceipts = filteredEntries.filter((e) => e.entryType === "receipt").reduce((s, e) => s + e.amount, 0)
-  const totalPayments = filteredEntries.filter((e) => e.entryType === "payment").reduce((s, e) => s + e.amount, 0)
+ const totalReceipts = filteredEntries
+  .filter((e) => e.entryType === "receipt")
+  .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+
+const totalPayments = filteredEntries
+  .filter((e) => e.entryType === "payment")
+  .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
   const netBalance = totalReceipts - totalPayments
-  console.log("filtered entries", filteredEntries)
+
+  console.log("filtered entries :::::::::::::", totalReceipts,netBalance)
   const clearFilters = () => {
     setTypeFilter("all")
     setPartyTypeFilter("all")
@@ -156,22 +164,24 @@ export default function CashbookPage() {
 
     const headers = [
       "Date",
+      "Reciept/Payment No",
       "Type",
       "Party Name",
       "Party Type",
       "Category",
-      "Description",
+      
       "Reference No",
       "Amount"
     ]
 
     const rows = entries.map((e) => [
       e.date,
+      e.receiptNumber,
       e.entryType,
       e.partyName || "",
       e.partyType || "",
       e.category || "",
-      e.description || "",
+      
       e.referenceNumber || "",
       e.amount || 0
     ])
@@ -374,14 +384,24 @@ export default function CashbookPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Date From</label>
-                <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
-              </div>
+                  <label className="text-sm font-medium">Date From</label>
+                  <Input
+                    type="date"
+                    value={dateFromFilter}
+                    onChange={(e) => setDateFromFilter(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Date To</label>
-                <Input type="date" value={dateToFilter} onChange={(e) => setDateToFilter(e.target.value)} />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Date To</label>
+                  <Input
+                    type="date"
+                    value={dateToFilter}
+                    min={dateFromFilter || undefined}   // 👈 restrict to only dates >= from date
+                    onChange={(e) => setDateToFilter(e.target.value)}
+                  />
+                </div>
+
 
               <div>
                 <label className="text-sm font-medium">Min Amount</label>
