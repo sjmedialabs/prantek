@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useUser } from "@/components/auth/user-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -37,6 +38,7 @@ interface Quotation {
 }
 
 export default function QuotationsPage() {
+  const { hasPermission} = useUser()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -158,7 +160,14 @@ export default function QuotationsPage() {
       <div className="flex justify-center items-center h-96">Loading...</div>
     )
   }
-
+  if (!hasPermission("view_quotations")) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold">Access Denied</h2>
+        <p>You don't have permission to view Quotations.</p>
+      </div>
+    )
+  }
   return (
     <div className="space-y-6">
       {/* ---------------- HEADER ---------------- */}
@@ -168,12 +177,16 @@ export default function QuotationsPage() {
           <p className="text-gray-600">Manage your quotations & proposals</p>
         </div>
 
-        <Link href="/dashboard/quotations/new">
+        {
+          (hasPermission("add_quotations")) && (
+            <Link href="/dashboard/quotations/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" /> New Quotation/Agreement
           </Button>
         </Link>
-      </div>
+          )
+        }
+      </div> 
 
       {/* ---------------- FILTERS ---------------- */}
       <Card>
@@ -298,16 +311,24 @@ export default function QuotationsPage() {
                         <Button variant="outline" size="sm">View</Button>
                       </Link>
 
-                      <Link href={`/dashboard/quotations/${q._id}/edit`}>
+                      {
+                        (hasPermission("edit_quotations")) && (
+                          <Link href={`/dashboard/quotations/${q._id}/edit`}>
                         <Button variant="outline" size="sm">
                           <Edit className="h-4 w-4" />
                         </Button>
                       </Link>
+                        )
+                      }
 
-                      <Switch
+                     {
+                      (hasPermission("edit_quotations")) && (
+                         <Switch
                         checked={q.isActive === "active"}
                         onCheckedChange={(e) => handleStatusToggle(q._id, q.isActive)}
                       />
+                      )
+                     }
                     </TableCell>
                   </TableRow>
                 ))}

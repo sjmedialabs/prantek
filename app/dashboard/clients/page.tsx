@@ -327,7 +327,11 @@ export default function ClientsPage() {
         </div>
         {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
           <div className="flex gap-4">
-          <BulkUploadDialogClient onSuccess={loadClients} />
+          {
+            (hasPermission("add_clients")) && (
+               <BulkUploadDialogClient onSuccess={loadClients} />
+            )
+          }
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -338,12 +342,16 @@ export default function ClientsPage() {
               }
             }}
           >
-            <DialogTrigger asChild>
+            {
+              (hasPermission("add_clients")) && (
+                <DialogTrigger asChild>
               <Button onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Client
               </Button>
             </DialogTrigger>
+              )
+            }
             <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
               <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
                 <DialogHeader>
@@ -627,10 +635,16 @@ export default function ClientsPage() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
+                            {
+                              (hasPermission("edit_clients")) && (
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Switch
+                              )
+                            }
+                            {
+                              (hasPermission("edit_clients")) && (
+                                 <Switch
                               checked={client.status === "active"}
                               onCheckedChange={async (checked) => {
                                 try {
@@ -643,6 +657,8 @@ export default function ClientsPage() {
                                 }
                               }}
                             />
+                              )
+                            }
                           </div>
                         </TableCell>
                       )}
