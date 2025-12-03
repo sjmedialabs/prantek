@@ -215,6 +215,46 @@ const filteredClients = clients.filter((client) => {
   }
 
   // Super-admin has access to everything - permission check removed
+  console.log("Clients List is :::",clients);
+  const exportCSV = () => {
+    if (clients.length === 0) {
+      alert("No data available to export.")
+      return
+    }
+
+    const headers = [
+      "Name",
+      "Plan",
+      "Status",
+      "Users",
+      "Total Revenue",
+      "Payment Status",
+      "Last Activity",
+      
+    ]
+
+    const rows = clients.map((e) => [
+      e.companyName,
+      e.plan,
+      e.status || "",
+      e.userCount || 0,
+      e.totalRevenue || "",
+      e.paymentStatus || "",
+     e.lastActivity ? `'${e.lastActivity}'` : ""
+    ])
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers, ...rows].map((row) => row.join(",")).join("\n")
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", "client_accounts_export.csv")
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   return (
     <div className="space-y-6">
@@ -224,7 +264,7 @@ const filteredClients = clients.filter((client) => {
           <p className="text-gray-600">Manage client accounts, subscriptions, and billing</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline">Export Clients</Button>
+          <Button variant="outline" onClick={exportCSV}>Export Clients</Button>
         </div>
       </div>
 
