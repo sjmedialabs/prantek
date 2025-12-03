@@ -431,7 +431,7 @@ export default function BankAccountPage() {
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 mb-[75px]">
                 <Label htmlFor="upiScanner">UPI Scanner (QR Code)</Label>
                 <div className="flex items-center space-x-4">
                   <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
