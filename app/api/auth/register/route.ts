@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
           userName: newUser.name,
           userEmail: newUser.email,
           action: "Trial Started",
-          resource: planDetails?.planName || "Subscription Plan",
-          planName: planDetails?.planName || "Unknown Plan",
+          resource: planDetails?.name || "Subscription Plan",
+          planName: planDetails?.name || "Unknown Plan",
           amount: 0, // Trial is free
           category: "subscription",
           status: "success",

@@ -61,6 +61,7 @@ export default function SuperAdminActivityPage() {
       }
       
       const result = await response.json()
+      console.log("Activity log response data:::",result);
       setActivityLogs(result.data || [])
     } catch (err) {
       console.error("Error fetching activity logs:", err)
