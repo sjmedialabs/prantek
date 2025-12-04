@@ -73,7 +73,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     await logActivity(userId, "create", "client", client._id?.toString(), { name: body.name })
     try{
         await createNotification({
-        userId: user.userId,
+        userId: filterUserId,
         type: "client",
         title: "New Client Created",
         message: "A new client has been created: " + body.name,

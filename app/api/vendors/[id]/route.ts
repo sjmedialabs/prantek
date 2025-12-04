@@ -54,6 +54,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 
     const updated = await mongoStore.update("vendors", id, {
       ...body,
+      userId:filterUserId,
       updatedAt: new Date(),
     })
 

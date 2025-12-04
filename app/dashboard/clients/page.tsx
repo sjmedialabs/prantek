@@ -246,7 +246,7 @@ export default function ClientsPage() {
       pincode: client.pincode || "",
       name: client.name || "",
       companyName: client.companyName || "",
-      contactName: client.contactName || "",
+      contactName: client.name || "",
       gst: client.gst || "",
       pan: client.pan || "",
     })

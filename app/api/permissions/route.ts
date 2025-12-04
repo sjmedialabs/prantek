@@ -48,7 +48,7 @@ const SYSTEM_PERMISSIONS = [
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    if (user.role !== "super-admin" && user.role !== "admin") {
+    if (user.role !== "super-admin" && user.role !== "admin" && user.role !== "admin-user") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

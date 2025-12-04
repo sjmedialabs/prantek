@@ -77,6 +77,8 @@ export default function UsersPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const[confirmPassword,setConfirmPassword]=useState("");
+  const[showConfirmPassword,setShowConfirmPassword]=useState(false)
   
   const { toast } = useToast()
 
@@ -157,6 +159,14 @@ export default function UsersPage() {
       toast({
         title: "Error",
         description: "Please select an employee and enter a password",
+        variant: "destructive",
+      })
+      return
+    }
+    if(password!=confirmPassword){
+      toast({
+        title: "Error",
+        description: "Password is not matched with confirm password",
         variant: "destructive",
       })
       return
@@ -288,6 +298,8 @@ export default function UsersPage() {
   const resetForm = () => {
     setSelectedEmployee("")
     setPassword("")
+    setConfirmPassword("")
+    setShowConfirmPassword(false)
     setShowPassword(false)
     setSelectedPermissions([])
     setSelectedUser(null)
@@ -341,15 +353,20 @@ export default function UsersPage() {
       </div>
 
       <Card className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
+         {/* Search + filter */}
+                  <div className="mb-4 space-y-4">
+                    <div className="flex gap-4 w-[50%]"> 
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by name, email..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </div> 
 
         {loading ? (
           <div className="space-y-4">
@@ -524,6 +541,28 @@ export default function UsersPage() {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Confirm Password *</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Enter password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>

@@ -70,7 +70,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     await logActivity(filterUserId, "create", "vendor", vendor._id?.toString(), { name: body.name })
     try{
        await createNotification({
-        userId: user.userId,
+        userId: filterUserId,
         type: "vendor",
         title: "New Vendor Created",
         message: "A new vendor has been created: " + body.name,
