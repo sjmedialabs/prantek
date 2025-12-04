@@ -410,10 +410,15 @@ export default function ReportsPage() {
               else if (value === "pdf") handleExportPDF()
             }}
           >
-            <SelectTrigger className="w-full sm:w-40">
+            {
+              (hasPermission("export_reports")) && (
+                   <SelectTrigger className="w-full sm:w-40">
               <Download className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Export" />
             </SelectTrigger>
+              )
+            }
+            
             <SelectContent>
               <SelectItem value="financial">Financial Data (CSV)</SelectItem>
               <SelectItem value="customer">Customer Analytics (CSV)</SelectItem>

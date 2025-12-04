@@ -36,6 +36,7 @@ import DateFilter, {
 import Link from "next/link";
 
 export default function DashboardPage() {
+  const { hasPermission} = useUser()
   const { user } = useUser();
   const { getCompletionPercentage, isOnboardingComplete, progress, updateProgress } = useOnboarding();
 
@@ -465,11 +466,16 @@ export default function DashboardPage() {
 
       {/* Quick Action Cards */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+       {
+        (hasPermission("add_quotations") || hasPermission("add_receipts") || hasPermission("add_payments")) && (
+           <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Quick Actions
         </h2>
+        )
+       }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link href="/dashboard/quotations/new">
+           {
+            (hasPermission("add_quotations")) &&(<Link href="/dashboard/quotations/new">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-400">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700">
@@ -488,9 +494,12 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          </Link>)
+          }
 
-          <Link href="/dashboard/receipts/new">
+          {
+            (hasPermission("add_receipts")) && (
+              <Link href="/dashboard/receipts/new">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-400">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700">
@@ -510,8 +519,12 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+            )
+          }
 
-          <Link href="/dashboard/payments/new">
+          {
+            (hasPermission("add_payments")) && (
+              <Link href="/dashboard/payments/new">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-red-400">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700">
@@ -531,6 +544,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
+            )
+          }
         </div>
       </div>
 

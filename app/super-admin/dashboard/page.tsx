@@ -38,8 +38,8 @@ export default function SuperAdminDashboard() {
       const allUsers = await api.users.getAll()
       setUsers(allUsers);
       const subscriberUsers = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin")
-      const activeClients = subscriberUsers.filter((u: any) => u.subscriptionStatus === "active").length
-
+      const activeClients = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin").length
+       
       // Fetch subscription plans to calculate revenue and subscriptions
       const loadedplans = await api.subscriptionPlans.getAll()
       setPlans(loadedplans)

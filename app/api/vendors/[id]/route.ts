@@ -66,28 +66,28 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 })
 
 
-// ---------------- DELETE VENDOR ----------------
-export const DELETE = withAuth(async (request: NextRequest, user, params) => {
-  try {
-    // Check edit_vendors permission
-    if (!hasPermission(user, "edit_vendors")) {
-      return NextResponse.json({ success: false, error: "Forbidden - edit_vendors permission required" }, { status: 403 })
-    }
+// // ---------------- DELETE VENDOR ----------------
+// export const DELETE = withAuth(async (request: NextRequest, user, params) => {
+//   try {
+//     // Check edit_vendors permission
+//     if (!hasPermission(user, "edit_vendors")) {
+//       return NextResponse.json({ success: false, error: "Forbidden - edit_vendors permission required" }, { status: 403 })
+//     }
 
-    const id = params.id
+//     const id = params.id
 
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+//     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
-    const vendor = await mongoStore.getById("vendors", id)
-    if (!vendor || vendor.userId !== filterUserId) {
-      return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404 })
-    }
+//     const vendor = await mongoStore.getById("vendors", id)
+//     if (!vendor || vendor.userId !== filterUserId) {
+//       return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404 })
+//     }
 
-    await mongoStore.delete("vendors", id)
-    await logActivity(filterUserId, "delete", "vendor", id, { name: vendor.name })
+//     await mongoStore.delete("vendors", id)
+//     await logActivity(filterUserId, "delete", "vendor", id, { name: vendor.name })
 
-    return NextResponse.json({ success: true, message: "Vendor deleted successfully" })
-  } catch (err) {
-    return NextResponse.json({ success: false, error: "Failed to delete vendor" }, { status: 500 })
-  }
-})
+//     return NextResponse.json({ success: true, message: "Vendor deleted successfully" })
+//   } catch (err) {
+//     return NextResponse.json({ success: false, error: "Failed to delete vendor" }, { status: 500 })
+//   }
+// })
