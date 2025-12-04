@@ -244,7 +244,7 @@ export default function QuotationsPage() {
 
               <div>
                 <label className="text-sm font-medium">Date To</label>
-                <Input type="date" value={dateToFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+                <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
               </div>
 
               <div>
