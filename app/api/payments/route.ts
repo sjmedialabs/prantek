@@ -58,7 +58,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       const quotationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).findOne({userId:filterUserId})
       if(quotationSettings?.paymentNotifications){
          await createNotification({
-        userId: user.userId,
+        userId: filterUserId,
         type: "payment",
         title: "New Payment Created",
         message: "A new payment has been created: " + body.paymentNumber,

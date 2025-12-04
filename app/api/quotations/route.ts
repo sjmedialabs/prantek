@@ -74,7 +74,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       if(quotationSettings?.quotationNotifications){
         console.log("sending notification for new quotation");
         await createNotification({
-        userId:user.userId,
+        userId:filterUserId,
         type: "quotation",
         title: "New Quotation Created",
         message: "A new quotation has been created: " + body.quotationNumber,

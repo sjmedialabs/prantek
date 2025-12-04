@@ -622,9 +622,9 @@ const amountPayHandle=(event:any)=>{
                     </Select>
                     <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="icon">
+                        {/* <Button variant="outline" size="icon">
                           <Plus className="h-4 w-4" />
-                        </Button>
+                        </Button> */}
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
@@ -687,9 +687,9 @@ const amountPayHandle=(event:any)=>{
                     </Select>
                     <Dialog open={showItemDialog} onOpenChange={setShowItemDialog}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="icon">
+                        {/* <Button variant="outline" size="icon">
                           <Plus className="h-4 w-4" />
-                        </Button>
+                        </Button> */}
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
@@ -891,9 +891,9 @@ const amountPayHandle=(event:any)=>{
                     </Select>
                     <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
                       <DialogTrigger asChild>
-                        <Button variant="outline" size="icon">
+                        {/* <Button variant="outline" size="icon">
                           <Plus className="h-4 w-4" />
-                        </Button>
+                        </Button> */}
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>

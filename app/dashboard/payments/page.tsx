@@ -217,7 +217,7 @@ const exportToCSV = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          {hasPermission("add_payments") && (
+          {hasPermission("manage_payments") && (
             <Link href="/dashboard/payments/new">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />

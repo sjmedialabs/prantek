@@ -67,7 +67,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       const quotationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).findOne({userId:filterUserId})
       if(quotationSettings?.receiptNotifications){
         const result=await createNotification({
-        userId: user.userId,
+        userId: filterUserId,
         type: "receipt",
         title: "New Receipt Created",
         message: "A new receipt has been created: " + body.receiptNumber,

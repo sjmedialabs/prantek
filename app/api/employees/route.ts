@@ -49,6 +49,7 @@ async function generateUniqueEmployeeNumber(db: any, userId: string): Promise<st
 }
 
 export const POST = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   try {
     const db = await connectDB()
     const data = await req.json()
@@ -65,7 +66,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const { id, _id, ...cleanData } = data
 
     // Generate unique employee number
-    const uniqueEmployeeNumber = await generateUniqueEmployeeNumber(db, user.userId)
+    const uniqueEmployeeNumber = await generateUniqueEmployeeNumber(db, filterUserId)
     // Map role to designation if designation is not provided
     if (!cleanData.designation && data.role) {
       cleanData.designation = data.role
@@ -75,7 +76,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const employee = {
       ...cleanData,
       employeeNumber: uniqueEmployeeNumber,
-      userId: user.userId,
+      userId: filterUserId,
       employmentStatus: data.employmentStatus || "active",
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -84,7 +85,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     // check the employee with same email,phone,pan,adhar number
 
     const existingEmployee = await db.collection(Collections.EMPLOYEES).findOne({
-      userId: user.userId,
+      userId: filterUserId,
       $or:[
         { email: employee.email },
         {mobileNo:employee.mobileNo },

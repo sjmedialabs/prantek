@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
+import { connectDB } from "@/lib/mongodb"
+import { Collections } from "@/lib/db-config"
+
+import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest, context: { params: { id: string } }) {
   return withAuth(async (request: NextRequest, user: any) => {
@@ -31,26 +35,50 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 
 
 export async function PUT(request: NextRequest, context: { params: { id: string } }) {
-  return withAuth(async (request: NextRequest, user: any) => {
+  return withAuth(async (req: NextRequest, user: any) => {
     try {
       const { params } = context
-      const body = await request.json()
+      const db = await connectDB()
 
-      console.log("params id is::", params.id)
+      const data = await req.json()
 
-      const client = await mongoStore.update("clients", params.id, body)
+      // Remove any accidental id fields
+      delete data._id
+      delete data.id
 
-      if (!client) {
-        return NextResponse.json({ success: false, error: "Client not found" }, { status: 404 })
+      // For admin users → use companyId, 
+      // For regular users → use userId
+      const filterUserId =
+        user.isAdminUser && user.companyId
+          ? String(user.companyId)
+          : String(user.userId)
+
+      console.log("Updating client with ID:", params.id)
+
+      const result = await db
+        .collection(Collections.CLIENTS)
+        .findOneAndUpdate(
+          { _id: new ObjectId(params.id), userId: filterUserId },
+          { $set: { ...data,userId: filterUserId, updatedAt: new Date() } },
+          { returnDocument: "after" }
+        )
+
+      if (!result) {
+        return NextResponse.json(
+          { success: false, error: "Client not found" },
+          { status: 404 }
+        )
       }
 
-
-      return NextResponse.json({ success: true, data: client })
+      return NextResponse.json({ success: true, data: result.value })
     } catch (error) {
-      console.error("PUT error:", error)
-      return NextResponse.json({ success: false, error: "Failed to update client" }, { status: 500 })
+      console.error("PUT Client Update Error:", error)
+      return NextResponse.json(
+        { success: false, error: "Failed to update client" },
+        { status: 500 }
+      )
     }
-  })(request) // ✅ Notice this
+  })(request)
 }
 
 

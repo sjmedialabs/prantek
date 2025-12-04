@@ -358,7 +358,7 @@ const categoryData = categories
     }
   }
 
-  if (!hasPermission("manage_assets")) {
+  if (!hasPermission("view_assets")) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
@@ -387,7 +387,9 @@ const categoryData = categories
         </div>
         <Dialog open={isAddAssetOpen} onOpenChange={setIsAddAssetOpen}>
           <DialogTrigger asChild>
-            <Button
+            {
+              (hasPermission("add_assets")) && (
+               <Button
               onClick={() => {
                 setIsEditMode(false)
                 setEditingAssetId(null)
@@ -406,6 +408,9 @@ const categoryData = categories
               <Plus className="h-4 w-4 mr-2" />
               Add Asset
             </Button>
+              )
+            }
+            
           </DialogTrigger>
 
           <DialogContent className="max-w-2xl">
@@ -678,7 +683,7 @@ const categoryData = categories
                     <TableHead>Condition</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Assigned To</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {(hasPermission("edit_assets")) && ( <TableHead>Actions</TableHead>)}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -722,7 +727,9 @@ const categoryData = categories
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex space-x-2">
+                        {
+                          (hasPermission("edit_assets")) && (
+                            <div className="flex space-x-2">
                           {asset.assignedTo && !asset.submittedDate ? (
                             <Button
                               size="sm"
@@ -747,6 +754,8 @@ const categoryData = categories
                           </Button>
 
                         </div>
+                          )
+                        }
                       </TableCell>
                     </TableRow>
                   ))}
