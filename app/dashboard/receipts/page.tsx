@@ -326,7 +326,7 @@ export default function ReceiptsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date To</label>
-                  <Input type="date" value={dateToFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+                  <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
