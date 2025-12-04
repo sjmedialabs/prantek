@@ -1,21 +1,18 @@
 module.exports = {
   apps: [{
     name: 'prantek-app',
-    script: '.next/standalone/server.js',
+    script: 'npm',
+    args: 'run dev',
     cwd: '/www/wwwroot/prantek',
-    instances: 1,
-    exec_mode: 'fork',
     env: {
-      NODE_ENV: 'production',
-      PORT: 9080,
-      HOSTNAME: '0.0.0.0'
+      NODE_ENV: 'development',
+      PORT: '9080',
+      HOST: '0.0.0.0'
     },
-    error_file: '/www/wwwroot/prantek/logs/pm2-error.log',
-    out_file: '/www/wwwroot/prantek/logs/pm2-out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-    merge_logs: true,
-    autorestart: true,
     watch: false,
-    max_memory_restart: '1G'
+    instances: 1,
+    autorestart: true,
+    max_restarts: 10,
+    min_uptime: '10s'
   }]
-};
+}
