@@ -164,7 +164,7 @@ export default function ReceiptsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Receipts</h1>
           <p className="text-gray-600">Manage payment receipts</p>
         </div>
-        {hasPermission("manage_receipts") && (
+        {hasPermission("add_receipts") && (
           <Link href="/dashboard/receipts/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -326,7 +326,7 @@ export default function ReceiptsPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date To</label>
-                  <Input type="date" value={dateToFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+                  <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">
@@ -390,7 +390,7 @@ export default function ReceiptsPage() {
                           {formatStatus(receipt.status)}
                         </Badge>
                       </TableCell>
-                      {hasPermission("manage_receipts") && (
+                      {(hasPermission("edit_receipts") || hasPermission("add_receipts")) && (
                         <TableCell>
                           <div className="flex space-x-2">
                             <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
@@ -398,11 +398,15 @@ export default function ReceiptsPage() {
                                 View
                               </Button>
                             </Link>
-                            <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
+                           {
+                            (hasPermission("edit_receipts")) && (
+                               <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
                               <Button variant="ghost" size="sm">
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </Link>
+                            )
+                           }
                           </div>
                         </TableCell>
                       )}

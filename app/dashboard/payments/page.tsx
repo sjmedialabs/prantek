@@ -217,7 +217,7 @@ const exportToCSV = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          {hasPermission("manage_payments") && (
+          {hasPermission("add_payments") && (
             <Link href="/dashboard/payments/new">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -454,7 +454,7 @@ const exportToCSV = () => {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Date To</label>
-                  <Input type="date" value={dateToFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+                  <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
                 </div>
 
                 <div className="space-y-2">

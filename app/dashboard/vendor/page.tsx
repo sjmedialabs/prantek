@@ -276,12 +276,14 @@ const handleSubmit = async (e: React.FormEvent) => {
               }
             }}
           >
-            <DialogTrigger asChild>
+           {
+            (hasPermission("add_vendors")) && ( <DialogTrigger asChild>
               <Button onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Vendor
               </Button>
-            </DialogTrigger>
+            </DialogTrigger>)
+           }
 
             <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] p-0 flex flex-col">
               {/* Sticky Header */}
@@ -516,9 +518,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </Link>
-                              <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor)}>
+                              {
+                                (hasPermission("edit_vendors"))&&(
+                                   <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
+                                )
+                              }
                               {/* <Button
                                 variant="ghost"
                                 size="sm"
