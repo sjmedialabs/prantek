@@ -267,7 +267,7 @@ useEffect(() => {
               updatedItem.price = masterItem.price
               updatedItem.itemId = masterItem._id;
 
-if (masterItem.applyTax) {
+if (masterItem) {
 
   // 🔹 Fetch seller & buyer states
   const buyer = clients.find(c => c._id === selectedClientId)
@@ -279,23 +279,23 @@ if (masterItem.applyTax) {
   //   (masterItem.igst || 0)
 
   // 🔹 Same state → CGST + SGST
-  if (sellerState && buyerState && sellerState === buyerState) {
+  // if (sellerState && buyerState && sellerState === buyerState) {
     updatedItem.cgst = masterItem.cgst || 0
     updatedItem.sgst = masterItem.sgst || 0
-    updatedItem.igst = 0
+    updatedItem.igst = masterItem.igst || 0
 
     updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
     updatedItem.taxName = "CGST + SGST"
-  }
+  // }
   // 🔹 Different state → IGST
-  else {
-    updatedItem.cgst = 0
-    updatedItem.sgst = 0
-    updatedItem.igst = masterItem.igst || 0
+  // else {
+  //   updatedItem.cgst = 0
+  //   updatedItem.sgst = 0
+  //   updatedItem.igst = masterItem.igst || 0
 
-    updatedItem.taxRate = (masterItem.igst || 0)
-    updatedItem.taxName = "IGST"
-  }
+  //   updatedItem.taxRate = (masterItem.igst || 0)
+  //   updatedItem.taxName = "IGST"
+  // }
 
 } else {
 

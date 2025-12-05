@@ -17,9 +17,9 @@ export async function GET(request: Request) {
     if (!userData) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
-
+    const filterUserId = userData.isAdminUser && userData.companyId ? userData.companyId : userData.userId
     const db = await connectDB()
-    const conditions = await db.collection(COLLECTION).find({ userId: userData.userId }).sort({ name: 1 }).toArray()
+    const conditions = await db.collection(COLLECTION).find({ userId: filterUserId }).sort({ name: 1 }).toArray()
 
     return NextResponse.json(conditions)
   } catch (error: any) {
