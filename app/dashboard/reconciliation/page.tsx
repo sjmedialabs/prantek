@@ -284,7 +284,7 @@ export default function ReconciliationPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6 max-w-[992px]">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Reconciliation</h1>

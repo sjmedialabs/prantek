@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Calendar, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +29,7 @@ interface DateFilterProps {
 export default function DateFilter({ onFilterChange, selectedFilter }: DateFilterProps) {
   const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({})
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
 
   const getFilterLabel = () => {
     switch (selectedFilter) {
@@ -84,61 +85,128 @@ export default function DateFilter({ onFilterChange, selectedFilter }: DateFilte
     onFilterChange(type, range)
   }
 
-  const handleCustomRangeSelect = (selected: { from?: Date; to?: Date }) => {
+  const handleCustomRangeSelect = (selected: { from?: Date; to?: Date } | undefined) => {
+    console.log('[DATE-FILTER] Date selection changed:', selected)
+    
+    if (!selected) {
+      setCustomRange({})
+      return
+    }
+    
     setCustomRange(selected)
     
+    // Only close and apply filter when both dates are selected AND they are different
     if (selected.from && selected.to) {
-      const fromDate = new Date(selected.from)
-      fromDate.setHours(0, 0, 0, 0)
-      const toDate = new Date(selected.to)
-      toDate.setHours(23, 59, 59, 999)
+      // Check if from and to are actually different dates
+      const isSameDate = selected.from.getTime() === selected.to.getTime()
       
-      const range: DateRange = { from: fromDate, to: toDate }
-      console.log('[DATE-FILTER] Custom range selected:', { from: fromDate, to: toDate })
-      onFilterChange("custom", range)
-      setIsCalendarOpen(false)
+      if (!isSameDate) {
+        const fromDate = new Date(selected.from)
+        fromDate.setHours(0, 0, 0, 0)
+        const toDate = new Date(selected.to)
+        toDate.setHours(23, 59, 59, 999)
+        
+        const range: DateRange = { from: fromDate, to: toDate }
+        console.log('[DATE-FILTER] Custom range completed:', { from: fromDate, to: toDate })
+        onFilterChange("custom", range)
+        setIsCalendarOpen(false)
+      }
     }
+  }
+
+  const handleCustomRangeClick = () => {
+    setCustomRange({})
+    setIsCalendarOpen(true)
   }
 
   return (
     <div className="flex items-center gap-2">
       <Calendar className="h-4 w-4 text-gray-500" />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9">
-            {getFilterLabel()}
-            <ChevronDown className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={() => handlePresetFilter("today")}>
-            Today
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handlePresetFilter("weekly")}>
-            This Week
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handlePresetFilter("monthly")}>
-            This Month
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                Custom Range...
-              </DropdownMenuItem>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end" side="right">
-              <CalendarComponent
-                mode="range"
-                selected={{ from: customRange.from, to: customRange.to }}
-                onSelect={(range) => handleCustomRangeSelect(range || {})}
-                numberOfMonths={2}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div ref={triggerRef}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9">
+              {getFilterLabel()}
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => handlePresetFilter("today")}>
+              Today
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePresetFilter("weekly")}>
+              This Week
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePresetFilter("monthly")}>
+              This Month
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleCustomRangeClick}>
+              Custom Range...
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <Popover 
+        open={isCalendarOpen} 
+        onOpenChange={(open) => {
+          // Only allow closing when both dates are selected AND different
+          if (!open) {
+            if (customRange.from && customRange.to) {
+              const isSameDate = customRange.from.getTime() === customRange.to.getTime()
+              if (!isSameDate) {
+                setIsCalendarOpen(false)
+              }
+            }
+            // Prevent closing if dates aren't fully selected or are the same
+            return
+          }
+          setIsCalendarOpen(open)
+        }}
+      >
+        <PopoverTrigger asChild>
+          <div style={{ position: 'absolute', pointerEvents: 'none', opacity: 0 }}>
+            {triggerRef.current && <div />}
+          </div>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-auto p-0" 
+          align="end" 
+          side="left"
+          sideOffset={10}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            // Prevent closing when dates aren't fully selected or are the same
+            if (!customRange.from || !customRange.to) {
+              e.preventDefault()
+            } else {
+              const isSameDate = customRange.from.getTime() === customRange.to.getTime()
+              if (isSameDate) {
+                e.preventDefault()
+              }
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            // Prevent closing on escape when dates aren't fully selected or are the same
+            if (!customRange.from || !customRange.to) {
+              e.preventDefault()
+            } else {
+              const isSameDate = customRange.from.getTime() === customRange.to.getTime()
+              if (isSameDate) {
+                e.preventDefault()
+              }
+            }
+          }}
+        >
+          <CalendarComponent
+            mode="range"
+            selected={{ from: customRange.from, to: customRange.to }}
+            onSelect={handleCustomRangeSelect}
+            numberOfMonths={2}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }
