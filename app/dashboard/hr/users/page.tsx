@@ -153,8 +153,92 @@ export default function UsersPage() {
   const availableEmployees = employees.filter(emp => 
     !users.some(user => user.employeeId === emp._id)
   )
+  const permissionRules = {
+  clients: {
+    view: "view_clients",
+    add: "add_clients",
+    edit: "edit_clients"
+  },
+  vendors: {
+    view: "view_vendors",
+    add: "add_vendors",
+    edit: "edit_vendors"
+  },
+  quotations: {
+    view: "view_quotations",
+    add: "add_quotations",
+    edit: "edit_quotations"
+  },
+  receipts: {
+    view: "view_receipts",
+    add: "add_receipts",
+    edit: "edit_receipts"
+  },
+  payments: {
+    view: "view_payments",
+    add: "add_payments",
+    edit: "edit_payments"
+  },
+  assets: {
+    view: "view_assets",
+    add: "add_assets",
+    edit: "edit_assets"
+  },
+  reports: {
+    view: "view_reports",
+    export: "export_reports"
+  },
+  reconciliation: {
+    view: "view_reconciliation",
+    manage: "manage_reconciliation"
+  },
+  users: {
+    view: "tenant_settings",
+    manage: "manage_users"
+  }
+};
+
+function validatePermissions(selectedPermissions) {
+  for (const key in permissionRules) {
+    const rules = permissionRules[key];
+
+    const viewPermission = rules.view;
+    const addPermission = rules.add;
+    const editPermission = rules.edit;
+    const exportPermission = rules.export;
+    const managePermission = rules.manage;
+
+    const hasView = selectedPermissions.includes(viewPermission);
+
+    // Check Add/Edit without View
+    if (!hasView && (selectedPermissions.includes(addPermission) || selectedPermissions.includes(editPermission))) {
+      alert(`Please select "${viewPermission}" before enabling Add/Edit for ${key}.`);
+      return false;
+    }
+
+    // Check Export without View
+    if (exportPermission && selectedPermissions.includes(exportPermission) && !hasView) {
+      alert(`Please select "${viewPermission}" before enabling Export in ${key}.`);
+      return false;
+    }
+
+    // Check Manage without View
+    if (managePermission && selectedPermissions.includes(managePermission) && !hasView) {
+      alert(`Please select "${viewPermission}" before enabling Manage in ${key}.`);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 
   const handleAddUser = async () => {
+    console.log("Selected Permissions to send the backend:::",selectedPermissions);
+
+   
+    
+    
     if (!selectedEmployee || !password) {
       toast({
         title: "Error",
@@ -171,7 +255,8 @@ export default function UsersPage() {
       })
       return
     }
-
+    if(!validatePermissions(selectedPermissions)) return;
+  
     try {
       const response = await fetch("/api/users?userType=admin-user", {
         method: "POST",
@@ -214,6 +299,7 @@ export default function UsersPage() {
 
   const handleEditUser = async () => {
     if (!selectedUser) return
+    if(!validatePermissions(selectedPermissions)) return
 
     try {
       const updateData: any = {
@@ -354,19 +440,19 @@ export default function UsersPage() {
 
       <Card className="p-4">
          {/* Search + filter */}
-                  <div className="mb-4 space-y-4">
-                    <div className="flex gap-4 w-[50%]"> 
-                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Search by name, email..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-                  </div> 
+            <div className="mb-4 space-y-4">
+              <div className="flex gap-4 w-[50%]"> 
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search by name, email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </div> 
 
         {loading ? (
           <div className="space-y-4">
