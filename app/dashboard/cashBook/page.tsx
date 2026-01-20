@@ -43,6 +43,8 @@ export default function CashbookPage() {
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1);
+  const[totlaRecieptsValue,setTotalRecieptsValue]=useState<any>();
+  const[netBalanceValue,setNetBalanceValue]=useState<any>()
   const itemsPerPage = 10; // choose how many entries per page
 
   useEffect(() => {
@@ -133,10 +135,16 @@ export default function CashbookPage() {
   const partyTypes = ["client", "vendor", "team"]
 
   // Summary values
-  const totalReceipts = filteredEntries.filter((e) => e.entryType === "receipt").reduce((s, e) => s + e.amount, 0)
-  const totalPayments = filteredEntries.filter((e) => e.entryType === "payment").reduce((s, e) => s + e.amount, 0)
+ const totalReceipts = filteredEntries
+  .filter((e) => e.entryType === "receipt")
+  .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+
+const totalPayments = filteredEntries
+  .filter((e) => e.entryType === "payment")
+  .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
   const netBalance = totalReceipts - totalPayments
-  console.log("filtered entries", filteredEntries)
+
+  console.log("filtered entries :::::::::::::", totalReceipts,netBalance)
   const clearFilters = () => {
     setTypeFilter("all")
     setPartyTypeFilter("all")
@@ -156,22 +164,24 @@ export default function CashbookPage() {
 
     const headers = [
       "Date",
+      "Reciept/Payment No",
       "Type",
       "Party Name",
       "Party Type",
       "Category",
-      "Description",
+      
       "Reference No",
       "Amount"
     ]
 
     const rows = entries.map((e) => [
       e.date,
+      e.receiptNumber,
       e.entryType,
       e.partyName || "",
       e.partyType || "",
       e.category || "",
-      e.description || "",
+      
       e.referenceNumber || "",
       e.amount || 0
     ])
@@ -244,12 +254,17 @@ export default function CashbookPage() {
       </div>
       {/* Quick Action Cards */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        {
+        (hasPermission("add_receipts") || hasPermission("add_payments")) && (
+           <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Quick Actions
         </h2>
+        )
+       }
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <Link href="/dashboard/receipts/new">
+          {
+            (hasPermission("add_receipts")) && (
+              <Link href="/dashboard/receipts/new">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-green-400">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700">
@@ -269,8 +284,12 @@ export default function CashbookPage() {
               </CardContent>
             </Card>
           </Link>
+            )
+          }
 
-          <Link href="/dashboard/payments/new">
+          {
+            (hasPermission("add_payments")) && (
+              <Link href="/dashboard/payments/new">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-red-400">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700">
@@ -290,6 +309,8 @@ export default function CashbookPage() {
               </CardContent>
             </Card>
           </Link>
+            )
+          }
         </div>
       </div>
 
@@ -374,14 +395,24 @@ export default function CashbookPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Date From</label>
-                <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
-              </div>
+                  <label className="text-sm font-medium">Date From</label>
+                  <Input
+                    type="date"
+                    value={dateFromFilter}
+                    onChange={(e) => setDateFromFilter(e.target.value)}
+                  />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Date To</label>
-                <Input type="date" value={dateToFilter} onChange={(e) => setDateToFilter(e.target.value)} />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Date To</label>
+                  <Input
+                    type="date"
+                    value={dateToFilter}
+                    min={dateFromFilter || undefined}   // 👈 restrict to only dates >= from date
+                    onChange={(e) => setDateToFilter(e.target.value)}
+                  />
+                </div>
+
 
               <div>
                 <label className="text-sm font-medium">Min Amount</label>

@@ -1,7 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity, generateNextNumber } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
-import { notifyAdminsNewReceipt } from "@/lib/notification-utils"
+import { createNotification, notifyAdminsNewReceipt } from "@/lib/notification-utils"
+import { Collections } from "@/lib/db-config"
+import { connectDB } from "@/lib/mongodb"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -61,12 +63,20 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Notify admins about new receipt
     try {
-      await notifyAdminsNewReceipt(
-        receipt._id?.toString() || "",
-        body.receiptNumber,
-        clientName,
-        filterUserId
-      )
+      const db = await connectDB()
+      const quotationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).findOne({userId:filterUserId})
+      if(quotationSettings?.receiptNotifications){
+        const result=await createNotification({
+        userId: filterUserId,
+        type: "receipt",
+        title: "New Receipt Created",
+        message: "A new receipt has been created: " + body.receiptNumber,
+        link: `/dashboard/receipts/${receipt?._id?.toString()}`
+      });
+      }
+
+        // console.log("Notification creation result:", result);
+
     } catch (notifError) {
       console.error("Failed to send notification:", notifError)
       // Don't fail the request if notification fails

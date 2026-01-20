@@ -7,8 +7,12 @@ import { withAuth } from "@/lib/api-auth"
 export const GET = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   
+  // For admin users, filter by companyId (parent account)
+  // For regular users, filter by userId (their own account)
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
   // Fetch roles - can be filtered by userId or fetch all for super-admin
-  const query = user.role === "super-admin" ? {} : { userId: String(user.id) }
+  const query = user.role === "super-admin" ? {} : { userId: String(filterUserId) }
   const roles = await db
     .collection(Collections.ROLES)
     .find(query)
@@ -34,9 +38,13 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     // Remove empty id and _id fields
     const { id, _id, ...cleanData } = data
 
+    // For admin users, use companyId (parent account)
+    // For regular users, use userId (their own account)
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+
     const role = {
       ...cleanData,
-      userId: user.id,  // Owner of this role definition
+      userId: filterUserId,  // Owner of this role definition
       name: data.name,
       code: data.code || data.name.toLowerCase().replace(/\s+/g, '_'),
       permissions: data.permissions,

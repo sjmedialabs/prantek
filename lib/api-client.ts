@@ -155,57 +155,73 @@ export const api = {
     },
   },
 
-  // Quotations
-  quotations: {
-    getAll: async () => {
-      const data = await fetchAPI("/api/quotations")
-      return data.data || []
-    },
-    getById: async (id: string) => {
-      const data = await fetchAPI(`/api/quotations/${id}`)
-      return data.data
-    },
-    create: async (quotationData: Omit<Quotation, "id" | "createdAt" | "updatedAt" | "quotationNumber">) => {
-      const data = await fetchAPI("/api/quotations", {
-        method: "POST",
-        body: JSON.stringify(quotationData),
-      })
-      console.log("response api-clients while creating the quotataions",data)
-      return data.quotation
-    },
-    update: async (id: string, quotationData: Partial<Quotation>) => {
-      const data = await fetchAPI(`/api/quotations/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(quotationData),
-      })
-      console.log("qutation update request ::",data)
-      return data.data
-    },
-    delete: async (id: string) => {
-      await fetchAPI(`/api/quotations/${id}`, {
-        method: "DELETE",
-      })
-    },
-   updateStatus: async (id: string, isActive: "active" | "inactive") => {
-  const data = await fetchAPI(`/api/quotations/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ isActive })  // ✅ CORRECT
-  })
-  return data.data
+
+
+// Quotations API
+quotations: {
+  getAll: async () => {
+    const user = JSON.parse(localStorage.getItem("auth_user") || "{}")
+
+    // ✅ Determine correct parent ID
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.id
+
+    const data = await fetchAPI(`/api/quotations?userId=${filterUserId}`)
+    return data.data || []
+  },
+
+  getById: async (id: string) => {
+    const data = await fetchAPI(`/api/quotations/${id}`)
+    return data.data
+  },
+
+  create: async (quotationData: Omit<Quotation, "id" | "createdAt" | "updatedAt" | "quotationNumber">) => {
+    const user = JSON.parse(localStorage.getItem("auth_user") || "{}")
+
+    // ✅ Determine correct parent ID
+    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.id
+
+    const data = await fetchAPI(`/api/quotations?userId=${filterUserId}`, {
+      method: "POST",
+      body: JSON.stringify(quotationData),
+    })
+
+    return data.data
+  },
+
+  update: async (id: string, quotationData: Partial<Quotation>) => {
+    const data = await fetchAPI(`/api/quotations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(quotationData),
+    })
+    return data.data
+  },
+
+  delete: async (id: string) => {
+    await fetchAPI(`/api/quotations/${id}`, {
+      method: "DELETE",
+    })
+  },
+
+  updateStatus: async (id: string, isActive: "active" | "inactive") => {
+    const data = await fetchAPI(`/api/quotations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ isActive })
+    })
+    return data.data
+  },
+
+  accept: async (id: string) => {
+    const data = await fetchAPI(`/api/quotations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        status: "accepted",
+        acceptedDate: new Date().toISOString(),
+      }),
+    })
+    return data.quotation
+  },
 },
 
-
-    accept: async (id: string) => {
-      const data = await fetchAPI(`/api/quotations/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          status: "accepted",
-          acceptedDate: new Date().toISOString(),
-        }),
-      })
-      return data.quotation
-    },
-  },
 
     // Receipts
     receipts: {
@@ -898,27 +914,25 @@ activityLogs: {
 },
 
   assets: {
-getAll: async (userId: string) => {
-  const res = await fetch(`/api/assets?userId=${userId}`)
-  const json = await res.json()
-  return json.assets || []
-},
+    getAll: async () => {
+      const data = await fetchAPI("/api/assets")
+      return data.assets || []
+    },
 
     create: async (asset: any) => {
-      const data = await fetch("/api/assets", {
+      const data = await fetchAPI("/api/assets", {
         method: "POST",
         body: JSON.stringify(asset),
       })
-      return  data
+      return data
     },
 
-    update: async (id: string, data: any) => {
-      console.log("data from assets", data)
-      const res = await fetch(`/api/assets/${id}`, {
+    update: async (id: string, updateData: any) => {
+      const data = await fetchAPI(`/api/assets/${id}`, {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: JSON.stringify(updateData),
       })
-      return res.json() || data || res
+      return data.asset || data
     },
   },
 

@@ -24,6 +24,7 @@ import { api } from "@/lib/api-client"
 import type { Client } from "@/lib/models/types"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
+import { BulkUploadDialogClient } from "@/components/admin/bulk-upload-clients"
 
 export default function ClientsPage() {
   const { hasPermission, loading } = useUser()
@@ -245,7 +246,7 @@ export default function ClientsPage() {
       pincode: client.pincode || "",
       name: client.name || "",
       companyName: client.companyName || "",
-      contactName: client.contactName || "",
+      contactName: client.name || "",
       gst: client.gst || "",
       pan: client.pan || "",
     })
@@ -324,7 +325,13 @@ export default function ClientsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
           <p className="text-gray-600">Manage customers and vendors</p>
         </div>
-        {hasPermission("manage_clients") && (
+        {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
+          <div className="flex gap-4">
+          {
+            (hasPermission("add_clients")) && (
+               <BulkUploadDialogClient onSuccess={loadClients} />
+            )
+          }
           <Dialog
             open={isDialogOpen}
             onOpenChange={(open) => {
@@ -335,12 +342,16 @@ export default function ClientsPage() {
               }
             }}
           >
-            <DialogTrigger asChild>
+            {
+              (hasPermission("add_clients")) && (
+                <DialogTrigger asChild>
               <Button onClick={resetForm}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Client
               </Button>
             </DialogTrigger>
+              )
+            }
             <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
               <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
                 <DialogHeader>
@@ -531,6 +542,7 @@ export default function ClientsPage() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
@@ -578,13 +590,13 @@ export default function ClientsPage() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Created</TableHead>
-                  {hasPermission("manage_clients") && <TableHead>Actions</TableHead>}
+                  {(hasPermission("add_clients") || hasPermission("edit_clients")) && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedClients.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={hasPermission("manage_clients") ? 7 : 6} className="text-center py-12 text-gray-500">
+                    <TableCell colSpan={hasPermission("add_clients") || hasPermission("edit_clients") ? 7 : 6} className="text-center py-12 text-gray-500">
                       No clients found. Add your first client to get started.
                     </TableCell>
                   </TableRow>
@@ -615,7 +627,7 @@ export default function ClientsPage() {
                       <TableCell>{client.phone}</TableCell>
                       <TableCell>{client.email}</TableCell>
                       <TableCell>{new Date(client.createdAt).toLocaleDateString()}</TableCell>
-                      {hasPermission("manage_clients") && (
+                      {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Link href={`/dashboard/clients/${client._id}`}>
@@ -623,10 +635,16 @@ export default function ClientsPage() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </Link>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
+                            {
+                              (hasPermission("edit_clients")) && (
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Switch
+                              )
+                            }
+                            {
+                              (hasPermission("edit_clients")) && (
+                                 <Switch
                               checked={client.status === "active"}
                               onCheckedChange={async (checked) => {
                                 try {
@@ -639,6 +657,8 @@ export default function ClientsPage() {
                                 }
                               }}
                             />
+                              )
+                            }
                           </div>
                         </TableCell>
                       )}

@@ -11,13 +11,14 @@ function getIdFromRequest(req: NextRequest): string {
 }
 
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   const data = await req.json()
   const id = getIdFromRequest(req)
   const result = await db
     .collection(Collections.PAYMENT_CATEGORIES)
     .findOneAndUpdate(
-      { _id: new ObjectId(id), userId: user.userId },
+      { _id: new ObjectId(id), userId: filterUserId },
       { $set: { ...data, updatedAt: new Date() } },
       { returnDocument: "after" },
     )
@@ -34,7 +35,7 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
 
 //   const result = await db
 //     .collection(Collections.PAYMENT_CATEGORIES)
-//     .deleteOne({ _id: new ObjectId(params.id), userId: user.userId })
+//     .deleteOne({ _id: new ObjectId(params.id), userId: filterUserId })
 
 //   if (result.deletedCount === 0) {
 //     return NextResponse.json({ error: "Payment category not found" }, { status: 404 })

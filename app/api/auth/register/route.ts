@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
 import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
+import { calculateTrialEndDate } from "@/lib/trial-helper"
+import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,22 +37,21 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10)
     
-    // Handle trial registration - Always give 14-day trial when a plan is selected
+    // Handle trial registration - Give trial based on system configuration when a plan is selected
     let subscriptionStatus = "inactive"
-    let trialEndsAt = null
+    // let trialEndsAt = null
     let subscriptionStartDate = null
-    let subscriptionEndDate = null
+    // let subscriptionEndDate = null
     
     if (data.subscriptionPlanId) {
-      // User selected a plan - automatically start 14-day trial
+      // User selected a plan - automatically start trial with configured period
       subscriptionStatus = "trial"
       subscriptionStartDate = new Date()
       
-      // Set trial end date to 14 days from now
-      const trialEndDate = new Date()
-      trialEndDate.setDate(trialEndDate.getDate() + 14)
-      trialEndsAt = trialEndDate
-      subscriptionEndDate = trialEndDate
+      // Set trial end date based on system configuration
+      // const trialEndDate = await calculateTrialEndDate()
+      // trialEndsAt = trialEndDate
+      // subscriptionEndDate = trialEndDate
     }
     
     // Create new user with normalized email
@@ -64,19 +65,57 @@ export async function POST(request: NextRequest) {
       address: data.address || "",
       subscriptionPlanId: data.subscriptionPlanId || "",
       subscriptionStatus,
-      trialEndsAt,
+      trialEndsAt:data.trialEndDate || null,
       subscriptionStartDate,
-      subscriptionEndDate,
+      subscriptionEndDate: data.subscriptionEndDate || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
+    const userId = result.insertedId.toString()
+    const notificationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).insertOne({
+      userId: userId,
+      quotationNotifications: true,
+      receiptNotifications: true,
+      paymentNotifications: true,
+    })
+    
+    // Log subscription activity if trial started
+    if (subscriptionStatus === "trial" && data.subscriptionPlanId) {
+      try {
+        // Get subscription plan details
+        const planDetails = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({
+          _id: new ObjectId(data.subscriptionPlanId)
+        })
+        
+        const activityLog = {
+          userId: userId,
+          userName: newUser.name,
+          userEmail: newUser.email,
+          action: "Trial Started",
+          resource: planDetails?.name || "Subscription Plan",
+          planName: planDetails?.name || "Unknown Plan",
+          amount: 0, // Trial is free
+          category: "subscription",
+          status: "success",
+          details: `Free trial started for ${planDetails?.planName || "subscription plan"}`,
+          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown",
+          timestamp: new Date(),
+          createdAt: new Date()
+        }
+        
+        await db.collection(Collections.ACTIVITY_LOGS).insertOne(activityLog)
+      } catch (logError) {
+        console.error("Failed to log trial activity:", logError)
+        // Don't fail the main operation if logging fails
+      }
+    }
     
     // Notify super admins about new registration
     try {
       await notifySuperAdminsNewRegistration(
-        result.insertedId.toString(),
+        userId,
         newUser.name,
         newUser.email
       )
@@ -96,7 +135,7 @@ export async function POST(request: NextRequest) {
       user: {
         ...userWithoutPassword,
         _id: result.insertedId,
-        id: result.insertedId.toString()
+        id: userId
       }
     })
   } catch (error) {

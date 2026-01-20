@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Car, Save } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import { useUser } from "@/components/auth/user-context"
-
+import { noSSR } from "next/dynamic"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 export default function EditReceiptPage() {
-  const { id: receiptId } = useParams()
+  const params = useParams()
+  const receiptId = params.id as string
   const router = useRouter()
   const { user } = useUser()
 
@@ -44,7 +47,7 @@ export default function EditReceiptPage() {
   // -------- LOAD RECEIPT & QUOTATION --------
   useEffect(() => {
     loadData()
-  }, [receiptId])
+  }, [receiptId]) 
 
   const loadData = async () => {
     try {
@@ -56,10 +59,14 @@ export default function EditReceiptPage() {
       }
 
       setReceipt(loadedReceipt)
+      console.log("Loaded Reciept is::::",loadedReceipt);
+      let loadedQuotation=null;
 
-      const loadedQuotation = await api.quotations.getById(loadedReceipt.quotationId)
+      if(loadedReceipt.quotationId){
+         loadedQuotation = await api.quotations.getById(loadedReceipt.quotationId)
       setQuotation(loadedQuotation)
 
+      }
       const banks = await api.bankAccounts.getAll()
       setBankAccounts(banks)
 
@@ -82,8 +89,14 @@ export default function EditReceiptPage() {
       setReferenceNumber(loadedReceipt.referenceNumber || "")
       setNote(loadedReceipt.notes || "")
 
-      setReceiptTotal(loadedQuotation.balanceAmount + loadedReceipt.amountPaid)
+    if(loadedQuotation){
+        setReceiptTotal(loadedQuotation.balanceAmount + loadedReceipt.amountPaid)
       setBalanceAmount(loadedQuotation.balanceAmount)
+    }
+    else{
+      setReceiptTotal(0);
+      setBalanceAmount(0)
+    }
 
     } catch (err) {
       console.error(err)
@@ -98,15 +111,15 @@ async function handleSubmit(e?: any) {
   if (e) e.preventDefault()
 
   if (submitting) return
-  if (!quotation || !receipt) return toast.error("Missing receipt/quotation")
+  if (!receipt) return toast.error("Missing receipt/quotation")
 
   // VALIDATION
   if (!date) return toast.error("Please select a payment date")
   if (paymentAmount <= 0) return toast.error("Payment amount must be greater than zero")
 
   const previousPaid = receipt.amountPaid            // what this receipt originally added
-  const originalPaidTotal = quotation.paidAmount     // total paid including this receipt
-  const originalBalance = quotation.balanceAmount
+  const originalPaidTotal = quotation?.paidAmount || 0     // total paid including this receipt
+  const originalBalance = quotation?.balanceAmount || 0
   const restoredTotalBeforeEdit = originalBalance + previousPaid
 
   if (paymentAmount > restoredTotalBeforeEdit) {
@@ -130,11 +143,13 @@ async function handleSubmit(e?: any) {
     if (updatedBalanceAmount <= 0) updatedStatus = "cleared"
     else if (updatedPaidAmount > 0) updatedStatus = "partial"
 
-    await api.quotations.update(quotation._id, {
+   if(quotation){
+     await api.quotations.update(quotation._id, {
       paidAmount: updatedPaidAmount,
       balanceAmount: updatedBalanceAmount,
       status: updatedStatus,
     })
+   }
 
     /* ----------------------------------------------
        2️⃣ UPDATE RECEIPT
@@ -199,7 +214,7 @@ async function handleSubmit(e?: any) {
     )
   }
 
-  if (!receipt || !quotation) {
+  if (!receipt) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Receipt Not Found</h2>
@@ -229,7 +244,9 @@ async function handleSubmit(e?: any) {
       </div>
 
       {/* QUOTATION DETAILS (Locked) */}
-      <Card>
+     {
+      (quotation) && (
+         <Card>
         <CardHeader>
           <CardTitle>Quotation / Agreement Details</CardTitle>
         </CardHeader>
@@ -278,6 +295,86 @@ async function handleSubmit(e?: any) {
           </div>
         </CardContent>
       </Card>
+      )
+     }
+
+     {/*without quotation */}
+
+     {
+      (!quotation) &&(
+        <Card>
+            <CardHeader>
+              <CardTitle>Items/Services</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {receipt.items && receipt.items.length > 0 ? (
+                <div className="space-y-4">
+                  {receipt.items.map((item, index) => (
+                    <div key={item.id || index} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-semibold">{item.name}</p>
+                          <p className="text-sm text-gray-600">{item.description}</p>
+                          <Badge variant="outline" className="mt-1">
+                            {item.type}
+                          </Badge>
+                        </div>
+                        <p className="font-bold text-lg">₹{(((item.price*item.quantity)-item.discount)+(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100))?.toLocaleString() || "0"}</p>
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                        <div>
+                          <p className="text-gray-600">Quantity</p>
+                          <p className="font-semibold">{item.quantity}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Price</p>
+                          <p className="font-semibold">₹{item.price || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Discount</p>
+                          <p className="font-semibold">₹{(item.discount || 0).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Amount</p>
+                          <p className="font-semibold">₹{((item.price*item.quantity)-item.discount)?.toLocaleString() || "0"}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
+                          <p className="font-semibold">₹{(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100)?.toLocaleString() || "0"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">No items found for this receipt</p>
+              )}
+              <div className="my-5">
+            <div>
+              <span className="text-gray-600">Paid In This Receipt:</span>
+              <span className="ml-2 font-medium text-purple-600">
+                ₹{receipt.amountPaid?.toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Total Amount:</span>
+              <span className="ml-2 font-medium text-purple-600">
+                ₹{receipt.total?.toLocaleString()}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Balance Due:</span>
+              <span className="ml-2 font-medium text-purple-600">
+                ₹{receipt.balanceAmount?.toLocaleString()}
+              </span>
+            </div>
+           </div>
+            </CardContent>
+          </Card>
+      )
+     }
+
 
       {/* PAYMENT SECTION */}
       <Card>
@@ -289,7 +386,7 @@ async function handleSubmit(e?: any) {
 
           {/* Date */}
           <div>
-            <Label htmlFor="date">Payment Date *</Label>
+            <Label htmlFor="date" required>Payment Date</Label>
             <Input
               id="date"
               type="date"
@@ -302,7 +399,7 @@ async function handleSubmit(e?: any) {
           {/* Method + Payment Type */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <Label>Payment Method *</Label>
+              <Label required>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -316,7 +413,7 @@ async function handleSubmit(e?: any) {
             </div>
 
             <div>
-              <Label>Payment Type *</Label>
+              <Label required>Payment Type</Label>
               <Select
                 value={paymentType}
                 onValueChange={(v: any) => setPaymentType(v)}
@@ -344,7 +441,7 @@ async function handleSubmit(e?: any) {
             <div className="grid grid-cols-2 gap-4">
 
               <div>
-                <Label>Payment Amount *</Label>
+                <Label required>Payment Amount</Label>
                 <Input
                   type="number"
                   value={paymentAmount}

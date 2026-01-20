@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { mongoStore, logActivity } from "@/lib/mongodb-store"
-import { withAuth } from "@/lib/api-auth"
+import { withAuth, hasPermission } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 // ✅ helper
 function getIdFromRequest(req: NextRequest): string {
@@ -10,6 +10,11 @@ function getIdFromRequest(req: NextRequest): string {
 // ---------------- GET ONE VENDOR ----------------
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check view_vendors permission
+    if (!hasPermission(user, "view_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - view_vendors permission required" }, { status: 403 })
+    }
+
     const id = getIdFromRequest(request)
     console.log("Fetching vendor with ID:", id)
     // Admin -> filter by companyId
@@ -32,6 +37,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 // ---------------- UPDATE VENDOR ----------------
 export const PUT = withAuth(async (request: NextRequest, user) => {
   try {
+    // Check edit_vendors permission
+    if (!hasPermission(user, "edit_vendors")) {
+      return NextResponse.json({ success: false, error: "Forbidden - edit_vendors permission required" }, { status: 403 })
+    }
+
     const id = getIdFromRequest(request)
     const body = await request.json()
 
@@ -44,6 +54,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 
     const updated = await mongoStore.update("vendors", id, {
       ...body,
+      userId:filterUserId,
       updatedAt: new Date(),
     })
 
@@ -56,23 +67,28 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 })
 
 
-// ---------------- DELETE VENDOR ----------------
-export const DELETE = withAuth(async (request: NextRequest, user, params) => {
-  try {
-    const id = params.id
+// // ---------------- DELETE VENDOR ----------------
+// export const DELETE = withAuth(async (request: NextRequest, user, params) => {
+//   try {
+//     // Check edit_vendors permission
+//     if (!hasPermission(user, "edit_vendors")) {
+//       return NextResponse.json({ success: false, error: "Forbidden - edit_vendors permission required" }, { status: 403 })
+//     }
 
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+//     const id = params.id
 
-    const vendor = await mongoStore.getById("vendors", id)
-    if (!vendor || vendor.userId !== filterUserId) {
-      return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404 })
-    }
+//     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
-    await mongoStore.delete("vendors", id)
-    await logActivity(filterUserId, "delete", "vendor", id, { name: vendor.name })
+//     const vendor = await mongoStore.getById("vendors", id)
+//     if (!vendor || vendor.userId !== filterUserId) {
+//       return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404 })
+//     }
 
-    return NextResponse.json({ success: true, message: "Vendor deleted successfully" })
-  } catch (err) {
-    return NextResponse.json({ success: false, error: "Failed to delete vendor" }, { status: 500 })
-  }
-})
+//     await mongoStore.delete("vendors", id)
+//     await logActivity(filterUserId, "delete", "vendor", id, { name: vendor.name })
+
+//     return NextResponse.json({ success: true, message: "Vendor deleted successfully" })
+//   } catch (err) {
+//     return NextResponse.json({ success: false, error: "Failed to delete vendor" }, { status: 500 })
+//   }
+// })

@@ -32,7 +32,7 @@ import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/data-store
 
 export default function ReportsPage() {
   const { toast } = useToast()
-  const { user, tenant, hasPermission } = useUser()
+  const { user, hasPermission } = useUser()
   const [dateRange, setDateRange] = useState("6months")
   const [reportType, setReportType] = useState("overview")
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
@@ -57,6 +57,7 @@ export default function ReportsPage() {
         setPayments(loadedPayments)
         setClients(loadedClients)
         setItems(loadedItems)
+        console.log("Items data loaded:", loadedItems)
       }
     }
     loadData()
@@ -100,7 +101,7 @@ export default function ReportsPage() {
       : 0
     
     // Calculate items with tax configuration
-    const itemsWithTax = items.filter(i => i.tax && i.tax > 0).length
+    const itemsWithTax = items.filter(i => i.applyTax && i.applyTax > 0).length
     const itemTaxScore = items.length > 0 
       ? Math.round((itemsWithTax / items.length) * 100) 
       : 0
@@ -409,10 +410,15 @@ export default function ReportsPage() {
               else if (value === "pdf") handleExportPDF()
             }}
           >
-            <SelectTrigger className="w-full sm:w-40">
+            {
+              (hasPermission("export_reports")) && (
+                   <SelectTrigger className="w-full sm:w-40">
               <Download className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Export" />
             </SelectTrigger>
+              )
+            }
+            
             <SelectContent>
               <SelectItem value="financial">Financial Data (CSV)</SelectItem>
               <SelectItem value="customer">Customer Analytics (CSV)</SelectItem>
@@ -435,7 +441,7 @@ export default function ReportsPage() {
               <Card
                 key={index}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => setSelectedMetric(selectedMetric === kpi.title ? null : kpi.title)}
+                // onClick={() => setSelectedMetric(selectedMetric === kpi.title ? null : kpi.title)}
               >
                 <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
@@ -459,9 +465,9 @@ export default function ReportsPage() {
                       <Icon className="h-5 w-5 lg:h-6 lg:w-6 text-purple-600" />
                     </div>
                   </div>
-                  {selectedMetric === kpi.title && (
+                  {/* {selectedMetric === kpi.title && (
                     <div className="mt-4 pt-4 border-t text-sm text-gray-600">Click to view detailed breakdown</div>
-                  )}
+                  )} */}
                 </CardContent>
               </Card>
             )
@@ -486,13 +492,13 @@ export default function ReportsPage() {
                   <CardTitle>Revenue Trend</CardTitle>
                   <CardDescription>Monthly income vs expenses over time</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0 ">
                   <ChartContainer
                     config={{
                       income: { label: "Income", color: "#8b5cf6" },
                       expenses: { label: "Expenses", color: "#06b6d4" },
                     }}
-                    className="h-64 lg:h-80"
+                    className="h-64 lg:h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={financialData}>
@@ -528,9 +534,9 @@ export default function ReportsPage() {
                   <CardTitle>Expense Breakdown</CardTitle>
                   <CardDescription>Distribution of expenses by category</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0 ">
                   {expenseBreakdown.length > 0 ? (
-                    <ChartContainer config={{}} className="h-64 lg:h-80">
+                    <ChartContainer config={{}} className="h-64 lg:h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -568,12 +574,12 @@ export default function ReportsPage() {
                   <CardTitle>Profit Analysis</CardTitle>
                   <CardDescription>Monthly profit trends and projections</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0 ">
                   <ChartContainer
                     config={{
                       profit: { label: "Profit", color: "#10b981" },
                     }}
-                    className="h-64 lg:h-80"
+                    className="h-64 lg:h-[300px]"
                   >
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={financialData}>
@@ -639,13 +645,13 @@ export default function ReportsPage() {
                   <CardTitle>Top Customers by Revenue</CardTitle>
                   <CardDescription>Highest revenue generating customers</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0">
                   {customerAnalytics.length > 0 ? (
                     <ChartContainer
                       config={{
                         revenue: { label: "Revenue", color: "#8b5cf6" },
                       }}
-                      className="h-64 lg:h-80"
+                      className="h-64 lg:h-[300px]"
                     >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={customerAnalytics} layout="vertical">
@@ -701,13 +707,13 @@ export default function ReportsPage() {
                   <CardTitle>Top Selling Items</CardTitle>
                   <CardDescription>Best performing products/services</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-0">
                   {inventoryAnalytics.length > 0 ? (
                     <ChartContainer
                       config={{
                         revenue: { label: "Revenue", color: "#10b981" },
                       }}
-                      className="h-64 lg:h-80"
+                      className="h-64 lg:h-[300px]"
                     >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={inventoryAnalytics}>

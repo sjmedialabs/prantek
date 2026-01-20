@@ -1,8 +1,13 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod"
 
 export function CTASection() {
+  const { trialDays } = useTrialPeriod()
+
   return (
     <section className="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -20,21 +25,12 @@ export function CTASection() {
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
-          <Link href="#demo">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white/10 rounded-full h-12 bg-transparent"
-            >
-              Schedule a Demo
-            </Button>
-          </Link>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-6 justify-center text-sm text-gray-300">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-400" />
-            <span>14-day free trial</span>
+            <span>{trialDays}-day free trial</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-400" />

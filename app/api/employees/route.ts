@@ -5,10 +5,11 @@ import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
 
 export const GET = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
   
   // Super admins can see all employees, others see only their own
-  const query = user.role === "super-admin" ? {} : { userId: user.userId }
+  const query = user.role === "super-admin" ? {} : { userId: filterUserId }
   const employees = await db.collection(Collections.EMPLOYEES).find(query).toArray()
 
   return NextResponse.json(employees)
@@ -48,6 +49,7 @@ async function generateUniqueEmployeeNumber(db: any, userId: string): Promise<st
 }
 
 export const POST = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   try {
     const db = await connectDB()
     const data = await req.json()
@@ -64,7 +66,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const { id, _id, ...cleanData } = data
 
     // Generate unique employee number
-    const uniqueEmployeeNumber = await generateUniqueEmployeeNumber(db, user.userId)
+    const uniqueEmployeeNumber = await generateUniqueEmployeeNumber(db, filterUserId)
     // Map role to designation if designation is not provided
     if (!cleanData.designation && data.role) {
       cleanData.designation = data.role
@@ -74,10 +76,26 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     const employee = {
       ...cleanData,
       employeeNumber: uniqueEmployeeNumber,
-      userId: user.userId,
+      userId: filterUserId,
       employmentStatus: data.employmentStatus || "active",
       createdAt: new Date(),
       updatedAt: new Date(),
+    }
+    
+    // check the employee with same email,phone,pan,adhar number
+
+    const existingEmployee = await db.collection(Collections.EMPLOYEES).findOne({
+      userId: filterUserId,
+      $or:[
+        { email: employee.email },
+        {mobileNo:employee.mobileNo },
+        {aadharNo:employee.aadharNo },
+        {panCardNo:employee.panCardNo}
+      ]
+    })
+
+    if(existingEmployee){
+      return NextResponse.json({success:false, error:"Employee with same email, phone, PAN or Aadhar number already exists"}, {status:400});
     }
 
     const result = await db.collection(Collections.EMPLOYEES).insertOne(employee)

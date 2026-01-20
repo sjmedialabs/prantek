@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Pencil, Power, PowerOff, Search, TrendingUp, Users, DollarSign, CheckCircle, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { api } from "@/lib/api-client"
+import PlanFeatureMatrix from "@/components/super-admin/plan-feature-matrix"
 
 export default function SubscriptionPlansPage() {
   const [plans, setPlans] = useState<any[]>([])
@@ -372,7 +373,7 @@ export default function SubscriptionPlansPage() {
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">All Plans</TabsTrigger>
-          <TabsTrigger value="analytics">Plan Analytics</TabsTrigger>
+          <TabsTrigger value="features">Feature Management</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="space-y-4">
           <div className="flex items-center gap-4">
@@ -464,48 +465,10 @@ export default function SubscriptionPlansPage() {
             </Table>
           </Card>
         </TabsContent>
-      {plans.map((plan) => {
-  // Count subscribers for this plan (only subscriber-type users)
-  const subscribers = users.filter(
-    (user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId === plan._id
-  );
 
-  const subscriberCount = subscribers.length;
-  const revenue = subscriberCount * Number(plan.price || 0);
-
-  const totalPercentage =
-    totalSubscribers > 0
-      ? Math.round((subscriberCount / totalSubscribers) * 100)
-      : 0;
-
-  return (
-    <div key={plan._id || plan.id} className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="font-medium">{plan.name}</div>
-          <div className="text-sm text-gray-500">
-            {subscriberCount} subscribers
-          </div>
-        </div>
-
-        <div className="text-right">
-          <div className="font-medium">₹{revenue.toLocaleString()}</div>
-          <div className="text-sm text-gray-500">{totalPercentage}% of total</div>
-        </div>
-      </div>
-
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className="bg-blue-600 h-2 rounded-full"
-          style={{
-            width: `${totalPercentage}%`,
-          }}
-        />
-      </div>
-    </div>
-  );
-})}
-
+        <TabsContent value="features" className="space-y-4">
+          <PlanFeatureMatrix />
+        </TabsContent>
       </Tabs>
     </div>
   )

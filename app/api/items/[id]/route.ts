@@ -13,6 +13,7 @@ function getId(req: NextRequest) {
 // ✅ PUT — Update by ID
 //
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
+  const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   try {
     const db = await connectDB()
     const data = await req.json()
@@ -25,10 +26,10 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
     const updated = await db
       .collection(Collections.ITEMS)
       .findOneAndUpdate(
-        { _id: new ObjectId(id), userId: String(user.userId) },
+        { _id: new ObjectId(id), userId: String(filterUserId) },
         { $set: { 
             ...data, 
-            userId: String(user.userId), 
+            userId: String(filterUserId), 
             updatedAt: new Date() 
           } 
         },

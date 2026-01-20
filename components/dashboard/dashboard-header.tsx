@@ -5,7 +5,7 @@ import { useUser } from "@/components/auth/user-context";
 import { Button } from "@/components/ui/button";
 import { tokenStorage } from "@/lib/token-storage";
 import {
-  DropdownMenu,
+  DropdownMenu, 
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -18,11 +18,16 @@ import type { Notification } from "@/lib/models/types";
 
 export default function DashboardHeader() {
   const { user, logout, hasPermission } = useUser();
+  
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationOpen, setNotificationOpen] = useState(false);
+ const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
+  const loginedUserLocalStorage = loginedUserLocalStorageString
+    ? JSON.parse(loginedUserLocalStorageString)
+    : null;
   const handleLogout = () => {
     logout();
   };
@@ -40,7 +45,8 @@ export default function DashboardHeader() {
         });
         if (response.ok) {
           const data = await response.json();
-          setNotifications(data);
+          const filteredData = data.filter((eachItem:any)=>eachItem.isRead===false);
+          setNotifications(filteredData);
           setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
         }
       } catch (error) {
@@ -114,7 +120,9 @@ export default function DashboardHeader() {
     <header className="bg-white border-b border-gray-200 px-6 py-2">
       <div className="flex items-center justify-end">
         <div className="flex items-center space-x-4">
-          <DropdownMenu
+          {
+            !loginedUserLocalStorage.isAdminUser && (
+              <DropdownMenu
             open={notificationOpen}
             onOpenChange={setNotificationOpen}
           >
@@ -167,6 +175,8 @@ export default function DashboardHeader() {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
+            )
+          }
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

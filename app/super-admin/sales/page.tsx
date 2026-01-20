@@ -1,10 +1,14 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useUser } from "@/components/auth/user-context"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -36,6 +40,13 @@ import {
 } from "lucide-react"
 import { api } from "@/lib/api-client"
 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+
 interface SalesMetric {
   name: string
   value: string | number
@@ -53,9 +64,7 @@ interface ClientOnboardingData {
 
 interface RevenueData {
   month: string
-  standard: number
-  premium: number
-  enterprise: number
+  [planName: string]: any
   total: number
 }
 
@@ -69,199 +78,281 @@ interface PlanDistribution {
 export interface ConversionFunnelStage {
   stage: string
   count: number
-  percentage: number
+  percentage: number | string
 }
-
 
 export default function SalesDashboardPage() {
   const { hasPermission } = useUser()
-  const [selectedPeriod, setSelectedPeriod] = useState("6months")
-const [conversionFunnel, setConversionFunnel] = useState([])
+
+  // UI state
+  const [selectedPeriod, setSelectedPeriod] = useState<
+    "6months" | "monthly" | "quarterly" | "half-yearly" | "yearly" | "all"
+  >("6months")
+
+  // Raw data (loaded once)
+  const [rawAllUsers, setRawAllUsers] = useState<any[]>([])
+  const [rawAdminUsers, setRawAdminUsers] = useState<any[]>([])
+  const [rawPlans, setRawPlans] = useState<any[]>([])
+
+  // Derived (filtered) data that drives charts and metrics
   const [salesMetrics, setSalesMetrics] = useState<SalesMetric[]>([])
   const [clientOnboardingData, setClientOnboardingData] = useState<ClientOnboardingData[]>([])
+  const [activeClients, setActiveClients] = useState<number>(0)
   const [revenueData, setRevenueData] = useState<RevenueData[]>([])
   const [planDistribution, setPlanDistribution] = useState<PlanDistribution[]>([])
+  const [conversionFunnel, setConversionFunnel] = useState<ConversionFunnelStage[]>([])
 
+  // utility: compute start date from selectedPeriod (Option A — filter by user.createdAt)
+  const getPeriodStartDate = (period: typeof selectedPeriod) => {
+    const now = new Date()
+    switch (period) {
+      case "monthly":
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days
+      case "quarterly":
+        return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) // 90 days
+      case "half-yearly":
+        return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000) // 180 days
+      case "yearly":
+        return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000) // 365 days
+      case "all":
+        return new Date(0)
+      case "6months":
+      default:
+        return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000) // Last 6 months as default
+    }
+  }
+
+  // Load raw data once
   useEffect(() => {
+    let mounted = true
     const loadRealData = async () => {
       try {
-        // Get all users and plans
         const allUsers = await api.users.getAll()
-        const adminUsers = allUsers.filter((u) => u.userType === "subscriber" && u.role !== "super-admin")
+        const adminUsers = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin")
         const plans = await api.subscriptionPlans.getAll()
 
-        // Calculate metrics from real data
-        const totalClients = adminUsers.length
-        const activeSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "active").length
-        const trialSubscriptions = adminUsers.filter((u) => u.subscriptionStatus === "trial").length
-
-        // Calculate total MRR from active subscriptions
-        let totalMRR = 0
-        adminUsers.forEach(user => {
-          if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial") {
-            const plan = plans.find(p => (p._id || p.id) === user.subscriptionPlanId)
-            if (plan) {
-              totalMRR += plan.price || 0
-            }
-          }
-        })
-
-        const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalMRR / activeSubscriptions) : 0
-        const churnedUsers = adminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
-        const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
-
-        const metrics: SalesMetric[] = [
-          {
-            name: "Total Clients Onboarded",
-            value: totalClients,
-            change: totalClients > 0 ? "+100%" : "0%",
-            trend: "up",
-            icon: Building2,
-          },
-          {
-            name: "Monthly Recurring Revenue",
-            value: `₹${totalMRR.toLocaleString()}`,
-            change: totalMRR > 0 ? "+100%" : "0%",
-            trend: "up",
-            icon: DollarSign,
-          },
-          {
-            name: "Active Subscriptions",
-            value: activeSubscriptions,
-            change: activeSubscriptions > 0 ? "+100%" : "0%",
-            trend: "up",
-            icon: CreditCard,
-          },
-          {
-            name: "Average Revenue Per User",
-            value: `₹${avgRevenuePerUser}`,
-            change: "0%",
-            trend: "neutral",
-            icon: Target,
-          },
-          {
-            name: "Customer Lifetime Value",
-            value: `₹${(avgRevenuePerUser * 12).toLocaleString()}`,
-            change: "0%",
-            trend: "up",
-            icon: TrendingUp,
-          },
-          {
-            name: "Churn Rate",
-            value: `${churnRate}%`,
-            change: "0%",
-            trend: churnedUsers > 0 ? "down" : "neutral",
-            icon: Users,
-          },
-        ]
-        setSalesMetrics(metrics)
-
-        // ✅ Dynamic conversion funnel
-const visitors = allUsers.length
-const signups = adminUsers.length
-const trials = trialSubscriptions
-const paid = activeSubscriptions
-
-const conversionFunnelData = [
-  {
-    stage: "Visitors",
-    count: visitors,
-    percentage: visitors > 0 ? 100 : 0,
-  },
-  {
-    stage: "Signups",
-    count: signups,
-    percentage: visitors > 0 ? ((signups / visitors) * 100).toFixed(2) : 0,
-  },
-  {
-    stage: "Trials",
-    count: trials,
-    percentage: signups > 0 ? ((trials / signups) * 100).toFixed(2) : 0,
-  },
-  {
-    stage: "Paid",
-    count: paid,
-    percentage: signups > 0 ? ((paid / signups) * 100).toFixed(2) : 0,
-  },
-]
-
-setConversionFunnel(conversionFunnelData)
-
-
-        // Generate onboarding data from real user creation dates
-        const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        const currentMonth = new Date().getMonth()
-        const onboarding = months.map((month, index) => {
-          const monthIndex = currentMonth - (5 - index)
-          const usersInMonth = adminUsers.filter(u => {
-            if (!u.createdAt) return false
-            const userMonth = new Date(u.createdAt).getMonth()
-            return userMonth === monthIndex
-          }).length
-
-          return {
-            month,
-            newClients: usersInMonth,
-            totalClients: adminUsers.filter(u => {
-              if (!u.createdAt) return false
-              return new Date(u.createdAt) <= new Date(2024, monthIndex, 1)
-            }).length,
-            churnRate: parseFloat(churnRate),
-          }
-        })
-        setClientOnboardingData(onboarding)
-
-        // Calculate revenue by plan from real subscriptions
-        const revenue = months.map((month, index) => {
-          const result: any = { month, total: 0 }
-
-          plans.forEach(plan => {
-            const planName = plan.name.toLowerCase()
-            console.log("Plan name is ", planName)
-            const usersWithPlan = adminUsers.filter(
-              (u) => u.subscriptionPlanId === (plan._id || plan.id)
-            ).length
-
-            console.log("Users with plan is ", usersWithPlan)
-            result[planName] = usersWithPlan * (plan.price || 0)
-            result.total += result[planName]
-          })
-          console.log("Revenue is :", result)
-          return result
-        })
-        setRevenueData(revenue)
-
-        // Plan distribution from real subscription counts
-        const distribution = plans.map((plan, index) => {
-          const subscriberCount = adminUsers.filter(u =>
-            (u.subscriptionPlanId === plan._id || u.subscriptionPlanId === plan.id)
-          ).length
-
-          const colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"]
-
-          return {
-            name: plan.name,
-            value: subscriberCount,
-            revenue: subscriberCount * (plan.price || 0),
-            color: colors[index % colors.length],
-          }
-        })
-        setPlanDistribution(distribution.filter(d => d.value > 0))
+        if (!mounted) return
+        setRawAllUsers(allUsers)
+        setRawAdminUsers(adminUsers)
+        setRawPlans(plans)
       } catch (error) {
         console.error("Failed to load sales data:", error)
       }
     }
 
     loadRealData()
+    return () => {
+      mounted = false
+    }
   }, [])
 
-  // const conversionFunnelData = [
-  //   { stage: "Visitors", count: 12500, percentage: 100 },
-  //   { stage: "Signups", count: 1875, percentage: 15 },
-  //   { stage: "Trials", count: 750, percentage: 6 },
-  //   { stage: "Paid", count: 127, percentage: 1.02 },
-  // ]
+  // Recompute all derived state each time raw data or selectedPeriod changes
+  useEffect(() => {
+    // If raw data not loaded yet, skip
+    if (!rawAllUsers.length || !rawAdminUsers.length) {
+      // Still we can set empty arrays to keep UI safe
+      setSalesMetrics([])
+      setClientOnboardingData([])
+      setRevenueData([])
+      setPlanDistribution([])
+      setConversionFunnel([])
+      setActiveClients(0)
+      return
+    }
 
+    const startDate = getPeriodStartDate(selectedPeriod)
+
+    // Filter users by createdAt within selected period
+    const filteredAllUsers = rawAllUsers.filter((u) => {
+      if (!u.createdAt) return false
+      const created = new Date(u.createdAt)
+      return created >= startDate
+    })
+
+    const filteredAdminUsers = rawAdminUsers.filter((u) => {
+      if (!u.createdAt) return false
+      const created = new Date(u.createdAt)
+      return created >= startDate
+    })
+
+    // activeClients (based on subscriptionEndDate irrespective of createdAt? 
+    // Option A requested filter by createdAt — so we use filteredAdminUsers here)
+    const tempActive = filteredAdminUsers.filter(
+      (u) => u.subscriptionEndDate && new Date(u.subscriptionEndDate) > new Date()
+    ).length
+    setActiveClients(tempActive)
+
+    // Basic counts
+    const totalClients = filteredAdminUsers.length
+    const activeSubscriptions = filteredAdminUsers.filter((u) => u.subscriptionStatus === "active").length
+    const trialSubscriptions = filteredAdminUsers.filter((u) => u.subscriptionStatus === "trial").length
+    const churnedUsers = filteredAdminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
+    const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
+
+    // Calculate total MRR from active/trial subscriptions from filteredAdminUsers (only users created in period)
+    let totalMRR = 0
+    filteredAdminUsers.forEach((user) => {
+      if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial") {
+        const plan = rawPlans.find((p) => (p._id || p.id) === user.subscriptionPlanId)
+        if (plan) {
+          totalMRR += plan.price || 0
+        }
+      }
+    })
+    const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalMRR / activeSubscriptions) : 0
+
+    const metrics: SalesMetric[] = [
+      {
+        name: "Total Clients Onboarded",
+        value: totalClients,
+        change: totalClients > 0 ? "+100%" : "0%",
+        trend: "up",
+        icon: Building2,
+      },
+      {
+        name: "Monthly Recurring Revenue",
+        value: `₹${totalMRR.toLocaleString()}`,
+        change: totalMRR > 0 ? "+100%" : "0%",
+        trend: "up",
+        icon: DollarSign,
+      },
+      {
+        name: "Active Subscriptions",
+        value: activeSubscriptions,
+        change: activeSubscriptions > 0 ? "+100%" : "0%",
+        trend: "up",
+        icon: CreditCard,
+      },
+      {
+        name: "Average Revenue Per User",
+        value: `₹${avgRevenuePerUser}`,
+        change: "0%",
+        trend: "neutral",
+        icon: Target,
+      },
+      {
+        name: "Customer Lifetime Value",
+        value: `₹${(avgRevenuePerUser * 12).toLocaleString()}`,
+        change: "0%",
+        trend: "up",
+        icon: TrendingUp,
+      },
+      {
+        name: "Churn Rate",
+        value: `${churnRate}%`,
+        change: "0%",
+        trend: churnedUsers > 0 ? "down" : "neutral",
+        icon: Users,
+      },
+    ]
+    setSalesMetrics(metrics)
+
+    // Conversion funnel: base numbers on filteredAllUsers & filteredAdminUsers
+    const visitors = filteredAllUsers.length
+    const signups = filteredAdminUsers.length
+    const trials = trialSubscriptions
+    const paid = activeSubscriptions
+
+    const conversionFunnelData: ConversionFunnelStage[] = [
+      {
+        stage: "Visitors",
+        count: visitors,
+        percentage: visitors > 0 ? 100 : 0,
+      },
+      {
+        stage: "Signups",
+        count: signups,
+        percentage: visitors > 0 ? ((signups / visitors) * 100).toFixed(2) : 0,
+      },
+      {
+        stage: "Trials",
+        count: trials,
+        percentage: signups > 0 ? ((trials / signups) * 100).toFixed(2) : 0,
+      },
+      {
+        stage: "Paid",
+        count: paid,
+        percentage: signups > 0 ? ((paid / signups) * 100).toFixed(2) : 0,
+      },
+    ]
+    setConversionFunnel(conversionFunnelData)
+
+    // Client onboarding data for the last 6 months (labels anchored to current month)
+    const monthsCount = 6
+    const monthsArray: string[] = []
+    const now = new Date()
+    for (let i = monthsCount - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthLabel = d.toLocaleString("en-US", { month: "short" })
+      monthsArray.push(monthLabel)
+    }
+
+    const onboarding = monthsArray.map((monthLabel, idx) => {
+      // month index relative to now
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1 - idx), 1)
+      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
+      const usersInMonth = filteredAdminUsers.filter((u) => {
+        if (!u.createdAt) return false
+        const c = new Date(u.createdAt)
+        return c >= monthStart && c < monthEnd
+      }).length
+
+      // total clients up to end of that month (from filteredAdminUsers, which are users created within selected period)
+      const totalUpToMonth = filteredAdminUsers.filter((u) => {
+        if (!u.createdAt) return false
+        const c = new Date(u.createdAt)
+        return c < monthEnd
+      }).length
+
+      return {
+        month: monthLabel,
+        newClients: usersInMonth,
+        totalClients: totalUpToMonth,
+        churnRate: parseFloat(churnRate),
+      }
+    })
+    setClientOnboardingData(onboarding)
+
+    // Revenue by plan from filteredAdminUsers
+    const revenue = monthsArray.map((monthLabel, idx) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - (monthsCount - 1 - idx), 1)
+      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)
+
+      const result: any = { month: monthLabel, total: 0 }
+      rawPlans.forEach((plan) => {
+        const planKey = plan.name.toLowerCase().replace(/\s+/g, "_")
+        const usersWithPlanInMonth = filteredAdminUsers.filter((u) => {
+          if (!u.subscriptionStartDate) return false
+          const s = new Date(u.subscriptionStartDate)
+          return s >= monthStart && s < monthEnd && (u.subscriptionPlanId === (plan._id || plan.id))
+        }).length
+
+        const planRevenue = usersWithPlanInMonth * (plan.price || 0)
+        result[planKey] = planRevenue
+        result.total += planRevenue
+      })
+      return result
+    })
+    setRevenueData(revenue)
+
+    // Plan distribution (counts & revenue) from filteredAdminUsers
+    const colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"]
+    const distribution = rawPlans.map((plan, index) => {
+      const subscriberCount = filteredAdminUsers.filter(
+        (u) => (u.subscriptionPlanId === plan._id || u.subscriptionPlanId === plan.id)
+      ).length
+
+      return {
+        name: plan.name,
+        value: subscriberCount,
+        revenue: subscriberCount * (plan.price || 0),
+        color: colors[index % colors.length],
+      }
+    })
+    setPlanDistribution(distribution.filter((d) => d.value > 0))
+  }, [rawAllUsers, rawAdminUsers, rawPlans, selectedPeriod])
+
+  // Small helpers for UI
   const getTrendIcon = (trend: "up" | "down" | "neutral") => {
     switch (trend) {
       case "up":
@@ -284,20 +375,49 @@ setConversionFunnel(conversionFunnelData)
     }
   }
 
+  // Colors for plan pie
+  const pieColors = useMemo(() => planDistribution.map((p) => p.color), [planDistribution])
+
+  // Render
   // Super-admin has access to everything - permission check removed
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Sales Dashboard</h1>
           <p className="text-gray-600">Track revenue, client onboarding, and subscription metrics</p>
         </div>
+
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Calendar className="h-4 w-4 mr-2" />
-            Last 6 Months
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Calendar className="h-4 w-4 mr-2" />
+                {selectedPeriod === "monthly"
+                  ? "Monthly"
+                  : selectedPeriod === "quarterly"
+                  ? "Quarterly"
+                  : selectedPeriod === "half-yearly"
+                  ? "Half-Yearly"
+                  : selectedPeriod === "yearly"
+                  ? "Yearly"
+                  : selectedPeriod === "all"
+                  ? "All Time"
+                  : "Last 6 Months"}
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => setSelectedPeriod("monthly")}>Monthly</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPeriod("quarterly")}>Quarterly</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPeriod("half-yearly")}>Half-Yearly</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPeriod("yearly")}>Yearly</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPeriod("all")}>All Time</DropdownMenuItem>
+              
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="outline" size="sm">
             Export Report
           </Button>
@@ -315,10 +435,19 @@ setConversionFunnel(conversionFunnelData)
                 <Icon className="h-4 w-4 text-gray-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
-                <div className={`flex items-center text-xs mt-1 ${getTrendColor(metric.trend)}`}>
-                  {getTrendIcon(metric.trend)}
+                <div className="flex flex-row items-center justify-between">
+                  <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
+                 
+                </div>
+                <div className={`flex flex-row justify-between items-center text-xs ${getTrendColor(metric.trend)}`}>
+                  <div className="flex items-center mt-4">
+                    {getTrendIcon(metric.trend)}
                   <span className="ml-1">{metric.change} from last month</span>
+                  </div>
+                   {metric.name==="Total Clients Onboarded" && (<div>
+                  <p className="text-[12px] font-bold">Active: {activeClients}</p>
+                  <p className="text-[12px] font-bold">InActive: {parseInt(metric.value)-activeClients}</p>
+                </div>)}
                 </div>
               </CardContent>
             </Card>

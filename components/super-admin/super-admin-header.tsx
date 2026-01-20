@@ -1,108 +1,108 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useUser } from "@/components/auth/user-context"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { tokenStorage } from "@/lib/token-storage"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Bell, Settings, LogOut } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Bell, LogOut, Settings, User } from "lucide-react"
-import { useRouter } from "next/navigation"
-import type { Notification } from "@/lib/models/types"
+import { Badge } from "@/components/ui/badge"
+
+interface Notification {
+  _id?: string
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+  link?: string
+}
 
 export default function SuperAdminHeader() {
-  const { user, logout } = useUser()
   const router = useRouter()
+  const { user, logout } = useUser()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  const handleLogout = () => {
-    logout()
-  }
-
-  // Fetch notifications
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const token = tokenStorage.getAccessToken(true)
-        const response = await fetch("/api/notifications", {
-          credentials: "include",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setNotifications(data)
-          setUnreadCount(data.filter((n: Notification) => !n.isRead).length)
-        }
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error)
-      }
-    }
-
-    if (user && user.role !== "super-admin") {
+    if (user) {
       fetchNotifications()
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000)
-      return () => clearInterval(interval)
+      // Only poll for non-super-admin users
+      if (user.role !== "super-admin") {
+        const interval = setInterval(fetchNotifications, 30000)
+        return () => clearInterval(interval)
+      }
     }
   }, [user])
 
-  const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read
-    if (!notification.isRead) {
-      try {
-        const token = tokenStorage.getAccessToken(true)
-        await fetch("/api/notifications", {
-          credentials: "include",
-          method: "PATCH",
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json" 
-          },
-          body: JSON.stringify({ 
-            notificationId: notification._id?.toString(), 
-            isRead: true 
-          }),
-        })
-        
-        // Update local state
-        setNotifications(prev => 
-          prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
-        )
-        setUnreadCount(prev => Math.max(0, prev - 1))
-      } catch (error) {
-        console.error("Failed to mark notification as read:", error)
-      }
-    }
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/notifications", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      })
 
-    // Close dropdown before navigation
-    setNotificationOpen(false)
-
-    // Navigate to link if provided
-    if (notification.link) {
-      // Transform /dashboard links to /super-admin/dashboard for super-admin
-      let targetLink = notification.link
-      if (targetLink.startsWith('/dashboard')) {
-        targetLink = targetLink.replace('/dashboard', '/super-admin/dashboard')
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data)
+        setUnreadCount(data.filter((n: Notification) => !n.isRead).length)
       }
-      router.push(targetLink)
+    } catch (error) {
+      console.error("Error fetching notifications:", error)
     }
   }
 
-  const formatNotificationTime = (date: Date) => {
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      if (!notification.isRead && notification._id) {
+        const token = localStorage.getItem("token")
+        await fetch("/api/notifications", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            notificationId: notification._id.toString(),
+            isRead: true,
+          }),
+        })
+
+        setNotifications(
+          notifications.map((n) => (n._id === notification._id ? { ...n, isRead: true } : n))
+        )
+        setUnreadCount(Math.max(0, unreadCount - 1))
+      }
+
+      setDropdownOpen(false)
+
+      if (notification.link) {
+        let link = notification.link
+        if (link.startsWith("/dashboard")) {
+          link = link.replace("/dashboard", "/super-admin/dashboard")
+        }
+        router.push(link)
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error)
+    }
+  }
+
+  const formatNotificationTime = (dateString: string) => {
+    const date = new Date(dateString)
     const now = new Date()
-    const notifDate = new Date(date)
-    const diffMs = now.getTime() - notifDate.getTime()
+    const diffMs = now.getTime() - date.getTime()
     const diffMins = Math.floor(diffMs / 60000)
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
@@ -111,93 +111,78 @@ export default function SuperAdminHeader() {
     if (diffMins < 60) return `${diffMins}m ago`
     if (diffHours < 24) return `${diffHours}h ago`
     if (diffDays < 7) return `${diffDays}d ago`
-    return notifDate.toLocaleDateString()
+    return date.toLocaleDateString()
   }
 
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-4 relative">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-slate-900">Platform Administration</h1>
-          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">Super Admin Access</Badge>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
-            <DropdownMenuTrigger asChild>
-              <button className="relative px-2 py-2 rounded hover:bg-slate-100 transition-colors">
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="max-h-96 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-gray-500">
-                    No notifications
-                  </div>
-                ) : (
-                  notifications.map((notification) => (
-                    <DropdownMenuItem
-                      key={notification._id?.toString()}
-                      onSelect={() => handleNotificationClick(notification)}
-                      className={`flex flex-col items-start p-3 cursor-pointer ${
-                        !notification.isRead ? "bg-blue-50" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {formatNotificationTime(notification.createdAt)}
-                          </p>
-                        </div>
-                        {!notification.isRead && (
-                          <span className="ml-2 h-2 w-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
-                        )}
+    <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="flex items-center justify-end space-x-4">
+        {/* Notifications */}
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-xs">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <div className="p-2 font-semibold">Notifications</div>
+            <DropdownMenuSeparator />
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 text-sm">No notifications</div>
+              ) : (
+                notifications.map((notification, index) => (
+                  <DropdownMenuItem
+                    key={index}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-3 cursor-pointer ${!notification.isRead ? "bg-blue-50" : ""}`}
+                  >
+                    <div className="flex flex-col space-y-1">
+                      <div className="flex items-start justify-between">
+                        <span className="font-medium text-sm">{notification.title}</span>
+                        {!notification.isRead && <div className="h-2 w-2 bg-blue-500 rounded-full" />}
                       </div>
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                      <p className="text-xs text-gray-600">{notification.message}</p>
+                      <span className="text-xs text-gray-400">
+                        {formatNotificationTime(notification.createdAt)}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
-                <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">{user?.name.charAt(0).toUpperCase()}</span>
-                </div>
-                <span className="text-sm font-medium">{user?.name}</span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Super Admin Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/super-admin/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center space-x-2">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-purple-600 text-white">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium">{user?.name}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push("/super-admin/settings")}>
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

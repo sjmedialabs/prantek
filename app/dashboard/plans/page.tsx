@@ -12,6 +12,38 @@ import Link from "next/link"
 import { json } from "node:stream/consumers"
 import { SubscriptionPlan } from "@/lib/models/types"
 
+
+  // Convert planFeatures to displayable feature list
+  const getPlanFeatures = (plan: SubscriptionPlan): string[] => {
+    if (!plan.planFeatures) {
+      // Fallback to legacy features array if planFeatures not available
+      return plan.features || []
+    }
+
+    const features: string[] = []
+    const pf = plan.planFeatures
+
+    if (pf.cashBook) features.push('Cash Book Management')
+    if (pf.clients) features.push('Client Management')
+    if (pf.vendors) features.push('Vendor Management')
+    if (pf.quotations) features.push('Quotation Management')
+    if (pf.receipts) features.push('Receipt Management')
+    if (pf.payments) features.push('Payment Management')
+    if (pf.reconciliation) features.push('Reconciliation')
+    if (pf.assets) features.push('Asset Management')
+    if (pf.reports) features.push('Reports & Analytics')
+    if (pf.settings) features.push('Settings & Configuration')
+    if (pf.hrSettings) features.push('HR Settings')
+
+    // Add usage limits
+    if (plan.maxUsers) features.push(`Up to ${plan.maxUsers} Users`)
+    if (plan.maxClients) features.push(`Up to ${plan.maxClients} Clients`)
+    if (plan.maxReceipts) features.push(`Up to ${plan.maxReceipts} Receipts`)
+    if (plan.maxStorage) features.push(`${plan.maxStorage} Storage`)
+
+    return features
+  }
+
 export default function PlansPage() {
   const router = useRouter()
   const { user } = useUser()
@@ -45,7 +77,7 @@ export default function PlansPage() {
         console.log("[PLANS] User subscriptionPlanId:", user?.subscriptionPlanId)
         if (user?.subscriptionPlanId) {
           try {
-            const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
+            const plan = await api.subscriptionPlans.getById(loginedUserLocalStorage.subscriptionPlanId)
             console.log("[PLANS] Fetched plan from API:", plan)
             console.log("[PLANS] Current plan details:", { id: plan?.id, _id: plan?._id, name: plan?.name, price: plan?.price })
             if (plan && plan.price !== undefined) {
@@ -225,7 +257,7 @@ export default function PlansPage() {
                 </CardHeader>
                 <CardContent className="space-y-3 pt-0">
                   <ul className="space-y-2">
-                    {plan.features.map((feature, index) => (
+                    {getPlanFeatures(plan).map((feature, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
                         <span className="text-gray-600 text-xs leading-relaxed">{feature}</span>

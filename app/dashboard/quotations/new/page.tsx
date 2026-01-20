@@ -25,6 +25,7 @@ import { api } from "@/lib/api-client"
 import { SearchableSelect } from "@/components/searchable-select"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import { useUser } from "@/components/auth/user-context"
+import { hasPermission } from "@/lib/jwt"
 interface QuotationItem {
   id: string
   type: "product" | "service"
@@ -89,6 +90,7 @@ interface MasterItem {
 }
 
 export default function NewQuotationPage() {
+  const { hasPermission} = useUser()
   const router = useRouter()
   const { user } = useUser()
   const [quotationNumber, setQuotationNumber] = useState("Loading...")
@@ -167,7 +169,7 @@ const [sellerState, setSellerState] = useState("")
 useEffect(() => {
    const loadCompany = async () => {
      const comp = await api.company.get()
-     setSellerState(comp.state)
+     setSellerState(comp?.state || "")
    }
    loadCompany()
 }, [])
@@ -265,7 +267,7 @@ useEffect(() => {
               updatedItem.price = masterItem.price
               updatedItem.itemId = masterItem._id;
 
-if (masterItem.applyTax) {
+if (masterItem) {
 
   // 🔹 Fetch seller & buyer states
   const buyer = clients.find(c => c._id === selectedClientId)
@@ -277,23 +279,23 @@ if (masterItem.applyTax) {
   //   (masterItem.igst || 0)
 
   // 🔹 Same state → CGST + SGST
-  if (sellerState && buyerState && sellerState === buyerState) {
+  // if (sellerState && buyerState && sellerState === buyerState) {
     updatedItem.cgst = masterItem.cgst || 0
     updatedItem.sgst = masterItem.sgst || 0
-    updatedItem.igst = 0
+    updatedItem.igst = masterItem.igst || 0
 
     updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
     updatedItem.taxName = "CGST + SGST"
-  }
+  // }
   // 🔹 Different state → IGST
-  else {
-    updatedItem.cgst = 0
-    updatedItem.sgst = 0
-    updatedItem.igst = masterItem.igst || 0
+  // else {
+  //   updatedItem.cgst = 0
+  //   updatedItem.sgst = 0
+  //   updatedItem.igst = masterItem.igst || 0
 
-    updatedItem.taxRate = (masterItem.igst || 0)
-    updatedItem.taxName = "IGST"
-  }
+  //   updatedItem.taxRate = (masterItem.igst || 0)
+  //   updatedItem.taxName = "IGST"
+  // }
 
 } else {
 
@@ -600,7 +602,7 @@ if (masterItem.applyTax) {
       const match = updatedClients.find(
         (c) =>
           (c.name || "").toLowerCase() ===
-          (newClient.name || newClient.companyName || "").toLowerCase()
+          (newClient.name || newClient.contactName || "").toLowerCase()
       );
 
       if (match) setSelectedClientId(match._id);
@@ -707,11 +709,15 @@ if (masterItem.applyTax) {
                         emptyText={loadingClients ? "Loading clients..." : "No clients found"}
                       />
                       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                        <DialogTrigger asChild>
+                        {
+                          (hasPermission("add_clients")) && (
+                            <DialogTrigger asChild>
                           <Button type="button" variant="outline" size="icon">
                             <UserPlus className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
+                          )
+                        }
 
                         <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
                           {/* HEADER */}

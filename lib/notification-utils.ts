@@ -43,98 +43,97 @@ export async function getSuperAdminUsers(): Promise<string[]> {
 /**
  * Create notification for users
  */
-export async function createNotification(
-  userIds: string[],
-  type: "quotation" | "receipt" | "payment" | "registration",
+export async function createNotification({
+  userId,
+  type,
+  title,
+  message,
+  link
+}: {
+  userId: string,
+  type: string,
   title: string,
   message: string,
-  entityId?: string,
-  entityType?: string,
   link?: string
-): Promise<void> {
-  if (userIds.length === 0) return
-
+}) {
   const db = await getDb()
-  const now = new Date()
 
-  const notifications: Partial<Notification>[] = userIds.map(userId => ({
+  const notification = {
     userId,
     type,
     title,
     message,
-    entityId,
-    entityType,
-    link,
-    isRead: false,
-    createdAt: now,
-    updatedAt: now,
-  }))
+    link: link || null,
+    isRead: false,  // 👈 default field
+    createdAt: new Date()
+  }
 
-  await db.collection<Notification>("notifications").insertMany(notifications as Notification[])
+  await db.collection("notifications").insertOne(notification)
 }
+
 
 /**
  * Notify admins about new quotation
  */
-export async function notifyAdminsNewQuotation(
-  quotationId: string,
-  quotationNumber: string,
-  clientName: string,
-  tenantId?: string
-): Promise<void> {
-  const adminIds = await getAdminUsers(tenantId)
-  await createNotification(
-    adminIds,
-    "quotation",
-    "New Quotation Created",
-    `Quotation ${quotationNumber} has been created for ${clientName}`,
-    quotationId,
-    "quotation",
-    `/dashboard/quotations`
-  )
-}
+// export async function notifyAdminsNewQuotation(
+//   quotationId: string,
+//   quotationNumber: string,
+//   clientName: string,
+//   tenantId?: string
+// ): Promise<void> {
+//   const adminIds = await getAdminUsers(tenantId)
+//   await createNotification(
+//     adminIds,
+//     "quotation",
+//     "New Quotation Created",
+//     `Quotation ${quotationNumber} has been created for ${clientName}`,
+//     quotationId,
+//     "quotation",
+//     `/dashboard/quotations`
+//   )
+// }
 
 /**
  * Notify admins about new receipt
  */
-export async function notifyAdminsNewReceipt(
-  receiptId: string,
-  receiptNumber: string,
-  clientName: string,
-  tenantId?: string
-): Promise<void> {
-  const adminIds = await getAdminUsers(tenantId)
-  await createNotification(
-    adminIds,
-    "receipt",
-    "New Receipt Created",
-    `Receipt ${receiptNumber} has been created for ${clientName}`,
-    receiptId,
-    "receipt",
-    `/dashboard/receipts`
-  )
-}
+// export async function notifyAdminsNewReceipt(
+//   receiptId: string,
+//   receiptNumber: string,
+//   clientName: string,
+//   tenantId?: string
+// ): Promise<void> {
+//   const adminIds = await getAdminUsers(tenantId)
+//   await createNotification(
+//     adminIds,
+//     "receipt",
+//     "New Receipt Created",
+//     `Receipt ${receiptNumber} has been created for ${clientName}`,
+//     receiptId,
+//     "receipt",
+//     `/dashboard/receipts`
+//   )
+// }
 
 /**
  * Notify admins about new payment
  */
-export async function notifyAdminsNewPayment(
-  paymentId: string,
-  paymentNumber: string,
-  amount: number,
-  tenantId?: string
-): Promise<void> {
-  const adminIds = await getAdminUsers(tenantId)
-  await createNotification(
-    adminIds,
-    "payment",
-    "New Payment Received",
-    `Payment ${paymentNumber} of ₹${amount.toLocaleString()} has been received`,
-    paymentId,
-    "payment",
-    `/dashboard/payments`
-  )
-}
+// export async function notifyAdminsNewPayment(
+//   paymentId: string,
+//   paymentNumber: string,
+//   amount: number,
+//   tenantId?: string
+// ): Promise<void> {
+//   const adminIds = await getAdminUsers(tenantId)
+//   await createNotification(
+//     adminIds,
+//     "payment",
+//     "New Payment Received",
+//     `Payment ${paymentNumber} of ₹${amount.toLocaleString()} has been received`,
+//     paymentId,
+//     "payment",
+//     `/dashboard/payments`
+//   )
+// }
 
 /**
  * Notify super admins about new registration

@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { mongoStore } from "@/lib/mongodb-store"
 import { logActivity } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
+import { createNotification } from "@/lib/notification-utils"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -70,6 +71,17 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     })
 
     await logActivity(userId, "create", "client", client._id?.toString(), { name: body.name })
+    try{
+        await createNotification({
+        userId: filterUserId,
+        type: "client",
+        title: "New Client Created",
+        message: "A new client has been created: " + body.name,
+        link: `/dashboard/clients/${client._id?.toString()}`
+        })
+    }catch(err){
+      console.error("Error logging activity for client creation:", err)
+    }
 
     return NextResponse.json({ success: true, data: client })
   } catch (error) {

@@ -6,9 +6,11 @@ import { ArrowRight, Play, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api-client";
 import { VideoModal } from "@/components/video-modal";
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod";
 import { WebsiteContent } from "@/lib/models/types";
 
 export function HeroSection() {
+  const { trialDays } = useTrialPeriod();
   const [content, setContent] = useState<WebsiteContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -17,7 +19,7 @@ export function HeroSection() {
     api.websiteContent
       .getAll()
       .then((data) => data[0] || {})
-      .then((websiteContent) => {
+      .then((websiteContent) => { 
         console.log("[v0] Hero section loaded content:", {
           heroRightImage: websiteContent.heroRightImage,
           heroBackgroundImage: websiteContent.heroBackgroundImage,
@@ -114,7 +116,7 @@ export function HeroSection() {
               <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <span>14-day free trial</span>
+                  <span>{trialDays}-day free trial</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />

@@ -17,6 +17,7 @@ import {
   Building2,
 } from "lucide-react";
 
+import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod";
 interface FeaturesSidebarProps {
   selectedPlan?: {
     name: string;
@@ -67,12 +68,13 @@ const getFeatureIcon = (feature: string) => {
 };
 
 export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
+  const{trialDays}=useTrialPeriod();
   // Default features when no plan is selected
   const defaultFeatures = [
     {
       icon: Sparkles,
       color: "blue",
-      title: "14-Day Free Trial",
+      title: `${trialDays}-Day Free Trial`,
       desc: "Get full access to all features. Billing starts only after trial ends.",
     },
     {

@@ -12,25 +12,26 @@ import { Building, Save } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { CompanySetting } from "@/lib/models/types"
+import { InfoTooltip } from "@/components/ui/info-tooltip"
 
 export default function CompanyDetailsPage() {
-const { user, loading, hasPermission } = useUser()
+  const { user, loading, hasPermission } = useUser()
   const [saved, setSaved] = useState(false)
 
   // ✅ ADDED error message state
   const [errors, setErrors] = useState<string[]>([])
-const [fieldErrors, setFieldErrors] = useState({
-  companyName: "",
-  email: "",
-  address: "",
-  phone: "",
-  city: "",
-  state: "",
-  pincode: "",
-  gstin: "",
-  pan: "",
-  tan: "",
-})
+  const [fieldErrors, setFieldErrors] = useState({
+    companyName: "",
+    email: "",
+    address: "",
+    phone: "",
+    city: "",
+    state: "",
+    pincode: "",
+    gstin: "",
+    pan: "",
+    tan: "",
+  })
 
   const [companyData, setCompanyData] = useState<CompanySetting>({
     userId: "",
@@ -65,136 +66,136 @@ const [fieldErrors, setFieldErrors] = useState({
   }, [])
 
   // ✅ VALIDATION FUNCTION
-const validateFields = () => {
-  const newErrors: any = {
-    companyName: "",
-    email: "",
-    address: "",
-    phone: "",
-    city: "",
-    state: "",
-    pincode: "",
-    gstin: "",
-    pan: "",
-    tan: "",
-  }
-
-  // Required validations
-  if (!companyData.companyName.trim()) newErrors.companyName = "Company name is required"
-  if (!companyData.email.trim()) newErrors.email = "Email is required"
-  if (!companyData.address?.trim()) newErrors.address = "Address is required"
-  if (!companyData.phone?.trim()) newErrors.phone = "Phone is required"
-  if (!companyData.city?.trim()) newErrors.city = "City is required"
-  if (!companyData.state?.trim()) newErrors.state = "State is required"
-  if (!companyData.pincode?.trim()) newErrors.pincode = "Pincode is required"
-  if (!companyData.gstin?.trim()) newErrors.gstin = "GSTIN is required"
-  if (!companyData.pan?.trim()) newErrors.pan = "PAN is required"
-  if (!companyData.tan?.trim()) newErrors.tan = "TAN is required"
-
-  // Pattern validations
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (companyData.email && !emailRegex.test(companyData.email))
-    newErrors.email = "Invalid email format"
-
-  const phoneRegex = /^[6-9]\d{9}$/
-  if (companyData.phone && !phoneRegex.test(companyData.phone))
-    newErrors.phone = "Phone must be valid 10-digit Indian mobile no."
-
-  const pincodeRegex = /^\d{6}$/
-  if (companyData.pincode && !pincodeRegex.test(companyData.pincode))
-    newErrors.pincode = "Pincode must be 6 digits"
-
-  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
-  if (companyData.pan && !panRegex.test(companyData.pan))
-    newErrors.pan = "Invalid PAN format"
-
-  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
-  if (companyData.gstin && !gstRegex.test(companyData.gstin))
-    newErrors.gstin = "Invalid GSTIN format"
-
-  const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
-  if (companyData.tan && !tanRegex.test(companyData.tan))
-    newErrors.tan = "Invalid TAN format"
-
-  setFieldErrors(newErrors)
-
-  // If ANY error has a value → fail
-  return Object.values(newErrors).every((x) => x === "")
-}
-
-
-const handleSave = async () => {
-  console.log("button clicked")
-
-if (!validateFields()) {
-  toast({ title: "Validation Error", description: "Please fix the highlighted errors.", variant: "destructive" })
-  return
-}
-
-
-  console.log("Updating company details:", companyData)
-
-  try {
-    let response
-
-    if (companyData._id) {
-      // ✅ If company exists → UPDATE
-      response = await api.company.update({
-        companyName: companyData.companyName,
-        email: companyData.email,
-        phone: companyData.phone,
-        address: companyData.address,
-        city: companyData.city,
-        state: companyData.state,
-        pincode: companyData.pincode,
-        gstin: companyData.gstin,
-        pan: companyData.pan,
-        tan: companyData.tan,
-        logo: companyData.logo,
-        website: companyData.website,
-      })
-
-      console.log("Company updated:", response)
-      toast({ title: "Success", description: "Company details updated successfully!" })  // ✅ ADDED
-
-    } else {
-      console.log("userid", user?.id)
-      // ✅ If no record exists → CREATE
-      response = await api.company.create({
-        userId: user?.id,   // ✅ REQUIRED only for create
-        companyName: companyData.companyName,
-        email: companyData.email,
-        phone: companyData.phone,
-        address: companyData.address,
-        city: companyData.city,
-        state: companyData.state,
-        pincode: companyData.pincode,
-        gstin: companyData.gstin,
-        pan: companyData.pan,
-        tan: companyData.tan,
-        logo: companyData.logo,
-        website: companyData.website,
-      })
-
-      console.log("Company created:", response)
-      toast({ title: "Success", description: "Company details saved successfully!" })   // ✅ ADDED
+  const validateFields = () => {
+    const newErrors: any = {
+      companyName: "",
+      email: "",
+      address: "",
+      phone: "",
+      city: "",
+      state: "",
+      pincode: "",
+      gstin: "",
+      pan: "",
+      tan: "",
     }
 
-    // ✅ Update UI state
-    setCompanyData((prev) => ({
-      ...prev,
-      ...response,
-    }))
+    // Required validations
+    if (!companyData.companyName.trim()) newErrors.companyName = "Company name is required"
+    if (!companyData.email.trim()) newErrors.email = "Email is required"
+    if (!companyData.address?.trim()) newErrors.address = "Address is required"
+    if (!companyData.phone?.trim()) newErrors.phone = "Phone is required"
+    if (!companyData.city?.trim()) newErrors.city = "City is required"
+    if (!companyData.state?.trim()) newErrors.state = "State is required"
+    if (!companyData.pincode?.trim()) newErrors.pincode = "Pincode is required"
+    if (!companyData.gstin?.trim()) newErrors.gstin = "GSTIN is required"
+    if (!companyData.pan?.trim()) newErrors.pan = "PAN is required"
+    if (!companyData.tan?.trim()) newErrors.tan = "TAN is required"
 
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    // Pattern validations
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (companyData.email && !emailRegex.test(companyData.email))
+      newErrors.email = "Invalid email format"
 
-  } catch (error) {
-    console.error("Error saving company:", error)
-    toast({ title: "Error", description: "Something went wrong while saving company details.", variant: "destructive" })
+    const phoneRegex = /^[6-9]\d{9}$/
+    if (companyData.phone && !phoneRegex.test(companyData.phone))
+      newErrors.phone = "Phone must be valid 10-digit Indian mobile no."
+
+    const pincodeRegex = /^\d{6}$/
+    if (companyData.pincode && !pincodeRegex.test(companyData.pincode))
+      newErrors.pincode = "Pincode must be 6 digits"
+
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
+    if (companyData.pan && !panRegex.test(companyData.pan))
+      newErrors.pan = "Invalid PAN format"
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+    if (companyData.gstin && !gstRegex.test(companyData.gstin))
+      newErrors.gstin = "Invalid GSTIN format"
+
+    const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
+    if (companyData.tan && !tanRegex.test(companyData.tan))
+      newErrors.tan = "Invalid TAN format"
+
+    setFieldErrors(newErrors)
+
+    // If ANY error has a value → fail
+    return Object.values(newErrors).every((x) => x === "")
   }
-}
-      if (loading) {
+
+
+  const handleSave = async () => {
+    console.log("button clicked")
+
+    if (!validateFields()) {
+      toast({ title: "Validation Error", description: "Please fix the highlighted errors.", variant: "destructive" })
+      return
+    }
+
+
+    console.log("Updating company details:", companyData)
+
+    try {
+      let response
+
+      if (companyData._id) {
+        // ✅ If company exists → UPDATE
+        response = await api.company.update({
+          companyName: companyData.companyName,
+          email: companyData.email,
+          phone: companyData.phone,
+          address: companyData.address,
+          city: companyData.city,
+          state: companyData.state,
+          pincode: companyData.pincode,
+          gstin: companyData.gstin,
+          pan: companyData.pan,
+          tan: companyData.tan,
+          logo: companyData.logo,
+          website: companyData.website,
+        })
+
+        console.log("Company updated:", response)
+        toast({ title: "Success", description: "Company details updated successfully!" })  // ✅ ADDED
+
+      } else {
+        console.log("userid", user?.id)
+        // ✅ If no record exists → CREATE
+        response = await api.company.create({
+          userId: user?.id,   // ✅ REQUIRED only for create
+          companyName: companyData.companyName,
+          email: companyData.email,
+          phone: companyData.phone,
+          address: companyData.address,
+          city: companyData.city,
+          state: companyData.state,
+          pincode: companyData.pincode,
+          gstin: companyData.gstin,
+          pan: companyData.pan,
+          tan: companyData.tan,
+          logo: companyData.logo,
+          website: companyData.website,
+        })
+
+        console.log("Company created:", response)
+        toast({ title: "Success", description: "Company details saved successfully!" })   // ✅ ADDED
+      }
+
+      // ✅ Update UI state
+      setCompanyData((prev) => ({
+        ...prev,
+        ...response,
+      }))
+
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+
+    } catch (error) {
+      console.error("Error saving company:", error)
+      toast({ title: "Error", description: "Something went wrong while saving company details.", variant: "destructive" })
+    }
+  }
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
@@ -260,9 +261,9 @@ if (!validateFields()) {
                 placeholder="Enter company name"
                 required
               />
-                {fieldErrors.companyName && (
-    <p className="text-red-500 text-sm">{fieldErrors.companyName}</p>
-  )}
+              {fieldErrors.companyName && (
+                <p className="text-red-500 text-sm">{fieldErrors.companyName}</p>
+              )}
             </div>
 
             {/* ✅ EMAIL */}
@@ -298,44 +299,44 @@ if (!validateFields()) {
             {fieldErrors.address && <p className="text-red-500 text-sm">{fieldErrors.address}</p>}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  {/* ✅ City */}
-  <div className="space-y-2">
-    <Label htmlFor="city" required>City</Label>
-    <Input
-      id="city"
-      value={companyData.city}
-      onChange={(e) => setCompanyData({ ...companyData, city: e.target.value })}
-      placeholder="Enter city"
-    />
-    {fieldErrors.city && <p className="text-red-500 text-sm">{fieldErrors.city}</p>}
+            {/* ✅ City */}
+            <div className="space-y-2">
+              <Label htmlFor="city" required>City</Label>
+              <Input
+                id="city"
+                value={companyData.city}
+                onChange={(e) => setCompanyData({ ...companyData, city: e.target.value })}
+                placeholder="Enter city"
+              />
+              {fieldErrors.city && <p className="text-red-500 text-sm">{fieldErrors.city}</p>}
 
-  </div>
+            </div>
 
-  {/* ✅ State */}
-  <div className="space-y-2">
-    <Label htmlFor="state" required>State</Label>
-    <Input
-      id="state"
-      value={companyData.state}
-      onChange={(e) => setCompanyData({ ...companyData, state: e.target.value })}
-      placeholder="Enter state"
-    />
-    {fieldErrors.state && <p className="text-red-500 text-sm">{fieldErrors.state}</p>}
+            {/* ✅ State */}
+            <div className="space-y-2">
+              <Label htmlFor="state" required>State</Label>
+              <Input
+                id="state"
+                value={companyData.state}
+                onChange={(e) => setCompanyData({ ...companyData, state: e.target.value })}
+                placeholder="Enter state"
+              />
+              {fieldErrors.state && <p className="text-red-500 text-sm">{fieldErrors.state}</p>}
 
-  </div>
+            </div>
 
-  {/* ✅ Pincode */}
-  <div className="space-y-2">
-    <Label htmlFor="pincode" required>Pincode</Label>
-    <Input
-      id="pincode"
-      value={companyData.pincode}
-      onChange={(e) => setCompanyData({ ...companyData, pincode: e.target.value })}
-      placeholder="Enter pincode"
-    />
-    {fieldErrors.pincode && <p className="text-red-500 text-sm">{fieldErrors.pincode}</p>}
-  </div>
-</div>
+            {/* ✅ Pincode */}
+            <div className="space-y-2">
+              <Label htmlFor="pincode" required>Pincode</Label>
+              <Input
+                id="pincode"
+                value={companyData.pincode}
+                onChange={(e) => setCompanyData({ ...companyData, pincode: e.target.value })}
+                placeholder="Enter pincode"
+              />
+              {fieldErrors.pincode && <p className="text-red-500 text-sm">{fieldErrors.pincode}</p>}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -368,46 +369,57 @@ if (!validateFields()) {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  {/* ✅ GSTIN */}
-  <div className="space-y-2">
-    <Label htmlFor="gstin" required>GSTIN</Label>
-    <Input
-      id="gstin"
-      value={companyData.gstin}
-      onChange={(e) => setCompanyData({ ...companyData, gstin: e.target.value })}
-      placeholder="Enter GSTIN"
-    />
-    {fieldErrors.gstin && <p className="text-red-500 text-sm">{fieldErrors.gstin}</p>}
-  </div>
+            {/* ✅ GSTIN */}
+            <div className="space-y-2">
+              <Label htmlFor="gstin" required className="flex items-center gap-1">
+                GSTIN
+                <InfoTooltip content="GSTIN format: 15 chars → 2 digits state code, 10-char PAN, 1 entity code, 'Z', 1 checksum." side="right" />
+              </Label>
 
-  {/* ✅ PAN */}
-  <div className="space-y-2">
-    <Label htmlFor="pan" required>PAN</Label>
-    <Input
-      id="pan"
-      value={companyData.pan}
-      onChange={(e) => setCompanyData({ ...companyData, pan: e.target.value })}
-      placeholder="Enter PAN"
-    />
-    {fieldErrors.pan && <p className="text-red-500 text-sm">{fieldErrors.pan}</p>}
-  </div>
-    {/* ✅ TAN */}
-  <div className="space-y-2">
-    <Label htmlFor="tan" required>TAN</Label>
-    <Input
-      id="tan"
-      value={companyData.tan}
-      onChange={(e) => setCompanyData({ ...companyData, tan: e.target.value })}
-      placeholder="Enter TAN"
-    />
-    {fieldErrors.tan && <p className="text-red-500 text-sm">{fieldErrors.tan}</p>}
-  </div>
-</div>
+              <Input
+                id="gstin"
+                value={companyData.gstin}
+                onChange={(e) => setCompanyData({ ...companyData, gstin: e.target.value })}
+                placeholder="Enter GSTIN"
+              />
+              {fieldErrors.gstin && <p className="text-red-500 text-sm">{fieldErrors.gstin}</p>}
+            </div>
+
+            {/* ✅ PAN */}
+            <div className="space-y-2">
+              <Label htmlFor="pan" required className="flex items-center gap-1">
+                PAN
+                <InfoTooltip content="PAN format: 5 letters, 4 digits, 1 letter. Example: ABCDE1234F" side="right" />
+              </Label>
+              <Input
+                id="pan"
+                value={companyData.pan}
+                onChange={(e) => setCompanyData({ ...companyData, pan: e.target.value })}
+                placeholder="Enter PAN"
+              />
+              {fieldErrors.pan && <p className="text-red-500 text-sm">{fieldErrors.pan}</p>}
+            </div>
+            {/* ✅ TAN */}
+            <div className="space-y-2">
+              <Label htmlFor="tan" required className="flex items-center gap-1">
+                TAN
+                <InfoTooltip content="TAN format: 4 letters, 5 digits, 1 letter. Example: ABCD12345E" side="right" />
+              </Label>
+
+              <Input
+                id="tan"
+                value={companyData.tan}
+                onChange={(e) => setCompanyData({ ...companyData, tan: e.target.value })}
+                placeholder="Enter TAN"
+              />
+              {fieldErrors.tan && <p className="text-red-500 text-sm">{fieldErrors.tan}</p>}
+            </div>
+          </div>
 
         </CardContent>
       </Card>
       <div className="text-end  mt-5">
-         <Button onClick={handleSave}>
+        <Button onClick={handleSave}>
           <Save className="h-4 w-4 mr-2" />
           Save Changes
         </Button>
