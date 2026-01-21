@@ -469,6 +469,7 @@ export interface CompanySetting extends BaseDocument {
   companyName: string
   email: string
   phone?: string
+  phone2?: string
   address?: string
   city?: string
   state?: string
