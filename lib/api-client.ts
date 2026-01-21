@@ -386,6 +386,12 @@ quotations: {
         
         return data
       },
+      createUser: async (userData: Omit<User, "id" | "createdAt" | "updatedAt">) => {
+        const data = await fetchAPI("/api/auth/register", {
+               method: "POST",
+          body: JSON.stringify(userData),
+        })
+      },
       updatePassword: async (userId:String,currentPassword:String,newPassword:String)=>{
         const data = await fetchAPI("/api/auth/update-password", {
           method: "PUT",

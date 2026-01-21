@@ -131,7 +131,7 @@ export default function DashboardPage() {
           console.error("Failed to fetch plan:", err);
         }
       }
-
+console.log("local storage is :",localStorage);
       // ✅ cash in hand
       const totalReceipts = (receipts || []).reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),

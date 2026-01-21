@@ -117,14 +117,27 @@ async function handleSubmit(e?: any) {
   if (!date) return toast.error("Please select a payment date")
   if (paymentAmount <= 0) return toast.error("Payment amount must be greater than zero")
 
-  const previousPaid = receipt.amountPaid            // what this receipt originally added
-  const originalPaidTotal = quotation?.paidAmount || 0     // total paid including this receipt
-  const originalBalance = quotation?.balanceAmount || 0
-  const restoredTotalBeforeEdit = originalBalance + previousPaid
+    let previousPaid=0;
+    let originalPaidTotal=0;
+    let originalBalance=0;
+    let  restoredTotalBeforeEdit=0;
 
-  if (paymentAmount > restoredTotalBeforeEdit) {
-    return toast.error("Payment amount cannot exceed total remaining amount")
-  }
+    if(quotation){
+       previousPaid = receipt.amountPaid            // what this receipt originally added
+     originalPaidTotal = quotation?.paidAmount || 0     // total paid including this receipt
+   originalBalance = quotation?.balanceAmount || 0
+   restoredTotalBeforeEdit = originalBalance + previousPaid
+    } 
+    else{
+      previousPaid=receipt.amountPaid
+      originalPaidTotal=receipt.amountPaid
+      originalBalance=receipt.balanceAmount
+      restoredTotalBeforeEdit=originalBalance + previousPaid
+    }
+
+  // if (paymentAmount > restoredTotalBeforeEdit) {
+  //   return toast.error("Payment amount cannot exceed total remaining amount")
+  // }
 
   setSubmitting(true)
 
@@ -169,6 +182,7 @@ async function handleSubmit(e?: any) {
                 ? "upi"
                 : "card",
       bankAccount,
+      balanceAmount:updatedBalanceAmount,
       referenceNumber,
       date,
       notes: note,
