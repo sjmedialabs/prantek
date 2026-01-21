@@ -37,6 +37,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api-client"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ClientAccount {
   id: string
@@ -55,7 +57,11 @@ interface ClientAccount {
   paymentStatus: "current" | "overdue" | "failed"
   trialEndsAt?: string
 }
-
+const Label = ({ text }: { text: string }) => (
+  <label className="text-sm font-medium">
+    {text} <span className="text-red-500">*</span>
+  </label>
+)
 export default function ClientAccountsPage() {
   const { hasPermission } = useUser()
   const [searchTerm, setSearchTerm] = useState("")
@@ -73,12 +79,12 @@ export default function ClientAccountsPage() {
       const users = await api.users.getAll()
       const adminUserCounts = await api.adminUsers.getCount()
       const plans = await api.subscriptionPlans.getAll()
-      
+
       // Map users to client accounts format
       const clientAccounts = users
-        .filter(user => user.userType === "subscriber" && user.role !== "super-admin") // Only subscriber users are clients
-        .map(user => {
-          const plan = plans.find(p => (p._id || p.id) === user.subscriptionPlanId)
+        .filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin") // Only subscriber users are clients
+        .map((user: any) => {
+          const plan = plans.find((p: any) => (p._id || p.id) === user.subscriptionPlanId)
           const userId = user._id || user.id
           return {
             id: user._id || user.id,
@@ -98,7 +104,7 @@ export default function ClientAccountsPage() {
             trialEndsAt: user.trialEndsAt,
           }
         })
-      
+
       setClients(clientAccounts)
     } catch (error) {
       console.error("Failed to load clients:", error)
@@ -106,30 +112,42 @@ export default function ClientAccountsPage() {
       setLoading(false)
     }
   }
-
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [clients, setClients] = useState<ClientAccount[]>([])
   const [loading, setLoading] = useState(true)
 
-const filteredClients = clients.filter((client) => {
-  const status = client.status?.toLowerCase() || "inactive"
+  const filteredClients = clients.filter((client) => {
+    const status = client.status?.toLowerCase() || "inactive"
 
-  const matchesStatus =
-    statusFilter === "all" ? true : status === statusFilter
+    const matchesStatus =
+      statusFilter === "all" ? true : status === statusFilter
 
-  const matchesSearch =
-    client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch =
+      client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.contactName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
-  return matchesStatus && matchesSearch
-})
+    return matchesStatus && matchesSearch
+  })
 
 
   const totalClients = clients.length
   const activeClients = clients.filter((c) => c.status === "active").length
   const suspendedClients = clients.filter((c) => c.status === "suspended").length
   const totalMRR = clients.filter((c) => c.status === "active").reduce((sum, c) => sum + c.monthlyRevenue, 0)
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    address: "",
+    subscriptionPlanId: "",
+  })
 
+  const [plans, setPlans] = useState([])
+  const [submitting, setSubmitting] = useState(false)
+  const [isCreateClientOpen, setIsCreateClientOpen] = useState(false)
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -190,6 +208,50 @@ const filteredClients = clients.filter((client) => {
         return <Badge variant="secondary">{plan}</Badge>
     }
   }
+  const validateField = (name: string, value: string) => {
+    if (!value || value.trim() === "") {
+      return "This field is required"
+    }
+    return ""
+  }
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+
+    setTouched(prev => ({ ...prev, [name]: true }))
+
+    const error = validateField(name, value)
+    setErrors(prev => ({ ...prev, [name]: error }))
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    Object.entries(formData).forEach(([key, value]) => {
+      if (!value || value.trim() === "") {
+        newErrors[key] = "This field is required"
+      }
+    })
+
+    setErrors(newErrors)
+    setTouched({
+      name: true,
+      email: true,
+      password: true,
+      phone: true,
+      address: true,
+      subscriptionPlanId: true,
+    })
+
+    return Object.keys(newErrors).length === 0
+  }
+
+  useEffect(() => {
+    api.subscriptionPlans.getAll().then(plans => plans.filter((p: any) => p.isActive)).then((activePlans) => {
+      setPlans(activePlans)
+    })
+    setLoading(false)
+  }, [])
 
   const handleSuspendAccount = async (clientId: string) => {
     setActionLoading(clientId)
@@ -199,6 +261,43 @@ const filteredClients = clients.filter((client) => {
     setClients(clients.map((client) => (client.id === clientId ? { ...client, status: "suspended" as const } : client)))
     setActionLoading(null)
   }
+  const handleSubmitCreateClient = async () => {
+    if (!validateForm()) return
+
+    try {
+      setSubmitting(true)
+
+      await api.auth.createUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        address: formData.address,
+        subscriptionPlanId: formData.subscriptionPlanId,
+        isActive: true,
+        role: "admin",
+        userType: "subscriber",
+      })
+
+      setIsCreateClientOpen(false)
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        phone: "",
+        address: "",
+        subscriptionPlanId: "",
+      })
+      setErrors({})
+      setTouched({})
+      loadClients()
+    } catch (error: any) {
+      alert(error?.message || "Failed to create client")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
 
   const handleReactivateAccount = async (clientId: string) => {
     setActionLoading(clientId)
@@ -209,13 +308,16 @@ const filteredClients = clients.filter((client) => {
     setActionLoading(null)
   }
 
+  const handleCreateClient = () => {
+    setIsCreateClientOpen(true)
+  }
   const handleViewDetails = (client: ClientAccount) => {
     setSelectedClient(client)
     setIsDetailsDialogOpen(true)
   }
 
   // Super-admin has access to everything - permission check removed
-  console.log("Clients List is :::",clients);
+  console.log("Clients List is :::", clients);
   const exportCSV = () => {
     if (clients.length === 0) {
       alert("No data available to export.")
@@ -230,7 +332,7 @@ const filteredClients = clients.filter((client) => {
       "Total Revenue",
       "Payment Status",
       "Last Activity",
-      
+
     ]
 
     const rows = clients.map((e) => [
@@ -240,7 +342,7 @@ const filteredClients = clients.filter((client) => {
       e.userCount || 0,
       e.totalRevenue || "",
       e.paymentStatus || "",
-     e.lastActivity ? `'${e.lastActivity}'` : ""
+      e.lastActivity ? `'${e.lastActivity}'` : ""
     ])
 
     const csvContent =
@@ -263,8 +365,13 @@ const filteredClients = clients.filter((client) => {
           <h1 className="text-2xl font-bold text-gray-900">Client Account Management</h1>
           <p className="text-gray-600">Manage client accounts, subscriptions, and billing</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={exportCSV}>Export Clients</Button>
+        <div className="flex flex-row gap-2 items-center">
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" onClick={exportCSV}>Export Clients</Button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="default" onClick={handleCreateClient}>Create Clients</Button>
+          </div>
         </div>
       </div>
 
@@ -430,7 +537,7 @@ const filteredClients = clients.filter((client) => {
             </CardContent>
           </Card>
         </TabsContent>
-                <TabsContent value="all" className="space-y-6">
+        <TabsContent value="all" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -529,7 +636,7 @@ const filteredClients = clients.filter((client) => {
             </CardContent>
           </Card>
         </TabsContent>
-                <TabsContent value="suspended" className="space-y-6">
+        <TabsContent value="suspended" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -628,7 +735,7 @@ const filteredClients = clients.filter((client) => {
             </CardContent>
           </Card>
         </TabsContent>
-                <TabsContent value="trial" className="space-y-6">
+        <TabsContent value="trial" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -865,6 +972,151 @@ const filteredClients = clients.filter((client) => {
           )}
         </DialogContent>
       </Dialog>
+      {isCreateClientOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-lg rounded-2xl flex flex-col max-h-[90vh] relative">
+
+            {/* ===== HEADER ===== */}
+            <div className="p-6 border-b flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Create Client</h2>
+
+              {/* Close Icon */}
+              <button
+                onClick={() => setIsCreateClientOpen(false)}
+                className="text-gray-500 hover:text-gray-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* ===== BODY (SCROLLABLE) ===== */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+
+              {/* Name */}
+              <div className="space-y-1">
+                <Label text="Company / Client Name" />
+                <Input
+                  name="name"
+                  placeholder="Enter Company / Client Name"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  onBlur={handleBlur}
+                  className={errors.name && touched.name ? "border-red-500" : ""}
+                />
+                {errors.name && touched.name && (
+                  <p className="text-xs text-red-500">{errors.name}</p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <Label text="Email" />
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="Enter Email"
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  onBlur={handleBlur}
+                  className={errors.email && touched.email ? "border-red-500" : ""}
+                />
+                {errors.email && touched.email && (
+                  <p className="text-xs text-red-500">{errors.email}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <Label text="Password" />
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="Enter Password"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  onBlur={handleBlur}
+                />
+                {errors.password && touched.password && (
+                  <p className="text-xs text-red-500">{errors.password}</p>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-1">
+                <Label text="Phone Number" />
+                <Input
+                  name="phone"
+                  placeholder="Enter Phone"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  onBlur={handleBlur}
+                />
+                {errors.phone && touched.phone && (
+                  <p className="text-xs text-red-500">{errors.phone}</p>
+                )}
+              </div>
+
+              {/* Address */}
+              <div className="space-y-1">
+                <Label text="Address" />
+                <Textarea
+                  name="address"
+                  placeholder="Enter Address"
+                  value={formData.address}
+                  onChange={e => setFormData({ ...formData, address: e.target.value })}
+                  onBlur={handleBlur}
+                />
+                {errors.address && touched.address && (
+                  <p className="text-xs text-red-500">{errors.address}</p>
+                )}
+              </div>
+
+              {/* Subscription Plan */}
+              <div className="space-y-1">
+                <Label text="Subscription Plan" />
+                <Select
+                  value={formData.subscriptionPlanId}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, subscriptionPlanId: value })
+                    setErrors(prev => ({ ...prev, subscriptionPlanId: "" }))
+                  }}
+                >
+                  <SelectTrigger className={errors.subscriptionPlanId ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select Subscription Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map(plan => (
+                      <SelectItem key={plan._id || plan.id} value={plan._id || plan.id}>
+                        {plan.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.subscriptionPlanId && (
+                  <p className="text-xs text-red-500">{errors.subscriptionPlanId}</p>
+                )}
+              </div>
+            </div>
+
+            {/* ===== FOOTER (STICKY) ===== */}
+            <div className="border-t p-4 flex justify-end gap-3 bg-white sticky bottom-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateClientOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                disabled={submitting}
+                onClick={handleSubmitCreateClient}
+              >
+                {submitting ? "Creating..." : "Create Client"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
