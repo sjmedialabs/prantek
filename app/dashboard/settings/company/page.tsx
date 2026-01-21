@@ -13,6 +13,12 @@ import { api } from "@/lib/api-client"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { CompanySetting } from "@/lib/models/types"
 import { InfoTooltip } from "@/components/ui/info-tooltip"
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+
+const validatePhone = (phone: string) => {
+  const phoneNumber = parsePhoneNumberFromString(phone);
+  return phoneNumber?.isValid() ?? false;
+};
 
 export default function CompanyDetailsPage() {
   const { user, loading, hasPermission } = useUser()
@@ -25,6 +31,7 @@ export default function CompanyDetailsPage() {
     email: "",
     address: "",
     phone: "",
+    phone2: "",
     city: "",
     state: "",
     pincode: "",
@@ -38,6 +45,7 @@ export default function CompanyDetailsPage() {
     companyName: "",
     email: "",
     phone: "",
+    phone2: "",
     address: "",
     city: "",
     state: "",
@@ -97,10 +105,14 @@ export default function CompanyDetailsPage() {
     if (companyData.email && !emailRegex.test(companyData.email))
       newErrors.email = "Invalid email format"
 
-    const phoneRegex = /^[6-9]\d{9}$/
-    if (companyData.phone && !phoneRegex.test(companyData.phone))
-      newErrors.phone = "Phone must be valid 10-digit Indian mobile no."
+if (companyData.phone && !validatePhone(companyData.phone)) {
+  newErrors.phone = "Invalid phone number with country code";
+}
 
+
+if (companyData.phone2 && !validatePhone(companyData.phone2)) {
+  newErrors.phone2 = "Invalid phone number with country code";
+}
     const pincodeRegex = /^\d{6}$/
     if (companyData.pincode && !pincodeRegex.test(companyData.pincode))
       newErrors.pincode = "Pincode must be 6 digits"
@@ -144,6 +156,7 @@ export default function CompanyDetailsPage() {
           companyName: companyData.companyName,
           email: companyData.email,
           phone: companyData.phone,
+          phone2: companyData.phone2,
           address: companyData.address,
           city: companyData.city,
           state: companyData.state,
@@ -166,6 +179,7 @@ export default function CompanyDetailsPage() {
           companyName: companyData.companyName,
           email: companyData.email,
           phone: companyData.phone,
+          phone2: companyData.phone2,
           address: companyData.address,
           city: companyData.city,
           state: companyData.state,
@@ -229,7 +243,7 @@ export default function CompanyDetailsPage() {
         </Alert>
       )}
 
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center">
             <Building className="h-5 w-5 mr-2" />
@@ -355,7 +369,23 @@ export default function CompanyDetailsPage() {
               />
               {fieldErrors.phone && <p className="text-red-500 text-sm">{fieldErrors.phone}</p>}
             </div>
-
+            {/* ✅ Second PHONE no.  */}
+            <div className="space-y-2">
+              <Label htmlFor="phone2">
+               Second Phone No.
+              </Label>
+              <Input
+                id="phone2"
+                type="tel"
+                value={companyData.phone2}
+                onChange={(e) => setCompanyData({ ...companyData, phone2: e.target.value })}
+                placeholder="+91 98765 43210"
+              />
+              {fieldErrors.phone2 && <p className="text-red-500 text-sm">{fieldErrors.phone2}</p>}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
             {/* ✅ WEBSITE */}
             <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
@@ -367,8 +397,6 @@ export default function CompanyDetailsPage() {
                 placeholder="https://www.example.com"
               />
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* ✅ GSTIN */}
             <div className="space-y-2">
               <Label htmlFor="gstin" required className="flex items-center gap-1">
@@ -418,7 +446,7 @@ export default function CompanyDetailsPage() {
 
         </CardContent>
       </Card>
-      <div className="text-end  mt-5">
+      <div className="text-end  mt-5 fixed bottom-1 right-10 bg-white/60 w-full z-20">
         <Button onClick={handleSave}>
           <Save className="h-4 w-4 mr-2" />
           Save Changes
