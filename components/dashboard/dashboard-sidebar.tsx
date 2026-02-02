@@ -23,6 +23,8 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  ClipboardList,
+  ShoppingCart,
 } from "lucide-react";
 
 interface NavItem {
@@ -73,7 +75,9 @@ const navigationItems: NavItem[] = [
   { name: "Clients", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
   { name: "Vendors", href: "/dashboard/vendor", icon: Users, permission: "view_vendors" },
   { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
+  { name: "Sales Invoices", href: "/dashboard/salesInvoices", icon: ClipboardList, permission: "view_sales_invoices" },
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
+  { name: "Purchase Invoices", href: "/dashboard/purchaseInvoices", icon: ShoppingCart, permission: "view_purchase_invoices" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
   { name: "Reconciliation", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
   { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "view_assets" },
@@ -373,7 +377,7 @@ export default function DashboardSidebar() {
 
   return (
     <div
-      className={`flex flex-col border-r bg-background transition-all duration-300 h-screen sticky top-0 ${
+      className={`flex flex-col border-r bg-background transition-all duration-300 h-screen z-200 sticky top-0 ${
         collapsed ? "w-16" : "w-64"
       }`}
     >

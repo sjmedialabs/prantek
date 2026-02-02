@@ -34,13 +34,35 @@ import DateFilter, {
   type DateRange,
 } from "@/components/dashboard/date-filter";
 import Link from "next/link";
+import ReceiptsPage from "./receipts/page";
+
+const normalizeDate = (date: string | Date) => {
+  const d = new Date(date)
+  return new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    d.getHours(),
+    d.getMinutes(),
+    d.getSeconds(),
+    d.getMilliseconds()
+  )
+}
+
+const isTillEndDate = (date: string | Date, range: DateRange) => {
+  if (!date) return false
+  return new Date(date) <= range.to
+}
+
 
 export default function DashboardPage() {
-  const { hasPermission} = useUser()
+  const { hasPermission } = useUser()
   const { user } = useUser();
   const { getCompletionPercentage, isOnboardingComplete, progress, updateProgress } = useOnboarding();
 
   const [stats, setStats] = useState({
+    totalReceipts: 0,
+    totalPayments: 0,
     cashInHand: 0,
     receivables: 0,
     payables: 0,
@@ -52,6 +74,18 @@ export default function DashboardPage() {
     pendingQuotations: 0,
     pendingInvoices: 0,
     billsDue: 0,
+    activeClients: 0,
+    activeVendors: 0,
+    activeQuotations: 0,
+    activeItems: 0,
+    unClearReceipt: 0,
+    unClearPayments: 0,
+    receipts: 0,
+    payments: 0,
+    items: 0,
+    Assets: 0,
+    vendors: 0,
+    clients: 0,
   });
 
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
@@ -72,6 +106,12 @@ export default function DashboardPage() {
     );
     return { from: startOfMonth, to: endOfMonth };
   });
+const getEntityDate = (entity: any) =>
+  entity.date ||
+  entity.createdAt ||
+  entity.updatedAt ||
+  entity.assignedAt ||
+  null
 
   useEffect(() => {
     // console.log('[DASHBOARD] User data:', user)
@@ -97,7 +137,7 @@ export default function DashboardPage() {
       // Update progress based on real data
       updateProgress("companyInfo", !!company?.companyName);
       // updateProgress("clients", (clients?.length || 0) > 0);
-      updateProgress("basicSettings", 
+      updateProgress("basicSettings",
         (categories?.length || 0) > 0 || (taxRates?.length || 0) > 0 || (paymentMethods?.length || 0) > 0
       );
       updateProgress("products", (items?.length || 0) > 0);
@@ -110,7 +150,7 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     // console.log('[DASHBOARD] Loading data with date range:', { from: dateRange.from, to: dateRange.to })
     try {
-      const [quotations, receipts, payments, employees, assets, plans] =
+      const [quotations, receipts, payments, employees, assets, plans, clients, vendors, items] =
         await Promise.all([
           api.quotations.getAll(),
           api.receipts.getAll(),
@@ -118,6 +158,9 @@ export default function DashboardPage() {
           api.employees.getAll(),
           api.assets.getAll(user?.id),
           api.subscriptionPlans.getAll(),
+          api.clients.getAll(),
+          api.vendors.getAll(),
+          api.items.getAll(),
         ]);
 
       // Fetch current plan details
@@ -131,45 +174,68 @@ export default function DashboardPage() {
           console.error("Failed to fetch plan:", err);
         }
       }
-console.log("local storage is :",localStorage);
-      // ✅ cash in hand
-      const totalReceipts = (receipts || []).reduce(
+const filteredReceipts = receipts.filter((r: any) =>
+  isTillEndDate(getEntityDate(r), dateRange)
+)
+
+const filteredPayments = payments.filter((p: any) =>
+  isTillEndDate(getEntityDate(p), dateRange)
+)
+
+const filteredClients = clients.filter((c: any) =>
+  isTillEndDate(getEntityDate(c), dateRange)
+)
+
+
+      const filteredQuotations = quotations.filter((q: any) =>
+        isTillEndDate(getEntityDate(q), dateRange)
+      )
+
+      const filteredVendors = vendors.filter((v: any) =>
+        isTillEndDate(getEntityDate(v), dateRange)
+      )
+
+      const filteredItems = items.filter((i: any) =>
+        isTillEndDate(getEntityDate(i), dateRange)
+      )
+
+      const filteredAssets = assets.filter((a: any) =>
+        isTillEndDate(getEntityDate(a), dateRange)
+      )
+
+      const filteredEmployees = employees.filter((e: any) =>
+        isTillEndDate(getEntityDate(e), dateRange)
+      )
+      const totalReceipts = filteredReceipts.reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),
         0
-      );
-      const totalPayments = (
-        Array.isArray(payments) ? payments : payments?.data || []
-      ).reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-      const cashInHand = totalReceipts - totalPayments;
-      // ✅ receivables = pending quotations (filtered by date range)
-      const pendingQuotations = (quotations || []).filter((q: any) => {
-        const qDate = new Date(q.date);
-        return (
-          (q.status === "pending" || q.status === "sent") &&
-          qDate >= dateRange.from &&
-          qDate <= dateRange.to
-        );
-      });
-      const receivables = pendingQuotations.reduce(
-        (sum: number, q: any) => sum + (q.grandTotal || 0),
+      )
+
+      const totalPayments = filteredPayments.reduce(
+        (sum: number, p: any) => sum + (p.amount || 0),
         0
-      );
+      )
+
+      const cashInHand = totalReceipts - totalPayments
+
+      const pendingQuotations = filteredQuotations.filter(
+        (q: any) => q.status === "pending" || q.status === "sent"
+      )
+
+      const receivables = pendingQuotations.reduce(
+        (sum: number, q: any) => sum + (q.balanceAmount || 0),
+        0
+      )
       // ✅ payables (filtered by date range)
       const recentPayments = (
-        Array.isArray(payments) ? payments : payments?.data || []
+        Array.isArray(filteredPayments) ? filteredPayments : filteredPayments?.data || []
       ).filter((p: any) => {
         const d = new Date(p.date);
         return d >= dateRange.from && d <= dateRange.to;
       });
-      const payables = recentPayments.reduce(
-        (sum: number, p: any) => sum + (p.amount || 0),
-        0
-      );
-      // ✅ revenue for selected date range
-      const filteredReceipts = (receipts || []).filter((r: any) => {
-        const date = new Date(r.date);
-        return date >= dateRange.from && date <= dateRange.to;
-      });
+      const pendingAmount = filteredPayments.filter((p: any) => p.status === "pending").reduce((sum: number, p: any) => sum + p.amount, 0)
+      const payables = pendingAmount
+
       console.log("[DASHBOARD] Filtered data counts:", {
         receipts: filteredReceipts.length,
         payments: recentPayments.length,
@@ -180,6 +246,7 @@ console.log("local storage is :",localStorage);
         0
       );
       console.log("[DASHBOARD] Period revenue:", monthlyRevenue);
+      const activeClients = filteredClients.filter((p: any) => p.status === "active");
 
       // ✅ Calculate last month revenue
       const lastMonth = new Date();
@@ -192,31 +259,49 @@ console.log("local storage is :",localStorage);
           date.getFullYear() === lastMonth.getFullYear()
         );
       });
+      const activeitems = filteredItems.filter((p: any) => p.isActive === true);
 
       const lastMonthRevenue = lastMonthReceipts.reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),
         0
       );
-
+      const totalClients = filteredClients.length
+      const totalVendors = filteredVendors.length
+      const assetsManaged = filteredAssets.filter((a: any) => a.status === "available");
       // ✅ Growth Rate (MoM %)
       let growthRate = 0;
       if (lastMonthRevenue > 0) {
         growthRate =
           ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
       }
-
+      const unClearReceipt = filteredReceipts.filter((r: any) => r.status === "received");
+      const Assets = filteredAssets.length
       setStats({
+        totalReceipts,
+        totalPayments,
+        receipts: filteredReceipts.length,
+        payments: filteredPayments.length,
         cashInHand,
         receivables,
         payables,
-        activeUsers: employees.length,
+        activeUsers: filteredEmployees.length,
         monthlyRevenue,
-        assetsManaged: assets.length,
+        Assets: Assets,
+        assetsManaged: assetsManaged.length,
         growthRate: Number(growthRate.toFixed(2)),
-        quotations: quotations.length,
+        quotations: filteredQuotations.length,
         pendingQuotations: pendingQuotations.length,
         pendingInvoices: pendingQuotations.length,
         billsDue: recentPayments.length,
+        activeClients: activeClients.length,
+        activeVendors: filteredVendors.length,
+        activeQuotations: filteredQuotations.length,
+        activeItems: activeitems.length,
+        unClearReceipt: unClearReceipt.length,
+        unClearPayments: filteredPayments.filter((p: any) => p.status === "pending").length,
+        items: filteredItems.length,
+        clients: totalClients,
+        vendors: totalVendors
       });
 
       // ✅ Recent Transactions (filtered by date range)
@@ -264,7 +349,27 @@ console.log("local storage is :",localStorage);
   };
   const statCards = [
     {
-      title: "Cash in Hand",
+      title: "Receipts",
+      value: formatCurrency(stats.totalReceipts),
+      change: `${stats.totalReceipts >= 0 ? "+" : ""}${(
+        (stats.totalReceipts / 1000) *
+        10
+      ).toFixed(1)}% from last month`, // TEMP placeholder
+      icon: Wallet,
+      color: "text-green-600",
+    },
+    {
+      title: "Payments",
+      value: formatCurrency(stats.totalPayments),
+      change: `${stats.totalPayments >= 0 ? "+" : ""}${(
+        (stats.totalPayments / 1000) *
+        10
+      ).toFixed(1)}% from last month`, // TEMP placeholder
+      icon: Wallet,
+      color: "text-green-600",
+    },
+    {
+      title: "Net Profit/Loss",
       value: formatCurrency(stats.cashInHand),
       change: `${stats.cashInHand >= 0 ? "+" : ""}${(
         (stats.cashInHand / 1000) *
@@ -283,9 +388,54 @@ console.log("local storage is :",localStorage);
     {
       title: "Payables",
       value: formatCurrency(stats.payables),
-      change: `${stats.billsDue} bills due this week`,
+      change: `${stats.billsDue} bills due`,
       icon: ArrowDownLeft,
       color: "text-red-600",
+    },
+  ];
+
+  const financialOverview = [
+    {
+      title: "Active Clients",
+      value: stats.activeClients?.toString(),
+      change: `${stats.clients} total clients`,
+      icon: Users,
+      color: "text-green-600",
+    },
+    {
+      title: "Active Vendors",
+      value: stats.activeVendors?.toString(),
+      change: `${stats.vendors} total vendors`,
+      icon: Users,
+      color: "text-green-600",
+    },
+    {
+      title: "Quotations",
+      value: stats.quotations?.toString(),
+      change: `${stats.pendingQuotations} pending approval`,
+      icon: FileText,
+      color: "text-cyan-600",
+    },
+    {
+      title: "Unpaid Receipts",
+      value: stats.unClearReceipt?.toString(),
+      change: `${stats.receipts} total receipts`,
+      icon: FileText,
+      color: "text-cyan-600",
+    },
+    {
+      title: "Unpaid Payments",
+      value: stats.unClearPayments?.toString(),
+      change: `${stats.payments} total payments`,
+      icon: FileText,
+      color: "text-cyan-600",
+    },
+    {
+      title: "Available Assets",
+      value: stats.assetsManaged?.toString(),
+      change: `${stats.Assets} total assets`, // placeholder
+      icon: Package,
+      color: "text-indigo-600",
     },
     {
       title: "Active Users",
@@ -294,42 +444,12 @@ console.log("local storage is :",localStorage);
       icon: Users,
       color: "text-purple-600",
     },
-  ];
-
-  const financialOverview = [
     {
-      title: "Monthly Revenue",
-      value: formatCurrency(stats.monthlyRevenue),
-      change:
-        stats.growthRate > 0
-          ? `+${stats.growthRate}% from last month`
-          : `${stats.growthRate}% from last month`,
-      icon: DollarSign,
-      color: "text-green-600",
-    },
-    {
-      title: "Assets Managed",
-      value: stats.assetsManaged?.toString(),
-      change: `+${Math.max(0, stats.assetsManaged - 1)} this week`, // placeholder
-      icon: Package,
-      color: "text-indigo-600",
-    },
-    {
-      title: "Growth Rate",
-      value: `${stats.growthRate}%`,
-      change:
-        stats.growthRate > 0
-          ? `+${stats.growthRate}% vs last month`
-          : `${stats.growthRate}% vs last month`,
+      title: "Items",
+      value: stats.activeItems.toString(),
+      change: `${stats.items} total items`,
       icon: TrendingUp,
       color: "text-orange-600",
-    },
-    {
-      title: "Quotations",
-      value: stats.quotations?.toString(),
-      change: `${stats.pendingQuotations} pending approval`,
-      icon: FileText,
-      color: "text-cyan-600",
     },
   ];
 
@@ -354,10 +474,10 @@ console.log("local storage is :",localStorage);
   return (
     <div className="space-y-3">
       {/* Trial Expiry Alert */}
-      {user?.subscriptionStatus === "trial" && user?.trialEndsAt ? (
+      {/* {user?.subscriptionStatus === "trial" && user?.trialEndsAt ? (
         <div className="relative">
           <Card className="border-amber-100 pr-28">
-            {/* added right padding so content doesn't overlap with button */}
+        
             <CardContent>
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -386,8 +506,6 @@ console.log("local storage is :",localStorage);
               </div>
             </CardContent>
           </Card>
-
-          {/* Right Middle Floating Button */}
           <Link
             href="/dashboard/plans"
             className="absolute right-4 top-1/2 -translate-y-1/2 bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md text-sm font-medium shadow-md transition"
@@ -395,7 +513,7 @@ console.log("local storage is :",localStorage);
             Upgrade Now
           </Link>
         </div>
-      ) : null}
+      ) : null} */}
 
       {/* Welcome Section */}
       <div className="relative rounded-lg overflow-hidden">
@@ -433,12 +551,11 @@ console.log("local storage is :",localStorage);
                     className="bg-blue-100 text-blue-900 font-medium"
                   >
                     {currentPlan
-                      ? `${currentPlan.name}${
-                          user?.subscriptionStatus === "trial" ? " (Trial)" : ""
-                        }`
+                      ? `${currentPlan.name}${user?.subscriptionStatus === "trial" ? " (Trial)" : ""
+                      }`
                       : user?.subscriptionStatus === "trial"
-                      ? "Trial Plan"
-                      : "No Active Plan"}
+                        ? "Trial Plan"
+                        : "No Active Plan"}
                   </Badge>
                 )}
               </div>
@@ -446,16 +563,16 @@ console.log("local storage is :",localStorage);
 
             {/* Right Side - Setup Progress (Compact) */}
             {!user?.isAdminUser && (
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
-                <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
+                  <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
+                </div>
+                <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
+                <p className="text-xs text-gray-600">
+                  {Object.values(progress).filter((v) => v).length} of 3 steps completed
+                </p>
               </div>
-              <Progress value={getCompletionPercentage()} className="h-2 mb-2" />
-              <p className="text-xs text-gray-600">
-                {Object.values(progress).filter((v) => v).length} of 3 steps completed
-              </p>
-            </div>
             )}
           </div>
         </div>
@@ -465,7 +582,7 @@ console.log("local storage is :",localStorage);
       {/* {!user?.isAdminUser && <OnboardingProgressCards />} */}
 
       {/* Quick Action Cards */}
-      <div>
+      {/* <div>
        {
         (hasPermission("add_quotations") || hasPermission("add_receipts") || hasPermission("add_payments")) && (
            <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -547,7 +664,7 @@ console.log("local storage is :",localStorage);
             )
           }
         </div>
-      </div>
+      </div> */}
 
       {/* Date Filter */}
       <div className="flex justify-between items-center">
@@ -639,11 +756,10 @@ console.log("local storage is :",localStorage);
                       </p>
                     </div>
                     <div
-                      className={`font-semibold ${
-                        transaction.type === "Income"
+                      className={`font-semibold ${transaction.type === "Income"
                           ? "text-green-600"
                           : "text-red-600"
-                      }`}
+                        }`}
                     >
                       {transaction.type === "Income" ? "+" : "-"}
                       {formatCurrency(transaction.amount)}

@@ -19,7 +19,7 @@ export type DateRange = {
   to: Date
 }
 
-export type DateFilterType = "today" | "weekly" | "monthly" | "custom"
+export type DateFilterType = "today" | "weekly" | "monthly" | "quarterly" | "yearly" | "lifetime" | "custom"
 
 interface DateFilterProps {
   onFilterChange: (type: DateFilterType, range: DateRange) => void
@@ -39,6 +39,12 @@ export default function DateFilter({ onFilterChange, selectedFilter }: DateFilte
         return "This Week"
       case "monthly":
         return "This Month"
+      case "quarterly":
+        return "This Quarter"
+      case "yearly":
+        return "This Year"
+      case "lifetime":
+        return "All Time"
       case "custom":
         if (customRange.from && customRange.to) {
           return `${format(customRange.from, "MMM d")} - ${format(customRange.to, "MMM d")}`
@@ -63,19 +69,50 @@ export default function DateFilter({ onFilterChange, selectedFilter }: DateFilte
         todayEnd.setHours(23, 59, 59, 999)
         range = { from: todayStart, to: todayEnd }
         break
-      case "weekly":
-        const startOfWeek = new Date(today)
-        startOfWeek.setDate(today.getDate() - today.getDay())
-        startOfWeek.setHours(0, 0, 0, 0)
-        const endOfWeek = new Date(startOfWeek)
-        endOfWeek.setDate(startOfWeek.getDate() + 6)
-        endOfWeek.setHours(23, 59, 59, 999)
-        range = { from: startOfWeek, to: endOfWeek }
-        break
+case "weekly": {
+  const day = today.getDay() || 7
+  const startOfWeek = new Date(today)
+  startOfWeek.setDate(today.getDate() - day + 1)
+  startOfWeek.setHours(0, 0, 0, 0)
+
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  range = { from: startOfWeek, to: endOfWeek }
+  break
+}
+
       case "monthly":
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0)
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999)
         range = { from: startOfMonth, to: endOfMonth }
+        break
+case "quarterly": {
+  const quarter = Math.floor(today.getMonth() / 3)
+  const start = new Date(today.getFullYear(), quarter * 3, 1)
+  start.setHours(0, 0, 0, 0)
+
+  const end = new Date(today.getFullYear(), quarter * 3 + 3, 0)
+  end.setHours(23, 59, 59, 999)
+
+  range = { from: start, to: end }
+  break
+}
+case "yearly": {
+  const start = new Date(today.getFullYear(), 0, 1)
+  const end = new Date(today.getFullYear(), 11, 31)
+  end.setHours(23, 59, 59, 999)
+
+  range = { from: start, to: end }
+  break
+}
+
+      case "lifetime":
+        const startOfLifetime = new Date(0)
+        const endOfLifetime = new Date(today)
+        endOfLifetime.setHours(23, 59, 59, 999)
+        range = { from: startOfLifetime, to: endOfLifetime }
         break
       default:
         return
@@ -121,11 +158,12 @@ export default function DateFilter({ onFilterChange, selectedFilter }: DateFilte
 
   return (
     <div className="flex items-center gap-2">
-      <Calendar className="h-4 w-4 text-gray-500" />
+
       <div ref={triggerRef}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-9">
+                    <Calendar className="h-4 w-4 text-gray-500" />
               {getFilterLabel()}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
@@ -139,6 +177,15 @@ export default function DateFilter({ onFilterChange, selectedFilter }: DateFilte
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handlePresetFilter("monthly")}>
               This Month
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePresetFilter("quarterly")}>
+              This Quarter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePresetFilter("yearly")}>
+              This Year
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handlePresetFilter("lifetime")}>
+              All Time
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleCustomRangeClick}>

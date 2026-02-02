@@ -63,6 +63,7 @@
     "jspdf-autotable": "^5.0.2",
     "jszip": "^3.10.1",
     "kerberos": "latest",
+    "libphonenumber-js": "^1.12.34",
     "lucide-react": "^0.454.0",
     "mongodb": "latest",
     "mongodb-client-encryption": "latest",
