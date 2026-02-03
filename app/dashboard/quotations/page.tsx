@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 
 import {
   Table,
@@ -31,14 +32,17 @@ interface Quotation {
   clientEmail: string
   grandTotal: number
   validity: string
-  status: "pending" | "accepted"
+  status: "pending" | "accepted" | "expired" | "confirmed"
   paidAmount?: number
   balanceAmount?: number
   isActive: "active" | "inactive"
+  salesInvoiceId?: string
+  convertedAt?: Date
+  terms?: string
 }
 
 export default function QuotationsPage() {
-  const { hasPermission} = useUser()
+  const { hasPermission } = useUser()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -56,6 +60,11 @@ export default function QuotationsPage() {
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
   const [clientFilter, setClientFilter] = useState("all")
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false)
+  const [invoiceDescription, setInvoiceDescription] = useState("")
+  const [quotationToConvert, setQuotationToConvert] = useState<Quotation | null>(null)
+  const [terms, setTerms] = useState("")
+  const [availableTerms, setAvailableTerms] = useState<any[]>([])
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -66,8 +75,39 @@ export default function QuotationsPage() {
   }, [])
 
   const loadQuotations = async () => {
-    const data = await api.quotations.getAll()
-    setQuotations(data)
+    const [data, termsRes] = await Promise.all([
+      api.quotations.getAll(),
+      fetch("/api/terms")
+    ])
+    
+    const termsData = await termsRes.json()
+    if (termsData.success) {
+      setAvailableTerms(termsData.data.filter((t: any) => t.type === 'invoice' && t.isActive))
+    }
+    
+    // Check for expired quotations
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const updates: Promise<any>[] = []
+    const updatedData = data.map((q: Quotation) => {
+      if (q.status === "pending" && q.validity) {
+        const validityDate = new Date(q.validity)
+        validityDate.setHours(0, 0, 0, 0)
+        
+        if (validityDate < today) {
+           updates.push(api.quotations.update(q._id, { status: "expired" }))
+           return { ...q, status: "expired" }
+        }
+      }
+      return q
+    })
+    
+    if (updates.length > 0) {
+       Promise.allSettled(updates)
+    }
+
+    setQuotations(updatedData)
     setLoading(false)
   }
 
@@ -111,6 +151,10 @@ export default function QuotationsPage() {
         return "bg-blue-100 text-blue-800"
       case "accepted":
         return "bg-green-100 text-green-800"
+      case "confirmed":
+        return "bg-emerald-100 text-emerald-800"
+      case "expired":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -130,6 +174,51 @@ export default function QuotationsPage() {
       window.location.href = `/dashboard/receipts/new?quotationId=${selectedQuotation._id}`
     } catch (error) {
       console.error(error)
+    }
+  }
+  const handleConvertToInvoice = async () => {
+    if (!quotationToConvert) return
+    console.log("quotationToConvert",quotationToConvert)
+    try {
+      const payload = {
+        ...quotationToConvert,
+        // 🔑 new / overridden fields
+        invoiceType: "quotation",
+        description: invoiceDescription || "",
+        sourceQuotationId: quotationToConvert._id,
+        date: new Date().toISOString(),
+        status: "pending",
+        terms: terms,
+        // remove quotation-only fields
+        validity: undefined,
+      }
+
+      const res = await fetch("/api/salesInvoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await res.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create invoice")
+      }
+
+      // Update quotation status to confirmed
+      await api.quotations.update(quotationToConvert._id, { status: "confirmed" })
+
+      toast.success("Invoice created successfully")
+
+      setConvertDialogOpen(false)
+      setInvoiceDescription("")
+
+      // Redirect to invoice view/edit page
+      // window.location.href = `/dashboard/sales-invoice/${result.data._id}`
+
+    } catch (err) {
+      console.error(err)
+      toast.error("Failed to convert quotation to invoice")
     }
   }
 
@@ -153,6 +242,14 @@ export default function QuotationsPage() {
     setMaxAmountFilter("")
     setClientFilter("all")
     setSearchTerm("")
+  }
+
+  const handleTermSelect = (termId: string) => {
+    const term = availableTerms.find(t => t._id === termId)
+    if (term) {
+      const plainText = term.content.replace(/<[^>]+>/g, '')
+      setTerms(plainText)
+    }
   }
 
   if (loading) {
@@ -180,13 +277,13 @@ export default function QuotationsPage() {
         {
           (hasPermission("add_quotations")) && (
             <Link href="/dashboard/quotations/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" /> New Quotation/Agreement
-          </Button>
-        </Link>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" /> New Quotation/Agreement
+              </Button>
+            </Link>
           )
         }
-      </div> 
+      </div>
 
       {/* ---------------- FILTERS ---------------- */}
       <Card>
@@ -216,10 +313,10 @@ export default function QuotationsPage() {
               minAmountFilter ||
               maxAmountFilter ||
               clientFilter !== "all") && (
-              <Button variant="outline" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-2" /> Clear
-              </Button>
-            )}
+                <Button variant="outline" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-2" /> Clear
+                </Button>
+              )}
           </div>
 
           {/* Filter dropdown section */}
@@ -233,6 +330,8 @@ export default function QuotationsPage() {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="accepted">Accepted</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -284,6 +383,7 @@ export default function QuotationsPage() {
                   <TableHead>Validity</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>SalesInvoice</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -305,35 +405,122 @@ export default function QuotationsPage() {
                     <TableCell>
                       <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
                     </TableCell>
+                    <TableCell>{!q.salesInvoiceId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-600"
+                        onClick={() => {
+                          setQuotationToConvert(q)
+                          setTerms(q.terms || "")
+                          setConvertDialogOpen(true)
+                        }}
+                      >
+                        Convert to Invoice
+                      </Button>
+                    )}
 
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Link href={`/dashboard/quotations/${q._id}`}>
                         <Button variant="outline" size="sm">View</Button>
                       </Link>
 
+                    {hasPermission("edit_quotations") && !q.salesInvoiceId && (
+  <Link href={`/dashboard/quotations/${q._id}/edit`}>
+    <Button size="sm" variant="outline">
+      <Edit className="h-4 w-4" />
+    </Button>
+  </Link>
+)}
+
+
                       {
                         (hasPermission("edit_quotations")) && (
-                          <Link href={`/dashboard/quotations/${q._id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </Link>
+                          <Switch
+                            checked={q.isActive === "active"}
+                            onCheckedChange={(e) => handleStatusToggle(q._id, q.isActive)}
+                          />
                         )
                       }
-
-                     {
-                      (hasPermission("edit_quotations")) && (
-                         <Switch
-                        checked={q.isActive === "active"}
-                        onCheckedChange={(e) => handleStatusToggle(q._id, q.isActive)}
-                      />
-                      )
-                     }
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Convert to Sales Invoice</DialogTitle>
+                  <DialogDescription>
+                    This will create a sales invoice using the quotation details.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3 py-4">
+                  <label className="text-sm font-medium">
+                    Invoice Description (Optional)
+                  </label>
+                  <Input
+                    placeholder="Enter description for invoice"
+                    value={invoiceDescription}
+                    onChange={(e) => setInvoiceDescription(e.target.value)}
+                  />
+
+                  {quotationToConvert && (
+                    <div className="bg-gray-100 p-3 rounded text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span>Quotation:</span>
+                        <span className="font-medium">{quotationToConvert.quotationNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Client:</span>
+                        <span>{quotationToConvert.clientName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Amount:</span>
+                        <span>₹{quotationToConvert.grandTotal.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Terms & Conditions</label>
+                    <Select onValueChange={handleTermSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select terms template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTerms.map((t) => (
+                          <SelectItem key={t._id} value={t._id}>
+                            {t.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Textarea 
+                      value={terms} 
+                      onChange={(e) => setTerms(e.target.value)} 
+                      placeholder="Enter terms and conditions..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    className="bg-green-600"
+                    onClick={handleConvertToInvoice}
+                  >
+                    Create Invoice
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
           </div>
 
           {/* ---------------- PAGINATION ---------------- */}

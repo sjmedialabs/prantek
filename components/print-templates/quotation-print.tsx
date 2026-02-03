@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+
 interface QuotationPrintProps {
   quotation: {
     quotationNumber: string
@@ -6,6 +8,7 @@ interface QuotationPrintProps {
     grandTotal?: number
     total?: number
     taxTotal?: number
+    terms?: string
     note?: string
     client: {
       name: string
@@ -176,7 +179,20 @@ console.log("items array", quotation.items)
           <p className="text-sm text-gray-600">{quotation.note}</p>
         </div>
       )}
-
+      
+          {/* Terms & Conditions */}
+          {quotation.terms && (
+            <div className="mb-8">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Terms & Conditions</h3>
+              </div>
+              <div>
+                <div className="prose max-w-none text-sm text-gray-600 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold" 
+                  dangerouslySetInnerHTML={{ __html: quotation.terms }} 
+                />
+              </div>
+            </div>
+          )}
       {/* Footer */}
       <div className="border-t-2 border-gray-300 pt-4 text-center">
         <p className="text-xs text-gray-600">Thank you for your business!</p>

@@ -49,6 +49,18 @@ useEffect(() => {
       const data =await api.quotations.getById(quotationId)
       console.log("Accepted quotation View Details:::",data);
       if (data) {
+        // Check for expiry
+        if (data.status === "pending" && data.validity) {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const validityDate = new Date(data.validity)
+          validityDate.setHours(0, 0, 0, 0)
+          
+          if (validityDate < today) {
+            await api.quotations.update(data._id!, { status: "expired" })
+            data.status = "expired"
+          }
+        }
         setQuotation(data)
       } else {
         console.error("[v0] Quotation not found:", quotationId)
@@ -148,6 +160,7 @@ const quotationForPrint = {
   total: quotation.grandTotal - invoiceTaxTotal,
   taxTotal: invoiceTaxTotal,
   grandTotal: quotation.grandTotal,
+  terms: quotation.terms,
   status: quotation.status === "pending"? "Pending": "Cleared",
   acceptedDate: quotation.acceptedDate,
 };
@@ -160,6 +173,10 @@ const quotationForPrint = {
         return "bg-blue-100 text-blue-800"
       case "accepted":
         return "bg-green-100 text-green-800"
+      case "confirmed":
+        return "bg-emerald-100 text-emerald-800"
+      case "expired":
+        return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -294,36 +311,6 @@ const quotationForPrint = {
               )}
             </CardContent>
           </Card>
-
-          {/* Client Details */}
-          <Card>
-            <CardHeader>
-              {/* <CardTitle>Client Details</CardTitle> */}
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-600">Client Name</p>
-                <p className="font-semibold">{quotation.clientName}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-semibold">{quotation.clientEmail}</p>
-              </div>
-              {quotation.clientPhone && (
-                <div>
-                  <p className="text-sm text-gray-600">Phone</p>
-                  <p className="font-semibold">{quotation.clientPhone}</p>
-                </div>
-              )}
-              {quotation.clientAddress && (
-                <div>
-                  <p className="text-sm text-gray-600">Address</p>
-                  <p className="font-semibold">{quotation.clientAddress}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Items/Services */}
           <Card>
             <CardHeader>
@@ -401,6 +388,35 @@ const quotationForPrint = {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          
+          {/* Client Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quotation Created For</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-600">Client Name</p>
+                <p className="font-semibold">{quotation.clientName}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="font-semibold">{quotation.clientEmail}</p>
+              </div>
+              {quotation.clientPhone && (
+                <div>
+                  <p className="text-sm text-gray-600">Phone</p>
+                  <p className="font-semibold">{quotation.clientPhone}</p>
+                </div>
+              )}
+              {quotation.clientAddress && (
+                <div>
+                  <p className="text-sm text-gray-600">Address</p>
+                  <p className="font-semibold">{quotation.clientAddress}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {/* Amount Summary */}
           <Card>
             <CardHeader>
@@ -457,7 +473,20 @@ const quotationForPrint = {
           </Card>
         </div>
       </div>
-
+                  
+          {/* Terms & Conditions */}
+          {quotation.terms && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Terms & Conditions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose max-w-none text-sm text-gray-600 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold" 
+                  dangerouslySetInnerHTML={{ __html: quotation.terms }} 
+                />
+              </CardContent>
+            </Card>
+          )}
       {/* Accept Dialog */}
       {/* <Dialog open={acceptDialogOpen} onOpenChange={setAcceptDialogOpen}>
         <DialogContent>

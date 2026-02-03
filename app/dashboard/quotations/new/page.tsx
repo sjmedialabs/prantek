@@ -26,6 +26,10 @@ import { SearchableSelect } from "@/components/searchable-select"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import { useUser } from "@/components/auth/user-context"
 import { hasPermission } from "@/lib/jwt"
+import dynamic from "next/dynamic"
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+import "react-quill/dist/quill.snow.css"
 interface QuotationItem {
   id: string
   type: "product" | "service"
@@ -97,6 +101,7 @@ export default function NewQuotationPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0])
   const [validityDate, setValidityDate] = useState("")
   const [note, setNote] = useState("")
+  const [terms, setTerms] = useState("")
 
   const [selectedClientId, setSelectedClientId] = useState<string>("")
 
@@ -190,6 +195,18 @@ useEffect(() => {
         setMasterItems(loadedItems || [])
         setQuotationNumber("Auto-generated")
         setQuotations(loadedQuotations || [])
+
+        // Fetch default terms
+        const termsRes = await fetch("/api/terms?type=quotation")
+        if (termsRes.ok) {
+          const termsData = await termsRes.json()
+          const formattedTerms = termsData
+            .filter((t: any) => t.isActive)
+            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+            .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
+            .join("")
+          setTerms(formattedTerms)
+        }
       } catch (error) {
         console.error("Error loading data:", error)
         toast.error("Failed to load clients and items")
@@ -216,6 +233,46 @@ useEffect(() => {
       }
     }
   }, [selectedClientId, clients])
+
+  // Recalculate taxes when client (and thus state) changes
+  useEffect(() => {
+    if (selectedClientId && sellerState) {
+      const buyer = clients.find((c) => c._id === selectedClientId)
+      const buyerState = buyer?.state || ""
+
+      if (buyerState) {
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (!item.itemName) return item
+            const masterItem = masterItems.find((i) => i.name === item.itemName)
+            if (!masterItem) return item
+
+            const isSameState = sellerState.toLowerCase() === buyerState.toLowerCase()
+            const newItem = { ...item }
+
+            if (isSameState) {
+              newItem.cgst = masterItem.cgst || 0
+              newItem.sgst = masterItem.sgst || 0
+              newItem.igst = 0
+              newItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
+              newItem.taxName = "CGST + SGST"
+            } else {
+              newItem.cgst = 0
+              newItem.sgst = 0
+              newItem.igst = masterItem.igst || (masterItem.cgst || 0) + (masterItem.sgst || 0)
+              newItem.taxRate = newItem.igst
+              newItem.taxName = "IGST"
+            }
+
+            newItem.amount = newItem.price * newItem.quantity - newItem.discount
+            newItem.taxAmount = (newItem.amount * newItem.taxRate) / 100
+            newItem.total = newItem.amount + newItem.taxAmount
+            return newItem
+          })
+        )
+      }
+    }
+  }, [selectedClientId, sellerState, clients, masterItems])
 
   const addItem = () => {
     const newItem: QuotationItem = {
@@ -273,29 +330,24 @@ if (masterItem) {
   const buyer = clients.find(c => c._id === selectedClientId)
   const buyerState = buyer?.state || ""
 
-  // const gstRate =
-  //   (masterItem.cgst || 0) +
-  //   (masterItem.sgst || 0) +
-  //   (masterItem.igst || 0)
-
   // 🔹 Same state → CGST + SGST
-  // if (sellerState && buyerState && sellerState === buyerState) {
+  if (sellerState && buyerState && sellerState.toLowerCase() === buyerState.toLowerCase()) {
     updatedItem.cgst = masterItem.cgst || 0
     updatedItem.sgst = masterItem.sgst || 0
-    updatedItem.igst = masterItem.igst || 0
+    updatedItem.igst = 0
 
     updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
     updatedItem.taxName = "CGST + SGST"
-  // }
+  }
   // 🔹 Different state → IGST
-  // else {
-  //   updatedItem.cgst = 0
-  //   updatedItem.sgst = 0
-  //   updatedItem.igst = masterItem.igst || 0
+  else {
+    updatedItem.cgst = 0
+    updatedItem.sgst = 0
+    updatedItem.igst = masterItem.igst || ((masterItem.cgst || 0) + (masterItem.sgst || 0))
 
-  //   updatedItem.taxRate = (masterItem.igst || 0)
-  //   updatedItem.taxName = "IGST"
-  // }
+    updatedItem.taxRate = updatedItem.igst
+    updatedItem.taxName = "IGST"
+  }
 
 } else {
 
@@ -309,7 +361,7 @@ if (masterItem) {
             }
           }
 
-          updatedItem.amount = (updatedItem.price *updatedItem.quantity) -updatedItem.discount
+          updatedItem.amount = (updatedItem.price - updatedItem.discount)*updatedItem.quantity
           updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
           updatedItem.total = updatedItem.amount + updatedItem.taxAmount
 
@@ -381,6 +433,7 @@ if (masterItem) {
         date,
         validity: validityDate,
         note,
+        terms,
         userId: (user?.id) || "",
         clientName,
         clientEmail,
@@ -1173,6 +1226,16 @@ if (masterItem) {
                       placeholder="Add any additional notes or terms"
                       rows={3}
                     />
+                  </div>
+                  <div>
+                    <Label>Terms & Conditions</Label>
+                    <div className="mt-2 [&_.ql-editor]:min-h-[200px]">
+                      <ReactQuill
+                        theme="snow"
+                        value={terms}
+                        onChange={setTerms}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

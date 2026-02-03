@@ -300,8 +300,6 @@ export interface QuotationItem {
   taxRate?: number
 }
 
-
-
 export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
@@ -322,15 +320,15 @@ export interface Quotation extends BaseDocument {
   grandTotal: number
   paidAmount: number
   balanceAmount: number
-
-  status: "pending" | "accepted"
+  terms: string
+  status: "pending" | "accepted" | "expired" | "confirmed"
 
   acceptedDate?: string | Date
 
   isActive?: string
+    salesInvoiceId?: string
+  convertedAt?: Date
 }
-
-
 
 export interface Payment extends BaseDocument {
   recipientName: string
@@ -595,4 +593,13 @@ export interface Asset {
   // System fields
   createdAt?: string
   updatedAt?: string
+}
+export type TermType = "quotation" | "invoice"
+
+export interface Term extends BaseDocument {
+  title?: string
+  content: string
+  type: TermType
+  isActive: boolean
+  order: number
 }

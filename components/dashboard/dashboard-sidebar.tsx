@@ -224,6 +224,12 @@ const navigationItems: NavItem[] = [
         href: "/dashboard/plans",
         permission: null,
       },
+            {
+        name: "Terms & Conditions",
+        icon: Settings,
+        href: "/dashboard/settings/terms",
+        permission: null,
+      },
     ],
   },
 ];
