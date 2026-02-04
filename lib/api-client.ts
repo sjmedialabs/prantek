@@ -769,6 +769,34 @@ quotations: {
       },
     },
 
+    // Terms
+    terms: {
+      getAll: async (type?: "quotation" | "invoice") => {
+        const url = type ? `/api/terms?type=${type}` : "/api/terms"
+        const data = await fetchAPI(url)
+        return data.data || []
+      },
+      create: async (termData: any) => {
+        const data = await fetchAPI("/api/terms", {
+          method: "POST",
+          body: JSON.stringify(termData),
+        })
+        return data.data
+      },
+      update: async (termData: any) => {
+        const data = await fetchAPI("/api/terms", {
+          method: "PUT",
+          body: JSON.stringify(termData),
+        })
+        return data.data
+      },
+      delete: async (id: string) => {
+        await fetchAPI(`/api/terms?id=${id}`, {
+          method: "DELETE",
+        })
+      },
+    },
+
     taxSetting: {
   get: async () => {
     const data = await fetchAPI("/api/tax-settings")

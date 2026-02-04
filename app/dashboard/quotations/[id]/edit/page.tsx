@@ -30,6 +30,10 @@ import Link from "next/link"
 import { toast } from "@/lib/toast"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
+import dynamic from "next/dynamic"
+
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+import "react-quill/dist/quill.snow.css"
 
 export default function EditQuotationPage() {
   const router = useRouter()
@@ -42,6 +46,7 @@ export default function EditQuotationPage() {
   const [date, setDate] = useState("")
   const [validityDate, setValidityDate] = useState("")
   const [note, setNote] = useState("")
+  const [terms, setTerms] = useState("")
 
   const [selectedClientId, setSelectedClientId] = useState("")
 
@@ -107,6 +112,7 @@ export default function EditQuotationPage() {
       setDate(data.date ?? "")
       setValidityDate(data.validity ?? "")
       setNote(data.note ?? "")
+      setTerms(data.terms ?? "")
       setPaidAmount(data.paidAmount ?? 0)
       setBalanceAmount(data.balanceAmount ?? 0)
       setSelectedClientId(data.clientId ?? "")
@@ -311,6 +317,7 @@ async function handleSave() {
     date,
     validity: validityDate,
     note,
+    terms,
     clientId: selectedClientId,
     clientName,
     clientEmail,
@@ -693,6 +700,18 @@ async function handleSave() {
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                     />
+                  </div>
+
+                  {/* TERMS */}
+                  <div>
+                    <Label>Terms & Conditions</Label>
+                    <div className="mt-2 [&_.ql-editor]:min-h-[200px]">
+                      <ReactQuill
+                        theme="snow"
+                        value={terms}
+                        onChange={setTerms}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

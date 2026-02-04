@@ -1,3 +1,4 @@
+import { TermsModel } from "./models/terms.model"
 import { BaseModel } from "./models/base.model"
 import { UserModel } from "./models/user.model"
 import { counterModel } from "./models/counter.model"
@@ -32,6 +33,7 @@ export const models = {
   payments: new BaseModel<Payment>(COLLECTIONS.PAYMENTS),
   subscriptionPlans: new BaseModel<SubscriptionPlan>(COLLECTIONS.SUBSCRIPTION_PLANS),
   paymentMethods: new BaseModel<PaymentMethod>(COLLECTIONS.PAYMENT_METHODS),
+  salesCategories: new BaseModel<Category>(COLLECTIONS.SALES_CATEGORIES),
   receiptCategories: new BaseModel<Category>(COLLECTIONS.RECEIPT_CATEGORIES),
   paymentCategories: new BaseModel<Category>(COLLECTIONS.PAYMENT_CATEGORIES),
   taxSettings: new BaseModel<TaxSetting>(COLLECTIONS.TAX_SETTINGS),
@@ -42,6 +44,8 @@ export const models = {
   memberTypes: new BaseModel<MemberType>(COLLECTIONS.MEMBER_TYPES),
   roles: new BaseModel<Role>(COLLECTIONS.ROLES),
   activityLogs: new BaseModel<ActivityLog>(COLLECTIONS.ACTIVITY_LOGS),
+  terms: TermsModel,
+
 }
 
 export class MongoDBStore {
@@ -142,6 +146,8 @@ export class MongoDBStore {
       memberTypes: models.memberTypes,
       roles: models.roles,
       activityLogs: models.activityLogs,
+      terms: models.terms,
+      salesInvoice: models.salesCategories,
     }
 
     return modelMap[collection] || null
@@ -185,6 +191,7 @@ export async function generateNextNumber(collection: string, prefix: string, use
     // Map collection name to counter type
     const counterType = collection === 'receipts' ? 'receipt' : 
                        collection === 'quotations' ? 'quotation' : 
+                       collection === 'salesInvoice' ? 'salesInvoice' :
                        collection === 'payments' ? 'payment' : collection
     
     // Use the counter model to get the next globally unique sequence
@@ -212,6 +219,7 @@ export async function peekNextNumber(collection: string, prefix: string, clientN
   try {
     const counterType = collection === 'receipts' ? 'receipt' : 
                        collection === 'quotations' ? 'quotation' : 
+                       collection === 'salesInvoice' ? 'salesInvoice' :
                        collection === 'payments' ? 'payment' : collection
     
     const counter = await counterModel.getCounter(counterType)
