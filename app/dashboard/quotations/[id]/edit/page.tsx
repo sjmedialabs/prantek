@@ -31,6 +31,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import dynamic from "next/dynamic"
+import { TaxRate } from "@/lib/models/types"
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
@@ -57,6 +58,7 @@ export default function EditQuotationPage() {
 
   const [clients, setClients] = useState<any[]>([])
   const [masterItems, setMasterItems] = useState<any[]>([])
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
   const [paidAmount, setPaidAmount] = useState(0);
   const [balanceAmount, setBalanceAmount] = useState(0);
   const [activeTab, setActiveTab] = useState("client")
@@ -93,14 +95,16 @@ export default function EditQuotationPage() {
 
   /* ---------------- LOAD SUPPORTING DATA ---------------- */
   const loadSupportingData = useCallback(async () => {
-    const [loadedClients, loadedItems] = await Promise.all([
+    const [loadedClients, loadedItems, loadedTaxRates] = await Promise.all([
       api.clients.getAll(),
       api.items.getAll(),
+      api.taxRates.getAll(),
     ])
 
     // only active items + active clients
     setClients(loadedClients.filter((c: any) => c.status === "active"))
     setMasterItems(loadedItems.filter((i: any) => i.isActive))
+    setTaxRates(loadedTaxRates || [])
   }, [])
 
   /* ---------------- LOAD EXISTING QUOTATION ---------------- */
@@ -123,7 +127,7 @@ export default function EditQuotationPage() {
 
       const rawItems = (data.items || []).map((i: any, idx: number) => ({
         id: String(Date.now() + idx),
-        type: i.type,
+        type: i.type ?? "product",
         itemName: i.itemName,
         description: i.description ?? "",
         quantity: i.quantity,
@@ -143,7 +147,7 @@ export default function EditQuotationPage() {
         total: 0,
       }))
 
-      const recalculated = rawItems.map((item) => recalcItem(item))
+      const recalculated = rawItems.map((item: QuotationItem) => recalcItem(item))
       setItems(recalculated)
     } catch (err) {
       console.error("Failed to load quotation:", err)
@@ -222,6 +226,9 @@ export default function EditQuotationPage() {
             taxRate: 0,
             taxName: "",
             itemId: "",
+            amount: 0,
+            taxAmount: 0,
+            total: 0,
           }
         }
 
@@ -245,10 +252,15 @@ export default function EditQuotationPage() {
           }
         }
 
-        const taxRate = updated.cgst + updated.sgst + updated.igst
+        const taxRate = (Number(updated.cgst) || 0) + (Number(updated.sgst) || 0) + (Number(updated.igst) || 0)
         updated.taxRate = taxRate
-        updated.taxName = taxRate > 0 ? `CGST+SGST+IGST (${taxRate}%)` : ""
-
+        
+        const taxParts = []
+        if (updated.cgst) taxParts.push(`CGST (${updated.cgst}%)`)
+        if (updated.sgst) taxParts.push(`SGST (${updated.sgst}%)`)
+        if (updated.igst) taxParts.push(`IGST (${updated.igst}%)`)
+        updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
+        
         return recalcItem(updated)
       })
     )
@@ -334,6 +346,9 @@ async function handleSave() {
       sgst: i.sgst,
       igst: i.igst,
       itemId: i.itemId,
+      amount: i.amount,
+      taxAmount: i.taxAmount,
+      total: i.total,
     })),
     grandTotal: quotationTotal,
     paidAmount: paidAmount,
@@ -604,15 +619,60 @@ async function handleSave() {
                           <div className="grid grid-cols-3 gap-3">
                             <div>
                               <Label>CGST (%)</Label>
-                              <Input disabled value={item.cgst} />
+                              <Select
+                                value={String(item.cgst || 0)}
+                                onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="0" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">0%</SelectItem>
+                                  {taxRates
+                                    .filter((r) => r.type === "CGST" && r.isActive)
+                                    .map((r) => (
+                                      <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div>
                               <Label>SGST (%)</Label>
-                              <Input disabled value={item.sgst} />
+                              <Select
+                                value={String(item.sgst || 0)}
+                                onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="0" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">0%</SelectItem>
+                                  {taxRates
+                                    .filter((r) => r.type === "SGST" && r.isActive)
+                                    .map((r) => (
+                                      <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div>
                               <Label>IGST (%)</Label>
-                              <Input disabled value={item.igst} />
+                              <Select
+                                value={String(item.igst || 0)}
+                                onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="0" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">0%</SelectItem>
+                                  {taxRates
+                                    .filter((r) => r.type === "IGST" && r.isActive)
+                                    .map((r) => (
+                                      <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
 

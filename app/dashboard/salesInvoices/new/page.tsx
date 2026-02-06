@@ -9,14 +9,45 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Trash2, Plus } from "lucide-react"
+import { ArrowLeft, Trash2, Plus, Minus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
-import { Client, Item, Quotation } from "@/lib/models/types"
+import { Client, Item, Quotation, TaxRate } from "@/lib/models/types"
 import { Textarea } from "@/components/ui/textarea"
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
+import { OwnSearchableSelect } from "@/components/searchableSelect"
 
+interface QuotationItem {
+  id: string
+  type: "product" | "service"
+  itemName: string
+  description: string
+  quantity: number
+  price: number
+  discount: number
+  amount: number
+  taxName: string
+  taxRate: number
+  taxAmount: number
+  total: number
+  cgst: number,
+  sgst: number,
+  igst: number,
+  itemId: string
+}
+interface MasterItem {
+  id: string
+  type: "product" | "service"
+  itemName: string
+  description: string
+  price: number
+  taxName: string
+  taxRate: number
+  cgst?: number
+  sgst?: number
+  igst?: number
+}
 export default function NewSalesInvoicePage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -26,29 +57,77 @@ export default function NewSalesInvoicePage() {
   const [activeTab, setActiveTab] = useState("quotation")
   const [loading, setLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [selectedBankAccount, setSelectedBankAccount] = useState<any>(null)
 
   // Data
   const [clients, setClients] = useState<Client[]>([])
-  const [items, setItems] = useState<Item[]>([])
+  const [items, setItems] = useState<QuotationItem[]>([
+    {
+      id: "1",
+      type: "product",
+      itemName: "",
+      description: "",
+      quantity: 1,
+      price: 0,
+      discount: 0,
+      amount: 0,
+      taxName: "",
+      taxRate: 0,
+      cgst: 0,
+      sgst: 0,
+      igst: 0,
+      itemId: "",
+      taxAmount: 0,
+      total: 0,
+    },
+  ])
+  const [bankAccounts, setBankAccounts] = useState<any>([]);
+  const [sellerState, setSellerState] = useState("")
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [availableTerms, setAvailableTerms] = useState<any[]>([])
-
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+  const [masterItems, setMasterItems] = useState<MasterItem[]>([])
   // Scenario 1: From Quotation
   const [selectedQuotationId, setSelectedQuotationId] = useState("")
   const [quotationDetails, setQuotationDetails] = useState<Quotation | null>(null)
   const [terms, setTerms] = useState("")
-
+  const [invoiceDescription, setInvoiceDescription] = useState("")
+  const [companyName, setCompanyName] = useState("")
   // Scenario 2: Direct Invoice
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedClientDetails, setSelectedClientDetails] = useState<Client | null>(null)
-  const [itemToAdd, setItemToAdd] = useState<string>("")
-  const [invoiceItems, setInvoiceItems] = useState<Array<{
+  const [itemToAdd, setItemToAdd] = useState<Array<{
     itemId: string
-    name: string
+    itemName: string
     quantity: number
     price: number
     discount: number
+    type: string
+    taxName: string
+    cgst: number
+    sgst: number
+    igst: number
     taxRate: number
+    taxAmount: number
+    amount: number
+    description?: string
+    total: number
+  }>>([])
+  const [invoiceItems, setInvoiceItems] = useState<Array<{
+    itemId: string
+    itemName: string
+    quantity: number
+    price: number
+    discount: number
+    type: string
+    taxName: string
+    cgst: number
+    sgst: number
+    igst: number
+    taxRate: number
+    taxAmount: number
+    amount: number
+    description?: string
     total: number
   }>>([])
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0])
@@ -72,27 +151,37 @@ export default function NewSalesInvoicePage() {
 
   const loadData = async () => {
     try {
-      const [clientsData, itemsData, quotationsData] = await Promise.all([
+      const [clientsData, itemsData, quotationsData, taxRatesData, bankAccountsData, companyData] = await Promise.all([
         api.clients.getAll(),
         api.items.getAll(),
         api.quotations.getAll(),
+        api.taxRates.getAll(),
+        api.bankAccounts.getAll(),
+        fetch("/api/company").then((res) => res.json()),
       ])
 
       setClients(clientsData.filter((c: any) => c.status === "active"))
-      setItems(itemsData.filter((i: any) => i.isActive))
-      setQuotations(quotationsData.filter((q: any) => q.isActive === "active"))
+      setMasterItems(itemsData.filter((i: any) => i.isActive))
+      setQuotations(quotationsData.filter((q: any) => q.isActive === "active" && q.status !== "confirmed"))
+      setTaxRates(taxRatesData || [])
+      setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
+      if (companyData?.company) {
+        setCompanyName(companyData.company.companyName || companyData.company.name || "")
+        setSellerState(companyData.company.state || "")
+      }
 
       // Fetch default terms
-           const termsRes = await fetch("/api/terms?type=invoice")
-        if (termsRes.ok) {
-          const termsData = await termsRes.json()
-          const formattedTerms = termsData
-            .filter((t: any) => t.isActive)
-            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-            .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
-            .join("")
-          setTerms(formattedTerms)
-        }
+      const termsRes = await fetch("/api/terms?type=invoice")
+      if (termsRes) {
+        const termsData = await termsRes.json()
+        const formattedTerms = termsData
+          .filter((t: any) => t.isActive)
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
+          .join("")
+        setTerms(formattedTerms)
+      }
+
     } catch (error) {
       console.error("Error loading data:", error)
       toast({ title: "Error", description: "Failed to load initial data", variant: "destructive" })
@@ -104,7 +193,7 @@ export default function NewSalesInvoicePage() {
       setLoading(true)
       const res = await fetch(`/api/salesInvoice/${id}`)
       const result = await res.json()
-      
+
       if (result.success) {
         const invoice = result.data
         setIsEditing(true)
@@ -117,11 +206,19 @@ export default function NewSalesInvoicePage() {
         setTerms(invoice.terms || "")
         setInvoiceItems(invoice.items.map((item: any) => ({
           itemId: item.itemId || item._id, // Handle potential difference in ID field
-          name: item.name,
+          itemName: item.itemName,
+          type: item.type,
+          description: item.description,
           quantity: item.quantity,
           price: item.price,
           discount: item.discount || 0,
           taxRate: item.taxRate,
+          taxName: item.taxName,
+          taxAmount: item.taxAmount,
+          amount: item.amount,
+          cgst: item.cgst || 0,
+          sgst: item.sgst || 0,
+          igst: item.igst || 0,
           total: item.total
         })))
       }
@@ -151,57 +248,166 @@ export default function NewSalesInvoicePage() {
   //     setTerms(term.content) // ✅ keep HTML
   //   }
   // }
+  // Recalculate taxes when client (and thus state) changes
+  useEffect(() => {
+    if (selectedClientId && sellerState) {
+      const buyer = clients.find((c) => c._id === selectedClientId)
+      const buyerState = buyer?.state || ""
 
+      if (buyerState) {
+        setItems((prevItems) =>
+          prevItems.map((item) => {
+            if (!item.itemName) return item
+            const masterItem = masterItems.find((i) => i.name === item.itemName)
+            if (!masterItem) return item
+
+            const isSameState = sellerState.toLowerCase() === buyerState.toLowerCase()
+            const newItem = { ...item }
+
+            if (isSameState) {
+              newItem.cgst = masterItem.cgst || 0
+              newItem.sgst = masterItem.sgst || 0
+              newItem.igst = 0
+              newItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
+              newItem.taxName = "CGST + SGST"
+            } else {
+              newItem.cgst = 0
+              newItem.sgst = 0
+              newItem.igst = masterItem.igst || (masterItem.cgst || 0) + (masterItem.sgst || 0)
+              newItem.taxRate = newItem.igst
+              newItem.taxName = "IGST"
+            }
+
+            newItem.amount = (newItem.price - newItem.discount) * newItem.quantity
+            newItem.taxAmount = (newItem.amount * newItem.taxRate) / 100
+            newItem.total = newItem.amount + newItem.taxAmount
+            return newItem
+          })
+        )
+      }
+    }
+  }, [selectedClientId, sellerState, clients, masterItems])
 
   // Handle Item Addition for Direct Invoice
   const handleAddItem = () => {
-    if (!itemToAdd) return
-    const item = items.find(i => i._id === itemToAdd)
-    if (!item) return
-
-    const newItem = {
-      itemId: item._id!,
-      name: item.name,
+    const newItem: QuotationItem = {
+      id: Date.now().toString(),
+      type: "product",
+      itemId: "",
+      itemName: "",
+      description: "",
       quantity: 1,
-      price: item.price,
+      price: 0,
       discount: 0,
-      taxRate: (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0),
-      total: item.price * (1 + ((item.cgst || 0) + (item.sgst || 0) + (item.igst || 0)) / 100)
+      amount: 0,
+      taxName: "",
+      taxRate: 0,
+      cgst: 0,
+      sgst: 0,
+      igst: 0,
+      taxAmount: 0,
+      total: 0,
     }
-    setInvoiceItems([...invoiceItems, newItem])
-    setItemToAdd("") // Reset selector
+    setItems([...items, newItem])
   }
 
-  const handleUpdateItem = (index: number, field: string, value: number) => {
-    const updated = [...invoiceItems]
-    const item = updated[index]
+  const handleUpdateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
+    console.log("Selected Item Id is:::", id)
+    setItems(
+      items.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value }
 
-    if (field === 'quantity') item.quantity = value || 0
-    if (field === 'price') item.price = value || 0
-    if (field === 'discount') item.discount = value || 0
+          if (field === "type") {
+            updatedItem.itemName = ""
+            updatedItem.description = ""
+            updatedItem.price = 0
+            updatedItem.taxName = ""
+            updatedItem.taxRate = 0
+          }
 
-    // Recalculate total
-    const amount = item.quantity * item.price
-    const discountedAmount = amount - item.discount
-    const tax = discountedAmount * (item.taxRate / 100)
-    item.total = discountedAmount + tax
+          if (field === "itemName") {
+            const masterItem = masterItems.find((i) => i.name === value)
 
-    setInvoiceItems(updated)
+            if (masterItem) {
+              updatedItem.description = masterItem.description
+              updatedItem.price = masterItem.price
+              updatedItem.itemId = masterItem._id;
+
+              if (masterItem) {
+
+                // 🔹 Fetch seller & buyer states
+                const buyer = clients.find(c => c._id === selectedClientId)
+                const buyerState = buyer?.state || ""
+
+                // 🔹 Same state → CGST + SGST
+                if (sellerState && buyerState && sellerState.toLowerCase() === buyerState.toLowerCase()) {
+                  updatedItem.cgst = masterItem.cgst || 0
+                  updatedItem.sgst = masterItem.sgst || 0
+                  updatedItem.igst = 0
+
+                  updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
+                  updatedItem.taxName = "CGST + SGST"
+                }
+                // 🔹 Different state → IGST
+                else {
+                  updatedItem.cgst = 0
+                  updatedItem.sgst = 0
+                  updatedItem.igst = masterItem.igst || ((masterItem.cgst || 0) + (masterItem.sgst || 0))
+
+                  updatedItem.taxRate = updatedItem.igst
+                  updatedItem.taxName = "IGST"
+                }
+
+              } else {
+
+                updatedItem.cgst = 0
+                updatedItem.sgst = 0
+                updatedItem.igst = 0
+                updatedItem.taxRate = 0
+                updatedItem.taxName = ""
+              }
+
+            }
+          }
+
+          if (field === "cgst" || field === "sgst" || field === "igst") {
+            updatedItem.taxRate = (Number(updatedItem.cgst) || 0) + (Number(updatedItem.sgst) || 0) + (Number(updatedItem.igst) || 0)
+
+            const taxParts = []
+            if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
+            if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
+            if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
+            updatedItem.taxName = taxParts.join(" + ")
+          }
+
+          updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
+          updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
+          updatedItem.total = updatedItem.amount + updatedItem.taxAmount
+
+
+          return updatedItem
+        }
+        return item
+      }),
+    )
   }
 
-  const handleRemoveItem = (index: number) => {
-    setInvoiceItems(invoiceItems.filter((_, i) => i !== index))
+  const handleRemoveItem = (id: string) => {
+    if (items.length > 1) {
+      setItems(items.filter((item) => item.id !== id))
+    }
   }
 
   const calculateTotals = (itemsList: any[]) => {
-    const subtotal = itemsList.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const totalDiscount = itemsList.reduce((sum, item) => sum + (item.discount || 0), 0);
+    const subtotal = itemsList.reduce((sum, item) => sum + (item.total), 0);
+    const totalDiscount = itemsList.reduce((sum, item) => sum + ((item.discount * item.quantity) || 0), 0);
     const taxAmount = itemsList.reduce((sum, item) => {
-      const itemAmount = item.quantity * item.price;
-      const discountedAmount = itemAmount - (item.discount || 0);
-      return sum + (discountedAmount * item.taxRate / 100);
+      const taxRate = (item.cgst + item.sgst + item.igst) || 0;
+      const taxAmount = (item.price - item.discount || 0) * (taxRate / 100);
+      return sum + (item.taxAmount || taxAmount || 0);
     }, 0);
-    const total = subtotal - totalDiscount + taxAmount;
+    const total = subtotal + taxAmount;
     return { subtotal, totalDiscount, taxAmount, total };
   }
 
@@ -210,27 +416,38 @@ export default function NewSalesInvoicePage() {
     if (!quotationDetails) return
 
     setLoading(true)
-
+    console.log("quotationDetails", quotationDetails)
     try {
       const payload = {
-        ...quotationDetails,
+        // 👇 SALES INVOICE fields ONLY
 
-        // 🔑 override / add invoice-only fields
         invoiceType: "quotation",
-        sourceQuotationId: quotationDetails._id,
-        quotationId: quotationDetails._id,
+        quotationNumber: quotationDetails.quotationNumber,
+        clientId: quotationDetails.clientId,
+        clientName: quotationDetails.clientName,
+        clientAddress: quotationDetails.clientAddress,
+        clientPhone: quotationDetails.clientContact, // mapping
+        clientEmail: quotationDetails.clientEmail,
+
+        items: quotationDetails.items,
+        grandTotal: quotationDetails.grandTotal,
+
+        paidAmount: 0,
+        balanceAmount: quotationDetails.grandTotal,
+
         date: new Date().toISOString(),
         status: "pending",
-        terms,
 
-        // ❌ remove quotation-only fields
-        validity: undefined,
-        isActive: undefined,
-        updatedAt: undefined,
-        createdAt: undefined,
-        __v: undefined,
+        terms: terms,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+
+        description: invoiceDescription,
+        quotationId: quotationDetails._id,
+        isActive: "active",
+        createdBy: companyName,
+        bankDetails: selectedBankAccount,
       }
-
+      console.log("payload", payload)
       const res = await fetch("/api/salesInvoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -246,13 +463,16 @@ export default function NewSalesInvoicePage() {
       // Optional but recommended
       await api.quotations.update(quotationDetails._id!, {
         status: "confirmed",
+        salesInvoiceId: result.data._id.toString(),
+        convertedAt: new Date(),
       })
 
       toast({
         title: "Success",
         description: "Invoice created successfully",
       })
-
+      console.log(result)
+      setInvoiceDescription("")
       router.push("/dashboard/salesInvoices")
     } catch (error) {
       console.error(error)
@@ -297,6 +517,7 @@ export default function NewSalesInvoicePage() {
         date: new Date(invoiceDate).toISOString(),
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         terms,
+        createdBy: companyName,
       }
 
       const res = await fetch(`/api/salesInvoice/${editId}`, {
@@ -317,10 +538,10 @@ export default function NewSalesInvoicePage() {
       setLoading(false)
     }
   }
-
+  const quotationTotal = items.reduce((sum, item) => sum + item.total, 0)
   // Create Direct Invoice
   const handleCreateDirect = async () => {
-    if (!selectedClientId || invoiceItems.length === 0) {
+    if (!selectedClientId || items.length === 0) {
       toast({
         title: "Error",
         description: "Please select client and add items",
@@ -344,29 +565,39 @@ export default function NewSalesInvoicePage() {
 
         clientId: selectedClientId,
         clientName: client?.name || "",
-        clientAddress: client?.address || "",
+        clientAddress: `${client?.address}, ${client?.city}, ${client?.state}, ${client?.pincode}` || "",
         clientPhone: client?.phone || "",
         clientEmail: client?.email || "",
 
-        items: invoiceItems.map(item => ({
-          itemId: item.itemId,
-          name: item.name,
+        items: items.map((item) => ({
+          type: item.type,
+          itemName: item.itemName,
+          description: item.description,
           quantity: item.quantity,
           price: item.price,
           discount: item.discount,
+          cgst: item.cgst,
+          sgst: item.sgst,
+          igst: item.igst,
+          itemId: item.itemId,
+          taxName: item.taxName,
           taxRate: item.taxRate,
           total: item.total,
+          amount: item.amount || (item.price - item.discount) * item.quantity,
+          taxAmount: item.taxAmount || (item.amount * item.taxRate) / 100 || ((item.price - item.discount) * item.taxRate / 100) * item.quantity,
         })),
 
-        subtotal: directTotals.subtotal,
-        taxAmount: directTotals.taxAmount,
-        grandTotal: directTotals.total,
-        balanceAmount: directTotals.total,
-
+        grandTotal: quotationTotal,
+        paidAmount: 0,
+        balanceAmount: quotationTotal,
+        description: invoiceDescription,
         date: new Date(invoiceDate).toISOString(),
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        status: "pending",
+        status: "Not Cleared",
         terms,
+        createdBy: companyName,
+        isActive: "active",
+        bankDetails: selectedBankAccount,
       }
 
       const res = await fetch("/api/salesInvoice", {
@@ -385,7 +616,7 @@ export default function NewSalesInvoicePage() {
         title: "Success",
         description: "Invoice created successfully",
       })
-
+      setInvoiceDescription("")
       router.push("/dashboard/salesInvoices")
     } catch (error) {
       console.error(error)
@@ -425,22 +656,42 @@ export default function NewSalesInvoicePage() {
             {/* FROM QUOTATION TAB */}
             <TabsContent value="quotation" className="space-y-4 mt-4">
               <div className="space-y-4">
-                <div>
-                  <Label>Select Quotation</Label>
-                  <Select value={selectedQuotationId} onValueChange={handleQuotationSelect}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a quotation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {quotations.map((q) => (
-                        <SelectItem key={q._id} value={q._id!}>
-                          {q.quotationNumber} - {q.clientName} - ₹{q.grandTotal}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-row justify-between">
+                  <div>
+                    <Label>Select Quotation</Label>
+                    <Select value={selectedQuotationId} onValueChange={handleQuotationSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a quotation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {quotations.length > 0 ? (
+                          quotations.map((q) => (
+                            <SelectItem key={q._id} value={q._id!}>
+                              {q.quotationNumber} - {q.clientName} - ₹{q.grandTotal}
+                            </SelectItem>
+                          ))) : (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            No pending quotation found
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-row gap-4">
+                    <div>
+                      <Label>Invoice Date</Label>
+                      <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Due Date</Label>
+                      <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Created By</Label>
+                      <Input value={companyName} readOnly className="bg-gray-100" />
+                    </div>
+                  </div>
                 </div>
-
                 {quotationDetails && (
                   <div className="border rounded-lg p-4 space-y-2 bg-gray-50">
                     <h3 className="font-semibold">Quotation Details</h3>
@@ -452,7 +703,65 @@ export default function NewSalesInvoicePage() {
                     </div>
                   </div>
                 )}
+                <div>
+                  <Label>
+                    Bank Account <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={selectedBankAccount?._id}
+                    onValueChange={(id) => {
+                      const bank = bankAccounts.find((b: any) => b._id === id)
+                      setSelectedBankAccount(bank)
+                    }}
+                  >
 
+                    <SelectTrigger>
+                      <SelectValue placeholder="Slect Bank Accounts" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map((method: any) => (
+                        <SelectItem key={method._id} value={method._id}>
+                          {method.bankName}
+                        </SelectItem>
+
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedBankAccount && (
+                    <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
+                      <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
+                      <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
+                      <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
+                      <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
+                      <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+
+                      {selectedBankAccount.upiId && (
+                        <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>
+                      )}
+                      {selectedBankAccount?.upiScanner && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                          <img
+                            src={selectedBankAccount.upiScanner}
+                            alt="UPI Scanner"
+                            className="h-40 w-40 object-contain border rounded"
+                          />
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium">
+                    Invoice Description (Optional)
+                  </label>
+                  <Input
+                    placeholder="Enter description for invoice"
+                    value={invoiceDescription}
+                    onChange={(e) => setInvoiceDescription(e.target.value)}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Terms & Conditions</Label>
                   {/* <Select onValueChange={handleTermSelect}>
@@ -508,14 +817,18 @@ export default function NewSalesInvoicePage() {
                     </Select>
                   </div>
                   <div className="flex flex-row gap-4">
-                  <div>
-                    <Label>Invoice Date</Label>
-                    <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-                  </div>
-                                    <div>
-                    <Label>Due Date</Label>
-                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                  </div>
+                    <div>
+                      <Label>Invoice Date</Label>
+                      <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Due Date</Label>
+                      <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Created By</Label>
+                      <Input value={companyName} readOnly className="bg-gray-100" />
+                    </div>
                   </div>
                 </div>
 
@@ -528,39 +841,238 @@ export default function NewSalesInvoicePage() {
                       <p><strong>Name:</strong> {selectedClientDetails.name}</p>
                       <p><strong>Email:</strong> {selectedClientDetails.email}</p>
                       <p><strong>Phone:</strong> {selectedClientDetails.phone}</p>
-                      <p><strong>Address:</strong> {selectedClientDetails.address}</p>
+                      <p><strong>Address:</strong> {`${selectedClientDetails.address}, ${selectedClientDetails.city}, ${selectedClientDetails.state}, ${selectedClientDetails.pincode}`}</p>
                     </CardContent>
                   </Card>
                 )}
 
-                <div>
-                  <Label>Add Items *</Label>
-                  <div className="flex gap-2">
-                    <Select value={itemToAdd} onValueChange={setItemToAdd}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select item to add" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {items.map((item) => (
-                          <SelectItem key={item._id} value={item._id!}>
-                            {item.name} - ₹{item.price}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button onClick={handleAddItem} variant="outline" size="icon">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Items/Services</CardTitle>
+                      <Button onClick={handleAddItem} size="sm" variant="outline">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {items.map((item, index) => (
+                        <div key={item.id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-medium">Item {index + 1}</h4>
+                            {items.length > 1 && (
+                              <Button
+                                onClick={() => handleRemoveItem(item.id)}
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="space-y-3">
+                            <div>
+                              <Label required>Type</Label>
+                              <Select
+                                value={item.type}
+                                onValueChange={(value: "product" | "service") => handleUpdateItem(item.id, "type", value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="product">Product</SelectItem>
+                                  <SelectItem value="service">Service</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                {invoiceItems.length > 0 && (
+                            <div>
+                              <Label required>Item Name</Label>
+                              <OwnSearchableSelect
+                                options={masterItems
+                                  .filter((masterItem) => (masterItem.type === item.type && masterItem.isActive === true))
+                                  .map((masterItem) => ({
+                                    value: masterItem.name,
+                                    label: masterItem.name,
+                                  }))}
+                                value={item.itemName}
+                                onValueChange={(value) => handleUpdateItem(item.id, "itemName", value)}
+                                placeholder="Search and select an item..."
+                                searchPlaceholder="Type to search items..."
+                                emptyText={`No ${item.type === "product" ? "products" : "services"} found.`}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Showing {item.type === "product" ? "products" : "services"} only
+                              </p>
+                            </div>
+                            <div>
+                              <Label>Description</Label>
+                              <Textarea
+                                value={item.description}
+                                onChange={(e) => handleUpdateItem(item.id, "description", e.target.value)}
+                                placeholder="Item description"
+                                rows={2}
+                                className="bg-white"
+                              />
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {item.type === "product" && (
+                                <div>
+                                  <Label required>Quantity</Label>
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => handleUpdateItem(item.id, "quantity", Number.parseInt(e.target.value) || 0)}
+                                    min="1"
+                                    className="bg-white"
+                                  />
+                                </div>
+                              )}
+                              <div>
+                                <Label required>Price</Label>
+                                <Input
+                                  type="number"
+                                  value={item.price}
+                                  onChange={(e) => handleUpdateItem(item.id, "price", Number.parseFloat(e.target.value) || 0)}
+                                  min="0"
+                                  step="0.01"
+                                  className="bg-white"
+                                />
+                              </div>
+                              <div>
+                                <Label>Discount</Label>
+                                <Input
+                                  type="number"
+                                  value={item.discount}
+                                  onChange={(e) =>
+                                    handleUpdateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
+                                  }
+                                  min="0"
+                                  step="1"
+                                  placeholder="0"
+                                  className="bg-white"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <Label>CGST (%)</Label>
+                                <Select
+                                  value={String(item.cgst || 0)}
+                                  onValueChange={(v) => handleUpdateItem(item.id, "cgst", Number(v))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select CGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* <SelectItem value="0">0%</SelectItem> */}
+                                    {taxRates
+                                      .filter((r) => r.type === "CGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>SGST (%)</Label>
+                                <Select
+                                  value={String(item.sgst || 0)}
+                                  onValueChange={(v) => handleUpdateItem(item.id, "sgst", Number(v))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select SGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* <SelectItem value="0">0%</SelectItem> */}
+                                    {taxRates
+                                      .filter((r) => r.type === "SGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>IGST (%)</Label>
+                                <Select
+                                  value={String(item.igst || 0)}
+                                  onValueChange={(v) => handleUpdateItem(item.id, "igst", Number(v))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select IGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* <SelectItem value="0">0%</SelectItem> */}
+                                    {taxRates
+                                      .filter((r) => r.type === "IGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+
+                            <div className="pt-3 border-t space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Amount:</span>
+                                <span className="font-medium"> ₹{item.amount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Tax Amount:</span>
+                                <span className="font-medium">₹{item.taxAmount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between font-semibold">
+                                <span>Total:</span>
+                                <span className="text-purple-600">₹{item.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+                <div>
+                  <Card className="sticky top-6">
+                    <CardHeader>
+                      <CardTitle>Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {items.map(
+                        (item, index) =>
+                          item.itemName && (
+                            <div key={item.id} className="pb-2 border-b">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Item {index + 1}:</span>
+                                <span className="font-medium">₹{item.total.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          )
+                      )}
+                      <div className="pt-2 border-t-2">
+                        <div className="flex justify-between font-bold text-lg">
+                          <span>Grand Total:</span>
+                          <span className="text-purple-600">₹{quotationTotal.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                {/* {invoiceItems.length > 0 && (
                   <div className="border rounded-lg p-4 space-y-4">
                     <h3 className="font-semibold">Items</h3>
                     {invoiceItems.map((item, index) => (
                       <div key={index} className="flex gap-2 items-start border-b pb-4 last:border-b-0 last:pb-0">
                         <div className="flex-1 space-y-2">
-                          <div className="font-medium">{item.name}</div>
+                          <div className="font-medium">{item.itemName}</div>
                           <div className="flex gap-2 items-end">
                             <div>
                               <Label className="text-xs font-normal">Quantity</Label>
@@ -568,8 +1080,8 @@ export default function NewSalesInvoicePage() {
                                 type="number"
                                 placeholder="Qty"
                                 value={item.quantity}
-                                onChange={(e) => handleUpdateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                                className="w-20 h-9"
+                                onChange={(e) => handlehandleUpdateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                                className="w-20 h-12 rounded-lg"
                               />
                             </div>
                             <div>
@@ -579,7 +1091,7 @@ export default function NewSalesInvoicePage() {
                                 placeholder="Price"
                                 value={item.price}
                                 onChange={(e) => handleUpdateItem(index, 'price', parseFloat(e.target.value) || 0)}
-                                className="w-24 h-9"
+                                className="w-24 h-12 rounded-lg"
                               />
                             </div>
                             <div>
@@ -589,11 +1101,67 @@ export default function NewSalesInvoicePage() {
                                 placeholder="Discount"
                                 value={item.discount}
                                 onChange={(e) => handleUpdateItem(index, 'discount', parseFloat(e.target.value) || 0)}
-                                className="w-24 h-9"
+                                className="w-24 h-12 rounded-lg"
                               />
                             </div>
-                            <div className="text-sm flex items-center text-gray-500 pb-2">
-                              Tax: {item.taxRate}%
+                            <div className="flex gap-2">
+                              <div>
+                                <Label className="text-xs font-normal">CGST</Label>
+                                <Select
+                                  value={String(item.cgst || 0)}
+                                  onValueChange={(v) => handleUpdateItem(index, 'cgst', Number(v))}
+                                >
+                                  <SelectTrigger className="w-20 h-9">
+                                    <SelectValue placeholder="Select CGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                 
+                                    {taxRates
+                                      .filter((r) => r.type === "CGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-normal">SGST</Label>
+                                <Select
+                                  value={String(item.sgst || 0)}
+                                  onValueChange={(v) => handleUpdateItem(index, 'sgst', Number(v))}
+                                >
+                                  <SelectTrigger className="w-20 h-9">
+                                    <SelectValue placeholder="Select SGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                
+                                    {taxRates
+                                      .filter((r) => r.type === "SGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-normal">IGST</Label>
+                                <Select
+                                  value={String(item.igst || 0)}
+                                  onValueChange={(v) => handleUpdateItem(index, 'igst', Number(v))}
+                                >
+                                  <SelectTrigger className="w-20 h-9">
+                                    <SelectValue placeholder="Select IGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                          
+                                    {taxRates
+                                      .filter((r) => r.type === "IGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -630,8 +1198,66 @@ export default function NewSalesInvoicePage() {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
+                                <div>
+                  <Label>
+                    Bank Account <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={selectedBankAccount?._id}
+                    onValueChange={(id) => {
+                      const bank = bankAccounts.find((b: any) => b._id === id)
+                      setSelectedBankAccount(bank)
+                    }}
+                  >
 
+                    <SelectTrigger>
+                      <SelectValue placeholder="Slect Bank Accounts" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map((method: any) => (
+                        <SelectItem key={method._id} value={method._id}>
+                          {method.bankName}
+                        </SelectItem>
+
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedBankAccount && (
+                    <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
+                      <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
+                      <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
+                      <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
+                      <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
+                      <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+
+                      {selectedBankAccount.upiId && (
+                        <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>
+                      )}
+                      {selectedBankAccount?.upiScanner && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                          <img
+                            src={selectedBankAccount.upiScanner}
+                            alt="UPI Scanner"
+                            className="h-40 w-40 object-contain border rounded"
+                          />
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium">
+                    Invoice Description (Optional)
+                  </label>
+                  <Input
+                    placeholder="Enter description for invoice"
+                    value={invoiceDescription}
+                    onChange={(e) => setInvoiceDescription(e.target.value)}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Terms & Conditions</Label>
                   {/* <Select onValueChange={handleTermSelect}>
@@ -663,7 +1289,7 @@ export default function NewSalesInvoicePage() {
 
                 <Button
                   onClick={isEditing ? handleUpdateInvoice : handleCreateDirect}
-                  disabled={loading || !selectedClientId || invoiceItems.length === 0}
+                  disabled={loading || !selectedClientId || items.length === 0}
                   className="w-full"
                 >
                   {loading ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Invoice" : "Create Invoice")}

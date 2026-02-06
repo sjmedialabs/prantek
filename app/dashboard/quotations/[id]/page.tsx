@@ -93,23 +93,11 @@ useEffect(() => {
     )
   }
 // Calculate total tax
-const invoiceTaxTotal = quotation.items.reduce((acc, item) => {
-  const net = item.quantity * item.price * (1 - (item.discount || 0) / 100);
+const invoiceTaxTotal = quotation.items.reduce(
+  (sum, item) => sum + (Number(item.taxAmount) || 0),
+  0
+)
 
-  let gstRate = 0;
-
-  // Same state → CGST + SGST
-  const cgst = item.cgst || 0, sgst = item.sgst || 0, igst = item.igst || 0;
-
-  if (sellerState === buyerState) {
- gstRate = cgst + sgst;
-  } else {
-    gstRate = igst;
-  }
-
-  const taxAmount = net * (cgst + sgst + igst) / 100;
-  return acc + taxAmount;
-}, 0);
 
 
 // Build print template object
@@ -131,15 +119,24 @@ const quotationForPrint = {
     const cgst = item.cgst || 0, sgst = item.sgst || 0, igst = item.igst || 0;
     let taxName = "";
 
-    if (sellerState === buyerState) {
+    if (cgst > 0 && sgst > 0 && igst >0) {
+      gstRate = cgst + sgst + igst;
+      taxName = "CGST + SGST + IGST";
+    } else if (cgst > 0 && sgst > 0) {
       gstRate = cgst + sgst;
       taxName = "CGST + SGST";
-    } else {
+    } else if (sgst > 0) {
+      gstRate = sgst;
+      taxName = "SGST";
+    } else if (cgst > 0) {
+      gstRate = sgst;
+      taxName = "SGST";
+    } else if (igst > 0) {
       gstRate = igst;
       taxName = "IGST";
     }
 
-    const taxAmount = net * (cgst + sgst + igst) / 100;
+    const taxAmount = item.taxAmount || 0;
 
     return {
       name: item.itemName,
@@ -153,7 +150,9 @@ const quotationForPrint = {
       igst,
       gstRate,
       taxAmount,
-      itemTotal: net + taxAmount,
+      amount: item.amount,
+      taxRate: item.taxRate,
+      itemTotal: item.total,
       taxName,
     };
   }),
@@ -328,11 +327,8 @@ const quotationForPrint = {
                           {item.type}
                         </Badge>
                       </div>
-                      <p className="text-purple-600 font-semibold">
-                        ₹{(
-                          (item.quantity * item.price) * (1 - item.discount / 100) * 
-                          (1 + ((item.cgst + item.sgst + item.igst) / 100))
-                        ).toLocaleString()}
+                      <p className="text-purple-600 font-semibold" title="Total Ammount including everything for Single Type of items">
+                        ₹{item?.total?.toLocaleString() || 0}
                       </p>
 
                     </div>
@@ -349,32 +345,32 @@ const quotationForPrint = {
                       <div>
                         <p className="text-gray-600">Discount</p>
                         <p className="font-semibold">
-                          ₹{((item.quantity * item.price * item.discount) / 100 || 0).toLocaleString()}
+                          ₹{(item.discount).toLocaleString()}
                         </p>
 
                       </div>
                       <div>
-                        <p className="text-gray-600">Amount</p>
-                       <p className="font-semibold">₹{((item.quantity * item.price) - ((item.quantity * item.price * item.discount) / 100) || 0).toLocaleString()}</p>
+                        <p className="text-gray-600" title="Total Amount without tax.">Amount</p>
+                       <p className="font-semibold">₹{(item.amount || 0).toLocaleString()}</p>
                       </div>
                       <div>
                         <p className="text-gray-600">CGST ({item.cgst}%)</p>
                         <p className="font-semibold">
-                          ₹{(((item.quantity * item.price) * (1 - item.discount / 100) * item.cgst) / 100).toLocaleString()}
+                          ₹{((((item.price - item.discount)* item.cgst) / 100)*item.quantity).toLocaleString()}
                         </p>
 
                       </div>
                       <div>
                         <p className="text-gray-600">SGST ({item.sgst}%)</p>
                         <p className="font-semibold">
-                          ₹{(((item.quantity * item.price) * (1 - item.discount / 100) * item.sgst) / 100).toLocaleString()}
+                          ₹{((((item.price - item.discount)* item.sgst) / 100)*item.quantity).toLocaleString()}
                         </p>
 
                       </div>
                       <div>
                         <p className="text-gray-600">IGST ({item.igst}%)</p>
                         <p className="font-semibold">
-                          ₹{(((item.quantity * item.price) * (1 - item.discount / 100) * item.igst) / 100).toLocaleString()}
+                          ₹{((((item.price - item.discount)* item.igst) / 100)*item.quantity).toLocaleString()}
                         </p>
 
                       </div>

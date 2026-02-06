@@ -11,35 +11,36 @@ import { useToast } from "@/hooks/use-toast"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { SalesInvoicePrint } from "@/components/print-templates/sales-invoice-print"
+import { SalesInvoice } from "@/lib/models/types"
 
-interface SalesInvoice {
-  _id: string
-  salesInvoiceNumber: string
-  date: string
-  dueDate?: string
-  clientName: string
-  clientId: string
-  clientEmail?: string
-  clientPhone?: string
-  clientAddress?: string
-  items: Array<{
-    itemId: string
-    name: string
-    description?: string
-    quantity: number
-    price: number
-    discount: number
-    taxRate: number
-    total: number
-  }>
-  subtotal: number
-  taxAmount: number
-  grandTotal: number
-  balanceAmount: number
-  status: string
-  notes?: string
-  terms?: string
-}
+// interface SalesInvoice {
+//   _id: string
+//   salesInvoiceNumber: string
+//   date: string
+//   dueDate?: string
+//   clientName: string
+//   clientId: string
+//   clientEmail?: string
+//   clientPhone?: string
+//   clientAddress?: string
+//   items: Array<{
+//     itemId: string
+//     name: string
+//     description?: string
+//     quantity: number
+//     price: number
+//     discount: number
+//     taxRate: number
+//     total: number
+//   }>
+//   subtotal: number
+//   taxAmount: number
+//   grandTotal: number
+//   balanceAmount: number
+//   status: string
+//   notes?: string
+//   terms?: string
+// }
 
 export default function SalesInvoiceDetailsPage() {
   const params = useParams()
@@ -106,7 +107,8 @@ export default function SalesInvoiceDetailsPage() {
         return "bg-gray-100 text-gray-800"
     }
   }
-
+  
+  const taxAmount = invoice?.items.reduce((total, item) => total + (item?.taxAmount || 0) || 0, 0)
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -194,24 +196,24 @@ export default function SalesInvoiceDetailsPage() {
                       <tr className="border-b">
                         <th className="text-left py-2 font-medium text-gray-500">Item</th>
                         <th className="text-right py-2 font-medium text-gray-500">Qty</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Price</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Tax</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Discount</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Total</th>
+                        <th className="text-right py-2 font-medium text-gray-500" title="Price per unit">Price</th>
+                        <th className="text-right py-2 font-medium text-gray-500" title="Tax applied on one quatity">Tax</th>
+                        <th className="text-right py-2 font-medium text-gray-500" title="Discount Applied on one Quantity">Discount</th>
+                        <th className="text-right py-2 font-medium text-gray-500" title="Total including Tax and Discount">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {invoice.items.map((item, index) => (
                         <tr key={index} className="border-b last:border-0">
                           <td className="py-3">
-                            <p className="font-medium">{item.name}</p>
+                            <p className="font-medium">{item.itemName || "Item " + (index + 1)}</p>
                             {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
                           </td>
                           <td className="text-right py-3">{item.quantity}</td>
                           <td className="text-right py-3">₹{item.price.toLocaleString()}</td>
-                          <td className="text-right py-3">{item.taxRate}%</td>
+                          <td className="text-right py-3">{item.cgst + item.sgst + item.igst}%</td>
                           <td className="text-right py-3">₹{item?.discount}</td>
-                          <td className="text-right py-3 font-medium">₹{item.total.toLocaleString()}</td>
+                          <td className="text-right py-3 font-medium">₹{item?.total?.toLocaleString() || `${item.price * item.quantity}`}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -224,15 +226,15 @@ export default function SalesInvoiceDetailsPage() {
                 <div className="w-full md:w-1/2 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span>₹{invoice.subtotal.toLocaleString()}</span>
+                    <span>₹{invoice?.subtotal?.toLocaleString() || `${invoice.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toLocaleString()}`}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Tax Amount</span>
-                    <span>₹{invoice.taxAmount.toLocaleString()}</span>
+                    <span>₹{invoice?.items?.reduce((acc, item) => acc + (item.taxAmount || 0), 0).toLocaleString() || 0}</span>
                   </div>
                    <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount Amount</span>
-                    <span>₹{invoice.items.reduce((acc, item) => acc + (item.discount || 0), 0).toLocaleString()}</span>
+                    <span>₹{invoice?.items?.reduce((acc, item) => acc + (item.discount*item.quantity || 0), 0).toLocaleString() || 0}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between font-bold text-lg">
@@ -242,7 +244,7 @@ export default function SalesInvoiceDetailsPage() {
                   {invoice.balanceAmount > 0 && (
                     <div className="flex justify-between text-sm font-medium text-red-600 mt-2">
                       <span>Balance Due</span>
-                      <span>₹{invoice.balanceAmount.toLocaleString()}</span>
+                      <span>₹{invoice?.balanceAmount?.toLocaleString() || 0}</span>
                     </div>
                   )}
                 </div>
@@ -251,14 +253,14 @@ export default function SalesInvoiceDetailsPage() {
           </Card>
 
 {/* Terms and Notes */}
-{(invoice.terms || invoice.notes) && (
+{(invoice.terms || invoice.description) && (
   <Card>
     <CardContent className="space-y-4">
-      {invoice.notes && (
+      {invoice.description && (
         <div>
-          <h4 className="font-semibold text-sm mb-1">Notes</h4>
+          <h4 className="font-semibold text-sm mb-1" title="Only for Admin Visiblility">Description</h4>
           <p className="text-sm text-gray-600">
-            {invoice.notes}
+            {invoice.description}
           </p>
         </div>
       )}
@@ -286,6 +288,7 @@ export default function SalesInvoiceDetailsPage() {
 
         {/* Sidebar Info */}
         <div className="space-y-6">
+                    
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Client Information</CardTitle>
@@ -315,6 +318,31 @@ export default function SalesInvoiceDetailsPage() {
               )}
             </CardContent>
           </Card>
+                  {invoice.bankDetails && (
+                    <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
+                      <h3 className="text-base font-medium py-2">Bank Details</h3>
+                      <p><strong>Bank:</strong> {invoice.bankDetails.bankName}</p>
+                      <p><strong>Account Name:</strong> {invoice.bankDetails.accountName}</p>
+                      <p><strong>Account Number:</strong> {invoice.bankDetails.accountNumber}</p>
+                      <p><strong>IFSC:</strong> {invoice.bankDetails.ifscCode}</p>
+                      <p><strong>Branch:</strong> {invoice.bankDetails.branchName}</p>
+
+                      {invoice.bankDetails.upiId && (
+                        <p><strong>UPI ID:</strong> {invoice.bankDetails.upiId}</p>
+                      )}
+                      {invoice.bankDetails?.upiScanner && (
+                        <div className="mt-3">
+                          <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                          <img
+                            src={invoice.bankDetails.upiScanner}
+                            alt="UPI Scanner"
+                            className="h-40 w-40 object-contain border rounded"
+                          />
+                        </div>
+                      )}
+
+                    </div>
+                  )}
         </div>
       </div>
 

@@ -298,12 +298,15 @@ export interface QuotationItem {
   // For printing compatibility
   taxName?: string
   taxRate?: number
+  amount?: number
+  taxAmount?: number
+  total: number
 }
 
 export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
-
+  id?: string
   quotationNumber?: string
   date: string | Date
   validity?: string | Date
@@ -322,12 +325,42 @@ export interface Quotation extends BaseDocument {
   balanceAmount: number
   terms: string
   status: "pending" | "accepted" | "expired" | "confirmed"
-
+  createdBy: string
   acceptedDate?: string | Date
 
   isActive?: string
     salesInvoiceId?: string
   convertedAt?: Date
+}
+export interface SalesInvoice extends BaseDocument {
+  invoiceType: string
+  salesInvoiceNumber: string
+
+  quotationId?: string
+  quotationNumber?: string
+  date: string | Date
+  dueDate?: string | Date
+  description?: string
+  clientId: string
+  clientName: string
+  clientEmail: string
+  clientAddress?: string
+  clientContact?: string
+  clientPhone?: string
+
+  items: QuotationItem[]
+  subtotal: number
+  taxAmount: number
+  totalDiscount: number
+  grandTotal: number
+  paidAmount: number
+  balanceAmount: number
+  terms: string
+  status: "Not Cleared" | "Cleared" | "Partial" | "Expired" | "Pending"
+  createdBy: string
+  userId: string
+  isActive?: string
+  bankDetails?: BankDetail
 }
 
 export interface Payment extends BaseDocument {
@@ -389,6 +422,7 @@ export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
   assets: 'Assets Management',
   reports: 'Reports',
   settings: 'Settings',
+  hrSettings: 'HR Settings',
 }
 
 export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
@@ -402,6 +436,7 @@ export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
   assets: 'Manage company assets inventory',
   reports: 'Generate business reports',
   settings: 'Access to system settings and configuration',
+  hrSettings: 'Access to HR settings and configuration',
 }
 
 export interface SubscriptionPlan extends BaseDocument {
@@ -456,9 +491,11 @@ export interface BankDetail extends BaseDocument {
   userId: string
   bankName: string
   accountNumber: string
+  accountName: string
   ifscCode: string
-  accountHolderName: string
-  branch?: string
+  upiScanner: string
+  upiId: string
+  branchName: string
   isDefault: boolean
 }
 

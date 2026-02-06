@@ -14,7 +14,10 @@ import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-
+import {Quotation} from "@/lib/models/types"
+import dynamic from "next/dynamic"
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+import "react-quill/dist/quill.snow.css"
 import {
   Table,
   TableBody,
@@ -23,30 +26,34 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Label } from "@/components/ui/label"
+import { useRouter } from "next/navigation"
 
-interface Quotation {
-  _id: string
-  quotationNumber: string
-  date: string
-  clientName: string
-  clientEmail: string
-  grandTotal: number
-  validity: string
-  status: "pending" | "accepted" | "expired" | "confirmed"
-  paidAmount?: number
-  balanceAmount?: number
-  isActive: "active" | "inactive"
-  salesInvoiceId?: string
-  convertedAt?: Date
-  terms?: string
-}
+// interface Quotation {
+//   _id: string
+//   quotationNumber: string
+//   date: string
+//   clientName: string
+//   clientEmail: string
+//   grandTotal: number
+//   validity: string
+//   status: "pending" | "accepted" | "expired" | "confirmed"
+//   paidAmount?: number
+//   balanceAmount?: number
+//   isActive: "active" | "inactive"
+//   salesInvoiceId?: string
+//   convertedAt?: Date
+//   terms?: string
+// }
 
 export default function QuotationsPage() {
+    const router = useRouter()
   const { hasPermission } = useUser()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-
+  const [selectedBankAccount, setSelectedBankAccount] = useState<any>(null)
+    const [bankAccounts, setBankAccounts] = useState<any>([]);
   // Accept dialog
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false)
@@ -63,9 +70,11 @@ export default function QuotationsPage() {
   const [convertDialogOpen, setConvertDialogOpen] = useState(false)
   const [invoiceDescription, setInvoiceDescription] = useState("")
   const [quotationToConvert, setQuotationToConvert] = useState<Quotation | null>(null)
-  const [terms, setTerms] = useState("")
-  const [availableTerms, setAvailableTerms] = useState<any[]>([])
-
+  // const [terms, setTerms] = useState("")
+  const [availableTerms, setAvailableTerms] = useState("")
+  const [dueDate, setDueDate] = useState("")
+  const [date, setInvoiceDate] = useState(new Date().toISOString().split("T")[0])
+  const [companyName, setCompanyName] = useState("")
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
@@ -75,36 +84,46 @@ export default function QuotationsPage() {
   }, [])
 
   const loadQuotations = async () => {
-    const [data, termsRes] = await Promise.all([
+    const [data,bankAccountsData, termsRes] = await Promise.all([
       api.quotations.getAll(),
-      fetch("/api/terms")
+            api.bankAccounts.getAll(),
+      fetch("/api/terms?type=invoice"),
     ])
-    
     const termsData = await termsRes.json()
-    if (termsData.success) {
-      setAvailableTerms(termsData.data.filter((t: any) => t.type === 'invoice' && t.isActive))
-    }
-    
+     const formattedTerms = termsData
+            .filter((t: any) => t.isActive)
+            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+            .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
+            .join("")
+            setAvailableTerms(formattedTerms)
+            console.log("formattedTerms", formattedTerms)
+            console.log("bankAccountsData", bankAccountsData)
+                setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
+                console.log("bankAccountsData", bankAccountsData)
+    // if (termsData.success) {
+    //   setAvailableTerms(termsData.data.filter((t: any) => t.type === 'invoice' && t.isActive))
+    // }
+
     // Check for expired quotations
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const updates: Promise<any>[] = []
     const updatedData = data.map((q: Quotation) => {
       if (q.status === "pending" && q.validity) {
-        const validityDate = new Date(q.validity)
-        validityDate.setHours(0, 0, 0, 0)
-        
-        if (validityDate < today) {
-           updates.push(api.quotations.update(q._id, { status: "expired" }))
-           return { ...q, status: "expired" }
+        const validity = new Date(q.validity)
+        validity.setHours(0, 0, 0, 0)
+
+        if (validity < today) {
+          updates.push(api.quotations.update(q._id, { status: "expired" }))
+          return { ...q, status: "expired" }
         }
       }
       return q
     })
-    
+
     if (updates.length > 0) {
-       Promise.allSettled(updates)
+      Promise.allSettled(updates)
     }
 
     setQuotations(updatedData)
@@ -114,7 +133,7 @@ export default function QuotationsPage() {
   // ---------------- FILTERING LOGIC ----------------
   const filteredQuotations = quotations.filter((q) => {
     const searchMatch =
-      q.quotationNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      q?.quotationNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       q.clientName.toLowerCase().includes(searchTerm.toLowerCase())
 
     const statusMatch = statusFilter === "all" || q.status === statusFilter
@@ -144,7 +163,7 @@ export default function QuotationsPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   )
-
+  console.log("bank acounts list ", bankAccounts)
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -159,7 +178,22 @@ export default function QuotationsPage() {
         return "bg-gray-100 text-gray-800"
     }
   }
+  const fetchCompanyName = async () => {
+    try {
+      const res = await fetch("/api/company").then((res) => res.json()),
+        result = await res
 
+      if (result?.company) {
+        setCompanyName(result.company.companyName || result.company.name || "")
+        console.log("companyName", companyName)
+      }
+    } catch (error) {
+      console.error("Failed to fetch company name", error)
+    }
+  }
+  useEffect(() => {
+    fetchCompanyName()
+  }, [])
   const handleAccept = (quotation: Quotation) => {
     setSelectedQuotation(quotation)
     setAcceptDialogOpen(true)
@@ -176,51 +210,77 @@ export default function QuotationsPage() {
       console.error(error)
     }
   }
-  const handleConvertToInvoice = async () => {
-    if (!quotationToConvert) return
-    console.log("quotationToConvert",quotationToConvert)
-    try {
-      const payload = {
-        ...quotationToConvert,
-        // 🔑 new / overridden fields
-        invoiceType: "quotation",
-        description: invoiceDescription || "",
-        sourceQuotationId: quotationToConvert._id,
-        date: new Date().toISOString(),
-        status: "pending",
-        terms: terms,
-        // remove quotation-only fields
-        validity: undefined,
-      }
+const handleConvertToInvoice = async () => {
+  if (!quotationToConvert) return
+  console.log("quotationToConvert", quotationToConvert)
+  setLoading(true)
 
-      const res = await fetch("/api/salesInvoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
+  try {
+    const payload = {
+      // 👇 SALES INVOICE fields ONLY
 
-      const result = await res.json()
+      invoiceType: "quotation",
+      quotationNumber: quotationToConvert.quotationNumber,
+      clientId: quotationToConvert.clientId,
+      clientName: quotationToConvert.clientName,
+      clientAddress: quotationToConvert.clientAddress,
+      clientPhone: quotationToConvert.clientContact, // mapping
+      clientEmail: quotationToConvert.clientEmail,
 
-      if (!result.success) {
-        throw new Error(result.error || "Failed to create invoice")
-      }
+      items: quotationToConvert.items,
+      grandTotal: quotationToConvert.grandTotal,
 
-      // Update quotation status to confirmed
-      await api.quotations.update(quotationToConvert._id, { status: "confirmed" })
+      paidAmount: 0,
+      balanceAmount: quotationToConvert.grandTotal,
 
-      toast.success("Invoice created successfully")
+      date: new Date().toISOString(),
+      status: "Not Cleared",
 
-      setConvertDialogOpen(false)
-      setInvoiceDescription("")
+      terms: availableTerms,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
 
-      // Redirect to invoice view/edit page
-      // window.location.href = `/dashboard/sales-invoice/${result.data._id}`
-
-    } catch (err) {
-      console.error(err)
-      toast.error("Failed to convert quotation to invoice")
+      description: invoiceDescription,
+      quotationId: quotationToConvert._id,
+      isActive : "active",
+      createdBy: companyName,
+      bankDetails: selectedBankAccount,
     }
+
+    console.log("Invoice Payload", payload)
+
+    const res = await fetch("/api/salesInvoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+
+    const result = await res.json()
+
+    if (!result.success) {
+      throw new Error(result.error || "Failed to create invoice")
+    }
+
+    // ✅ mark quotation confirmed
+    await api.quotations.update(quotationToConvert._id, {
+      status: "confirmed",
+              salesInvoiceId: result.data._id.toString(),
+  convertedAt: new Date(),
+    })
+
+    toast.success("Invoice created successfully")
+
+    setConvertDialogOpen(false)
+    setInvoiceDescription("")
+    router.push("/dashboard/salesInvoices")
+  } catch (err) {
+    console.error(err)
+    toast.error("Failed to convert quotation to invoice")
+  } finally {
+    setLoading(false)
   }
+}
+
+
 
   const handleStatusToggle = async (id: string, isActive: string) => {
     try {
@@ -244,13 +304,13 @@ export default function QuotationsPage() {
     setSearchTerm("")
   }
 
-  const handleTermSelect = (termId: string) => {
-    const term = availableTerms.find(t => t._id === termId)
-    if (term) {
-      const plainText = term.content.replace(/<[^>]+>/g, '')
-      setTerms(plainText)
-    }
-  }
+  // const handleTermSelect = (termId: string) => {
+  //   const term = availableTerms.find(t => t._id === termId)
+  //   if (term) {
+  //     const plainText = term.content.replace(/<[^>]+>/g, '')
+  //     setTerms(plainText)
+  //   }
+  // }
 
   if (loading) {
     return (
@@ -390,7 +450,7 @@ export default function QuotationsPage() {
 
               <TableBody>
                 {paginatedData.map((q, index) => (
-                  <TableRow key={q._id}>
+                  <TableRow key={q?._id?.toString() || index}>
                     <TableCell>
                       {(currentPage - 1) * pageSize + (index + 1)}
                     </TableCell>
@@ -398,7 +458,7 @@ export default function QuotationsPage() {
                     <TableCell className="font-medium">{q.quotationNumber}</TableCell>
                     <TableCell>{q.clientName}</TableCell>
                     <TableCell>{new Date(q.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(q.validity).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(q?.validity || "").toLocaleDateString()}</TableCell>
 
                     <TableCell>₹{(q.balanceAmount || 0).toLocaleString()}</TableCell>
 
@@ -412,7 +472,6 @@ export default function QuotationsPage() {
                         className="text-green-600 border-green-600"
                         onClick={() => {
                           setQuotationToConvert(q)
-                          setTerms(q.terms || "")
                           setConvertDialogOpen(true)
                         }}
                       >
@@ -426,13 +485,13 @@ export default function QuotationsPage() {
                         <Button variant="outline" size="sm">View</Button>
                       </Link>
 
-                    {hasPermission("edit_quotations") && !q.salesInvoiceId && (
-  <Link href={`/dashboard/quotations/${q._id}/edit`}>
-    <Button size="sm" variant="outline">
-      <Edit className="h-4 w-4" />
-    </Button>
-  </Link>
-)}
+                      {hasPermission("edit_quotations") && !q.salesInvoiceId && (
+                        <Link href={`/dashboard/quotations/${q._id}/edit`}>
+                          <Button size="sm" variant="outline">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
 
 
                       {
@@ -449,77 +508,145 @@ export default function QuotationsPage() {
               </TableBody>
             </Table>
             <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
+              <DialogContent className="max-h-[90vh]">
+                <DialogHeader className="fixed top-2 left-6">
                   <DialogTitle>Convert to Sales Invoice</DialogTitle>
                   <DialogDescription>
                     This will create a sales invoice using the quotation details.
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-3 py-4">
-                  <label className="text-sm font-medium">
-                    Invoice Description (Optional)
-                  </label>
-                  <Input
-                    placeholder="Enter description for invoice"
-                    value={invoiceDescription}
-                    onChange={(e) => setInvoiceDescription(e.target.value)}
-                  />
+                <div className="space-y-4 mt-10 mb-16 max-h-[70vh] overflow-y-scroll no-scrollbar">
 
+                  {/* Description */}
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Invoice Description</label>
+                    <Input
+                      placeholder="Enter description for invoice"
+                      value={invoiceDescription}
+                      onChange={(e) => setInvoiceDescription(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Due Date */}
+                  <div className="flex flex-row gap-2">
+                    <div>
+                      <Label>Invoice Date</Label>
+                      <Input type="date" value={date} onChange={(e) => setInvoiceDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Due Date</label>
+                      <Input
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Created By</Label>
+                      <Input value={companyName} readOnly className="bg-gray-100" />
+                    </div>
+                  </div>
                   {quotationToConvert && (
                     <div className="bg-gray-100 p-3 rounded text-sm space-y-1">
                       <div className="flex justify-between">
                         <span>Quotation:</span>
-                        <span className="font-medium">{quotationToConvert.quotationNumber}</span>
+                        <span className="font-medium">
+                          {quotationToConvert.quotationNumber}
+                        </span>
                       </div>
+
                       <div className="flex justify-between">
                         <span>Client:</span>
                         <span>{quotationToConvert.clientName}</span>
                       </div>
+
                       <div className="flex justify-between">
                         <span>Amount:</span>
                         <span>₹{quotationToConvert.grandTotal.toLocaleString()}</span>
                       </div>
                     </div>
                   )}
-
+                                  <div>
+                                    <Label>
+                                      Bank Account <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Select
+                                      value={selectedBankAccount?._id}
+                                      onValueChange={(id) => {
+                                        const bank = bankAccounts.find((b: any) => b._id === id)
+                                        setSelectedBankAccount(bank)
+                                      }}
+                                    >
+                  
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Slect Bank Accounts" />
+                                      </SelectTrigger>
+                                      <SelectContent className="z-[9999]">
+                                        {bankAccounts.map((acc , index) => (
+                                          <SelectItem key={acc._id} value={acc._id}>
+                                            {acc.bankName}
+                                          </SelectItem>
+                  
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    {selectedBankAccount && (
+                                      <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
+                                        <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
+                                        <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
+                                        <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
+                                        <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
+                                        <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+                  
+                                        {selectedBankAccount.upiId && (
+                                          <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>
+                                        )}
+                                        {selectedBankAccount?.upiScanner && (
+                                          <div className="mt-3">
+                                            <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                                            <img
+                                              src={selectedBankAccount.upiScanner}
+                                              alt="UPI Scanner"
+                                              className="h-40 w-40 object-contain border rounded"
+                                            />
+                                          </div>
+                                        )}
+                  
+                                      </div>
+                                    )}
+                                  </div>
+                  {/* Terms */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Terms & Conditions</label>
-                    <Select onValueChange={handleTermSelect}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select terms template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTerms.map((t) => (
-                          <SelectItem key={t._id} value={t._id}>
-                            {t.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Textarea 
-                      value={terms} 
-                      onChange={(e) => setTerms(e.target.value)} 
-                      placeholder="Enter terms and conditions..."
-                      className="min-h-[100px]"
-                    />
+
+                    <div className="[&_.ql-editor]:min-h-[150px]">
+                      <ReactQuill
+                        theme="snow"
+                        value={availableTerms}
+                        onChange={setAvailableTerms}
+                        placeholder="Enter terms and conditions..."
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="fixed flex left-6 bottom-2 justify-end gap-2">
                   <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>
                     Cancel
                   </Button>
+
                   <Button
                     className="bg-green-600"
+                    disabled={loading}
                     onClick={handleConvertToInvoice}
                   >
-                    Create Invoice
+                    {loading ? "Creating..." : "Create Invoice"}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
+
 
           </div>
 

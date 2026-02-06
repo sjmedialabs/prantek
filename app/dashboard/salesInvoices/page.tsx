@@ -13,20 +13,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Edit } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { SalesInvoice } from "@/lib/models/types"
 
-interface SalesInvoice {
-  _id: string
-salesInvoiceNumber: string
-  date: string
-  dueDate?: string
-  clientName: string
-  quotationNumber?: string
-  total: number
-  status: string 
-  balanceAmount?: number
-  createdAt: string
-  isActive?: boolean
-}
+// interface SalesInvoice {
+//   _id: string
+// salesInvoiceNumber: string
+//   date: string
+//   dueDate?: string
+//   clientName: string
+//   quotationNumber?: string
+//   total: number
+//   status: string 
+//   balanceAmount?: number
+//   createdAt: string
+//   isActive?: boolean
+// }
 
 export default function SalesInvoicesPage() {
   const { hasPermission } = useUser()
@@ -38,7 +39,10 @@ export default function SalesInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
-
+  const [dateFromFilter, setDateFromFilter] = useState("")
+  const [dateToFilter, setDateToFilter] = useState("")
+  const [minAmountFilter, setMinAmountFilter] = useState("")
+  const [maxAmountFilter, setMaxAmountFilter] = useState("")
   useEffect(() => {
     loadInvoices()
   }, [])
@@ -56,7 +60,7 @@ export default function SalesInvoicesPage() {
         today.setHours(0, 0, 0, 0)
         
         data.forEach(async (inv: SalesInvoice) => {
-          if (inv.status === 'pending' && inv.dueDate) {
+          if (inv.status === 'Not Cleared' && inv.dueDate) {
             const due = new Date(inv.dueDate)
             due.setHours(0, 0, 0, 0)
             if (due < today) {
@@ -86,8 +90,15 @@ export default function SalesInvoicesPage() {
       (invoice.quotationNumber && invoice.quotationNumber.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesStatus = statusFilter === "all" || invoice.status === statusFilter
+    const dateFromMatch = !dateFromFilter || new Date(invoice.date) >= new Date(dateFromFilter)
+    const dateToMatch = !dateToFilter || new Date(invoice.date) <= new Date(dateToFilter)
 
-    return matchesSearch && matchesStatus
+    const minMatch = !minAmountFilter || invoice.grandTotal >= Number(minAmountFilter)
+    const maxMatch = !maxAmountFilter || invoice.grandTotal <= Number(maxAmountFilter)
+    return matchesSearch && dateFromMatch &&
+      dateToMatch &&
+      minMatch &&
+      maxMatch && matchesStatus
   })
 
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage)
@@ -170,17 +181,17 @@ export default function SalesInvoicesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₹{invoices.reduce((sum, i) => sum + (i.total || 0), 0).toLocaleString()}
+              ₹{invoices.reduce((sum, i) => sum + (i.balanceAmount || 0), 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
         <Card>
            <CardHeader className="pb-3">
-            <CardDescription>Pending Payment</CardDescription>
+            <CardDescription>Unclear Payment</CardDescription>
           </CardHeader>
           <CardContent>
              <div className="text-2xl font-bold text-orange-600">
-              {invoices.filter(i => i.status === 'pending').length}
+              {invoices.filter(i => i.status === 'Not Cleared').length}
             </div>
           </CardContent>
         </Card>
@@ -227,12 +238,31 @@ export default function SalesInvoicesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
+                      <SelectItem value="Not Cleared">Not Cleared</SelectItem>
+                      <SelectItem value="Cleared">Cleared</SelectItem>
                       <SelectItem value="overdue">Overdue</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                              <div>
+                <label className="text-sm font-medium">Date From</label>
+                <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Date To</label>
+                <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Min Amount</label>
+                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Max Amount</label>
+                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+              </div>
               </div>
             )}
           </div>
@@ -265,32 +295,31 @@ export default function SalesInvoicesPage() {
                         <TableCell>{new Date(invoice.date || invoice.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">{invoice.salesInvoiceNumber}</TableCell>
                         <TableCell>{invoice.clientName}</TableCell>
-                        <TableCell>{invoice.quotationNumber || "-"}</TableCell>
+                        <TableCell>{invoice.quotationNumber || invoice.quotationId || '-'}</TableCell>
                         <TableCell className="font-semibold">₹{(invoice.balanceAmount || 0).toLocaleString()}</TableCell>
                         <TableCell>
-                            <Badge variant={invoice.status === "paid" ? "default" : invoice.status === "pending" ? "secondary" : "outline"}>
+                            <Badge variant={invoice.status === "Cleared" ? "default" : invoice.status === "Not Cleared" ? "secondary" : "outline"}>
                             {invoice.status}
                             </Badge>
                         </TableCell>
                         <TableCell>
-                          <Switch
-                            checked={invoice.isActive !== false}
-                            onCheckedChange={() => handleStatusToggle(invoice._id, invoice.isActive !== false)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                            <div className="flex space-x-2">
+                           <div className="flex space-x-2 items-center">
                                 <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
                                 <Button variant="ghost" size="sm">View</Button>
                                 </Link>
                                 {hasPermission("edit_sales_invoices") && (
-                                  <Link href={`/dashboard/salesInvoices/new?id=${invoice._id}`}>
+                                  <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
                                     <Button variant="ghost" size="sm">
                                       <Edit className="h-4 w-4" />
                                     </Button>
                                   </Link>
                                 )}
-                            </div>
+                           
+                          <Switch
+                            checked={invoice.isActive !== "deactive"}
+                            onCheckedChange={() => handleStatusToggle(invoice._id, invoice.isActive !== "deactive")}
+                          />
+                           </div>
                         </TableCell>
                         </TableRow>
                     )
