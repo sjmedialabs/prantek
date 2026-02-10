@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Search, Edit, FileText, Filter, X } from "lucide-react"
+import { Plus, Search, Edit, FileText, Filter, X, Eye } from "lucide-react"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -482,12 +482,12 @@ const handleConvertToInvoice = async () => {
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Link href={`/dashboard/quotations/${q._id}`}>
-                        <Button variant="outline" size="sm">View</Button>
+                        <Button variant="outline" size="sm" title="View in detail"><Eye className="h-4 w-4" /></Button>
                       </Link>
 
                       {hasPermission("edit_quotations") && !q.salesInvoiceId && (
                         <Link href={`/dashboard/quotations/${q._id}/edit`}>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" title="Edit Quotation details">
                             <Edit className="h-4 w-4" />
                           </Button>
                         </Link>
@@ -499,6 +499,7 @@ const handleConvertToInvoice = async () => {
                           <Switch
                             checked={q.isActive === "active"}
                             onCheckedChange={(e) => handleStatusToggle(q._id, q.isActive)}
+                            title="Update Status(Active/Inactive)"
                           />
                         )
                       }
@@ -582,8 +583,8 @@ const handleConvertToInvoice = async () => {
                                       <SelectTrigger>
                                         <SelectValue placeholder="Slect Bank Accounts" />
                                       </SelectTrigger>
-                                      <SelectContent className="z-[9999]">
-                                        {bankAccounts.map((acc , index) => (
+                                      <SelectContent className="z-9999">
+                                        {bankAccounts.map((acc : any) => (
                                           <SelectItem key={acc._id} value={acc._id}>
                                             {acc.bankName}
                                           </SelectItem>

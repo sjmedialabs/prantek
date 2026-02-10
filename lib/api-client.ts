@@ -223,6 +223,36 @@ quotations: {
   },
 },
 
+  // Sales Invoices
+  salesInvoice: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/salesInvoice")
+      return data.data || []
+    },
+    getById: async (id: string) => {
+      const data = await fetchAPI(`/api/salesInvoice/${id}`)
+      return data.data
+    },
+    create: async (invoiceData: any) => {
+      const data = await fetchAPI("/api/salesInvoice", {
+        method: "POST",
+        body: JSON.stringify(invoiceData),
+      })
+      return data.data
+    },
+    update: async (id: string, invoiceData: any) => {
+      const data = await fetchAPI(`/api/salesInvoice/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(invoiceData),
+      })
+      return data.data
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/salesInvoice/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
 
     // Receipts
     receipts: {

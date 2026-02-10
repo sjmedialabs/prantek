@@ -64,7 +64,7 @@ export default function CashbookPage() {
       partyName: r.clientName,
       category: r.category || "Client Payment",
       description: r.notes,
-      amount: r.amountPaid,
+      amount: r.ReceiptAmount,
       referenceNumber: r.referenceNumber,
       //   createdBy: r.createdBy
     }))

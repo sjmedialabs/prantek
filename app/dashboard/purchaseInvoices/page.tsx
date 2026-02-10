@@ -170,9 +170,9 @@ export default function PurchaseInvoiceList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="partial">Partial</SelectItem>
-                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="Paid">Paid</SelectItem>
+                <SelectItem value="Partial">Partial</SelectItem>
+                <SelectItem value="Unpaid">Unpaid</SelectItem>
               </SelectContent>
             </Select>
           )}

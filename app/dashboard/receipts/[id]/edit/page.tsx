@@ -38,6 +38,8 @@ export default function EditReceiptPage() {
   const [referenceNumber, setReferenceNumber] = useState("")
   const [note, setNote] = useState("")
   const [salesInvoice, setSalesInvoice] = useState<any>(null)
+  const [badDeptAmount, setBadDeptAmount] = useState(0)
+  const [badDeptReason, setBadDeptReason] = useState("")
 
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
 
@@ -111,6 +113,8 @@ export default function EditReceiptPage() {
       setBankAccount(loadedReceipt.bankDetails || loadedReceipt.bankAccount || "")
       setReferenceNumber(loadedReceipt.referenceNumber || "")
       setNote(loadedReceipt.notes || "")
+      setBadDeptAmount(loadedReceipt.badDeptAmount || 0)
+      setBadDeptReason(loadedReceipt.badDeptReason || "")
 
       if (loadedInvoice) {
         setReceiptTotal(
@@ -212,6 +216,8 @@ console.log("payment amount is ", paymentAmount)
         referenceNumber,
         date,
         notes: note,
+        badDeptAmount,
+        badDeptReason,
         advanceAppliedAmount: (receipt.advanceAppliedAmount || 0) + advanceApplyAmount,
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || receipt.parentReceiptNumber,
       }
@@ -272,6 +278,8 @@ console.log("payment amount is ", paymentAmount)
   // Words
   const numberToWords = (num: number): string =>
     `${num.toLocaleString()} Rupees Only`
+
+  const isCleared = receipt.status?.toLowerCase() === "cleared" || receipt.status?.toLowerCase() === "completed" || receipt.status?.toLowerCase() === "paid"
 
   return (
     <div className="space-y-6">
@@ -465,14 +473,14 @@ console.log("payment amount is ", paymentAmount)
           <CardTitle>Payment Details</CardTitle>
         </CardHeader>
       <CardContent className="space-y-3">
-  <div className="flex justify-between">
+{(receipt?.receiptType !== "advance" && receipt.receiptType !== "quick") && ( <> <div className="flex justify-between">
     <span className="text-gray-600">Grand Total</span>
     <span className="font-semibold">
       ₹{(receipt?.invoicegrandTotal || receipt?.total || 0).toLocaleString()}
     </span>
   </div>
 
-  <Separator />
+  <Separator /></>)}
 
   <div className="flex justify-between text-green-600">
     <span className="font-semibold">Receipt Amount(Paid)</span>
@@ -509,6 +517,7 @@ console.log("payment amount is ", paymentAmount)
                   <div>
                     <Label>Select Advance Receipt</Label>
                     <Select
+                      disabled={isCleared}
                       value={selectedAdvanceReceipt?._id}
                       onValueChange={(id) => {
                         const adv = advanceReceipts.find(r => r._id === id)
@@ -533,6 +542,7 @@ console.log("payment amount is ", paymentAmount)
                     <div>
                       <Label>Advance Amount to Apply</Label>
                       <Input
+                        disabled={isCleared}
                         type="number"
                         value={advanceApplyAmount}
                         max={selectedAdvanceReceipt.ReceiptAmount}
@@ -558,6 +568,7 @@ console.log("payment amount is ", paymentAmount)
           <div>
             <Label htmlFor="date" required>Payment Date</Label>
             <Input
+              disabled={isCleared}
               id="date"
               type="date"
               value={date}
@@ -570,7 +581,7 @@ console.log("payment amount is ", paymentAmount)
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label required>Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <Select disabled={isCleared} value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cash">Cash</SelectItem>
@@ -585,6 +596,7 @@ console.log("payment amount is ", paymentAmount)
             <div>
               <Label required>Payment Type</Label>
               <Select
+                disabled={isCleared}
                 value={paymentType}
                 onValueChange={(v: any) => setPaymentType(v)}
               >
@@ -592,7 +604,7 @@ console.log("payment amount is ", paymentAmount)
                 <SelectContent>
                   <SelectItem value="Full Payment">Full Payment</SelectItem>
                   <SelectItem value="Partial Payment">Partial Payment</SelectItem>
-                 {receipt?.receiptType && (<SelectItem value="Advance Payment">Advance Payment</SelectItem>)}
+                 {receipt?.receiptType === "advance" && (<SelectItem value="Advance Payment">Advance Payment</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -614,6 +626,7 @@ console.log("payment amount is ", paymentAmount)
               <div>
                 <Label required>Payment Amount</Label>
                 <Input
+                  disabled={isCleared}
                   type="number"
                   value={paymentAmount}
                   onChange={(e) =>
@@ -652,7 +665,7 @@ console.log("payment amount is ", paymentAmount)
 
               <div>
                 <Label>Bank Account</Label>
-                <Select value={bankAccount._id} onValueChange={(id) => {
+                <Select disabled={isCleared} value={bankAccount._id} onValueChange={(id) => {
                   const bank = bankAccounts.find((b: any) => b._id === id)
                   setBankAccount(bank)
                 }}>
@@ -675,6 +688,7 @@ console.log("payment amount is ", paymentAmount)
               <div>
                 <Label>Reference Number</Label>
                 <Input
+                  disabled={isCleared}
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
                   placeholder="Transaction reference / cheque no."
@@ -688,10 +702,33 @@ console.log("payment amount is ", paymentAmount)
           <div>
             <Label>Note</Label>
             <Textarea
+              disabled={isCleared}
               rows={4}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
+          </div>
+
+          {/* Bad Debt Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Bad Debt Amount</Label>
+              <Input
+                type="number"
+                value={badDeptAmount}
+                onChange={(e) => setBadDeptAmount(Number(e.target.value))}
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <Label>Bad Debt Reason</Label>
+              <Textarea
+                value={badDeptReason}
+                onChange={(e) => setBadDeptReason(e.target.value)}
+                rows={2}
+              />
+            </div>
           </div>
 
         </CardContent>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, FileText, Filter, X } from "lucide-react"
+import { Plus, Search, FileText, Filter, X, Eye } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -241,6 +241,7 @@ export default function SalesInvoicesPage() {
                       <SelectItem value="Not Cleared">Not Cleared</SelectItem>
                       <SelectItem value="Cleared">Cleared</SelectItem>
                       <SelectItem value="overdue">Overdue</SelectItem>
+                      <SelectItem value="Partial">Partial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -305,11 +306,11 @@ export default function SalesInvoicesPage() {
                         <TableCell>
                            <div className="flex space-x-2 items-center">
                                 <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
-                                <Button variant="ghost" size="sm">View</Button>
+                                <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" /></Button>
                                 </Link>
                                 {hasPermission("edit_sales_invoices") && invoice.status !== "Cleared" && (
                                   <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
-                                    <Button variant="ghost" size="sm">
+                                    <Button variant="ghost" size="sm" title="Edit Details">
                                       <Edit className="h-4 w-4" />
                                     </Button>
                                   </Link>
@@ -318,6 +319,7 @@ export default function SalesInvoicesPage() {
                           <Switch
                             checked={invoice.isActive !== "deactive"}
                             onCheckedChange={() => handleStatusToggle(invoice._id, invoice.isActive !== "deactive")}
+                            title="Change Status(Active/Inactive)"
                           />
                            </div>
                         </TableCell>

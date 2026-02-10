@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Edit, ReceiptIcon, Filter, X } from "lucide-react"
+import { Plus, Search, Edit, ReceiptIcon, Filter, X, Eye } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
@@ -251,7 +251,7 @@ export default function ReceiptsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="received">Received</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="cleared">Cleared</SelectItem>
                       {/* <SelectItem value="cleared">Failed</SelectItem> */}
                     </SelectContent>
@@ -268,6 +268,7 @@ export default function ReceiptsPage() {
                       <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="Full Payment">Full Payment</SelectItem>
                       <SelectItem value="Partial Payment">Partial Payment</SelectItem>
+                      <SelectItem value="Advance Payment">Advance Payment</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -365,7 +366,7 @@ export default function ReceiptsPage() {
                       <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
                       <TableCell>{receipt.clientName}</TableCell>
                       <TableCell>{receipt.salesInvoiceNumber}</TableCell>
-                      <TableCell className="font-semibold">₹{(receipt.amountPaid || receipt.ReceiptAmount).toLocaleString()}</TableCell>
+                      <TableCell className="font-semibold">₹{(receipt?.ReceiptAmount || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant={receipt.paymentType === "full" ? "default" : "secondary"}>
                           {formatPaymentType(receipt.paymentType)}
@@ -381,14 +382,13 @@ export default function ReceiptsPage() {
                         <TableCell>
                           <div className="flex space-x-2">
                             <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
-                              <Button variant="ghost" size="sm">
-                                View
+                              <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" />
                               </Button>
                             </Link>
                            {
                             (hasPermission("edit_receipts")) && (
                                <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" title="Edit Receipt">
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </Link>

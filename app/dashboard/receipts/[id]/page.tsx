@@ -30,7 +30,7 @@ export default function ReceiptDetailsPage() {
   const loadReceipt = async () => {
     try {
       const data = await api.receipts.getById(receiptId)
-      console.log("Getting recipt data from api",data)
+      console.log("Getting recipt data from api", data)
       setReceipt(data)
 
     } catch (error) {
@@ -48,44 +48,44 @@ export default function ReceiptDetailsPage() {
     printDocument("print-content")
   }
 
-const receiptForPrint =
-  receipt &&
-  receipt.items && {
-    receiptNumber: receipt.receiptNumber,
-    date: receipt.date,
-    notes: receipt.notes || "",
+  const receiptForPrint =
+    receipt &&
+    receipt.items && {
+      receiptNumber: receipt.receiptNumber,
+      date: receipt.date,
+      notes: receipt.notes || "",
 
-    client: {
-      name: receipt.clientName,
-      address: receipt.clientAddress || "",
-      phone: receipt.clientPhone || "",
-      email: receipt.clientEmail || "",
-    },
+      client: {
+        name: receipt.clientName,
+        address: receipt.clientAddress || "",
+        phone: receipt.clientPhone || "",
+        email: receipt.clientEmail || "",
+      },
 
-    items: receipt.items.map((item:any) => ({
-      itemName: item.itemName,
-      description: item.description,
-      quantity: item.quantity,
-      price: item.price,
-      discount: item.discount || 0,
-      taxName: item.taxName,
-      taxRate: item.taxRate,
-      amount: item.amount,
-      total: item.total,
-      cgst: item.cgst,
-      sgst: item.sgst,
-      igst: item.igst
-    })),
+      items: receipt.items.map((item: any) => ({
+        itemName: item.itemName,
+        description: item.description,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount || 0,
+        taxName: item.taxName,
+        taxRate: item.taxRate,
+        amount: item.amount,
+        total: item.total,
+        cgst: item.cgst,
+        sgst: item.sgst,
+        igst: item.igst
+      })),
 
-    receiptTotal: receipt.ReceiptAmount || 0,
-    paymentType: receipt.paymentType,
-    paymentMethod: receipt.paymentMethod,
-    referenceNumber: receipt.referenceNumber || "",
-    status: receipt.status,
+      receiptTotal: receipt.ReceiptAmount || 0,
+      paymentType: receipt.paymentType,
+      paymentMethod: receipt.paymentMethod,
+      referenceNumber: receipt.referenceNumber || "",
+      status: receipt.status,
 
-    salesInvoiceNumber: receipt.salesInvoiceNumber || "",
-    balanceAmount: receipt.balanceAmount || 0,
-  }
+      salesInvoiceNumber: receipt.salesInvoiceNumber || "",
+      balanceAmount: receipt.balanceAmount || 0,
+    }
 
 
   const companyDetailsForPrint = companyDetails || {
@@ -182,24 +182,24 @@ const receiptForPrint =
                   </Badge>
                 </div>
               </div>
-{receipt.salesInvoiceNumber && (
-  <>
-    <Separator />
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <p className="text-sm text-gray-600">Sales Invoice Number</p>
-        <p className="font-semibold">{receipt.salesInvoiceNumber}</p>
-      </div>
+              {receipt.salesInvoiceNumber && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Sales Invoice Number</p>
+                      <p className="font-semibold">{receipt.salesInvoiceNumber}</p>
+                    </div>
 
-      <div>
-        <p className="text-sm text-gray-600">Invoice Date</p>
-        <p className="font-semibold">
-          {new Date(receipt.invoiceDate).toLocaleDateString()}
-        </p>
-      </div>
-    </div>
-  </>
-)}
+                    <div>
+                      <p className="text-sm text-gray-600">Invoice Date</p>
+                      <p className="font-semibold">
+                        {new Date(receipt.invoiceDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {(receipt as any).advanceAppliedAmount > 0 && (
                 <>
@@ -265,7 +265,7 @@ const receiptForPrint =
           </Card>
 
           {/* Items/Services */}
-       {receipt?.items?.length > 0 && (  <Card>
+          {receipt?.items?.length > 0 && (<Card>
             <CardHeader>
               <CardTitle>Items/Services</CardTitle>
             </CardHeader>
@@ -282,7 +282,7 @@ const receiptForPrint =
                             {item.type}
                           </Badge>
                         </div>
-                        <p className="font-bold text-lg">₹{(((item.price*item.quantity)-item.discount)+(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100))?.toLocaleString() || "0"}</p>
+                        <p className="font-bold text-lg">₹{(((item.price * item.quantity) - item.discount) + (((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100))?.toLocaleString() || "0"}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -300,11 +300,11 @@ const receiptForPrint =
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{((item.price*item.quantity)-item.discount)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{((item.price * item.quantity) - item.discount)?.toLocaleString() || "0"}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
-                          <p className="font-semibold">₹{(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{(((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100)?.toLocaleString() || "0"}</p>
                         </div>
                       </div>
                     </div>
@@ -320,42 +320,51 @@ const receiptForPrint =
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Amount Summary */}
-      <CardContent className="space-y-3">
-  <div className="flex justify-between">
-    <span className="text-gray-600">Grand Total</span>
-    <span className="font-semibold">
-      ₹{(receipt?.invoicegrandTotal || receipt?.total || 0).toLocaleString()}
-    </span>
-  </div>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Grand Total</span>
+              <span className="font-semibold">
+                ₹{(receipt?.invoicegrandTotal || receipt?.total || 0).toLocaleString()}
+              </span>
+            </div>
 
-  <Separator />
+            <Separator />
 
-  <div className="flex justify-between text-green-600">
-    <span className="font-semibold">Receipt Amount(Paid)</span>
-    <span className="font-bold">
-      ₹{(receipt.ReceiptAmount || 0).toLocaleString()}
-    </span>
-  </div>
+            <div className="flex justify-between text-green-600">
+              <span className="font-semibold">Receipt Amount(Paid)</span>
+              <span className="font-bold">
+                ₹{(receipt.ReceiptAmount || 0).toLocaleString()}
+              </span>
+            </div>
+            {receipt?.badDeptAmount > 0 && (<>
+              <Separator />
+              <div className="flex justify-between text-green-600">
+                <span className="font-semibold">BadDept Amount</span>
+                <span className="font-bold">
+                  ₹{(receipt.badDeptAmount || 0).toLocaleString()}
+                </span>
+              </div>
+              <span className="text-gray-200 text-xs capitalize">{receipt.badDeptReason}</span>
+            </>)}
+            {(receipt as any).advanceAppliedAmount > 0 && (
+              <div className="flex justify-between text-blue-600">
+                <span className="font-semibold">Advance Applied</span>
+                <span className="font-bold">
+                  ₹{(receipt as any).advanceAppliedAmount.toLocaleString()}
+                </span>
+              </div>
+            )}
 
-  {(receipt as any).advanceAppliedAmount > 0 && (
-    <div className="flex justify-between text-blue-600">
-      <span className="font-semibold">Advance Applied</span>
-      <span className="font-bold">
-        ₹{(receipt as any).advanceAppliedAmount.toLocaleString()}
-      </span>
-    </div>
-  )}
-
-  <Separator />
-  {(receipt.invoiceBalance || receipt.balanceAmount || 0) > 0 && (
-    <div className="flex justify-between text-orange-600">
-      <span className="font-semibold">Balance Due</span>
-      <span className="font-bold">
-        ₹{(receipt.invoiceBalance || receipt.balanceAmount || 0).toLocaleString()}
-      </span>
-    </div>
-  )}
-</CardContent>
+            <Separator />
+            {(receipt.invoiceBalance || receipt.balanceAmount || 0) > 0 && (
+              <div className="flex justify-between text-orange-600">
+                <span className="font-semibold">Balance Due</span>
+                <span className="font-bold">
+                  ₹{(receipt.invoiceBalance || receipt.balanceAmount || 0).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </CardContent>
 
           {/* Payment Details */}
           <Card>
@@ -389,31 +398,31 @@ const receiptForPrint =
               </div>
             </CardContent>
           </Card>
-                  {(receipt?.bankDetails || receipt.bankAccount) && (
-                    <div className="border rounded-lg mt-2 p-4 bg-white text-sm space-y-1">
-                      <h3 className="text-base font-medium py-2">Bank Details</h3>
-                      <p><strong>Bank:</strong> {receipt?.bankDetails?.bankName || receipt?.bankAccount?.bankName}</p>
-                      <p><strong>Account Name:</strong> {receipt?.bankDetails?.accountName || receipt.bankAccount.accountName}</p>
-                      <p><strong>Account Number:</strong> {receipt?.bankDetails?.accountNumber || receipt?.bankAccount?.accountNumber}</p>
-                      <p><strong>IFSC:</strong> {receipt?.bankDetails?.ifscCode || receipt?.bankAccount?.ifscCode}</p>
-                      <p><strong>Branch:</strong> {receipt?.bankDetails?.branchName || receipt?.bankAccount?.branchName}</p>
+          {(receipt?.bankDetails || receipt.bankAccount) && (
+            <div className="border rounded-lg mt-2 p-4 bg-white text-sm space-y-1">
+              <h3 className="text-base font-medium py-2">Bank Details</h3>
+              <p><strong>Bank:</strong> {receipt?.bankDetails?.bankName || receipt?.bankAccount?.bankName}</p>
+              <p><strong>Account Name:</strong> {receipt?.bankDetails?.accountName || receipt.bankAccount.accountName}</p>
+              <p><strong>Account Number:</strong> {receipt?.bankDetails?.accountNumber || receipt?.bankAccount?.accountNumber}</p>
+              <p><strong>IFSC:</strong> {receipt?.bankDetails?.ifscCode || receipt?.bankAccount?.ifscCode}</p>
+              <p><strong>Branch:</strong> {receipt?.bankDetails?.branchName || receipt?.bankAccount?.branchName}</p>
 
-                      {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId && (
-                        <p><strong>UPI ID:</strong> {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId}</p>
-                      )}
-                      {receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner && (
-                        <div className="mt-3">
-                          <p className="text-sm font-medium mb-1">UPI QR Code</p>
-                          <img
-                            src={receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner}
-                            alt="UPI Scanner"
-                            className="h-40 w-40 object-contain border rounded"
-                          />
-                        </div>
-                      )}
+              {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId && (
+                <p><strong>UPI ID:</strong> {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId}</p>
+              )}
+              {receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                  <img
+                    src={receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner}
+                    alt="UPI Scanner"
+                    className="h-40 w-40 object-contain border rounded"
+                  />
+                </div>
+              )}
 
-                    </div>
-                  )}
+            </div>
+          )}
           {/* Status Card */}
           <Card>
             <CardHeader>

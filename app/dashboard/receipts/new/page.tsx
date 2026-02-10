@@ -718,7 +718,7 @@ export default function ReceiptsPage() {
         bankDetails: selectedAccount,
         referenceNumber: scenario3ReferenceNumber,
         date: new Date().toISOString(),
-        status: "pending",
+        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "Cleared" : "Pending"}`,
         notes: notes,
         createdBy: companyName
       }
@@ -774,7 +774,7 @@ export default function ReceiptsPage() {
         bankDetails: selectedAccount,
         referenceNumber: scenario3ReferenceNumber,
         date: new Date().toISOString(),
-        status: "pending",
+        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "Cleared" : "Pending"}`,
         notes: notes,
         createdBy: companyName
       }
