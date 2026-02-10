@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Download, Filter, X } from "lucide-react"
+import { Plus, Search, Download, Filter, X, Eye, Edit } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
@@ -206,7 +206,7 @@ const exportToCSV = () => {
 
 
   return (
-    <div className="space-y-6 max-w-[992px] overflow-x-auto">
+    <div className="space-y-6 overflow-x-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
@@ -229,7 +229,7 @@ const exportToCSV = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Total Payments</CardTitle>
@@ -263,7 +263,7 @@ const exportToCSV = () => {
             </p>
           </CardContent>
         </Card>
-
+{/* 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Failed Payments</CardTitle>
@@ -274,7 +274,7 @@ const exportToCSV = () => {
               {filteredPayments.filter((p) => p.status === "failed").length} payments
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Payments Table */}
@@ -531,10 +531,14 @@ const exportToCSV = () => {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <Link href={`/dashboard/payments/${payment._id?.toString()}`}>
-                          <Button variant="ghost" size="sm">
-                            View
+                          <Button variant="ghost" size="sm"title="View Payment details"><Eye className="h-4 w-4" />
                           </Button>
                         </Link>
+                          {!(payment.status === "completed") && (
+                                                <Link href={`/dashboard/payments/${payment._id}/edit`}>
+                                                  <Button size="icon" variant="ghost" title="Edit Payment"><Edit className="h-4 w-4" /></Button>
+                                                </Link>
+                                              )}
                       </div>
                     </TableCell>
                   )}

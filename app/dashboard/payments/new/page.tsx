@@ -35,20 +35,28 @@ export default function NewPaymentPage() {
   const { toast } = useToast()
 
   const [paymentData, setPaymentData] = useState({
+    purchaseInvoiceId: "",
+    purchaseInvoiceNumber: "",
     paymentNumber: `PAY-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
     date: new Date().toISOString().split("T")[0],
     recipientType: "" as "client" | "vendor" | "team" | "",
     recipientId: "",
     recipientName: "",
-    recipientDetails: "",
+    recipientEmail: "",
+    recipientPhone: "",
+    recipientAddress: "",
     category: "",
     description: "",
     amount: "",
     paymentMethod: "",
+    payAbleAmount: 0,
+    invoiceDate: new Date().toISOString().split("T")[0],
     bankAccount: "",
     referenceNumber: "",
-    billFile: null as File | null,
-    screenshotFile: null as File | null,
+    billFile: "",
+    screenshotFile: "",
+    paymentType: "full" as "full" | "partial",
+    createdBy: "",
   })
   const [amountInWords, setAmountInWords] = useState("")
   const [activeTab, setActiveTab] = useState("payment-details")
@@ -63,11 +71,14 @@ export default function NewPaymentPage() {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([])
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [recipientTypes, setRecipientTypes] = useState<any[]>([])
-
+  const [purchaseInvoices, setPurchaseInvoices] = useState<any[]>([])
+  const [creationMode, setCreationMode] = useState("non-invoiced")
+  const [companyName, setCompanyName] = useState("")
   useEffect(() => {
+
     const loadData = async () => {
       try {
-        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts] = await Promise.all([
+        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, invoicesData, companyData] = await Promise.all([
           api.clients.getAll(),
           api.vendors.getAll(),
           api.employees.getAll(),
@@ -75,9 +86,11 @@ export default function NewPaymentPage() {
           api.paymentCategories.getAll(),
           api.paymentMethods.getAll(),
           api.bankAccounts.getAll(),
+          api.purchaseInvoice.getAll(),
+          api.company.get(),
         ]);
 
-        console.log("Loaded data:", clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts);
+        console.log("Loaded data:", clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, invoicesData);
 
         // 🧹 Filter → Dedupe → Set
 
@@ -108,8 +121,8 @@ const activeRecipientTypes = recipientTypesData.filter((t : any) => t.isEnabled)
 const uniqueRecipientTypes = Array.from(
   new Map(
     activeRecipientTypes
-      .filter((t) => t.value)  // remove items missing value
-      .map((t) => [t.value.toLowerCase(), t])
+      .filter((t:any) => t.value)  // remove items missing value
+      .map((t: any) => [t.value.toLowerCase(), t])
   ).values()
 );
 
@@ -129,6 +142,14 @@ setRecipientTypes(uniqueRecipientTypes);
 
         const activeBankAccounts = bankAccounts.filter((t: any) => t.isActive);
         setBankAccounts(activeBankAccounts);
+
+        // Filter Open Purchase Invoices with Balance > 0
+        const openInvoices = (invoicesData || []).filter((inv: any) => 
+          (inv.invoiceStatus === "Open" || inv.invoiceStatus === "Partial") && 
+          (Number(inv.balanceAmount) > 0)
+        );
+        setPurchaseInvoices(openInvoices);
+        setCompanyName(companyData.companyName || "")
       } catch (error) {
         console.error("Failed to load data:", error);
       }
@@ -146,6 +167,10 @@ setRecipientTypes(uniqueRecipientTypes);
   const validatePaymentDetails = (): boolean => {
     const errors: Record<string, string> = {}
 
+    if (creationMode === "invoiced" && !paymentData.purchaseInvoiceId) {
+      errors.purchaseInvoiceId = "Please select an invoice"
+    }
+
     if (!paymentData.date && !paymentData.category) {
       errors.date = "Date is required"
     }
@@ -153,11 +178,13 @@ setRecipientTypes(uniqueRecipientTypes);
       errors.amount = "Valid amount is required"
     }
 
-    if (!paymentData.recipientType) {
-      errors.recipientType = "Recipient type is required"
-    }
-    if (!paymentData.recipientId) {
-      errors.recipientId = "Recipient must be selected"
+    if (creationMode === "non-invoiced") {
+      if (!paymentData.recipientType) {
+        errors.recipientType = "Recipient type is required"
+      }
+      if (!paymentData.recipientId) {
+        errors.recipientId = "Recipient must be selected"
+      }
     }
 
     setValidationErrors(errors)
@@ -237,38 +264,101 @@ setRecipientTypes(uniqueRecipientTypes);
   // const paymentMethods = ["Cash", "Bank Transfer", "UPI", "Check"]
   // const bankAccounts = ["HDFC Bank - ****1234", "ICICI Bank - ****5678", "SBI - ****9012"]
 
-  const handleRecipientChange = (recipientId: string) => {
-    let recipient: any = null
-    let details = ""
+const handleRecipientChange = (recipientId: string) => {
+  let recipient: any = null
 
-    if (paymentData.recipientType === "client") {
-      recipient = clients.find((c) => c._id === recipientId)
-      if (recipient) {
-        details = `${recipient.address}\n${recipient.phone}\n${recipient.email}`
-      }
-    } else if (paymentData.recipientType === "vendor") {
-      recipient = vendors.find((v) => v._id === recipientId)
-      if (recipient) {
-        details = `${recipient.category}\n${recipient.address}\n${recipient.phone}\n${recipient.email}`
-      }
-    } else if (paymentData.recipientType === "team") {
-      recipient = teamMembers.find((t) => t._id === recipientId)
-      if (recipient) {
-        details = `${recipient.role}\n${recipient.department || "N/A"}\n${recipient.phone}\n${recipient.email}`
-      }
-    }
+  let recipientName = ""
+  let recipientEmail = ""
+  let recipientPhone = ""
+  let recipientAddress = ""
+  let recipientDetails = ""
+
+  if (paymentData.recipientType === "client") {
+    recipient = clients.find((c) => c._id === recipientId)
 
     if (recipient) {
+      recipientName = recipient.name || ""
+      recipientEmail = recipient.email || ""
+      recipientPhone = recipient.phone || ""
+      recipientAddress = recipient.address || ""
+
+      recipientDetails = `${recipientAddress}\n${recipientPhone}\n${recipientEmail}`
+    }
+  }
+
+  else if (paymentData.recipientType === "vendor") {
+    recipient = vendors.find((v) => v._id === recipientId)
+
+    if (recipient) {
+      recipientName = recipient.name || ""
+      recipientEmail = recipient.email || ""
+      recipientPhone = recipient.phone || ""
+      recipientAddress = recipient.address || ""
+
+      recipientDetails = `${recipient.category}\n${recipientAddress}\n${recipientPhone}\n${recipientEmail}`
+    }
+  }
+
+  else if (paymentData.recipientType === "team") {
+    recipient = teamMembers.find((t) => t._id === recipientId)
+
+    if (recipient) {
+      recipientName = `${recipient.employeeName ?? ""} ${recipient.surname ?? ""}`.trim()
+      recipientEmail = recipient.email || ""
+      recipientPhone = recipient.phone || ""
+      recipientAddress = recipient.department || ""
+
+      recipientDetails = `${recipient.role}\n${recipient.department || "N/A"}\n${recipientPhone}\n${recipientEmail}`
+    }
+  }
+
+  if (!recipient) return
+
+  setPaymentData({
+    ...paymentData,
+    recipientId,
+    recipientName,
+    recipientEmail,
+    recipientPhone,
+    recipientAddress,
+  })
+
+  // Clear validation error
+  if (validationErrors.recipientId) {
+    setValidationErrors({ ...validationErrors, recipientId: "" })
+  }
+}
+
+
+  const handleInvoiceSelect = (invoiceId: string) => {
+    const invoice = purchaseInvoices.find(i => i._id === invoiceId)
+    if (invoice) {
+      const balance = Number(invoice.balanceAmount || 0)
+      
       setPaymentData({
         ...paymentData,
-        recipientId,
-        recipientName: recipient.name || (recipient.employeeName + " " + recipient.surname),
-        recipientDetails: details,
+        purchaseInvoiceId: invoiceId,
+        purchaseInvoiceNumber: invoice.purchaseInvoiceNumber || "",
+        recipientType: invoice.recipientType || invoice.recipientType || "",
+        recipientId: invoice.recipientId || invoice.vendor?._id || "",
+        recipientName: invoice.recipientName || invoice.recipientName || "",
+        recipientEmail: invoice.recipientEmail || "",
+        recipientPhone: invoice.recipientPhone || "",
+        recipientAddress: invoice.recipientAddress || "",
+        invoiceDate: new Date(invoice.date).toISOString().split("T")[0],
+        payAbleAmount: invoice.balanceAmount || 0,
+        category: invoice.paymentCategory || invoice.category || "",
+        amount: balance.toString() || "",
+        description: `Payment for Invoice #${invoice.purchaseInvoiceNumber}`,
+        paymentType: "full",
+        createdBy: invoice.createdBy,
+        billFile: invoice.billUpload || null
       })
-
-      // Clear recipient validation error
-      if (validationErrors.recipientId) {
-        setValidationErrors({ ...validationErrors, recipientId: "" })
+      
+      setAmountInWords(`${balance.toLocaleString()} rupees only`)
+      
+      if (validationErrors.purchaseInvoiceId) {
+        setValidationErrors({ ...validationErrors, purchaseInvoiceId: "" })
       }
     }
   }
@@ -287,7 +377,7 @@ setRecipientTypes(uniqueRecipientTypes);
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     // Final validation of all tabs
@@ -312,12 +402,44 @@ setRecipientTypes(uniqueRecipientTypes);
     }
 
     try {
-      api.payments.create({
+      // If payment is for an invoice, update the invoice first
+      if (creationMode === "invoiced" && paymentData.purchaseInvoiceId) {
+        const originalInvoice = purchaseInvoices.find(i => i._id === paymentData.purchaseInvoiceId);
+        if (originalInvoice) {
+          const paymentAmount = Number.parseFloat(paymentData.amount);
+          const originalBalance = Number(originalInvoice.balanceAmount);
+          const newBalance = originalBalance - paymentAmount;
+
+          let newPaymentStatus: "Paid" | "Partial" | "Unpaid" = "Partial";
+          let newInvoiceStatus: "Open" | "Closed" | "Partial" = "Partial";
+
+          if (newBalance <= 0) {
+            newPaymentStatus = "Paid";
+            newInvoiceStatus = "Closed";
+          }
+
+          await api.purchaseInvoice.update(paymentData.purchaseInvoiceId, {
+            balanceAmount: newBalance,
+            paymentStatus: newPaymentStatus,
+            invoiceStatus: newInvoiceStatus,
+          });
+        }
+      }
+      await api.payments.create({
+        // purchaseInvoiceId: creationMode === "invoiced" ? paymentData.purchaseInvoiceId : undefined,
         userId: user?.id || "",
         paymentNumber: paymentData.paymentNumber,
         recipientType: paymentData.recipientType as "client" | "vendor" | "team",
         recipientId: paymentData.recipientId,
         recipientName: paymentData.recipientName,
+        recipientEmail: paymentData.recipientEmail,
+        recipientPhone: paymentData.recipientPhone,
+        recipientAddress: paymentData.recipientAddress,
+        invoiceDate: paymentData.invoiceDate || undefined,
+        payAbleAmount: paymentData.payAbleAmount,
+        amountInWords: amountInWords,
+        purchaseInvoiceNumber: paymentData.purchaseInvoiceNumber || undefined,
+        purchaseInvoiceId: paymentData.purchaseInvoiceId,
         date: paymentData.date,
         amount: Number.parseFloat(paymentData.amount),
         paymentMethod: paymentData.paymentMethod as any,
@@ -325,10 +447,12 @@ setRecipientTypes(uniqueRecipientTypes);
         description: paymentData.description,
         screenshotFile: paymentData.screenshotFile,
         billFile: paymentData.billFile,
+        paymentType: paymentData.paymentType,
         status: paymentData.paymentMethod === "Cash" ? "completed" : "pending",
         bankAccount: paymentData.bankAccount,
         referenceNumber: paymentData.referenceNumber,
-        createdBy: user?.id || "",
+        createdBy: companyName || "",
+        // paymentType: paymentData.paymentType,
       })
 
       toast({
@@ -675,21 +799,22 @@ setRecipientTypes(uniqueRecipientTypes);
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+            <Tabs value={creationMode} onValueChange={(val) => {
+              setCreationMode(val)
+              setActiveTab("payment-details")
+              // Reset data if needed, or keep it
+            }} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="invoiced">Invoiced Payment</TabsTrigger>
+                <TabsTrigger value="non-invoiced">Non-Invoiced Payment</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6 mt-6">
               <TabsList>
                 <TabsTrigger value="payment-details" className="relative">
                   Payment Details
                 </TabsTrigger>
-                {/* <TabsTrigger 
-                  value="recipient-details" 
-                  disabled={isTabDisabled("recipient-details")}
-                  className="relative disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Party Details
-                  {isTabDisabled("recipient-details") && (
-                    <AlertCircle className="h-3 w-3 absolute -top-1 -right-1 text-red-500" />
-                  )}
-                </TabsTrigger> */}
                 <TabsTrigger
                   value="payment-info"
                   disabled={isTabDisabled("payment-info")}
@@ -709,6 +834,28 @@ setRecipientTypes(uniqueRecipientTypes);
                     <CardDescription>Enter basic payment information</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    
+                    {creationMode === "invoiced" && (
+                      <div className="space-y-2">
+                        <Label>Select Invoice <span className="text-red-500">*</span></Label>
+                        <ClientSelectSimple
+                          options={purchaseInvoices.map((inv) => ({
+                            value: inv._id,
+                            label: `${inv.purchaseInvoiceNumber} - ${inv.recipientName || inv.vendor?.name} (₹${inv.balanceAmount})`,
+                          }))}
+                          value={paymentData.purchaseInvoiceId}
+                          onValueChange={handleInvoiceSelect}
+                          placeholder="Search invoice..."
+                          searchPlaceholder="Type to search invoices..."
+                          emptyText="No open invoices found."
+                          className={validationErrors.purchaseInvoiceId ? "border-red-500" : "w-full"}
+                        />
+                        {validationErrors.purchaseInvoiceId && (
+                          <p className="text-xs text-red-500">{validationErrors.purchaseInvoiceId}</p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="paymentNumber">
@@ -742,6 +889,7 @@ setRecipientTypes(uniqueRecipientTypes);
                     </div>
 
                     <div className="space-y-2 flex flex-wrap gap-6">
+                      {creationMode === "non-invoiced" && (
                       <div>
                         <Label htmlFor="category">
                           Ledger Head <span className="text-red-500">*</span>
@@ -774,8 +922,10 @@ setRecipientTypes(uniqueRecipientTypes);
                           <p className="text-xs text-red-500">{validationErrors.category}</p>
                         )}
                       </div>
+                      )}
 
 
+                      {creationMode === "non-invoiced" && (
                       <div className="space-y-2">
                         <Label htmlFor="recipientType">
                           Party Type <span className="text-red-500">*</span>
@@ -788,7 +938,9 @@ setRecipientTypes(uniqueRecipientTypes);
                               recipientType: value,
                               recipientId: "",
                               recipientName: "",
-                              recipientDetails: "",
+                              recipientEmail: "",
+                              recipientPhone: "",
+                              recipientAddress: "",
                             })
                             if (validationErrors.recipientType) {
                               setValidationErrors({ ...validationErrors, recipientType: "" })
@@ -816,8 +968,9 @@ setRecipientTypes(uniqueRecipientTypes);
                           <p className="text-xs text-red-500">{validationErrors.recipientType}</p>
                         )}
                       </div>
+                      )}
 
-                      {paymentData.recipientType === "client" && (
+                      {creationMode === "non-invoiced" && paymentData.recipientType === "client" && (
                         <>
                           <div className="space-y-2">
                             <Label htmlFor="client">
@@ -1080,7 +1233,7 @@ setRecipientTypes(uniqueRecipientTypes);
                         </>
                       )}
 
-                      {paymentData.recipientType === "vendor" && (
+                      {creationMode === "non-invoiced" && paymentData.recipientType === "vendor" && (
                         <>
                           <div className="space-y-2">
                             <Label htmlFor="vendor">
@@ -1193,7 +1346,7 @@ setRecipientTypes(uniqueRecipientTypes);
                         </>
                       )}
 
-                      {paymentData.recipientType === "team" && (
+                      {creationMode === "non-invoiced" && paymentData.recipientType === "team" && (
                         <>
                           <div className="space-y-2">
                             <Label htmlFor="teamMember">
@@ -1220,13 +1373,24 @@ setRecipientTypes(uniqueRecipientTypes);
                         </>
                       )}
 
-                      {paymentData.recipientId && (
+                      {paymentData.recipientId && creationMode === "non-invoiced" && (
                         <div className="space-y-2">
                           <Label>Recipient Details</Label>
                           <Textarea value={paymentData.recipientName+" "+paymentData.recipientDetails} disabled rows={4} />
                         </div>
                       )}
                     </div>
+
+                    {creationMode === "invoiced" && paymentData.purchaseInvoiceId && (
+                      <div className="p-4 bg-slate-50 rounded-lg border space-y-2">
+                        <div className="text-sm font-medium">Invoice Details</div>
+                        <div className="text-sm text-gray-600">Vendor: {paymentData.recipientName}</div>
+                        {/* <div className="text-sm text-gray-600">Invoice Date: {paymentData.recipient}</div> */}
+                        <div className="text-sm text-gray-600">Invoice Amount: {paymentData.payAbleAmount}</div>
+                        <div className="text-sm text-gray-600">Invoice Number: {paymentData.purchaseInvoiceNumber}</div>
+                        <div className="text-sm text-gray-600">Category: {paymentData.category}</div>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="description">Description</Label>
@@ -1238,6 +1402,25 @@ setRecipientTypes(uniqueRecipientTypes);
                         rows={3}
                       />
                     </div>
+
+                    {creationMode === "invoiced" && (
+                      <div className="space-y-2">
+                        <Label>Payment Type</Label>
+                        <Select
+                          value={paymentData.paymentType}
+                          onValueChange={(val: any) => setPaymentData({...paymentData, paymentType: val})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="full">Full Payment</SelectItem>
+                            <SelectItem value="partial">Partial Payment</SelectItem>
+                            {/* <SelectItem value="advance">Advance Payment</SelectItem> */}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="amount">
@@ -1355,7 +1538,7 @@ setRecipientTypes(uniqueRecipientTypes);
                       </div>
                     )}
                     {/* BILL UPLOAD */}
-  <div className="mb-2">
+ {( <div className="mb-2">
     <Label>Bill Upload <span className="text-red-500">*</span></Label>
 
     <ImageUpload
@@ -1375,7 +1558,7 @@ setRecipientTypes(uniqueRecipientTypes);
     {validationErrors.billFile && (
       <p className="text-xs text-red-500">{validationErrors.billFile}</p>
     )}
-  </div>
+  </div>)}
 
                     {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
 <div className="mt-5 mb-5">
@@ -1423,7 +1606,7 @@ setRecipientTypes(uniqueRecipientTypes);
 
                     <div className="space-y-2">
                       <Label>Created By</Label>
-                      <Input value={user?.name || ""} disabled />
+                      <Input value={companyName || ""} disabled />
                     </div>
                   </CardContent>
                 </Card>
@@ -1446,6 +1629,10 @@ setRecipientTypes(uniqueRecipientTypes);
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Date:</span>
                     <span className="font-medium">{paymentData.date || "-"}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Type:</span>
+                    <span className="font-medium capitalize">{creationMode}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Recipient Type:</span>

@@ -307,7 +307,7 @@ export default function SalesInvoicesPage() {
                                 <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
                                 <Button variant="ghost" size="sm">View</Button>
                                 </Link>
-                                {hasPermission("edit_sales_invoices") && (
+                                {hasPermission("edit_sales_invoices") && invoice.status !== "Cleared" && (
                                   <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
                                     <Button variant="ghost" size="sm">
                                       <Edit className="h-4 w-4" />

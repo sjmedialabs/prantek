@@ -256,9 +256,9 @@ export interface ReceiptItem {
 export interface Receipt extends BaseDocument {
   id: string
   receiptNumber: string
-  receiptType: "quotation" | "items" | "quick" // Type of receipt creation
-  quotationId?: string // Optional - only for receipts from quotations
-  quotationNumber?: string
+  receiptType: "salesInvoiced" | "nonInvoiced" | "advance" // Type of receipt creation
+  salesInvoiceId?: string // Optional - only for receipts from invoice
+  salesInvoiceNumber?: string
   clientId: string
   clientName: string
   clientEmail: string
@@ -268,16 +268,20 @@ export interface Receipt extends BaseDocument {
   items: QuotationItem[]
   subtotal: number
   taxAmount: number
-  total: number // Total amount from quotation
-  amountPaid: number // Amount paid in this receipt
-  balanceAmount: number // Remaining balance after this payment
+  invoiceDate: string
+  invoicegrandTotal: number
+  invoiceBalance: number
+  total: number // Total amount from quotation also the invoice total amount 
+  ReceiptAmount: number // Amount paid in this receipt
+  balanceAmount: number // Remaining balance after this payment else invoice balace amount
   paymentType: "full" | "partial" | "advance"
   paymentMethod: "cash" | "card" | "upi" | "bank-transfer" | "cheque"
-  bankAccount?: string
+  bankDetails?: BankDetail
   referenceNumber?: string
   screenshot?: string
   status: "pending" | "cleared" // Lowercase to match reconciliation
   notes?: string
+  createdBy: string
 }
 
 export interface QuotationItem {
@@ -361,6 +365,40 @@ export interface SalesInvoice extends BaseDocument {
   userId: string
   isActive?: string
   bankDetails?: BankDetail
+}
+export interface PurchaseInvoice extends BaseDocument {
+  purchaseInvoiceNumber: string // PI-2026-0001
+  date: string
+  dueDate: string
+
+  vendorInvoiceNumber: string
+
+  vendor: {
+    vendorId: string
+    name: string
+    address: string
+    contactNumber: string
+    email: string
+  }
+
+  paymentCategory: string
+  description?: string
+
+  invoiceTotalAmount: number
+  amountInWords: string
+
+  billUpload?: string
+
+  paymentStatus: "Unpaid" | "Paid"
+  invoiceStatus: "Open" | "Closed"
+
+  paidAmount: number
+
+  expenseAdjustment?: number
+  expenseAdjustmentReason?: string
+
+  createdBy: string
+  userId: string
 }
 
 export interface Payment extends BaseDocument {

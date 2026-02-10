@@ -21,6 +21,7 @@ import type {
   MemberType,
   Role,
   ActivityLog,
+  PurchaseInvoice,
 } from "./models/types"
 
 export const models = {
@@ -34,6 +35,7 @@ export const models = {
   subscriptionPlans: new BaseModel<SubscriptionPlan>(COLLECTIONS.SUBSCRIPTION_PLANS),
   paymentMethods: new BaseModel<PaymentMethod>(COLLECTIONS.PAYMENT_METHODS),
   salesCategories: new BaseModel<Category>(COLLECTIONS.SALES_CATEGORIES),
+  purchaseInvoices: new BaseModel<PurchaseInvoice>(COLLECTIONS.PURCHASE_INVOICES),
   receiptCategories: new BaseModel<Category>(COLLECTIONS.RECEIPT_CATEGORIES),
   paymentCategories: new BaseModel<Category>(COLLECTIONS.PAYMENT_CATEGORIES),
   taxSettings: new BaseModel<TaxSetting>(COLLECTIONS.TAX_SETTINGS),
@@ -148,6 +150,7 @@ export class MongoDBStore {
       activityLogs: models.activityLogs,
       terms: models.terms,
       salesInvoice: models.salesCategories,
+      purchaseInvoice: models.purchaseInvoices,
     }
 
     return modelMap[collection] || null
