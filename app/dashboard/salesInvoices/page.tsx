@@ -277,7 +277,7 @@ export default function SalesInvoicesPage() {
                   <TableHead>Invoice Number</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Quotation Ref</TableHead>
-                  <TableHead>Total Amount</TableHead>
+                  <TableHead>Balance Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>

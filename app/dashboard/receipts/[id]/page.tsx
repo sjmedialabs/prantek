@@ -54,7 +54,7 @@ export default function ReceiptDetailsPage() {
       receiptNumber: receipt.receiptNumber,
       date: receipt.date,
       notes: receipt.notes || "",
-
+      advanceAppliedAmount: receipt.advanceAppliedAmount || 0,
       client: {
         name: receipt.clientName,
         address: receipt.clientAddress || "",

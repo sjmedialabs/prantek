@@ -106,12 +106,21 @@ export default function ClientDetailsPage() {
     const loadClientData = async () => {
       if (params.id) {
         try {
-          const loadedClient = await api.clients.getById(params.id as string)
+          const [loadedClient, allQuotations, allReceipts, allPayments] = await Promise.all([
+            api.clients.getById(params.id as string),
+            api.quotations.getAll(),
+            api.receipts.getAll(),
+            api.payments.getAll(),
+          ])
+
+          if (!loadedClient) {
+            setClient(null)
+            return
+          }
           setClient(loadedClient)
 
-          const allQuotations = await api.quotations.getAll()
-          const clientQuotations = allQuotations
-            .filter((q: any) => q.clientId === params.id || q.clientName === loadedClient?.clientName)
+          const clientQuotations = (allQuotations || [])
+            .filter((q: any) => q.clientId === params.id)
             .map((q: any) => ({
               id: q._id,
               type: "quotation" as const,
@@ -121,10 +130,42 @@ export default function ClientDetailsPage() {
               amount: q.grandTotal || 0,
               paidAmount: q.paidAmount || 0,
               balanceAmount: q.balanceAmount || 0,
-              status: q.status === "completed" ? "completed" : q.paidAmount > 0 ? "partial" : "pending",
+              status: q.balanceAmount <= 0 ? "completed" : q.paidAmount > 0 ? "partial" : "pending",
             }))
 
-          setTransactions(clientQuotations)
+          const clientReceipts = (allReceipts || [])
+            .filter((r: any) => r.clientId === params.id)
+            .map((r: any) => ({
+              id: r._id,
+              type: "receipt" as const,
+              number: r.receiptNumber,
+              date: r.date,
+              items: r.items?.map((item: any) => item.itemName || item.name) || [r.receiptType || "Receipt"],
+              amount: r.total || r.ReceiptAmount || 0,
+              paidAmount: r.ReceiptAmount || r.amountPaid || 0,
+              balanceAmount: r.balanceAmount || 0,
+              status: r.status?.toLowerCase() === "cleared" ? "completed" : "pending",
+            }))
+
+          const clientPayments = (allPayments || [])
+            .filter((p: any) => p.recipientId === params.id && p.recipientType === "client")
+            .map((p: any) => ({
+              id: p._id,
+              type: "payment" as const,
+              number: p.paymentNumber,
+              date: p.date,
+              items: [p.description || p.category || "Payment"],
+              amount: p.amount || 0,
+              paidAmount: p.amount || 0,
+              balanceAmount: 0,
+              status: p.status === "completed" || p.status === "Cleared" ? "completed" : "pending",
+            }))
+
+          const combinedTransactions = [...clientQuotations, ...clientReceipts, ...clientPayments].sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+
+          setTransactions(combinedTransactions)
         } catch (error) {
           console.error("Failed to load client data:", error)
         }
@@ -309,6 +350,71 @@ export default function ClientDetailsPage() {
     }
   }
 
+  const renderTransactionTable = (data: Transaction[]) => (
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Transaction</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Items</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Paid</TableHead>
+            <TableHead>Balance</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                No transactions found
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((transaction) => (
+              <TableRow key={transaction.id}>
+                <TableCell className="font-medium">{transaction.number}</TableCell>
+                <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {transaction.items.slice(0, 2).join(", ")}
+                    {transaction.items.length > 2 && ` +${transaction.items.length - 2} more`}
+                  </div>
+                </TableCell>
+                <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                <TableCell className="text-green-600">₹{transaction.paidAmount.toLocaleString()}</TableCell>
+                <TableCell className="text-red-600">₹{transaction.balanceAmount.toLocaleString()}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      transaction.status === "completed"
+                        ? "default"
+                        : transaction.status === "partial"
+                          ? "secondary"
+                          : "destructive"
+                    }
+                  >
+                    {transaction.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {transaction.status !== "completed" && (
+                    <Button size="sm" variant="outline" onClick={() => handleContinuePayment(transaction)}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Pay
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -430,73 +536,15 @@ export default function ClientDetailsPage() {
                   <TabsTrigger value="pending">Pending</TabsTrigger>
                   <TabsTrigger value="completed">Completed</TabsTrigger>
                 </TabsList>
-                {/* TabsContent remains exactly the same */}
-                {/* ... (your existing table code - unchanged) ... */}
                 <TabsContent value="all" className="mt-4">
-                  <div className="border rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Transaction</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Items</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Paid</TableHead>
-                          <TableHead>Balance</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {transactions.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                              No transactions found for this client
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          transactions.map((transaction) => (
-                            <TableRow key={transaction.id}>
-                              <TableCell className="font-medium">{transaction.number}</TableCell>
-                              <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  {transaction.items.slice(0, 2).join(", ")}
-                                  {transaction.items.length > 2 && ` +${transaction.items.length - 2} more`}
-                                </div>
-                              </TableCell>
-                              <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                              <TableCell className="text-green-600">₹{transaction.paidAmount.toLocaleString()}</TableCell>
-                              <TableCell className="text-red-600">₹{transaction.balanceAmount.toLocaleString()}</TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    transaction.status === "completed"
-                                      ? "default"
-                                      : transaction.status === "partial"
-                                        ? "secondary"
-                                        : "destructive"
-                                  }
-                                >
-                                  {transaction.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {transaction.status !== "completed" && (
-                                  <Button size="sm" variant="outline" onClick={() => handleContinuePayment(transaction)}>
-                                    <CreditCard className="h-4 w-4 mr-2" />
-                                    Pay
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  {renderTransactionTable(transactions)}
                 </TabsContent>
-                {/* pending & completed tabs unchanged */}
+                <TabsContent value="pending" className="mt-4">
+                  {renderTransactionTable(transactions.filter((t) => t.status === "pending" || t.status === "partial"))}
+                </TabsContent>
+                <TabsContent value="completed" className="mt-4">
+                  {renderTransactionTable(transactions.filter((t) => t.status === "completed"))}
+                </TabsContent>
               </Tabs>
             </CardContent>
           </Card>

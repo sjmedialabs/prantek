@@ -110,10 +110,10 @@ export function PaymentPrint({ payment, companyDetails }: PaymentPrintProps) {
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
           <h3 className="text-sm font-semibold text-gray-700 mb-2">PAID TO:</h3>
-          <div className="text-sm">
-            <p className="font-semibold text-gray-900">{payment.recipientName}</p>
-            {payment.recipientId && <p className="text-gray-600">{payment.recipientId}</p>}
-            {payment.recipientType && <p className="text-gray-600">Phone: {payment.recipientType}</p>}
+          <div className="text-sm flex flex-col gap-2">
+            <p className="font-semibold text-gray-900 py-2">{payment.recipientName}</p>
+            {payment.recipientId && <p className="text-gray-600 py-0">{payment.recipientId}</p>}
+            {payment.recipientType && <p className="text-gray-600 py-0">Phone: {payment.recipientType}</p>}
             {/* {payment.recipientName && <p className="text-gray-600">Email: {payment.recipientName}</p>} */}
           </div>
         </div>

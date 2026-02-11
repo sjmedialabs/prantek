@@ -9,12 +9,16 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Printer, Download, FileText, ExternalLink, Mail, Phone, MapPin, Calendar, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
+import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
+import { generatePDF, printDocument } from "@/lib/pdf-utils"
+import { PurchaseInvoicePrint } from "@/components/print-templates/purchase-invoice-print"
 
 export default function ViewInvoicePage() {
   const { id } = useParams()
   const router = useRouter()
   const [invoice, setInvoice] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
 
   useEffect(() => {
     const loadInvoice = async () => {
@@ -28,7 +32,16 @@ export default function ViewInvoicePage() {
       }
     }
     if (id) loadInvoice()
+    getCompanyDetails().then(setCompanyDetails)
   }, [id])
+
+  const handlePrint = () => {
+    printDocument("invoice-print-content")
+  }
+
+  const handleDownload = async () => {
+    await generatePDF("print-content", `Purchase-Invoice-${invoice?.purchaseInvoiceNumber}.pdf`)
+  }
 
   if (loading) return <div className="p-8 text-center">Loading invoice details...</div>
   if (!invoice) return <div className="p-8 text-center">Invoice not found</div>
@@ -57,7 +70,11 @@ export default function ViewInvoicePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>
@@ -200,6 +217,23 @@ export default function ViewInvoicePage() {
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Hidden Print Component */}
+      <div className="hidden" id="print-content">
+        {companyDetails && (
+          <PurchaseInvoicePrint
+            invoice={invoice}
+            companyDetails={{
+              name: companyDetails.companyName,
+              address: companyDetails.address,
+              phone: companyDetails.mobileNo1,
+              email: companyDetails.email,
+              website: companyDetails.website,
+              logo: companyDetails.logo
+            }}
+          />
+        )}
       </div>
     </div>
   )

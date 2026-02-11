@@ -8,9 +8,12 @@ import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Edit, Printer, Trash2 } from "lucide-react"
+import { ArrowLeft, Edit, Printer, Trash2, Download } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useUser } from "@/components/auth/user-context"
+import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
+import { generatePDF, printDocument } from "@/lib/pdf-utils"
+import { PaymentPrint } from "@/components/print-templates/payment-print"
 
 // Helper component for displaying details
 const DetailItem = ({ label, value, isBadge = false }: { label: string; value: any; isBadge?: boolean }) => {
@@ -34,6 +37,7 @@ export default function PaymentDetailsPage() {
 
   const [payment, setPayment] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
 
   useEffect(() => {
     if (paymentId) {
@@ -65,8 +69,17 @@ export default function PaymentDetailsPage() {
         }
       }
       loadPayment()
+      getCompanyDetails().then(setCompanyDetails)
     }
   }, [paymentId, router, toast])
+
+  const handlePrint = () => {
+    printDocument("print-content")
+  }
+
+  const handleDownload = async () => {
+    await generatePDF("print-content", `Payment-${payment?.paymentNumber}.pdf`)
+  }
 
   if (loading) {
     return (
@@ -129,7 +142,11 @@ export default function PaymentDetailsPage() {
               </Button>
             </Link>
           )}
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>
@@ -259,6 +276,27 @@ export default function PaymentDetailsPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Hidden Print Component */}
+      <div className="hidden" id="print-content">
+        {payment && (
+          <PaymentPrint
+            payment={{
+              ...payment,
+              paymentCategory: payment.category || payment.paymentCategory,
+              amount: Number(payment.amount || 0)
+            }}
+            companyDetails={companyDetails ? {
+              name: companyDetails.companyName,
+              address: companyDetails.address,
+              phone: companyDetails.mobileNo1,
+              email: companyDetails.email,
+              website: companyDetails.website,
+              logo: companyDetails.logo
+            } : undefined}
+          />
+        )}
       </div>
     </div>
   )
