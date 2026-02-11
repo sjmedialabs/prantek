@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Upload, FileSpreadsheet, Download, Loader2 } from "lucide-react"
-
+import { InfoTooltip } from "@/components/ui/info-tooltip"
 import { Progress } from "@/components/ui/progress"
 import { toast } from "@/lib/toast"
 interface BulkUploadProps {
@@ -118,7 +118,7 @@ if (!zip) {
         toast({
           variant: "destructive",
           title: "All Items Failed",
-          description: `Nothing was uploaded. Check your file format.`,
+          description: `Nothing was uploaded. Check info fo `,
         })
 
         if (result.errors?.length > 0) {
@@ -183,7 +183,7 @@ Paracetamol Tablet,Used for fever,Box,100,3004,true,${cgstList[0] || 0},${sgstLi
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} variant="outline" className="flex items-center gap-2">
+      <Button onClick={() => setOpen(true)} variant="outline" className="flex items-center gap-2" title="Bulk Upload Only allowed for Products">
         <FileSpreadsheet className="h-4 w-4" />
         Bulk Upload
       </Button>
@@ -196,6 +196,7 @@ Paracetamol Tablet,Used for fever,Box,100,3004,true,${cgstList[0] || 0},${sgstLi
           </DialogHeader>
 
           <div className="space-y-4">
+            <div className="flex flex-row items-center">
             <Button
               onClick={downloadTemplate}
               variant="outline"
@@ -205,10 +206,11 @@ Paracetamol Tablet,Used for fever,Box,100,3004,true,${cgstList[0] || 0},${sgstLi
               <Download className="h-4 w-4" />
               Download Template
             </Button>
-
+            <InfoTooltip content="Download template for bulk upload of Products. Please Make sure to fill all the fields with unique values for each item and the correct Image Url based on the Image Zip folder."/>
+            </div>
             {/* Excel Upload */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Excel File (.xlsx / .csv)</label>
+              <label className="text-sm font-medium">Excel File (.xlsx / .csv) <InfoTooltip content="Chose the file to upload items. Please Make sure to fill all the fields with unique values for each item and the correct Image Url based on the Image Zip folder."/></label>
               <Input
                 type="file"
                 accept=".xlsx,.xls,.csv"
@@ -220,7 +222,7 @@ Paracetamol Tablet,Used for fever,Box,100,3004,true,${cgstList[0] || 0},${sgstLi
 
             {/* ZIP Upload */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">ZIP File (Images)</label>
+              <label className="text-sm font-medium">ZIP File (Images) <InfoTooltip content="Chose the file to upload images for the items. Please Make sure the correct Image Url based on the Image url in Excel. Compare both then upload."/></label>
               <Input
                 type="file"
                 accept=".zip"

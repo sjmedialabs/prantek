@@ -129,7 +129,7 @@ export default function SalesInvoicesPage() {
     }
   }
 
-  if (!hasPermission("view_sales_invoices")) {
+  if (!hasPermission("view_sales_invoice")) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
@@ -156,7 +156,7 @@ export default function SalesInvoicesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Sales Invoices</h1>
           <p className="text-gray-600">Manage sales invoices</p>
         </div>
-        {hasPermission("create_sales_invoices") && (
+        {hasPermission("add_sales_invoice") && (
           <Link href="/dashboard/salesInvoices/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -316,11 +316,11 @@ export default function SalesInvoicesPage() {
                                   </Link>
                                 )}
                            
-                          <Switch
+                         {hasPermission("edit_sales_invoice") &&( <Switch
                             checked={invoice.isActive !== "deactive"}
                             onCheckedChange={() => handleStatusToggle(invoice._id, invoice.isActive !== "deactive")}
                             title="Change Status(Active/Inactive)"
-                          />
+                          />)}
                            </div>
                         </TableCell>
                         </TableRow>

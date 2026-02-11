@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Trash2, Edit, Plus, Eye, EyeOff, Search } from "lucide-react"
+import { Trash2, Edit, Plus, Eye, EyeOff, Search, Terminal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,7 +25,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-
+import { useUser } from "@/components/auth/user-context"
+import { api } from "@/lib/api-client"
+import type { SubscriptionPlan } from "@/lib/models/types"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/lib/toast"
 
@@ -59,6 +62,7 @@ interface User {
 }
 
 export default function UsersPage() {
+  const { user } = useUser()
   const [users, setUsers] = useState<User[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [roles, setRoles] = useState<any[]>([])
@@ -79,15 +83,19 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const[confirmPassword,setConfirmPassword]=useState("");
   const[showConfirmPassword,setShowConfirmPassword]=useState(false)
-  
+  const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
+  const [canAddUser, setCanAddUser] = useState(true)
+
   const { toast } = useToast()
 
   useEffect(() => {
-    fetchUsers()
-    fetchEmployees()
-    fetchRoles()
-    fetchPermissions()
-  }, [])
+    if (user) {
+      fetchUsers()
+      fetchEmployees()
+      fetchRoles()
+      fetchPermissions()
+    }
+  }, [user])
 
 
   const fetchPermissions = async () => {
@@ -109,7 +117,24 @@ export default function UsersPage() {
       const data = await response.json()
 
       if (data.success) {
-        setUsers(data.users || [])
+        const adminUsers = data.users || []
+        setUsers(adminUsers)
+
+        // Now fetch plan and check limit
+        if (user?.subscriptionPlanId) {
+          try {
+            const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
+            setCurrentPlan(plan)
+            if (plan?.name?.toLowerCase() === "proffessional" && adminUsers.length >= 5) {
+              setCanAddUser(false)
+            } else {
+              setCanAddUser(true)
+            }
+          } catch (planError) {
+            console.error("Failed to fetch subscription plan:", planError)
+            setCanAddUser(true) // Default to true if plan check fails
+          }
+        }
       } else {
         toast({
           title: "Error",
@@ -154,6 +179,9 @@ export default function UsersPage() {
     !users.some(user => user.employeeId === emp._id)
   )
   const permissionRules = {
+    cashBook: {
+      view: "view_cash_book",
+    },
   clients: {
     view: "view_clients",
     add: "add_clients",
@@ -169,10 +197,20 @@ export default function UsersPage() {
     add: "add_quotations",
     edit: "edit_quotations"
   },
+  salesInvoice: {
+    view: "view_sales_invoice",
+    add: "add_sales_invoice",
+    edit: "edit_sales_invoice"
+  },
   receipts: {
     view: "view_receipts",
     add: "add_receipts",
     edit: "edit_receipts"
+  },
+  purchaseInvoice: {
+    view: "view_purchase_invoice",
+    add: "add_purchase_invoice",
+    edit: "edit_purchase_invoice"
   },
   payments: {
     view: "view_payments",
@@ -198,7 +236,7 @@ export default function UsersPage() {
   }
 };
 
-function validatePermissions(selectedPermissions) {
+function validatePermissions(selectedPermissions: any) {
   for (const key in permissionRules) {
     const rules = permissionRules[key];
 
@@ -330,6 +368,7 @@ function validatePermissions(selectedPermissions) {
         setIsEditDialogOpen(false)
         resetForm()
         fetchUsers()
+        window.location.reload()
       } else {
         toast({
           title: "Error",
@@ -432,11 +471,30 @@ function validatePermissions(selectedPermissions) {
             Manage admin users and their permissions
           </p>
         </div>
-        <Button onClick={openAddDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Admin User
-        </Button>
+       <div
+  title="Professional Plan User can add up to 5 admin users"
+  className="inline-block"
+>
+  <Button onClick={openAddDialog} disabled={!canAddUser}>
+    <Plus className="mr-2 h-4 w-4" />
+    Add Admin User
+  </Button>
+</div>
+
       </div>
+
+      {/* {!canAddUser && currentPlan && (
+        <Alert variant="destructive">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Admin User Limit Reached</AlertTitle>
+          <AlertDescription>
+            Your current plan (<strong>{currentPlan.name}</strong>) allows a maximum of 5 admin users. To add more users, please{" "}
+            <a href="/dashboard/plans" className="underline">
+              upgrade your plan
+            </a>.
+          </AlertDescription>
+        </Alert>
+      )} */}
 
       <Card className="p-4">
          {/* Search + filter */}
@@ -465,14 +523,14 @@ function validatePermissions(selectedPermissions) {
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="p-4 text-left font-medium">Sr.No</th>
-                  <th className="p-4 text-left font-medium">Name</th>
-                  <th className="p-4 text-left font-medium">Email</th>
-                  <th className="p-4 text-left font-medium">Employee</th>
-                  <th className="p-4 text-left font-medium">Permissions</th>
-                  <th className="p-4 text-left font-medium">Status</th>
-                  <th className="p-4 text-left font-medium">Last Login</th>
-                  <th className="p-4 text-right font-medium">Actions</th>
+                  <th className="py-4 px-2 text-left font-medium">Sr.No</th>
+                  <th className="py-4 px-2 text-left font-medium">Name</th>
+                  <th className="py-4 px-2 text-left font-medium">Email</th>
+                  <th className="py-4 px-2 text-left font-medium">Employee Number</th>
+                  <th className="py-4 px-2 text-left font-medium">Permissions</th>
+                  <th className="py-4 px-2 text-left font-medium">Status</th>
+                  <th className="py-4 px-2 text-left font-medium">Last Login</th>
+                  <th className="py-4 px-2 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -485,18 +543,18 @@ function validatePermissions(selectedPermissions) {
                 ) : (
                   filteredUsers.map((user,index) => (
                     <tr key={user._id} className="border-b hover:bg-muted/50">
-                      <td className="p-4">{index + 1}</td>
-                      <td className="p-4 font-medium">{user.name}</td>
-                      <td className="p-4">{user.email}</td>
-                      <td className="p-4">
+                      <td className="py-4 px-2">{index + 1}</td>
+                      <td className="py-4 px-2 font-medium">{user.name}</td>
+                      <td className="py-4 px-2">{user.email}</td>
+                      <td className="py-4 px-2">
                         {user.employee ? (
                           <div className="text-sm">
-                            <div className="font-medium">
+                            {/* <div className="font-medium">
                               {user.employee.employeeName} {user.employee.surname || ''}
-                            </div>
+                            </div> */}
                             <div className="text-muted-foreground">
                               {user.employee.employeeNumber}
-                              {user.employee.designation && ` • ${user.employee.designation}`}
+                              {/* {user.employee.designation && ` • ${user.employee.designation}`} */}
                             </div>
                           </div>
                         ) : user.roleName ? (
@@ -505,7 +563,7 @@ function validatePermissions(selectedPermissions) {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
-                      <td className="p-4">
+                      <td className="py-4 px-2">
                         <div className="flex flex-wrap gap-1">
                           {user.permissions && user.permissions.length > 0 ? (
                             user.permissions.slice(0, 2).map((perm) => (
@@ -523,17 +581,17 @@ function validatePermissions(selectedPermissions) {
                           )}
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="py-4 px-2">
                         <Badge variant={user.isActive ? "default" : "secondary"}>
                           {user.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </td>
-                      <td className="p-4 text-sm text-muted-foreground">
+                      <td className="py-4 px-2 text-sm text-muted-foreground">
                         {user.lastLogin
                           ? new Date(user.lastLogin).toLocaleDateString()
                           : "Never"}
                       </td>
-                      <td className="p-4">
+                      <td className="py-4 px-2">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"

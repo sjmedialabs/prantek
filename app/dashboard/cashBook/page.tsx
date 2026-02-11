@@ -211,14 +211,14 @@ const totalPayments = filteredEntries
     )
   }
 
-  //   if (!hasPermission("view_cashbo)) {
-  //     return (
-  //       <div className="text-center py-12">
-  //         <h2 className="text-2xl font-bold">Access Denied</h2>
-  //         <p className="text-gray-600">You cannot view cashbook records.</p>
-  //       </div>
-  //     )
-  //   }
+    if (!hasPermission("view_cashbook")) {
+      return (
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold">Access Denied</h2>
+          <p className="text-gray-600">You cannot view cashbook records.</p>
+        </div>
+      )
+    }
 
   return (
     <div className="space-y-6">

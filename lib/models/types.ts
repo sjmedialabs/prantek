@@ -426,7 +426,9 @@ export interface PlanFeatures {
   clients: boolean
   vendors: boolean
   quotations: boolean
+  salesInvoice: boolean
   receipts: boolean
+  purchaseInvoice: boolean
   payments: boolean
   reconciliation: boolean
   assets: boolean
@@ -440,7 +442,9 @@ export const PLAN_FEATURE_KEYS = [
   'clients',
   'vendors',
   'quotations',
+  'salesInvoice',
   'receipts',
+  'purchaseInvoice',
   'payments',
   'reconciliation',
   'assets',
@@ -454,8 +458,10 @@ export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
   clients: 'Clients Management',
   vendors: 'Vendors Management',
   quotations: 'Quotations',
+  salesInvoice: 'Sales Invoice',
   receipts: 'Receipts',
   payments: 'Payments',
+  purchaseInvoice: 'Purchase Invoice',
   reconciliation: 'Reconciliation',
   assets: 'Assets Management',
   reports: 'Reports',
@@ -468,7 +474,9 @@ export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
   clients: 'Manage client database and relationships',
   vendors: 'Manage vendor database and relationships',
   quotations: 'Create and manage quotations',
+  salesInvoice: 'Create and manage sales invoices',
   receipts: 'Create and manage receipts',
+  purchaseInvoice: 'Create and manage purchase invoices',
   payments: 'Process and track payments',
   reconciliation: 'Bank reconciliation features',
   assets: 'Manage company assets inventory',
@@ -573,7 +581,7 @@ export interface MemberType extends BaseDocument {
   code: string
   description?: string
   requiresSalary: boolean
-  isActive: boolean
+  isEnabled: boolean
 }
 
 // Role for Admin Users (dashboard access permissions)

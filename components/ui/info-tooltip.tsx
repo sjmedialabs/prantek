@@ -18,7 +18,7 @@ export function InfoTooltip({ content, side = "top" }: InfoTooltipProps) {
         <TooltipTrigger asChild>
           <Info className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help inline-block ml-1" />
         </TooltipTrigger>
-        <TooltipContent side={side} className="max-w-xs">
+        <TooltipContent side={side} className="max-w-xs z-1000">
           <p className="text-sm">{content}</p>
         </TooltipContent>
       </Tooltip>

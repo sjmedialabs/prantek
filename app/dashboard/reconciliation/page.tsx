@@ -284,7 +284,7 @@ export default function ReconciliationPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6 max-w-[992px]">
+    <div className="container py-8 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Reconciliation</h1>
@@ -521,6 +521,29 @@ export default function ReconciliationPage() {
                   })}
                 </TableBody>
               </Table>
+              {filteredTransactions.length > itemsPerPage && (
+                <div className="flex items-center justify-between py-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

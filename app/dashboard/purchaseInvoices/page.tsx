@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useUser } from "@/components/auth/user-context"
 
 interface PurchaseInvoice {
   _id: string
@@ -21,9 +22,11 @@ interface PurchaseInvoice {
   invoiceStatus: string
   balanceAmount: number
   vendor?: { name: string }
+  paidAmount: number
 }
 
 export default function PurchaseInvoiceList() {
+  const { hasPermission } = useUser()
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -33,7 +36,10 @@ export default function PurchaseInvoiceList() {
 
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-
+  const [dateFromFilter, setDateFromFilter] = useState("")
+  const [dateToFilter, setDateToFilter] = useState("")
+  const [minAmountFilter, setMinAmountFilter] = useState("")
+  const [maxAmountFilter, setMaxAmountFilter] = useState("")
   useEffect(() => {
     fetch("/api/purchaseInvoice")
       .then((r) => r.json())
@@ -49,8 +55,15 @@ export default function PurchaseInvoiceList() {
       i.vendor?.name?.toLowerCase().includes(search.toLowerCase())
 
     const matchStatus = statusFilter === "all" || i.paymentStatus === statusFilter
+    const dateFromMatch = !dateFromFilter || new Date(i.date) >= new Date(dateFromFilter)
+    const dateToMatch = !dateToFilter || new Date(i.date) <= new Date(dateToFilter)
 
-    return matchSearch && matchStatus
+    const minMatch = !minAmountFilter || i.invoiceTotalAmount >= Number(minAmountFilter)
+    const maxMatch = !maxAmountFilter || i.invoiceTotalAmount <= Number(maxAmountFilter)
+    return matchSearch && dateFromMatch &&
+      dateToMatch &&
+      minMatch &&
+      maxMatch && matchStatus
   })
 
   useEffect(() => {
@@ -58,7 +71,7 @@ export default function PurchaseInvoiceList() {
   }, [search, statusFilter])
 
   const totalAmount = filtered.reduce((s, i) => s + (i.balanceAmount || 0), 0)
-  const paidAmount = filtered.filter(i => i.paymentStatus === "paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
+  const paidAmount = filtered.filter(i => i.paymentStatus === "Paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
   const unpaidAmount = filtered.filter(i => i.paymentStatus === "Unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage)
@@ -89,6 +102,14 @@ export default function PurchaseInvoiceList() {
   }
 
   if (loading) return <p>Loading...</p>
+    if (!hasPermission("view_purchase_invoice")) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+        <p className="text-gray-600">You don't have permission to view purchase invoices.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -105,29 +126,29 @@ export default function PurchaseInvoiceList() {
             <Download className="h-4 w-4 mr-2" /> Export
           </Button>
 
-          <Link href="/dashboard/purchaseInvoices/new">
+          {hasPermission("add_purchase_invoice")&&(<Link href="/dashboard/purchaseInvoices/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" /> New Invoice
             </Button>
-          </Link>
+          </Link>)}
         </div>
       </div>
 
       {/* Summary */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle>Total</CardTitle></CardHeader>
-          <CardContent>₹{totalAmount.toLocaleString()}</CardContent>
+          <CardHeader className="pb-2"><CardDescription>Total Amount</CardDescription></CardHeader>
+          <CardContent><div className="text-2xl font-bold">₹{totalAmount.toLocaleString()} </div></CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle>Paid</CardTitle></CardHeader>
-          <CardContent className="text-green-600">₹{paidAmount.toLocaleString()}</CardContent>
+          <CardHeader className="pb-2"><CardDescription>Paid</CardDescription></CardHeader>
+          <CardContent className="text-green-600"><div className="text-2xl font-bold">₹{paidAmount.toLocaleString()}</div></CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2"><CardTitle>Unpaid</CardTitle></CardHeader>
-          <CardContent className="text-red-600">₹{unpaidAmount.toLocaleString()}</CardContent>
+          <CardHeader className="pb-2"><CardDescription>Unpaid</CardDescription></CardHeader>
+          <CardContent className="text-red-600"><div className="text-2xl font-bold">₹{unpaidAmount.toLocaleString()}</div></CardContent>
         </Card>
       </div>
 
@@ -164,80 +185,102 @@ export default function PurchaseInvoiceList() {
           </div>
 
           {showFilters && (
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Payment Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Partial">Partial</SelectItem>
-                <SelectItem value="Unpaid">Unpaid</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Payment Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payment</SelectItem>
+                  <SelectItem value="Paid">Paid</SelectItem>
+                  <SelectItem value="Partial">Partial</SelectItem>
+                  <SelectItem value="Unpaid">Unpaid</SelectItem>
+                </SelectContent>
+              </Select>
+              <div>
+                <label className="text-sm font-medium">Date From</label>
+                <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Date To</label>
+                <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium" title="Filter by invoice total amount">Min Amount</label>
+                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium" title="Filter by invoice total amount">Max Amount</label>
+                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+              </div>
+            </div>
           )}
 
-          <Table className="mt-4">
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead>Invoice Status</TableHead>
-                <TableHead className="text-right">Payable Amount</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+              <Table className="mt-4">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>#</TableHead>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Payment Status</TableHead>
+                    <TableHead>Invoice Status</TableHead>
+                    <TableHead className="text-right">Total Amount</TableHead>
+                    <TableHead className="text-right">Balance Amount</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-            <TableBody>
-              {paginated.map((i, idx) => (
-                <TableRow key={i._id}>
-                  <TableCell>{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
-                  <TableCell>{i.purchaseInvoiceNumber}</TableCell>
-                  <TableCell>{i.date ? new Date(i.date).toLocaleDateString() : "-"}</TableCell>
-                  <TableCell>{i.recipientName}</TableCell>
+                <TableBody>
+                  {paginated.map((i, idx) => (
+                    <TableRow key={i._id}>
+                      <TableCell>{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
+                      <TableCell>{i.purchaseInvoiceNumber}</TableCell>
+                      <TableCell>{i.date ? new Date(i.date).toLocaleDateString() : "-"}</TableCell>
+                      <TableCell>{i.recipientName}</TableCell>
 
-                  <TableCell>
-                    <Badge variant={i.paymentStatus === "Paid" ? "default" : "secondary"}>
-                      {i.paymentStatus}
-                    </Badge>
-                  </TableCell>
+                      <TableCell>
+                        <Badge variant={i.paymentStatus === "Paid" ? "default" : "secondary"}>
+                          {i.paymentStatus}
+                        </Badge>
+                      </TableCell>
 
-                  <TableCell>
-                    <Badge variant={i.invoiceStatus === "Closed" ? "default" : "outline"}>
-                      {i.invoiceStatus || "Open"}
-                    </Badge>
-                  </TableCell>
+                      <TableCell>
+                        <Badge variant={i.invoiceStatus === "Closed" ? "default" : "outline"}>
+                          {i.invoiceStatus || "Open"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">₹{i?.invoiceTotalAmount?.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">₹{i?.balanceAmount?.toLocaleString()}</TableCell>
 
-                  <TableCell className="text-right">₹{i?.balanceAmount?.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Link href={`/dashboard/purchaseInvoices/${i._id}`}>
+                            <Button size="icon" variant="ghost" title="View Invoice details"><Eye className="h-4 w-4" /></Button>
+                          </Link>
+                          {!(i.paymentStatus === "Paid" && i.invoiceStatus === "Closed" && (!i.balanceAmount || i.balanceAmount === 0)) && hasPermission("edit_purchase_invoice") && (
+                            <Link href={`/dashboard/purchaseInvoices/${i._id}/edit`}>
+                              <Button size="icon" variant="ghost" title="Edit Invoice"><Edit className="h-4 w-4" /></Button>
+                            </Link>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
 
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/dashboard/purchaseInvoices/${i._id}`}>
-                        <Button size="icon" variant="ghost" title="View Invoice details"><Eye className="h-4 w-4" /></Button>
-                      </Link>
-                      {!(i.paymentStatus === "Paid" && i.invoiceStatus === "Closed" && (!i.balanceAmount || i.balanceAmount === 0)) && (
-                        <Link href={`/dashboard/purchaseInvoices/${i._id}/edit`}>
-                          <Button size="icon" variant="ghost" title="Edit Invoice"><Edit className="h-4 w-4" /></Button>
-                        </Link>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              {/* Pagination */}
+              <div className="flex justify-between mt-4">
+                <Button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <Button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
+              </div>
 
-          {/* Pagination */}
-          <div className="flex justify-between mt-4">
-            <Button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>Prev</Button>
-            <span>Page {currentPage} of {totalPages}</span>
-            <Button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
-          </div>
-
-        </CardContent>
+            </CardContent>
       </Card>
     </div>
   )

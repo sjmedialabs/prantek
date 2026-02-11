@@ -422,6 +422,7 @@ const handleRecipientChange = (recipientId: string) => {
             balanceAmount: newBalance,
             paymentStatus: newPaymentStatus,
             invoiceStatus: newInvoiceStatus,
+            paidAmount: Number.parseFloat(paymentData.amount)
           });
         }
       }
