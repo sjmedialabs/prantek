@@ -70,7 +70,7 @@ export default function PurchaseInvoiceList() {
     setCurrentPage(1)
   }, [search, statusFilter])
 
-  const totalAmount = filtered.reduce((s, i) => s + (i.balanceAmount || 0), 0)
+  const totalAmount = filtered.reduce((s, i) => s + (i.invoiceTotalAmount || 0), 0)
   const paidAmount = filtered.filter(i => i.paymentStatus === "Paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
   const unpaidAmount = filtered.filter(i => i.paymentStatus === "Unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
 
@@ -127,7 +127,7 @@ export default function PurchaseInvoiceList() {
           </Button>
 
           {hasPermission("add_purchase_invoice")&&(<Link href="/dashboard/purchaseInvoices/new">
-            <Button>
+            <Button title="Add New Invoice but Please ensure Payment Settings completed">
               <Plus className="h-4 w-4 mr-2" /> New Invoice
             </Button>
           </Link>)}

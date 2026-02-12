@@ -145,11 +145,11 @@ export default function SalesInvoiceDetailsPage() {
           <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownload}>
+          <Button variant="outline" onClick={handleDownload} title="While downloading please cross verify Your owned company Detils in settings">
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
+          <Button variant="outline" onClick={handlePrint} title="While Printing please cross verify Your owned company Detils in setting">
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>

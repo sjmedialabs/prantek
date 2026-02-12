@@ -236,11 +236,11 @@ const quotationForPrint = {
               Accept Quotation
             </Button>
           )} */}
-          <Button variant="outline" onClick={handleDownloadPDF}>
+          <Button variant="outline" onClick={handleDownloadPDF}  title="While downloading the quotation please cross verify Your owned company Detils in setting">
             <Download className="h-4 w-4 mr-2" />
             Download PDF
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
+          <Button variant="outline" onClick={handlePrint}  title="While Printing the quotation please cross verify Your owned company Detils in setting">
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>

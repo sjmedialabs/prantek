@@ -570,7 +570,7 @@ const handleConvertToInvoice = async () => {
                   )}
                                   <div>
                                     <Label>
-                                      Bank Account <span className="text-red-500">*</span>
+                                      Bank Account
                                     </Label>
                                     <Select
                                       value={selectedBankAccount?._id}
@@ -584,12 +584,16 @@ const handleConvertToInvoice = async () => {
                                         <SelectValue placeholder="Slect Bank Accounts" />
                                       </SelectTrigger>
                                       <SelectContent className="z-9999">
-                                        {bankAccounts.map((acc : any) => (
+                                        {bankAccounts.length !== 0 ?(bankAccounts.map((acc : any) => (
                                           <SelectItem key={acc._id} value={acc._id}>
                                             {acc.bankName}
                                           </SelectItem>
                   
-                                        ))}
+                                        ))):(
+                                           <p >
+                                            No Bank Accounts Available. Please Add Bank Account
+                                          </p>
+                                        )}
                                       </SelectContent>
                                     </Select>
                                     {selectedBankAccount && (

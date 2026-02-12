@@ -523,7 +523,7 @@ export default function EditSalesInvoicePage() {
                       onValueChange={setSelectedClientId}
                       placeholder="Search client..."
                       searchPlaceholder="Type to filter..."
-                      emptyText="No clients found"
+                      emptyText="No clients found. Create a client first."
                     />
 
                     <p className="text-xs text-gray-500 mt-1">
@@ -638,6 +638,7 @@ export default function EditSalesInvoicePage() {
                                 updateItem(item.itemId, "itemName", v)
                               }
                               placeholder="Search item..."
+                              emptyText="No items found. Create one first."
                             />
 
                             <p className="text-xs text-gray-500 mt-1">
@@ -870,11 +871,12 @@ export default function EditSalesInvoicePage() {
                       </SelectTrigger>
 
                       <SelectContent className="z-[9999]">
-                        {bankAccounts.map((acc: any) => (
+                        {bankAccounts.length !==0 ?(bankAccounts.map((acc: any) => (
                           <SelectItem key={acc._id} value={acc._id}>
                             {acc.bankName}
                           </SelectItem>
-                        ))}
+                        ))):(
+                          <SelectItem value="0">No Bank Account Please Add Bank Account</SelectItem>)}
                       </SelectContent>
                     </Select>
 
