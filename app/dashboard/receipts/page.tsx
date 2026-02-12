@@ -7,25 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Edit, ReceiptIcon, Filter, X } from "lucide-react"
+import { Plus, Search, Edit, ReceiptIcon, Filter, X, Eye } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
 import type { Receipt } from "@/lib/models/types"
-// interface Receipt {
-//   id: string
-//   receiptNumber: string
-//   date: string
-//   clientName: string
-//   quotationNumber?: string
-//   amountPaid: number // Changed from 'amount' to 'amountPaid'
-//   total: number // Added total field
-//   balanceAmount: number // Added balance field
-//   paymentType: "full" | "partial" | "advance" // Updated to match DataStore
-//   paymentMethod: string
-//   status: "received" | "cleared" // Updated to match DataStore (lowercase)
-//   createdBy?: string
-// }
+
 
 export default function ReceiptsPage() {
   const { hasPermission, user } = useUser()
@@ -58,7 +45,7 @@ export default function ReceiptsPage() {
     const matchesSearch =
       (receipt.receiptNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (receipt.clientName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (receipt.quotationNumber && receipt.quotationNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+      (receipt.salesInvoiceNumber && receipt.salesInvoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesStatus = statusFilter === "all" || receipt.status === statusFilter
 
@@ -74,8 +61,8 @@ export default function ReceiptsPage() {
     const matchesDateFrom = !dateFromFilter || receiptDate >= new Date(dateFromFilter)
     const matchesDateTo = !dateToFilter || receiptDate <= new Date(dateToFilter)
 
-    const matchesMinAmount = !minAmountFilter || (receipt.amountPaid || 0) >= Number.parseFloat(minAmountFilter)
-    const matchesMaxAmount = !maxAmountFilter || (receipt.amountPaid || 0) <= Number.parseFloat(maxAmountFilter)
+    const matchesMinAmount = !minAmountFilter || (receipt.ReceiptAmount || 0) >= Number.parseFloat(minAmountFilter)
+    const matchesMaxAmount = !maxAmountFilter || (receipt.ReceiptAmount || 0) <= Number.parseFloat(maxAmountFilter)
 
     const matchesClient = clientFilter === "all" || receipt.clientName === clientFilter
 
@@ -189,7 +176,7 @@ export default function ReceiptsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₹{receipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0).toLocaleString()}
+              ₹{receipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0).toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -264,7 +251,7 @@ export default function ReceiptsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="received">Received</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="cleared">Cleared</SelectItem>
                       {/* <SelectItem value="cleared">Failed</SelectItem> */}
                     </SelectContent>
@@ -280,7 +267,8 @@ export default function ReceiptsPage() {
                     <SelectContent>
                       <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="Full Payment">Full Payment</SelectItem>
-                      <SelectItem value="Partial">Partial</SelectItem>
+                      <SelectItem value="Partial Payment">Partial Payment</SelectItem>
+                      <SelectItem value="Advance Payment">Advance Payment</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -360,7 +348,7 @@ export default function ReceiptsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Receipt Number</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Quotation/Agreement</TableHead>
+                  <TableHead>Agreement Number</TableHead>
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Payment Type</TableHead>
                   <TableHead>Method</TableHead>
@@ -377,8 +365,8 @@ export default function ReceiptsPage() {
                       <TableCell>{new Date(receipt.date || receipt.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell className="font-medium">{receipt.receiptNumber}</TableCell>
                       <TableCell>{receipt.clientName}</TableCell>
-                      <TableCell>{receipt.quotationNumber || "-"}</TableCell>
-                      <TableCell className="font-semibold">₹{(receipt.amountPaid || 0).toLocaleString()}</TableCell>
+                      <TableCell>{receipt.salesInvoiceNumber}</TableCell>
+                      <TableCell className="font-semibold">₹{(receipt?.ReceiptAmount || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant={receipt.paymentType === "full" ? "default" : "secondary"}>
                           {formatPaymentType(receipt.paymentType)}
@@ -394,14 +382,13 @@ export default function ReceiptsPage() {
                         <TableCell>
                           <div className="flex space-x-2">
                             <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
-                              <Button variant="ghost" size="sm">
-                                View
+                              <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" />
                               </Button>
                             </Link>
                            {
                             (hasPermission("edit_receipts")) && (
                                <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" title="Edit Receipt">
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </Link>

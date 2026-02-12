@@ -197,7 +197,7 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
                   Complete Business Management Solution
                 </h1>
                 <p className="text-gray-700 text-sm">
-                  Experience all premium features free for 14 days.
+                  Experience all premium features free for {trialDays} days.
                 </p>
               </div>
             )}

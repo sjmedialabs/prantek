@@ -80,6 +80,8 @@ export default function EmployeePage() {
   const [memberTypes, setMemberTypes] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])
   const [currentPage, setCurrentPage] = useState(1)
+  const [roleName, setRolesName] = useState<any[]>([])
+  const [member, setMember] = useState<any[]>([])
   const itemsPerPage = 10
 const [formData, setFormData] = useState<Employee>({
   id: "",
@@ -130,11 +132,15 @@ const loadEmployees = async () => {
       await loadEmployees()
       console.log("loadedEmployees", employees)
       const loadedMemberTypes = await api.memberTypes.getAll()
+      const memberTypes = loadedMemberTypes.filter((t: any) => t.isActive === true)
       console.log("loadedMemberTypes", loadedMemberTypes)
       const loadedRoles = await api.employeeRoles.getAll()
+      const roles = loadedRoles.filter((t: any) => t.isActive === true)
       console.log("loadedRoles", loadedRoles)
-      setRoles(loadedRoles)
-      setMemberTypes(loadedMemberTypes)
+      setRoles(roles)
+      setMemberTypes(memberTypes)
+      setRolesName(loadedRoles)
+      setMember(loadedMemberTypes)
     }
     loadData()
   }, [])
@@ -382,14 +388,14 @@ const resetForm = () => {
                       : "Enter employee details below. Fields marked with * are required."}
                   </DialogDescription>
                 </div>
-                <Button
+                {/* <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsDialogOpen(false)}
                   className="hover:bg-gray-100"
                 >
                   <X className="h-5 w-5" />
-                </Button>
+                </Button> */}
               </div>
             </div>
 
@@ -448,15 +454,22 @@ const resetForm = () => {
                           value={formData.memberType ?? ""}
                           onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="z-1000">
                             <SelectValue  placeholder="Employment type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {memberTypes.map((type) => (
+                          {memberTypes.length === 0 ? (
+                              <SelectItem value="no-member" disabled>
+                                No Types available. Please create EmployeeType first.
+                              </SelectItem>
+                          ) :(
+                             memberTypes.map((type) => (
                               <SelectItem key={type._id} value={String(type._id)}>
                                 {type.name}
                               </SelectItem>
-                            ))}
+                            ))
+                          )
+                            }
                           </SelectContent>
                         </Select>
                       </div>
@@ -468,7 +481,7 @@ const resetForm = () => {
                           value={formData.role ?? ""}
                           onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="z-1000">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
@@ -948,7 +961,7 @@ const resetForm = () => {
                         <TableCell className="p-3">
                           {employee?.role ? (
                             <Badge variant="outline" className="text-xs">
-                              {roles.find((r) => String(r._id) === String(employee?.role))?.name ||
+                              {roleName.find((r) => String(r._id) === String(employee?.role))?.name ||
                                 employee?.role}
                             </Badge>
                           ) : (
@@ -958,7 +971,7 @@ const resetForm = () => {
                         <TableCell className="p-3">
                           {employee?.memberType ? (
                             <Badge variant="secondary" className="text-xs">
-                              {memberTypes.find((t) => String(t._id) === String(employee?.memberType))
+                              {member.find((t) => String(t._id) === String(employee?.memberType))
                                 ?.name || employee?.memberType}
                             </Badge>
                           ) : (

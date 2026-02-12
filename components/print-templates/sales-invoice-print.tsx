@@ -15,19 +15,19 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
       <div className="flex justify-between items-start mb-8">
         <div className="flex items-center gap-4">
           {companyDetails.logo && (
-            <img 
-              src={companyDetails.logo} 
+            <img
+              src={companyDetails.logo}
               crossOrigin="anonymous"
-              alt="Company Logo" 
-              className="h-16 w-auto object-contain" 
+              alt="Company Logo"
+              className="h-16 w-auto object-contain"
             />
           )}
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{companyDetails.name}</h1>
-            <div className="text-sm text-gray-600 mt-1 space-y-0.5">
-              <p>{companyDetails.address}</p>
-              <p>Phone: {companyDetails.phone}</p>
-              <p>Email: {companyDetails.email}</p>
+            <div className="text-sm text-gray-600 mt-1 space-y-0.5 flex flex-col gap-1">
+              <p className="py-0">{companyDetails.address}</p>
+              <p className="py-0">Phone: {companyDetails.phone}</p>
+              <p className="py-0">Email: {companyDetails.email}</p>
               {companyDetails.website && <p>Web: {companyDetails.website}</p>}
             </div>
           </div>
@@ -46,12 +46,12 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
       </div>
 
       {/* Bill To */}
-      <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100">
+      <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100 flex flex-col gap-1">
         <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
-        <p className="font-bold text-gray-900 text-lg">{invoice.clientName}</p>
-        {invoice.clientAddress && <p className="text-gray-600 mt-1">{invoice.clientAddress}</p>}
-        {invoice.clientEmail && <p className="text-gray-600">{invoice.clientEmail}</p>}
-        {invoice.clientPhone && <p className="text-gray-600">{invoice.clientPhone}</p>}
+        <p className="font-bold text-gray-900 text-lg py-0">{invoice.clientName}</p>
+        {invoice.clientAddress && <p className="text-gray-600 mt-1 py-0">{invoice.clientAddress}</p>}
+        {invoice.clientEmail && <p className="text-gray-600 py-0">{invoice.clientEmail}</p>}
+        {invoice.clientPhone && <p className="text-gray-600 py-0">{invoice.clientPhone}</p>}
       </div>
 
       {/* Items Table */}
@@ -70,15 +70,15 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
           <tbody className="divide-y divide-gray-100">
             {invoice.items.map((item: any, index: number) => (
               <tr key={index}>
-                <td className="py-3 px-4">
-                  <p className="font-medium text-gray-900">{item.name}</p>
-                  {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                <td className="py-3 px-4 flex flex-col gap-2">
+                  <p className="font-medium text-gray-900">{item?.itemName || item?.name}</p>
+                  {item.description && <p className="text-xs text-gray-500 py-0">{item.description}</p>}
                 </td>
                 <td className="py-3 px-4 text-right text-gray-600">{item.quantity}</td>
                 <td className="py-3 px-4 text-right text-gray-600">₹{item.price.toLocaleString()}</td>
                 <td className="py-3 px-4 text-right text-gray-600">₹{(item.discount || 0).toLocaleString()}</td>
                 <td className="py-3 px-4 text-right text-gray-600">{item.taxRate}%</td>
-                <td className="py-3 px-4 text-right font-medium text-gray-900">₹{item.total.toLocaleString()}</td>
+                <td className="py-3 px-4 text-right font-medium text-gray-900">₹{item?.total?.toLocaleString() || 0}</td>
               </tr>
             ))}
           </tbody>
@@ -90,29 +90,53 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
         <div className="w-64 space-y-2">
           <div className="flex justify-between text-sm text-gray-600">
             <span>Subtotal:</span>
-            <span>₹{invoice.subtotal.toLocaleString()}</span>
+            <span>₹{invoice?.subtotal?.toLocaleString() || `${invoice.items.reduce((acc: any, item: any) => acc + item.price * item.quantity, 0).toLocaleString()}`}</span>
           </div>
           <div className="flex justify-between text-sm text-gray-600">
             <span>Discount:</span>
-            <span className="text-red-600">- ₹{totalDiscount.toLocaleString()}</span>
+            <span className="text-red-600">-₹{invoice?.items?.reduce((acc: any, item: any) => acc + (item.discount * item.quantity || 0), 0).toLocaleString() || 0}</span>
           </div>
           <div className="flex justify-between text-sm text-gray-600">
             <span>Tax Amount:</span>
-            <span>₹{invoice.taxAmount.toLocaleString()}</span>
+            <span>₹{invoice?.items?.reduce((acc: any, item: any) => acc + (item.taxAmount || 0), 0).toLocaleString() || 0}</span>
           </div>
           <div className="border-t border-gray-200 my-2 pt-2 flex justify-between font-bold text-lg text-gray-900">
             <span>Grand Total:</span>
-            <span>₹{invoice?.grandTotal?.toLocaleString()}</span>
+            <span>₹{invoice?.grandTotal?.toLocaleString() || 0}</span>
           </div>
           {invoice.balanceAmount !== undefined && (
             <div className="flex justify-between text-sm font-medium text-red-600 pt-1">
               <span>Balance Due:</span>
-              <span>₹{invoice.balanceAmount.toLocaleString()}</span>
+              <span>₹{invoice?.balanceAmount?.toLocaleString() || 0}</span>
             </div>
           )}
         </div>
       </div>
+      {invoice.bankDetails && (
+        <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
+          <h3 className="text-base font-medium py-2">Bank Details</h3>
+          <p><strong>Bank:</strong> {invoice.bankDetails.bankName}</p>
+          <p><strong>Account Name:</strong> {invoice.bankDetails.accountName}</p>
+          <p><strong>Account Number:</strong> {invoice.bankDetails.accountNumber}</p>
+          <p><strong>IFSC:</strong> {invoice.bankDetails.ifscCode}</p>
+          <p><strong>Branch:</strong> {invoice.bankDetails.branchName}</p>
 
+          {invoice.bankDetails.upiId && (
+            <p><strong>UPI ID:</strong> {invoice.bankDetails.upiId}</p>
+          )}
+          {invoice.bankDetails?.upiScanner && (
+            <div className="mt-3">
+              <p className="text-sm font-medium mb-1">UPI QR Code</p>
+              <img
+                src={invoice.bankDetails.upiScanner}
+                alt="UPI Scanner"
+                className="h-40 w-40 object-contain border rounded"
+              />
+            </div>
+          )}
+
+        </div>
+      )}
       {/* Terms & Notes */}
       {(invoice.terms || invoice.notes) && (
         <div className="border-t border-gray-200 pt-6 space-y-4">
@@ -125,9 +149,9 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
           {invoice.terms && (
             <div>
               <h4 className="text-sm font-bold text-gray-700 mb-1">Terms & Conditions:</h4>
-              <div 
-                className="prose prose-sm max-w-none text-gray-600"
-                dangerouslySetInnerHTML={{ __html: invoice.terms }} 
+              <div
+                className="prose prose-sm max-w-none text-gray-600 flex flex-col gap-1"
+                dangerouslySetInnerHTML={{ __html: invoice.terms }}
               />
             </div>
           )}

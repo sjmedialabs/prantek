@@ -24,7 +24,7 @@ export default function DashboardLayout({
     <UserProvider>
       <OnboardingProvider>
         <ProtectedRoute>
-          <div className="flex min-h-screen bg-gray-50">
+          <div className="flex min-h-screen flex-row bg-gray-50">
             <DashboardSidebar />
             <div className="flex-1 flex flex-col">
               <DashboardHeader />

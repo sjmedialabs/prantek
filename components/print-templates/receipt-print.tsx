@@ -67,10 +67,10 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
               style={{width:"120px",height:"120px"}}
             />
           )}
-          <div>
-            <h1 className="text-2xl py-2 font-bold text-gray-900">{companyDetails?.name || "Company Name"}</h1>
-            <p className="text-sm text-gray-600">{companyDetails?.address}</p>
-            <p className="text-sm text-gray-600">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 py-0">{companyDetails?.name || "Company Name"}</h1>
+            <p className="text-sm text-gray-600 py-0">{companyDetails?.address}</p>
+            <p className="text-sm text-gray-600 py-0">
               Phone: {companyDetails?.phone} | Email: {companyDetails?.email}
             </p>
             {companyDetails?.website && <p className="text-sm text-gray-600">Website: {companyDetails.website}</p>}
@@ -86,11 +86,11 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
           <h3 className="text-sm font-semibold text-gray-700 py-2">RECEIVED FROM:</h3>
-          <div className="text-sm">
-            <p className="font-semibold text-gray-900">{receipt.client.name}</p>
-            {receipt.client.address && <p className="text-gray-600">{receipt.client.address}</p>}
-            {receipt.client.phone && <p className="text-gray-600">Phone: {receipt.client.phone}</p>}
-            {receipt.client.email && <p className="text-gray-600">Email: {receipt.client.email}</p>}
+          <div className="text-sm flex flex-col gap-2">
+            <p className="font-semibold text-gray-900 py-0">{receipt.client.name}</p>
+            {receipt.client.address && <p className="text-gray-600 py-0">{receipt.client.address}</p>}
+            {receipt.client.phone && <p className="text-gray-600 py-0">Phone: {receipt.client.phone}</p>}
+            {receipt.client.email && <p className="text-gray-600 py-0">Email: {receipt.client.email}</p>}
           </div>
         </div>
         <div className="text-right">
@@ -145,9 +145,9 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
           <tbody>
             {receipt.items.map((item, index) => (
               <tr key={index} className="border-b border-gray-200">
-                <td className="py-3 px-4">
-                  <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                  {item.description && <p className="text-xs text-gray-600">{item.description}</p>}
+                <td className="py-3 px-4 flex flex-col gap-1">
+                  <p className="text-sm font-medium text-gray-900 py-0">{item.itemName || item.name}</p>
+                  {item.description && <p className="text-xs text-gray-600 py-0">{item.description}</p>}
                 </td>
                 <td className="text-right py-3 px-4 text-sm text-gray-900">{item.quantity}</td>
                 <td className="text-right py-3 px-4 text-sm text-gray-900">₹{(item.price || 0).toFixed(2)}</td>
@@ -180,6 +180,10 @@ export function ReceiptPrint({ receipt, companyDetails }: ReceiptPrintProps) {
               <div className="flex justify-between py-2 text-sm border-t border-gray-300">
                 <span className="text-gray-700">Total Amount:</span>
                 <span className="text-gray-900 font-medium">₹{(subtotal + totalTax).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-2 text-sm border-t border-gray-300">
+                <span className="text-gray-700">Advance Amount:</span>
+                <span className="text-gray-900 font-medium">₹{(receipt.advanceAppliedAmount || 0).toFixed(2)}</span>
               </div>
             </>
           )}

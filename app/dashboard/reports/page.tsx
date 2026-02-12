@@ -135,7 +135,7 @@ export default function ReportsPage() {
       if (!monthlyData[month]) {
         monthlyData[month] = { income: 0, expenses: 0, profit: 0 }
       }
-      monthlyData[month].income += receipt.amountPaid || 0
+      monthlyData[month].income += receipt.ReceiptAmount || 0
     })
 
     // Group payments by month
@@ -179,7 +179,7 @@ export default function ReportsPage() {
   }, [filteredPayments])
 
   const kpiData = useMemo(() => {
-    const totalIncome = filteredReceipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0)
+    const totalIncome = filteredReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0)
     const totalExpenses = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
     const totalProfit = totalIncome - totalExpenses
     const profitMargin = totalIncome > 0 ? (totalProfit / totalIncome) * 100 : 0
@@ -196,7 +196,7 @@ export default function ReportsPage() {
       return date >= previousPeriodStart && date < getDateRangeFilter
     })
 
-    const previousIncome = previousReceipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0)
+    const previousIncome = previousReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0)
     const incomeChange = previousIncome > 0 ? ((totalIncome - previousIncome) / previousIncome) * 100 : 0
 
     return [
@@ -242,7 +242,7 @@ export default function ReportsPage() {
           transactions: 0,
         }
       }
-      clientStats[receipt.clientId].revenue += receipt.amountPaid || 0
+      clientStats[receipt.clientId].revenue += receipt.ReceiptAmount || 0
       clientStats[receipt.clientId].transactions += 1
     })
 
@@ -605,7 +605,7 @@ export default function ReportsPage() {
                     <div>
                       <p className="text-sm text-green-600">Total Income</p>
                       <p className="text-xl lg:text-2xl font-bold text-green-700">
-                        ₹{filteredReceipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0).toLocaleString()}
+                        ₹{filteredReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0).toLocaleString()}
                       </p>
                     </div>
                     <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-green-600" />
@@ -625,7 +625,7 @@ export default function ReportsPage() {
                       <p className="text-xl lg:text-2xl font-bold text-purple-700">
                         ₹
                         {(
-                          filteredReceipts.reduce((sum, r) => sum + (r.amountPaid || 0), 0) -
+                          filteredReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0) -
                           filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
                         ).toLocaleString()}
                       </p>

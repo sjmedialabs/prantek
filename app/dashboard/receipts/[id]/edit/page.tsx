@@ -27,16 +27,19 @@ export default function EditReceiptPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const [receipt, setReceipt] = useState<any>(null)
-  const [quotation, setQuotation] = useState<any>(null)
+  // const [quotation, setQuotation] = useState<any>(null)
 
   // Editable fields
   const [date, setDate] = useState("")
   const [paymentAmount, setPaymentAmount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState("Cash")
   const [paymentType, setPaymentType] = useState<"Full Payment" | "Partial">("Full Payment")
-  const [bankAccount, setBankAccount] = useState("")
+  const [bankAccount, setBankAccount] = useState<any>(null)
   const [referenceNumber, setReferenceNumber] = useState("")
   const [note, setNote] = useState("")
+  const [salesInvoice, setSalesInvoice] = useState<any>(null)
+  const [badDeptAmount, setBadDeptAmount] = useState(0)
+  const [badDeptReason, setBadDeptReason] = useState("")
 
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
 
@@ -44,10 +47,14 @@ export default function EditReceiptPage() {
   const [receiptTotal, setReceiptTotal] = useState(0)
   const [balanceAmount, setBalanceAmount] = useState(0)
 
+  const [advanceReceipts, setAdvanceReceipts] = useState<any[]>([])
+  const [selectedAdvanceReceipt, setSelectedAdvanceReceipt] = useState<any>(null)
+  const [advanceApplyAmount, setAdvanceApplyAmount] = useState(0)
+
   // -------- LOAD RECEIPT & QUOTATION --------
   useEffect(() => {
     loadData()
-  }, [receiptId]) 
+  }, [receiptId])
 
   const loadData = async () => {
     try {
@@ -59,44 +66,67 @@ export default function EditReceiptPage() {
       }
 
       setReceipt(loadedReceipt)
-      console.log("Loaded Reciept is::::",loadedReceipt);
-      let loadedQuotation=null;
+      console.log("Loaded Reciept is::::", loadedReceipt.ReceiptAmount);
+      let loadedInvoice = null
 
-      if(loadedReceipt.quotationId){
-         loadedQuotation = await api.quotations.getById(loadedReceipt.quotationId)
-      setQuotation(loadedQuotation)
-
+      if (loadedReceipt.invoiceId) {
+        const res = await fetch(`/api/salesInvoice/${loadedReceipt.invoiceId}`)
+        const inv = await res.json()
+        loadedInvoice = inv.data || inv
+        setSalesInvoice(loadedInvoice)
       }
+
       const banks = await api.bankAccounts.getAll()
       setBankAccounts(banks)
 
-      // Prefill editable fields
+      // Fetch advance receipts if applicable
+      if ((loadedReceipt.receiptType === "salesInvoiced" || loadedReceipt.receiptType === "nonInvoiced") && !loadedReceipt.advanceAppliedAmount) {
+        const res = await fetch("/api/receipts")
+        const result = await res.json()
+        if (result.success) {
+          const advances = result.data.filter((r: any) =>
+            r.receiptType === "advance" &&
+            r.status === "cleared" &&
+            !r.parentReceiptNumber &&
+            r.clientId === loadedReceipt.clientId
+          )
+          setAdvanceReceipts(advances)
+        }
+      }
+
+      // Prefill editable fields 
       setDate(loadedReceipt.date?.split("T")[0] || "")
-      setPaymentAmount(loadedReceipt.amountPaid || 0)
+
       setPaymentMethod(
         loadedReceipt.paymentMethod === "cash"
           ? "Cash"
           : loadedReceipt.paymentMethod === "bank-transfer"
             ? "Bank Transfer"
-            : loadedReceipt.paymentMethod === "upi"
+            : loadedReceipt.paymentMethod === "UPI"
               ? "UPI"
               : loadedReceipt.paymentMethod === "cheque"
                 ? "Cheque"
                 : "Card"
       )
+        setPaymentAmount(parseFloat(loadedReceipt.ReceiptAmount) || 0)
       setPaymentType(loadedReceipt.paymentType || "Full Payment")
-      setBankAccount(loadedReceipt.bankAccount || "")
+      setBankAccount(loadedReceipt.bankDetails || loadedReceipt.bankAccount || "")
       setReferenceNumber(loadedReceipt.referenceNumber || "")
       setNote(loadedReceipt.notes || "")
+      setBadDeptAmount(loadedReceipt.badDeptAmount || 0)
+      setBadDeptReason(loadedReceipt.badDeptReason || "")
 
-    if(loadedQuotation){
-        setReceiptTotal(loadedQuotation.balanceAmount + loadedReceipt.amountPaid)
-      setBalanceAmount(loadedQuotation.balanceAmount)
-    }
-    else{
-      setReceiptTotal(0);
-      setBalanceAmount(0)
-    }
+      if (loadedInvoice) {
+        setReceiptTotal(
+          Number(loadedInvoice.balanceAmount) + Number(loadedReceipt.ReceiptAmount)
+        )
+        setBalanceAmount(loadedInvoice.balanceAmount)
+      }
+
+      else {
+        setReceiptTotal(loadedReceipt.total || loadedReceipt.invoicegrandTotal || 0);
+        setBalanceAmount(loadedReceipt?.balanceAmount || 0)
+      }
 
     } catch (err) {
       console.error(err)
@@ -105,113 +135,120 @@ export default function EditReceiptPage() {
       setLoading(false)
     }
   }
-/* ------------------ SUBMIT HANDLER ------------------ */
+  /* ------------------ SUBMIT HANDLER ------------------ */
+console.log("payment amount is ", paymentAmount)
+  async function handleSubmit(e?: any) {
+    if (e) e.preventDefault()
 
-async function handleSubmit(e?: any) {
-  if (e) e.preventDefault()
+    if (submitting) return
+    if (!receipt) return toast.error("Missing receipt data")
 
-  if (submitting) return
-  if (!receipt) return toast.error("Missing receipt/quotation")
+    // VALIDATION
+    if (!date) return toast.error("Please select a payment date")
+    if (paymentAmount <= 0) return toast.error("Payment amount must be greater than zero")
 
-  // VALIDATION
-  if (!date) return toast.error("Please select a payment date")
-  if (paymentAmount <= 0) return toast.error("Payment amount must be greater than zero")
+    const previousPaid = receipt.ReceiptAmount || 0
+    const previousAdvance = receipt.advanceAppliedAmount || 0
 
-    let previousPaid=0;
-    let originalPaidTotal=0;
-    let originalBalance=0;
-    let  restoredTotalBeforeEdit=0;
-
-    if(quotation){
-       previousPaid = receipt.amountPaid            // what this receipt originally added
-     originalPaidTotal = quotation?.paidAmount || 0     // total paid including this receipt
-   originalBalance = quotation?.balanceAmount || 0
-   restoredTotalBeforeEdit = originalBalance + previousPaid
-    } 
-    else{
-      previousPaid=receipt.amountPaid
-      originalPaidTotal=receipt.amountPaid
-      originalBalance=receipt.balanceAmount
-      restoredTotalBeforeEdit=originalBalance + previousPaid
-    }
-
-  // if (paymentAmount > restoredTotalBeforeEdit) {
-  //   return toast.error("Payment amount cannot exceed total remaining amount")
-  // }
-
-  setSubmitting(true)
-
-  try {
-    /* ----------------------------------------------
-       1️⃣ UPDATE QUOTATION — UNDO OLD RECEIPT PAYMENT
-    ---------------------------------------------- */
+    const originalPaidTotal = salesInvoice?.paidAmount || 0
+    // Calculate restored total based on current balance + what was paid in this receipt (cash + advance)
+    const currentBalance = salesInvoice?.balanceAmount ?? receipt.balanceAmount ?? 0
+    const restoredTotalBeforeEdit = currentBalance + previousPaid + previousAdvance
 
     const updatedPaidAmount =
-      originalPaidTotal - previousPaid + paymentAmount
+      originalPaidTotal - previousPaid - previousAdvance + paymentAmount + advanceApplyAmount
 
     const updatedBalanceAmount =
-      restoredTotalBeforeEdit - paymentAmount
+      restoredTotalBeforeEdit - paymentAmount - advanceApplyAmount
 
-    let updatedStatus = "pending"
-    if (updatedBalanceAmount <= 0) updatedStatus = "cleared"
-    else if (updatedPaidAmount > 0) updatedStatus = "partial"
+    const updatedStatus =
+      updatedBalanceAmount <= 0 ? "Cleared" : "Partial"
 
-   if(quotation){
-     await api.quotations.update(quotation._id, {
-      paidAmount: updatedPaidAmount,
-      balanceAmount: updatedBalanceAmount,
-      status: updatedStatus,
-    })
-   }
 
-    /* ----------------------------------------------
-       2️⃣ UPDATE RECEIPT
-    ---------------------------------------------- */
+    setSubmitting(true)
+  console.log("submitting")
+    try {
+      /* ----------------------------------------------
+         1️⃣ UPDATE QUOTATION — UNDO OLD RECEIPT PAYMENT
+      ---------------------------------------------- */
 
-    const payload = {
-      amountPaid: paymentAmount,
-      paymentType: paymentType,
-      paymentMethod:
-        paymentMethod === "Cash"
-          ? "cash"
-          : paymentMethod === "Bank Transfer"
-            ? "bank-transfer"
-            : paymentMethod === "Cheque"
-              ? "cheque"
-              : paymentMethod === "UPI"
-                ? "upi"
-                : "card",
-      bankAccount,
-      balanceAmount:updatedBalanceAmount,
-      referenceNumber,
-      date,
-      notes: note,
+      // await fetch(`/api/salesInvoice/${salesInvoice._id}`, {
+      //   method: "PUT",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     paidAmount: updatedPaidAmount,
+      //     balanceAmount: updatedBalanceAmount,
+      //     status: updatedStatus,
+      //   }),
+      // })
+
+
+      /* ----------------------------------------------
+         2️⃣ UPDATE RECEIPT
+      ---------------------------------------------- */
+
+      if (selectedAdvanceReceipt) {
+        await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            parentReceiptNumber: receipt.receiptNumber
+          })
+        })
+      }
+
+      const payload = {
+        ReceiptAmount: paymentAmount,
+        paymentType,
+        paymentMethod:
+          paymentMethod === "Cash"
+            ? "cash"
+            : paymentMethod === "Bank Transfer"
+              ? "bank-transfer"
+              : paymentMethod === "Cheque"
+                ? "cheque"
+                : paymentMethod === "UPI"
+                  ? "upi"
+                  : "card",
+
+        bankDetails: bankAccount,
+        invoiceBalance: updatedBalanceAmount,
+        referenceNumber,
+        date,
+        notes: note,
+        badDeptAmount,
+        badDeptReason,
+        advanceAppliedAmount: (receipt.advanceAppliedAmount || 0) + advanceApplyAmount,
+        parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || receipt.parentReceiptNumber,
+      }
+
+      console.log("Payload to update receipt:::", payload)
+      await api.receipts.update(receiptId, payload)
+
+      toast.success("Receipt updated successfully")
+      router.push(`/dashboard/receipts/${receiptId}`)
+
+    } catch (err: any) {
+      console.error(err)
+      toast.error("Failed to update receipt")
+    } finally {
+      setSubmitting(false)
     }
-
-    await api.receipts.update(receiptId, payload)
-
-    toast.success("Receipt updated successfully")
-    router.push(`/dashboard/receipts/${receiptId}`)
-
-  } catch (err: any) {
-    console.error(err)
-    toast.error("Failed to update receipt")
-  } finally {
-    setSubmitting(false)
   }
-}
   // -------- PAYMENT TYPE LOGIC --------
   useEffect(() => {
-    if (!quotation) return
+    if (!receipt) return
+
+    const effectiveTotal = receiptTotal - advanceApplyAmount
 
     if (paymentType === "Full Payment") {
-      setPaymentAmount(receiptTotal)
+      setPaymentAmount(effectiveTotal > 0 ? effectiveTotal : 0)
       setBalanceAmount(0)
     } else {
-      const remaining = receiptTotal - paymentAmount
+      const remaining = effectiveTotal - paymentAmount
       setBalanceAmount(remaining < 0 ? 0 : remaining)
     }
-  }, [paymentType, paymentAmount, receiptTotal, quotation])
+  }, [paymentType, paymentAmount, receiptTotal, receipt, advanceApplyAmount])
 
   // Auto update status
   useEffect(() => {
@@ -242,6 +279,8 @@ async function handleSubmit(e?: any) {
   const numberToWords = (num: number): string =>
     `${num.toLocaleString()} Rupees Only`
 
+  const isCleared = receipt.status?.toLowerCase() === "cleared" || receipt.status?.toLowerCase() === "completed" || receipt.status?.toLowerCase() === "paid"
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -257,83 +296,122 @@ async function handleSubmit(e?: any) {
         </div>
       </div>
 
-      {/* QUOTATION DETAILS (Locked) */}
-     {
-      (quotation) && (
-         <Card>
+      {/* Client Details */}
+      <Card>
         <CardHeader>
-          <CardTitle>Quotation / Agreement Details</CardTitle>
+          {/* <CardTitle>Client Details</CardTitle> */}
         </CardHeader>
-
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-
-            <div>
-              <span className="text-gray-600">Quotation Number:</span>
-              <span className="ml-2 font-medium">{quotation.quotationNumber}</span>
-            </div>
-
-            <div>
-              <span className="text-gray-600">Client:</span>
-              <span className="ml-2 font-medium">{quotation.clientName}</span>
-            </div>
-
-            <div>
-              <span className="text-gray-600">Total Amount:</span>
-              <span className="ml-2 font-medium">
-                ₹{quotation.grandTotal?.toLocaleString()}
-              </span>
-            </div>
-
-            <div>
-              <span className="text-gray-600">Paid Before This Receipt:</span>
-              <span className="ml-2 font-medium">
-                ₹{(quotation.paidAmount - receipt.amountPaid)?.toLocaleString()}
-              </span>
-            </div>
-
-            <div>
-              <span className="text-gray-600">Paid In This Receipt:</span>
-              <span className="ml-2 font-medium text-purple-600">
-                ₹{receipt.amountPaid?.toLocaleString()}
-              </span>
-            </div>
-
-            <div>
-              <span className="text-gray-600 font-semibold">Current Balance:</span>
-              <span className="ml-2 font-semibold text-blue-600">
-                ₹{(quotation.balanceAmount + receipt.amountPaid)?.toLocaleString()}
-              </span>
-            </div>
-
+          <div>
+            <p className="text-sm text-gray-600">Client Name</p>
+            <p className="font-semibold">{receipt.clientName}</p>
           </div>
+          {receipt.clientEmail && (
+            <div>
+              <p className="text-sm text-gray-600">Email</p>
+              <p className="font-semibold">{receipt.clientEmail}</p>
+            </div>
+          )}
+          {receipt.clientPhone && (
+            <div>
+              <p className="text-sm text-gray-600">Phone</p>
+              <p className="font-semibold">{receipt.clientPhone}</p>
+            </div>
+          )}
+          {receipt.clientAddress && (
+            <div>
+              <p className="text-sm text-gray-600">Address</p>
+              <p className="font-semibold">{receipt.clientAddress}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
-      )
-     }
+      {/* QUOTATION DETAILS (Locked) */}
+      {
+        (salesInvoice) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Invoice Details</CardTitle>
+            </CardHeader>
 
-     {/*without quotation */}
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-4 text-sm">
 
-     {
-      (!quotation) &&(
-        <Card>
+                <div>
+                  <span className="text-gray-600">Invoice Number:</span>
+                  <span className="ml-2 font-medium">
+                    {salesInvoice.salesInvoiceNumber}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-600">Client:</span>
+                  <span className="ml-2 font-medium">
+                    {salesInvoice.clientName}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-600">Invoice Total:</span>
+                  <span className="ml-2 font-medium">
+                    ₹{salesInvoice.grandTotal}
+                  </span>
+                </div>
+
+
+                <div>
+                  <span className="text-gray-600">Paid Before This Receipt:</span>
+                  <span className="ml-2 font-medium">
+                    ₹{(
+                      Number(salesInvoice.paidAmount || 0) -
+                      Number(receipt.ReceiptAmount || 0)
+                    ).toLocaleString()}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-600">Paid In This Receipt:</span>
+                  <span className="ml-2 font-medium text-purple-600">
+                    ₹{Number(receipt.ReceiptAmount || 0).toLocaleString()}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-600 font-semibold">Current Balance:</span>
+                  <span className="ml-2 font-semibold text-blue-600">
+                    ₹{(receipt?.invoiceBalance || receipt?.balanceAmount || 0).toLocaleString()}
+                  </span>
+                </div>
+
+
+              </div>
+            </CardContent>
+          </Card>
+        )
+      }
+
+      {/*without quotation */}
+
+      {
+        (receipt.items.length > 0) && (
+          <Card>
             <CardHeader>
               <CardTitle>Items/Services</CardTitle>
             </CardHeader>
             <CardContent>
               {receipt.items && receipt.items.length > 0 ? (
                 <div className="space-y-4">
-                  {receipt.items.map((item, index) => (
+                  {receipt.items.map((item: any, index: number) => (
                     <div key={item.id || index} className="border rounded-lg p-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold">{item.name}</p>
+                          <p className="font-semibold">{item.itemName}</p>
                           <p className="text-sm text-gray-600">{item.description}</p>
                           <Badge variant="outline" className="mt-1">
                             {item.type}
                           </Badge>
                         </div>
-                        <p className="font-bold text-lg">₹{(((item.price*item.quantity)-item.discount)+(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100))?.toLocaleString() || "0"}</p>
+                        <p className="font-bold text-lg">₹{(((item.price * item.quantity) - item.discount) + (((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100))?.toLocaleString() || "0"}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -351,11 +429,11 @@ async function handleSubmit(e?: any) {
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{((item.price*item.quantity)-item.discount)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{((item.price * item.quantity) - item.discount)?.toLocaleString() || "0"}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
-                          <p className="font-semibold">₹{(((item.price*item.quantity)-item.discount)*(item.taxRate || 0)/100)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{(((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100)?.toLocaleString() || "0"}</p>
                         </div>
                       </div>
                     </div>
@@ -365,31 +443,62 @@ async function handleSubmit(e?: any) {
                 <p className="text-gray-500 text-center py-4">No items found for this receipt</p>
               )}
               <div className="my-5">
-            <div>
-              <span className="text-gray-600">Paid In This Receipt:</span>
-              <span className="ml-2 font-medium text-purple-600">
-                ₹{receipt.amountPaid?.toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">Total Amount:</span>
-              <span className="ml-2 font-medium text-purple-600">
-                ₹{receipt.total?.toLocaleString()}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-600">Balance Due:</span>
-              <span className="ml-2 font-medium text-purple-600">
-                ₹{receipt.balanceAmount?.toLocaleString()}
-              </span>
-            </div>
-           </div>
+                <div>
+                  <span className="text-gray-600">Paid In This Receipt:</span>
+                  <span className="ml-2 font-medium text-purple-600">
+                    ₹{receipt.ReceiptAmount?.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Total Amount:</span>
+                  <span className="ml-2 font-medium text-purple-600">
+                    ₹{(receipt.total || receipt.invoicegrandTotal)?.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Balance Due:</span>
+                  <span className="ml-2 font-medium text-purple-600">
+                    ₹{(receipt?.balanceAmount || receipt?.invoiceBalance || 0)?.toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
-      )
-     }
+        )
+      }
 
+      {/* PAYMENT SECTION */}
+      <Card>
+          <CardHeader>
+          <CardTitle>Payment Details</CardTitle>
+        </CardHeader>
+      <CardContent className="space-y-3">
+{(receipt?.receiptType !== "advance" && receipt.receiptType !== "quick") && ( <> <div className="flex justify-between">
+    <span className="text-gray-600">Grand Total</span>
+    <span className="font-semibold">
+      ₹{(receipt?.invoicegrandTotal || receipt?.total || 0).toLocaleString()}
+    </span>
+  </div>
 
+  <Separator /></>)}
+
+  <div className="flex justify-between text-green-600">
+    <span className="font-semibold">Receipt Amount(Paid)</span>
+    <span className="font-bold">
+      ₹{(receipt.ReceiptAmount || 0).toLocaleString()}
+    </span>
+  </div>
+
+  {(receipt.invoiceBalance || receipt.balanceAmount) > 0 && (
+    <div className="flex justify-between text-orange-600">
+      <span className="font-semibold">Balance Due</span>
+      <span className="font-bold">
+        ₹{(receipt?.invoiceBalance || receipt.balanceAmount || 0).toLocaleString()}
+      </span>
+    </div>
+  )}
+</CardContent>
+      </Card>
       {/* PAYMENT SECTION */}
       <Card>
         <CardHeader>
@@ -398,10 +507,68 @@ async function handleSubmit(e?: any) {
 
         <CardContent className="space-y-4">
 
+          {/* Advance Receipt Selection */}
+          {(receipt.receiptType === "salesInvoiced" || receipt.receiptType === "nonInvoiced") &&
+            !receipt.advanceAppliedAmount &&
+            advanceReceipts.length > 0 && (
+              <div className="p-4 border rounded-lg bg-blue-50 space-y-4 mb-4">
+                <h3 className="font-medium text-blue-900">Apply Advance Payment</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Select Advance Receipt</Label>
+                    <Select
+                      disabled={isCleared}
+                      value={selectedAdvanceReceipt?._id}
+                      onValueChange={(id) => {
+                        const adv = advanceReceipts.find(r => r._id === id)
+                        setSelectedAdvanceReceipt(adv)
+                        setAdvanceApplyAmount(adv?.ReceiptAmount || 0)
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select advance receipt" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {advanceReceipts.map((adv) => (
+                          <SelectItem key={adv._id} value={adv._id}>
+                            {adv.receiptNumber} — ₹{adv.ReceiptAmount}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedAdvanceReceipt && (
+                    <div>
+                      <Label>Advance Amount to Apply</Label>
+                      <Input
+                        disabled={isCleared}
+                        type="number"
+                        value={advanceApplyAmount}
+                        max={selectedAdvanceReceipt.ReceiptAmount}
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          setAdvanceApplyAmount(
+                            val > selectedAdvanceReceipt.ReceiptAmount
+                              ? selectedAdvanceReceipt.ReceiptAmount
+                              : val
+                          )
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Max available: ₹{selectedAdvanceReceipt.ReceiptAmount}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           {/* Date */}
           <div>
             <Label htmlFor="date" required>Payment Date</Label>
             <Input
+              disabled={isCleared}
               id="date"
               type="date"
               value={date}
@@ -414,7 +581,7 @@ async function handleSubmit(e?: any) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label required>Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <Select disabled={isCleared} value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cash">Cash</SelectItem>
@@ -429,13 +596,15 @@ async function handleSubmit(e?: any) {
             <div>
               <Label required>Payment Type</Label>
               <Select
+                disabled={isCleared}
                 value={paymentType}
                 onValueChange={(v: any) => setPaymentType(v)}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Full Payment">Full Payment</SelectItem>
-                  <SelectItem value="Partial">Partial Payment</SelectItem>
+                  <SelectItem value="Partial Payment">Partial Payment</SelectItem>
+                 {receipt?.receiptType === "advance" && (<SelectItem value="Advance Payment">Advance Payment</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -451,12 +620,13 @@ async function handleSubmit(e?: any) {
           </div>
 
           {/* PARTIAL PAYMENT MODE */}
-          {paymentType === "Partial" && (
+          {paymentType === "Partial Payment" && (
             <div className="grid grid-cols-2 gap-4">
 
               <div>
                 <Label required>Payment Amount</Label>
                 <Input
+                  disabled={isCleared}
                   type="number"
                   value={paymentAmount}
                   onChange={(e) =>
@@ -468,7 +638,7 @@ async function handleSubmit(e?: any) {
                   step="0.01"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Max: ₹{receiptTotal.toLocaleString()}
+                  Max: ₹{(receiptTotal).toLocaleString()}
                 </p>
               </div>
 
@@ -476,10 +646,7 @@ async function handleSubmit(e?: any) {
                 <Label>Remaining Balance</Label>
                 <Input value={balanceAmount} disabled className="bg-gray-50" />
               </div>
-
-            </div>
-          )}
-
+                
           {/* Amount in Words */}
           <div>
             <Label>Amount in Words</Label>
@@ -488,15 +655,20 @@ async function handleSubmit(e?: any) {
               disabled
               className="bg-gray-50"
             />
-          </div>
+          </div>  
+            </div>
+          )}
 
           {/* BANK DETAILS */}
-          {paymentMethod !== "Cash" && (
+          {paymentMethod !== ("Cash" || "cash") && (
             <div className="grid grid-cols-2 gap-4">
 
               <div>
                 <Label>Bank Account</Label>
-                <Select value={bankAccount} onValueChange={setBankAccount}>
+                <Select disabled={isCleared} value={bankAccount._id} onValueChange={(id) => {
+                  const bank = bankAccounts.find((b: any) => b._id === id)
+                  setBankAccount(bank)
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select bank account" />
                   </SelectTrigger>
@@ -516,6 +688,7 @@ async function handleSubmit(e?: any) {
               <div>
                 <Label>Reference Number</Label>
                 <Input
+                  disabled={isCleared}
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
                   placeholder="Transaction reference / cheque no."
@@ -529,10 +702,33 @@ async function handleSubmit(e?: any) {
           <div>
             <Label>Note</Label>
             <Textarea
+              disabled={isCleared}
               rows={4}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
+          </div>
+
+          {/* Bad Debt Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Bad Debt Amount</Label>
+              <Input
+                type="number"
+                value={badDeptAmount}
+                onChange={(e) => setBadDeptAmount(Number(e.target.value))}
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <Label>Bad Debt Reason</Label>
+              <Textarea
+                value={badDeptReason}
+                onChange={(e) => setBadDeptReason(e.target.value)}
+                rows={2}
+              />
+            </div>
           </div>
 
         </CardContent>

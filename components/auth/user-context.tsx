@@ -140,6 +140,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Fallback to role-based permissions for backward compatibility
     const permissions = {
       "super-admin": [
+        "view_cash_book",
         "platform_management",
         "manage_subscriptions",
         "view_sales_dashboard",
@@ -168,17 +169,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       ],
       admin: [
         "manage_users",
+        "view_cash_book",
         "manage_roles",
         "view_financials",
         "manage_financials",
+        "view_cash_book",
         "view_quotations",
         "manage_quotations",
+        "view_sales_invoice",
+        "manage_sales_invoice",
         "view_clients",
         "view_vendors",
         "add_clients", "edit_clients",
         "add_vendors", "edit_vendors",
         "view_receipts",
         "manage_receipts",
+        "view_purchase_invoice",
+        "manage_purchase_invoice",
         "view_payments",
         "manage_payments",
         "view_reconciliation",
@@ -191,6 +198,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       employee: [
         "view_financials",
         "manage_financials",
+        "view_cash_book",
         "view_quotations",
         "manage_quotations",
         "view_clients",

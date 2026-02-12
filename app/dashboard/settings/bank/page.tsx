@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Landmark, Save, Upload, Plus, Edit2, Power, PowerOff } from "lucide-react"
 import { api } from "@/lib/api-client"
+import FileUpload from "@/components/file-upload"
 import {
   Dialog,
   DialogContent,
@@ -54,7 +55,7 @@ export default function BankAccountPage() {
     accountNumber: "",
     ifscCode: "",
     upiId: "",
-    upiScanner: null as File | null,
+    upiScanner: "",
   })
   const [errors, setErrors] = useState({
     bankName: false,
@@ -142,10 +143,7 @@ export default function BankAccountPage() {
     // ---- UPDATE EXISTING ACCOUNT ----
     if (editingAccount) {
       const updated = await api.bankAccounts.update(editingAccount._id, {
-        ...bankData,
-        upiScanner: bankData.upiScanner
-          ? URL.createObjectURL(bankData.upiScanner)
-          : editingAccount.upiScanner,
+        ...bankData
       })
 
       if (updated) {
@@ -157,9 +155,6 @@ export default function BankAccountPage() {
     else {
       const newAccount = await api.bankAccounts.create({
         ...bankData,
-        upiScanner: bankData.upiScanner
-          ? URL.createObjectURL(bankData.upiScanner)
-          : null,
         isActive: true,
       })
 
@@ -183,7 +178,7 @@ export default function BankAccountPage() {
       accountNumber: "",
       ifscCode: "",
       upiId: "",
-      upiScanner: null,
+      upiScanner: "",
     })
     setEditingAccount(null)
   }
@@ -201,7 +196,7 @@ export default function BankAccountPage() {
       accountNumber: account.accountNumber,
       ifscCode: account.ifscCode,
       upiId: account.upiId,
-      upiScanner: null,
+      upiScanner: account.upiScanner || "",
     })
     setIsDialogOpen(true)
   }
@@ -217,11 +212,6 @@ export default function BankAccountPage() {
     window.location.reload()
   }
 
-  const handleScannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setBankData({ ...bankData, upiScanner: e.target.files[0] })
-    }
-  }
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -432,36 +422,15 @@ export default function BankAccountPage() {
               </div>
 
               <div className="space-y-2 mb-[75px]">
-                <Label htmlFor="upiScanner">UPI Scanner (QR Code)</Label>
-                <div className="flex items-center space-x-4">
-                  <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                    {bankData?.upiScanner ? (
-                      <img
-                        src={URL.createObjectURL(bankData?.upiScanner) || "/placeholder.svg"}
-                        alt="QR Code"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : editingAccount?.upiScanner ? (
-                      <img
-                        src={editingAccount?.upiScanner || "/placeholder.svg"}
-                        alt="QR Code"
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : (
-                      <Upload className="h-8 w-8 text-gray-400" />
-                    )}
-                  </div>
-                  <div>
-                    <Input
-                      id="upiScanner"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleScannerUpload}
-                      className="max-w-xs"
-                    />
-                    <p className="text-sm text-gray-500 mt-1">Upload UPI QR code for payments</p>
-                  </div>
-                </div>
+                <Label>UPI Scanner (QR Code)</Label>
+                <FileUpload
+                  value={bankData.upiScanner}
+                  onChange={(url) => setBankData({ ...bankData, upiScanner: url })}
+                  className="w-20 h-20"
+                  accept="image/*"
+                  placeholder="Upload UPI QR code"
+                />
+                {/* <p className="text-sm text-gray-500 mt-1 max-w-20 px-2">Upload UPI QR code for payments</p> */}
               </div>
             </div>
           </div>

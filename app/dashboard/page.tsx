@@ -72,6 +72,7 @@ export default function DashboardPage() {
     growthRate: 0,
     quotations: 0,
     pendingQuotations: 0,
+    pendingReceipt:0,
     pendingInvoices: 0,
     billsDue: 0,
     activeClients: 0,
@@ -150,7 +151,7 @@ const getEntityDate = (entity: any) =>
   const loadDashboardData = async () => {
     // console.log('[DASHBOARD] Loading data with date range:', { from: dateRange.from, to: dateRange.to })
     try {
-      const [quotations, receipts, payments, employees, assets, plans, clients, vendors, items] =
+      const [quotations, receipts, payments, employees, assets, plans, clients, vendors, items, salesInvoice] =
         await Promise.all([
           api.quotations.getAll(),
           api.receipts.getAll(),
@@ -161,6 +162,7 @@ const getEntityDate = (entity: any) =>
           api.clients.getAll(),
           api.vendors.getAll(),
           api.items.getAll(),
+          api.salesInvoice.getAll(),
         ]);
 
       // Fetch current plan details
@@ -177,7 +179,7 @@ const getEntityDate = (entity: any) =>
 const filteredReceipts = receipts.filter((r: any) =>
   isTillEndDate(getEntityDate(r), dateRange)
 )
-
+// console.log("receipts", filteredReceipts)
 const filteredPayments = payments.filter((p: any) =>
   isTillEndDate(getEntityDate(p), dateRange)
 )
@@ -190,7 +192,8 @@ const filteredClients = clients.filter((c: any) =>
       const filteredQuotations = quotations.filter((q: any) =>
         isTillEndDate(getEntityDate(q), dateRange)
       )
-
+      const filteredSalesInvoice = salesInvoice.filter((s: any) =>
+        isTillEndDate(getEntityDate(s), dateRange) )
       const filteredVendors = vendors.filter((v: any) =>
         isTillEndDate(getEntityDate(v), dateRange)
       )
@@ -207,7 +210,7 @@ const filteredClients = clients.filter((c: any) =>
         isTillEndDate(getEntityDate(e), dateRange)
       )
       const totalReceipts = filteredReceipts.reduce(
-        (sum: number, r: any) => sum + (r.amountPaid || 0),
+        (sum: number, r: any) => sum + (r.ReceiptAmount || 0),
         0
       )
 
@@ -215,17 +218,29 @@ const filteredClients = clients.filter((c: any) =>
         (sum: number, p: any) => sum + (p.amount || 0),
         0
       )
-
+      
       const cashInHand = totalReceipts - totalPayments
 
       const pendingQuotations = filteredQuotations.filter(
         (q: any) => q.status === "pending" || q.status === "sent"
       )
+const pendingReceipt = filteredReceipts.filter(
+  (r: any) => r.status?.toString().trim().toLowerCase() === "pending"
+)
 
-      const receivables = pendingQuotations.reduce(
-        (sum: number, q: any) => sum + (q.balanceAmount || 0),
+      // console.log("pendingReceipt", pendingReceipt)
+      const pendingReceiptAmount = pendingReceipt.reduce(
+        (sum: number, q: any) => sum + (q.ReceiptAmount || 0),
         0
       )
+      // console.log("pendingReceiptAmount", pendingReceiptAmount)
+const badDept = filteredReceipts.reduce(
+  (sum: number, r: any) => sum + Number(r.badDeptAmount || 0),
+  0
+)
+
+      console.log("badDept", badDept)
+      const receivables = pendingReceiptAmount - badDept
       // ✅ payables (filtered by date range)
       const recentPayments = (
         Array.isArray(filteredPayments) ? filteredPayments : filteredPayments?.data || []
@@ -268,6 +283,7 @@ const filteredClients = clients.filter((c: any) =>
       const totalClients = filteredClients.length
       const totalVendors = filteredVendors.length
       const assetsManaged = filteredAssets.filter((a: any) => a.status === "available");
+      const pendingInvoices = filteredSalesInvoice.filter((r: any) => r.status !== "Cleared");
       // ✅ Growth Rate (MoM %)
       let growthRate = 0;
       if (lastMonthRevenue > 0) {
@@ -291,7 +307,8 @@ const filteredClients = clients.filter((c: any) =>
         growthRate: Number(growthRate.toFixed(2)),
         quotations: filteredQuotations.length,
         pendingQuotations: pendingQuotations.length,
-        pendingInvoices: pendingQuotations.length,
+        pendingReceipt: pendingReceipt.length,
+        pendingInvoices: pendingInvoices.length,
         billsDue: recentPayments.length,
         activeClients: activeClients.length,
         activeVendors: filteredVendors.length,
@@ -381,7 +398,7 @@ const filteredClients = clients.filter((c: any) =>
     {
       title: "Receivables",
       value: formatCurrency(stats.receivables),
-      change: `${stats.pendingInvoices} pending invoices`,
+      change: `${stats.pendingReceipt} pending receipts`,
       icon: ArrowUpRight,
       color: "text-blue-600",
     },
@@ -418,7 +435,7 @@ const filteredClients = clients.filter((c: any) =>
     },
     {
       title: "Unpaid Receipts",
-      value: stats.unClearReceipt?.toString(),
+      value: stats.pendingReceipt?.toString(),
       change: `${stats.receipts} total receipts`,
       icon: FileText,
       color: "text-cyan-600",

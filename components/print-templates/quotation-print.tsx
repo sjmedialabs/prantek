@@ -71,11 +71,13 @@ console.log("items array", quotation.items)
           )}
           <div>
             <h1 className="text-2xl font-bold text-gray-900 py-2">{companyDetails?.name || "Company Name"}</h1>
-            <p className="text-sm text-gray-600">{companyDetails?.address}</p>
-            <p className="text-sm text-gray-600">
+            <div className="flex flex-col gap-1">
+            <p className="text-sm text-gray-600 py-0">{companyDetails?.address}</p>
+            <p className="text-sm text-gray-600 py-0">
               Phone: {companyDetails?.phone} | Email: {companyDetails?.email}
             </p>
-            {companyDetails?.website && <p className="text-sm text-gray-600">Website: {companyDetails.website}</p>}
+            </div>
+            {companyDetails?.website && <p className="text-sm text-gray-600 py-0">Website: {companyDetails.website}</p>}
           </div>
         </div>
         <div className="text-right">
@@ -88,7 +90,7 @@ console.log("items array", quotation.items)
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
           <h3 className="text-sm font-semibold text-gray-700 py-2">BILL TO:</h3>
-          <div className="text-sm">
+          <div className="text-sm flex flex-col gap-1">
             <p className="font-semibold text-gray-900">{quotation.client.name}</p>
             {quotation.client.address && <p className="text-gray-600">{quotation.client.address}</p>}
             {quotation.client.phone && <p className="text-gray-600">Phone: {quotation.client.phone}</p>}
@@ -136,7 +138,7 @@ console.log("items array", quotation.items)
         <tbody>
           {quotation.items.map((item, index) => (
             <tr key={index} className="border-b border-t border-gray-200">
-              <td className="py-3 px-4">
+              <td className="py-3 px-4 flex flex-col gap-1">
                 <p className="text-sm font-medium text-gray-900">{item.name}</p>
                 {item.description && <p className="text-xs text-gray-600">{item.description}</p>}
               </td>

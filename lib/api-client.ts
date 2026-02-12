@@ -11,6 +11,7 @@ import type {
   
   Vendor,
   TaxSetting,
+  PurchaseInvoice,
 } from "./models/types"
 import type { CompanySetting } from "@/lib/models/types"
 
@@ -222,6 +223,36 @@ quotations: {
   },
 },
 
+  // Sales Invoices
+  salesInvoice: {
+    getAll: async () => {
+      const data = await fetchAPI("/api/salesInvoice")
+      return data.data || []
+    },
+    getById: async (id: string) => {
+      const data = await fetchAPI(`/api/salesInvoice/${id}`)
+      return data.data
+    },
+    create: async (invoiceData: any) => {
+      const data = await fetchAPI("/api/salesInvoice", {
+        method: "POST",
+        body: JSON.stringify(invoiceData),
+      })
+      return data.data
+    },
+    update: async (id: string, invoiceData: any) => {
+      const data = await fetchAPI(`/api/salesInvoice/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(invoiceData),
+      })
+      return data.data
+    },
+    delete: async (id: string) => {
+      await fetchAPI(`/api/salesInvoice/${id}`, {
+        method: "DELETE",
+      })
+    },
+  },
 
     // Receipts
     receipts: {
@@ -281,6 +312,37 @@ quotations: {
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/payments/${id}`, {
+          method: "DELETE",
+        })
+      },
+    },
+
+    // Purchase Invoices
+    purchaseInvoice: {
+      getAll: async () => {
+        const data = await fetchAPI("/api/purchaseInvoice")
+        return data.data || []
+      },
+      getById: async (id: string) => {
+        const data = await fetchAPI(`/api/purchaseInvoice/${id}`)
+        return data.data
+      },
+      create: async (invoiceData: Omit<PurchaseInvoice, "_id" | "createdAt" | "updatedAt" | "purchaseInvoiceNumber" | "userId" | "createdBy">) => {
+        const data = await fetchAPI("/api/purchaseInvoice", {
+          method: "POST",
+          body: JSON.stringify(invoiceData),
+        })
+        return data.data
+      },
+      update: async (id: string, invoiceData: Partial<PurchaseInvoice>) => {
+        const data = await fetchAPI(`/api/purchaseInvoice/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(invoiceData),
+        })
+        return data.data
+      },
+      delete: async (id: string) => {
+        await fetchAPI(`/api/purchaseInvoice/${id}`, {
           method: "DELETE",
         })
       },

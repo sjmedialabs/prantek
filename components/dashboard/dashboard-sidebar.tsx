@@ -71,13 +71,13 @@ function hasActiveSubscription(user: any): boolean {
 
 const navigationItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
-  { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: null },
+  { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: "view_cash_book" },
   { name: "Clients", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
   { name: "Vendors", href: "/dashboard/vendor", icon: Users, permission: "view_vendors" },
   { name: "Quotation", href: "/dashboard/quotations", icon: FileText, permission: "view_quotations" },
-  { name: "Sales Invoices", href: "/dashboard/salesInvoices", icon: ClipboardList, permission: "view_sales_invoices" },
+  { name: "Sales Invoices", href: "/dashboard/salesInvoices", icon: ClipboardList, permission: "view_sales_invoice" },
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
-  { name: "Purchase Invoices", href: "/dashboard/purchaseInvoices", icon: ShoppingCart, permission: "view_purchase_invoices" },
+  { name: "Purchase Invoices", href: "/dashboard/purchaseInvoices", icon: ShoppingCart, permission: "view_purchase_invoice" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
   { name: "Reconciliation", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
   { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "view_assets" },
@@ -178,7 +178,7 @@ const navigationItems: NavItem[] = [
               {
                 name: "Employee Roles",
                 href: "/dashboard/hr/employee-roles",
-                permission: "manage_roles",
+                permission: "tenant_settings",
               },
               {
                 name: "Employee List",
@@ -222,13 +222,13 @@ const navigationItems: NavItem[] = [
         name: "Plans",
         icon: Settings,
         href: "/dashboard/plans",
-        permission: null,
+        permission: "tenant_settings",
       },
             {
         name: "Terms & Conditions",
         icon: Settings,
         href: "/dashboard/settings/terms",
-        permission: null,
+        permission: "tenant_settings",
       },
     ],
   },
@@ -273,10 +273,13 @@ export default function DashboardSidebar() {
     
     // Map menu items to plan features
     const featureMap: Record<string, string> = {
+      'Cash Book': 'cashBook',
       'Clients': 'clients',
       'Vendors': 'vendors',
       'Quotation': 'quotations',
+      'Sales Invoice': 'salesInvoice',
       'Receipts': 'receipts',
+      'Purchase Invoice': 'purchaseInvoice',
       'Payments': 'payments',
       'Reconciliation': 'reconciliation',
       'Assets': 'assets',
@@ -301,7 +304,7 @@ export default function DashboardSidebar() {
 
     // LEVEL 2: Check plan features - strictly gate based on subscription plan
     // Dashboard and Cash Book are always accessible
-    if (item.name !== 'Dashboard' && item.name !== 'Cash Book') {
+    if (item.name !== 'Dashboard') {
       // If planFeatures hasn't loaded yet, hide menu items to prevent showing restricted features
       if (!planFeatures) {
         return null;

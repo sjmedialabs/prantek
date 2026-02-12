@@ -256,9 +256,9 @@ export interface ReceiptItem {
 export interface Receipt extends BaseDocument {
   id: string
   receiptNumber: string
-  receiptType: "quotation" | "items" | "quick" // Type of receipt creation
-  quotationId?: string // Optional - only for receipts from quotations
-  quotationNumber?: string
+  receiptType: "salesInvoiced" | "nonInvoiced" | "advance" // Type of receipt creation
+  salesInvoiceId?: string // Optional - only for receipts from invoice
+  salesInvoiceNumber?: string
   clientId: string
   clientName: string
   clientEmail: string
@@ -268,16 +268,20 @@ export interface Receipt extends BaseDocument {
   items: QuotationItem[]
   subtotal: number
   taxAmount: number
-  total: number // Total amount from quotation
-  amountPaid: number // Amount paid in this receipt
-  balanceAmount: number // Remaining balance after this payment
+  invoiceDate: string
+  invoicegrandTotal: number
+  invoiceBalance: number
+  total: number // Total amount from quotation also the invoice total amount 
+  ReceiptAmount: number // Amount paid in this receipt
+  balanceAmount: number // Remaining balance after this payment else invoice balace amount
   paymentType: "full" | "partial" | "advance"
   paymentMethod: "cash" | "card" | "upi" | "bank-transfer" | "cheque"
-  bankAccount?: string
+  bankDetails?: BankDetail
   referenceNumber?: string
   screenshot?: string
   status: "pending" | "cleared" // Lowercase to match reconciliation
   notes?: string
+  createdBy: string
 }
 
 export interface QuotationItem {
@@ -298,12 +302,15 @@ export interface QuotationItem {
   // For printing compatibility
   taxName?: string
   taxRate?: number
+  amount?: number
+  taxAmount?: number
+  total: number
 }
 
 export interface Quotation extends BaseDocument {
   userId: string
   clientId: string
-
+  id?: string
   quotationNumber?: string
   date: string | Date
   validity?: string | Date
@@ -322,12 +329,76 @@ export interface Quotation extends BaseDocument {
   balanceAmount: number
   terms: string
   status: "pending" | "accepted" | "expired" | "confirmed"
-
+  createdBy: string
   acceptedDate?: string | Date
 
   isActive?: string
     salesInvoiceId?: string
   convertedAt?: Date
+}
+export interface SalesInvoice extends BaseDocument {
+  invoiceType: string
+  salesInvoiceNumber: string
+
+  quotationId?: string
+  quotationNumber?: string
+  date: string | Date
+  dueDate?: string | Date
+  description?: string
+  clientId: string
+  clientName: string
+  clientEmail: string
+  clientAddress?: string
+  clientContact?: string
+  clientPhone?: string
+
+  items: QuotationItem[]
+  subtotal: number
+  taxAmount: number
+  totalDiscount: number
+  grandTotal: number
+  paidAmount: number
+  balanceAmount: number
+  terms: string
+  status: "Not Cleared" | "Cleared" | "Partial" | "Expired" | "Pending"
+  createdBy: string
+  userId: string
+  isActive?: string
+  bankDetails?: BankDetail
+}
+export interface PurchaseInvoice extends BaseDocument {
+  purchaseInvoiceNumber: string // PI-2026-0001
+  date: string
+  dueDate: string
+
+  vendorInvoiceNumber: string
+
+  vendor: {
+    vendorId: string
+    name: string
+    address: string
+    contactNumber: string
+    email: string
+  }
+
+  paymentCategory: string
+  description?: string
+
+  invoiceTotalAmount: number
+  amountInWords: string
+
+  billUpload?: string
+
+  paymentStatus: "Unpaid" | "Paid"
+  invoiceStatus: "Open" | "Closed"
+
+  paidAmount: number
+
+  expenseAdjustment?: number
+  expenseAdjustmentReason?: string
+
+  createdBy: string
+  userId: string
 }
 
 export interface Payment extends BaseDocument {
@@ -355,7 +426,9 @@ export interface PlanFeatures {
   clients: boolean
   vendors: boolean
   quotations: boolean
+  salesInvoice: boolean
   receipts: boolean
+  purchaseInvoice: boolean
   payments: boolean
   reconciliation: boolean
   assets: boolean
@@ -369,7 +442,9 @@ export const PLAN_FEATURE_KEYS = [
   'clients',
   'vendors',
   'quotations',
+  'salesInvoice',
   'receipts',
+  'purchaseInvoice',
   'payments',
   'reconciliation',
   'assets',
@@ -383,12 +458,15 @@ export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
   clients: 'Clients Management',
   vendors: 'Vendors Management',
   quotations: 'Quotations',
+  salesInvoice: 'Sales Invoice',
   receipts: 'Receipts',
   payments: 'Payments',
+  purchaseInvoice: 'Purchase Invoice',
   reconciliation: 'Reconciliation',
   assets: 'Assets Management',
   reports: 'Reports',
   settings: 'Settings',
+  hrSettings: 'HR Settings',
 }
 
 export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
@@ -396,12 +474,15 @@ export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
   clients: 'Manage client database and relationships',
   vendors: 'Manage vendor database and relationships',
   quotations: 'Create and manage quotations',
+  salesInvoice: 'Create and manage sales invoices',
   receipts: 'Create and manage receipts',
+  purchaseInvoice: 'Create and manage purchase invoices',
   payments: 'Process and track payments',
   reconciliation: 'Bank reconciliation features',
   assets: 'Manage company assets inventory',
   reports: 'Generate business reports',
   settings: 'Access to system settings and configuration',
+  hrSettings: 'Access to HR settings and configuration',
 }
 
 export interface SubscriptionPlan extends BaseDocument {
@@ -456,9 +537,11 @@ export interface BankDetail extends BaseDocument {
   userId: string
   bankName: string
   accountNumber: string
+  accountName: string
   ifscCode: string
-  accountHolderName: string
-  branch?: string
+  upiScanner: string
+  upiId: string
+  branchName: string
   isDefault: boolean
 }
 
@@ -498,7 +581,7 @@ export interface MemberType extends BaseDocument {
   code: string
   description?: string
   requiresSalary: boolean
-  isActive: boolean
+  isEnabled: boolean
 }
 
 // Role for Admin Users (dashboard access permissions)

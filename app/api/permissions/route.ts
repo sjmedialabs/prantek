@@ -3,6 +3,8 @@ import { withAuth } from "@/lib/api-auth"
 
 // Define all available permissions in the system
 const SYSTEM_PERMISSIONS = [
+  //cashbook
+  { id: "view_cash_book", label: "View Cashbook", category: "CashBook", description: "View cashbook records"},
   // Clients
   { id: "view_clients", label: "View Clients", category: "Clients", description: "View client information" },
   { id: "add_clients", label: "Add Clients", category: "Clients", description: "Create new clients" },
@@ -18,10 +20,20 @@ const SYSTEM_PERMISSIONS = [
   { id: "add_quotations", label: "Add Quotations", category: "Quotations", description: "Create new quotations" },
   { id: "edit_quotations", label: "Edit Quotations", category: "Quotations", description: "Modify quotations" },
 
+  // sales invoice Permission
+  { id: "view_sales_invoice", label: "View Sales Invoice", category: "Sales Invoice", description: "View sales invoice records" },
+  {id: "add_sales_invoice", label: "Add Sales Invoice", category: "Sales Invoice", description: "Create new sales invoice"},
+  {id: "edit_sales_invoice", label: "Edit Sales Invoice", category: "Sales Invoice", description: "Modify sales invoice"},
+
   // Receipts
   { id: "view_receipts", label: "View Receipts", category: "Receipts", description: "View receipt records" },
   { id: "add_receipts", label: "Add Receipts", category: "Receipts", description: "Create new receipts" },
   { id: "edit_receipts", label: "Edit Receipts", category: "Receipts", description: "Modify receipts" },
+
+  //Purchase Invoice Permission
+  { id: "view_purchase_invoice", label: "View Purchase Invoice", category: "Purchase Invoice", description: "View purchase invoice records" },
+  {id: "add_purchase_invoice", label: "Add Purchase Invoice", category: "Purchase Invoice", description: "Create new purchase invoice"},
+  {id: "edit_purchase_invoice", label: "Edit Purchase Invoice", category: "Purchase Invoice", description: "Modify purchase invoice"},
 
   // Payments
   { id: "view_payments", label: "View Payments", category: "Payments", description: "View payment records" },
