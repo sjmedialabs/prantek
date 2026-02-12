@@ -32,7 +32,7 @@ export default function EditReceiptPage() {
   // Editable fields
   const [date, setDate] = useState("")
   const [paymentAmount, setPaymentAmount] = useState(0)
-  const [paymentMethod, setPaymentMethod] = useState("Cash")
+  const [paymentMethod, setPaymentMethod] = useState("cash")
   const [paymentType, setPaymentType] = useState<"Full Payment" | "Partial">("Full Payment")
   const [bankAccount, setBankAccount] = useState<any>(null)
   const [referenceNumber, setReferenceNumber] = useState("")
@@ -99,7 +99,7 @@ export default function EditReceiptPage() {
 
       setPaymentMethod(
         loadedReceipt.paymentMethod === "cash"
-          ? "Cash"
+          ? ("Cash" || "cash")
           : loadedReceipt.paymentMethod === "bank-transfer"
             ? "Bank Transfer"
             : loadedReceipt.paymentMethod === "UPI"
@@ -162,7 +162,7 @@ console.log("payment amount is ", paymentAmount)
       restoredTotalBeforeEdit - paymentAmount - advanceApplyAmount
 
     const updatedStatus =
-      updatedBalanceAmount <= 0 ? "Cleared" : "Partial"
+      updatedBalanceAmount <= 0 ? "cleared" : "Partial"
 
 
     setSubmitting(true)
@@ -201,7 +201,7 @@ console.log("payment amount is ", paymentAmount)
         ReceiptAmount: paymentAmount,
         paymentType,
         paymentMethod:
-          paymentMethod === "Cash"
+          paymentMethod === ("Cash" || "cash")
             ? "cash"
             : paymentMethod === "Bank Transfer"
               ? "bank-transfer"
@@ -584,7 +584,7 @@ console.log("payment amount is ", paymentAmount)
               <Select disabled={isCleared} value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value={"Cash" || "cash"}>Cash</SelectItem>
                   <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                   <SelectItem value="Cheque">Cheque</SelectItem>
                   <SelectItem value="UPI">UPI</SelectItem>
@@ -612,7 +612,7 @@ console.log("payment amount is ", paymentAmount)
             <div>
               <Label>Status</Label>
               <Input
-                value={paymentMethod === "Cash" ? "Cleared" : "Received"}
+                value={paymentMethod === ("Cash" || "cash") ? "cleared" : "Received"}
                 disabled
                 className="bg-gray-50"
               />

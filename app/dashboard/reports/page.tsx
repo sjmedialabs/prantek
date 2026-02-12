@@ -42,6 +42,8 @@ export default function ReportsPage() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [hasTaxSettings, setHasTaxSettings] = useState(false)
+  const [hasBankDetails, setHasBankDetails] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,12 +53,16 @@ export default function ReportsPage() {
         const loadedPayments = await api.payments.getAll()
         const loadedClients = await api.clients.getAll()
         const loadedItems = await api.items.getAll()
+        const loadedTaxSettings = await api.taxSetting.get()
+        const loadedBankAccounts = await api.bankAccounts.getAll()
 
         setReceipts(loadedReceipts)
         setQuotations(loadedQuotations)
         setPayments(loadedPayments)
         setClients(loadedClients)
         setItems(loadedItems)
+        setHasTaxSettings(!!loadedTaxSettings)
+        setHasBankDetails(Array.isArray(loadedBankAccounts) && loadedBankAccounts.length > 0)
         console.log("Items data loaded:", loadedItems)
       }
     }
@@ -88,10 +94,6 @@ export default function ReportsPage() {
 
   // Calculate compliance metrics
   const complianceMetrics = useMemo(() => {
-    // Check if tax settings exist (simplified - you may need to add API call)
-    const hasTaxSettings = true // TODO: Check actual tax settings
-    const hasBankDetails = true // TODO: Check actual bank details
-    
     // Calculate client data completeness
     const clientsWithCompleteData = clients.filter(c => 
       c.name && c.email && c.phone && c.address
@@ -124,7 +126,7 @@ export default function ReportsPage() {
       bankDetailsScore,
       overallScore,
     }
-  }, [clients, items])
+  }, [clients, items, hasTaxSettings, hasBankDetails])
 
   const financialData = useMemo(() => {
     const monthlyData: Record<string, { income: number; expenses: number; profit: number }> = {}

@@ -23,7 +23,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       bankAccount: r.bankAccount,
       paymentMethod: r.paymentMethod,
       referenceNumber: r.referenceNumber,
-      amount: r.amountPaid || r.total || 0,
+      amount: r.ReceiptAmount || r.amountPaid || r.total || 0,
       status: r.status || "pending",
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,

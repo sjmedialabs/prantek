@@ -374,7 +374,7 @@ export default function ReceiptsPage() {
                       </TableCell>
                       <TableCell>{receipt.paymentMethod}</TableCell>
                       <TableCell>
-                        <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
+                        <Badge variant={receipt.status === ("cleared") ? "default" : "secondary"}>
                           {formatStatus(receipt.status)}
                         </Badge>
                       </TableCell>

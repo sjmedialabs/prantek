@@ -83,7 +83,7 @@ export default function ReceiptsPage() {
   const [paymentType, setPaymentType] = useState<any>("FullPayment")// Ful, Payment or Partial Payment
   const [amountToPay, setAmountToPay] = useState(0)// if partial amount is selected then need to enter amount they paying currently
   const [paymentMethods, setPaymentMethods] = useState<any>([])
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("Cash")
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [referenceNumber, setReferenceNumber] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any>([]);
   const [selectedBankAcount, setSelectedBankAccount] = useState<any>();
@@ -151,7 +151,7 @@ export default function ReceiptsPage() {
     if (result.success) {
       const advances = result.data.filter((r: any) =>
         r.receiptType === "advance" &&
-        r.status === "cleared" &&
+        r.status === ("cleared") &&
         !r.parentReceiptNumber
       )
 
@@ -189,7 +189,7 @@ export default function ReceiptsPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSalesInvoices(result.data.filter((i: any) => i.isActive === "active" && i.status !== "Cleared"))
+        setSalesInvoices(result.data.filter((i: any) => i.isActive === "active" && i.status !== "cleared"))
       }
     } catch (err) {
       console.error(err)
@@ -400,7 +400,7 @@ export default function ReceiptsPage() {
         bankDetails: invoiceDetails.bankDetails || selectedBankAcount,
         referenceNumber,
 
-        status: selectedPaymentMethod.toLowerCase() === "cash" ? "Cleared" : "Pending",
+        status: selectedPaymentMethod.toLowerCase() === "cash" ? "cleared" : "Pending",
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || null,
         advanceAppliedAmount: advanceApplyAmount || 0,
         createdBy: invoiceDetails.createdBy,
@@ -425,7 +425,7 @@ export default function ReceiptsPage() {
         body: JSON.stringify({
           paidAmount: Number(invoiceDetails.paidAmount) + Number(receiptAmount),
           balanceAmount: invoiceBalance,
-          status: invoiceBalance <= 0 ? "Cleared" : "Partial",
+          status: invoiceBalance <= 0 ? "cleared" : "Partial",
         }),
       })
 
@@ -652,7 +652,7 @@ export default function ReceiptsPage() {
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || null,
         advanceAppliedAmount: advanceApplyAmount || 0,
         date: new Date().toISOString(),
-        status: `${scenario2PaymentMethod.trim().toLowerCase() === "cash" ? "Cleared" : "Pending"}`,
+        status: `${scenario2PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "Pending"}`,
         notes: notes,
         createdBy: companyName
       }
@@ -718,7 +718,7 @@ export default function ReceiptsPage() {
         bankDetails: selectedAccount,
         referenceNumber: scenario3ReferenceNumber,
         date: new Date().toISOString(),
-        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "Cleared" : "Pending"}`,
+        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "Pending"}`,
         notes: notes,
         createdBy: companyName
       }
@@ -774,7 +774,7 @@ export default function ReceiptsPage() {
         bankDetails: selectedAccount,
         referenceNumber: scenario3ReferenceNumber,
         date: new Date().toISOString(),
-        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "Cleared" : "Pending"}`,
+        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "Pending"}`,
         notes: notes,
         createdBy: companyName
       }

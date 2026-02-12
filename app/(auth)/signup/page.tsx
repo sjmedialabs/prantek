@@ -79,24 +79,24 @@ export default function SignUpPage() {
         // Only clear if not coming back from payment
         const params = new URLSearchParams(window.location.search);
         const paymentStatus = params.get("payment");
-        
+
         if (paymentStatus !== "success") {
           // Clear tokens
           tokenStorage.clearTokens();
-          
+
           // Call logout API to clear cookies
           await fetch("/api/auth/logout", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({}),
-          }).catch(() => {});
+          }).catch(() => { });
         }
       } catch (err) {
         console.error("Error clearing sessions:", err);
       }
     };
-    
+
     clearExistingSessions();
   }, []);
 
@@ -162,7 +162,7 @@ export default function SignUpPage() {
     if (!email || validateEmail(email)) return false;
 
     const normalizedEmail = email.toLowerCase().trim();
-    
+
     // Check cache first
     if (checkedEmails.has(normalizedEmail)) {
       const exists = checkedEmails.get(normalizedEmail)!;
@@ -172,13 +172,19 @@ export default function SignUpPage() {
           email: "This email is already registered. Would you like to login instead?",
         }));
         setError(
-          <div className="flex items-center justify-between">
-            <span>Email already registered</span>
-            <Link href="/signin" className="text-blue-600 hover:underline font-medium">
-              Go to Login
-            </Link>
+          <div className="flex w-full flex-row items-center justify-between gap-4">
+            <div>
+              <span>Email already registered</span>
+            </div>
+
+            <div>
+              <Link href="/signin" className="text-blue-600 hover:underline font-medium">
+                Go to Login
+              </Link>
+            </div>
           </div> as any
         );
+        ;
       } else {
         setFieldErrors((prev) => ({ ...prev, email: "" }));
         setError("");
@@ -230,7 +236,7 @@ export default function SignUpPage() {
     if (!phone || validatePhoneNumber(phone)) return false;
 
     const normalizedPhone = phone.trim();
-    
+
     // Check cache first
     if (checkedPhones.has(normalizedPhone)) {
       const exists = checkedPhones.get(normalizedPhone)!;
@@ -604,7 +610,7 @@ export default function SignUpPage() {
                   Create Your Account
                 </h2>
                 <p className="text-sm text-gray-600">
-                  Fill in your details to start your free 14-day trial
+                  Fill in your details to start your free {trialDays} day trial
                 </p>
               </div>
               <form onSubmit={handleContinueToPlans} className="space-y-4">
@@ -640,11 +646,10 @@ export default function SignUpPage() {
                       });
                     }}
                     required
-                    className={`h-10 ${
-                      fieldErrors.name
+                    className={`h-10 ${fieldErrors.name
                         ? "border-red-500 focus-visible:ring-red-500/20"
                         : ""
-                    }`}
+                      }`}
                   />
                   {fieldErrors.name && (
                     <p className="text-xs text-red-500 mt-1">
@@ -693,11 +698,10 @@ export default function SignUpPage() {
                         }
                       }}
                       required
-                      className={`h-10 ${
-                        fieldErrors.email || checkingEmail
+                      className={`h-10 ${fieldErrors.email || checkingEmail
                           ? "border-red-500 focus-visible:ring-red-500/20"
                           : ""
-                      }`}
+                        }`}
                     />
                     {checkingEmail && (
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
@@ -794,11 +798,10 @@ export default function SignUpPage() {
                       }}
                       required
                       minLength={6}
-                      className={`pr-10 h-10 ${
-                        fieldErrors.password
+                      className={`pr-10 h-10 ${fieldErrors.password
                           ? "border-red-500 focus-visible:ring-red-500/20"
                           : ""
-                      }`}
+                        }`}
                     />
                     <button
                       type="button"
@@ -852,11 +855,10 @@ export default function SignUpPage() {
                         });
                       }}
                       required
-                      className={`pr-10 h-10 ${
-                        fieldErrors.confirmPassword
+                      className={`pr-10 h-10 ${fieldErrors.confirmPassword
                           ? "border-red-500 focus-visible:ring-red-500/20"
                           : ""
-                      }`}
+                        }`}
                     />
                     <button
                       type="button"
@@ -917,11 +919,11 @@ export default function SignUpPage() {
         selectedPlan={
           currentSelectedPlan
             ? {
-                name: currentSelectedPlan.name,
-                price: currentSelectedPlan.price,
-                billingCycle: currentSelectedPlan.billingCycle,
-                features: currentSelectedPlan.features,
-              }
+              name: currentSelectedPlan.name,
+              price: currentSelectedPlan.price,
+              billingCycle: currentSelectedPlan.billingCycle,
+              features: currentSelectedPlan.features,
+            }
             : null
         }
       />
@@ -956,22 +958,20 @@ export default function SignUpPage() {
                 <button
                   type="button"
                   onClick={() => setBillingCycle("monthly")}
-                  className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                    billingCycle === "monthly"
+                  className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingCycle === "monthly"
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600 hover:text-gray-900"
-                  }`}
+                    }`}
                 >
                   Monthly
                 </button>
                 <button
                   type="button"
                   onClick={() => setBillingCycle("yearly")}
-                  className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all relative ${
-                    billingCycle === "yearly"
+                  className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all relative ${billingCycle === "yearly"
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600 hover:text-gray-900"
-                  }`}
+                    }`}
                 >
                   Yearly
                   <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
@@ -1008,13 +1008,12 @@ export default function SignUpPage() {
                   return (
                     <Card
                       key={plan._id || plan.id}
-                      className={`relative cursor-pointer overflow-hidden transition-all duration-300 flex flex-col max-h-[200px] md:max-h-[260px] xl:max-h-[270px] ${
-                        isSelected
+                      className={`relative cursor-pointer overflow-hidden transition-all duration-300 flex flex-col max-h-[200px] md:max-h-[260px] xl:max-h-[270px] ${isSelected
                           ? "border-2 border-blue-600 shadow-2xl bg-gradient-to-br from-blue-50 via-white to-indigo-50"
                           : isPopular
-                          ? "border-2 border-amber-400 shadow-lg bg-gradient-to-br from-amber-50 to-white hover:shadow-xl"
-                          : "border border-gray-300 bg-white hover:border-blue-300 hover:shadow-lg"
-                      }`}
+                            ? "border-2 border-amber-400 shadow-lg bg-gradient-to-br from-amber-50 to-white hover:shadow-xl"
+                            : "border border-gray-300 bg-white hover:border-blue-300 hover:shadow-lg"
+                        }`}
                       onClick={() => setSelectedPlan(plan._id || plan.id)}
                     >
                       {/* Corner Trial Badge */}
@@ -1038,13 +1037,12 @@ export default function SignUpPage() {
                         <div className="text-center mb-4 md:mb-6 pt-6">
                           <div className="flex items-center justify-center gap-2 mb-2">
                             <h3
-                              className={`text-lg md:text-xl font-bold ${
-                                isSelected
+                              className={`text-lg md:text-xl font-bold ${isSelected
                                   ? "text-blue-600"
                                   : isPopular
-                                  ? "text-amber-600"
-                                  : "text-gray-900"
-                              }`}
+                                    ? "text-amber-600"
+                                    : "text-gray-900"
+                                }`}
                             >
                               {plan.name}
                             </h3>
@@ -1065,13 +1063,12 @@ export default function SignUpPage() {
                               ₹
                             </span>
                             <span
-                              className={`text-4xl md:text-5xl font-bold ${
-                                isSelected
+                              className={`text-4xl md:text-5xl font-bold ${isSelected
                                   ? "text-blue-600"
                                   : isPopular
-                                  ? "text-amber-600"
-                                  : "text-gray-900"
-                              }`}
+                                    ? "text-amber-600"
+                                    : "text-gray-900"
+                                }`}
                             >
                               {(billingCycle === "yearly"
                                 ? discountedYearlyPrice
