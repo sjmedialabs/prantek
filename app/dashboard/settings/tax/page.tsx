@@ -104,7 +104,7 @@ const totalPages = Math.ceil(filteredRates.length / itemsPerPage)
   }
 
   const handleSaveRate = async () => {
-    if (!rateData.rate || !rateData.description) {
+    if (!rateData.rate) {
       toast({ title: "Validation Error", description: "Please fill in all fields", variant: "destructive" })
       return
     }
@@ -352,7 +352,7 @@ if (isDuplicate) {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Tax Type</Label>
+              <Label htmlFor="type" required>Tax Type</Label>
               <Select
                 value={rateData.type}
                 onValueChange={(value: "CGST" | "SGST" | "IGST") => setRateData({ ...rateData, type: value })}
@@ -369,7 +369,7 @@ if (isDuplicate) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="rate">Rate (%)</Label>
+              <Label htmlFor="rate" required>Rate (%)</Label>
               <Input
                 id="rate"
                 type="number"

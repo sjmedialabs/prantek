@@ -3,6 +3,9 @@ import { withAuth } from "@/lib/api-auth"
 
 // Define all available permissions in the system
 const SYSTEM_PERMISSIONS = [
+  
+  //Dashboard
+  { id: "dashboard", label: "View Dashboard", category: "Dashboard", description: "View Dashboard records"},
   //cashbook
   { id: "view_cash_book", label: "View Cashbook", category: "CashBook", description: "View cashbook records"},
   // Clients

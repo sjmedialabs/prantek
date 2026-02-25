@@ -52,6 +52,7 @@ export default function ClientsPage() {
     contactName: "",
     gst: "",
     pan: "",
+    note: "",
   })
 
   const [errors, setErrors] = useState({
@@ -91,6 +92,7 @@ export default function ClientsPage() {
       contactName: "",
       gst: "",
       pan: "",
+      note: "",
     })
     setErrors({
       name: "",
@@ -203,6 +205,7 @@ export default function ClientsPage() {
         pincode: formData.pincode,
         userId: parsed.id,
         pan: formData.pan,
+        note: formData.note,
         status: "active",
       }
 
@@ -249,6 +252,7 @@ export default function ClientsPage() {
       contactName: client.name || "",
       gst: client.gst || "",
       pan: client.pan || "",
+      note: client.note || "",
     })
     setIsDialogOpen(true)
   }
@@ -526,6 +530,18 @@ export default function ClientsPage() {
                       />
                       {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                     </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="note">Note </Label>
+                    <Textarea
+                      id="note"
+                      value={formData.note}
+                      placeholder="Enter note"
+                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                      rows={2}
+                    />
+                    {/* {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>} */}
                   </div>
                 </form>
               </div>

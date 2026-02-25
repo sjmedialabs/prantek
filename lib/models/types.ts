@@ -92,7 +92,7 @@ export interface Client extends BaseDocument {
   contactName?: string
   gst?: string
   pan?: string
-  notes?: string
+  note?: string
   status?: "active" | "inactive"
 }
 

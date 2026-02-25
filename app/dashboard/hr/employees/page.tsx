@@ -70,6 +70,11 @@ interface Employee {
   createdAt: string
   updatedAt: string
 }
+const STATIC_MEMBER_TYPES = [
+  { _id: "1", name: "Full Time" },
+  { _id: "2", name: "Part Time" },
+  { _id: "3", name: "Contract Based" },
+];
 
 export default function EmployeePage() {
   const { hasPermission } = useUser()
@@ -138,7 +143,7 @@ const loadEmployees = async () => {
       const roles = loadedRoles.filter((t: any) => t.isActive === true)
       console.log("loadedRoles", loadedRoles)
       setRoles(roles)
-      setMemberTypes(memberTypes)
+ setMemberTypes(STATIC_MEMBER_TYPES);
       setRolesName(loadedRoles)
       setMember(loadedMemberTypes)
     }

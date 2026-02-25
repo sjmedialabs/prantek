@@ -10,13 +10,13 @@ export type Term = {
   _id: string
   title?: string
   content: string
-  type: "quotation" | "invoice"
+  type: "quotation" | "invoice" | "receipt"
   isActive: boolean
   order: number
 }
 
 export default function TermsManager() {
-  const [type, setType] = useState<"quotation" | "invoice">("quotation")
+  const [type, setType] = useState<"quotation" | "invoice" | "receipt">("quotation")
   const [terms, setTerms] = useState<Term[]>([])
   const [open, setOpen] = useState(false)
   const [editTerm, setEditTerm] = useState<Term | null>(null)
@@ -32,8 +32,9 @@ export default function TermsManager() {
       <Tabs value={type} onValueChange={(v) => setType(v as any)}>
         <div className="flex justify-between items-center mb-4">
           <TabsList>
-            <TabsTrigger value="quotation">Quotation</TabsTrigger>
-            <TabsTrigger value="invoice">Invoice</TabsTrigger>
+            <TabsTrigger value="quotation">Quotation T&C</TabsTrigger>
+            <TabsTrigger value="invoice">Invoice T&C</TabsTrigger>
+            <TabsTrigger value="receipt">Receipt T&C</TabsTrigger>
           </TabsList>
 
           <Button onClick={() => setOpen(true)}>
@@ -44,35 +45,46 @@ export default function TermsManager() {
       </Tabs>
 
       <div className="space-y-3">
-        {terms.map(term => (
-          <div
-            key={term._id}
-            className="border rounded p-3 flex justify-between items-start"
-          >
-            <div>
-              {term.title && (
-                <p className="font-medium">{term.title}</p>
-              )}
-              <div 
-                className="text-sm text-muted-foreground [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
-                dangerouslySetInnerHTML={{ __html: term.content }}
-              />
-            </div>
+        {terms.length === 0 ? (
+          <div className="border border-dashed rounded-lg p-6 text-center text-muted-foreground">
+            <p className="font-medium mb-1">No content available</p>
+            <p className="text-sm mb-3">Please add new content.</p>
 
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setEditTerm(term)
-                  setOpen(true)
-                }}
-              >
-                Edit
-              </Button>
-            </div>
+            {/* <Button size="sm" onClick={() => setOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Term
+            </Button> */}
           </div>
-        ))}
+        ) : (
+          terms.map((term) => (
+            <div
+              key={term._id}
+              className="border rounded p-3 flex justify-between items-start"
+            >
+              <div>
+                {term.title && <p className="font-medium">{term.title}</p>}
+
+                <div
+                  className="text-sm text-muted-foreground [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
+                  dangerouslySetInnerHTML={{ __html: term.content }}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditTerm(term)
+                    setOpen(true)
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       <TermDialog

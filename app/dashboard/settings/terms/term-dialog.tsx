@@ -20,7 +20,7 @@ export default function TermDialog({
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
-  type: "quotation" | "invoice"
+  type: "quotation" | "invoice" | "receipt"
   term: Term | null
   onSaved: () => void
 }) {

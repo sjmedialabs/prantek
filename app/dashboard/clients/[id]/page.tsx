@@ -59,6 +59,7 @@ interface Client {
   startDate?: string
   status: string
   type?: "individual" | "company"
+  note?: string
 }
 
 export default function ClientDetailsPage() {
@@ -86,6 +87,7 @@ export default function ClientDetailsPage() {
     contactName: "",
     gst: "",
     pan: "",
+    note: "",
   })
 
   const [errors, setErrors] = useState({
@@ -234,6 +236,7 @@ export default function ClientDetailsPage() {
       contactName: client.contactName || "",
       gst: client.gst || "",
       pan: client.pan || "",
+      note: client.note || "",
     })
 
     setIsDialogOpen(true)
@@ -253,6 +256,7 @@ export default function ClientDetailsPage() {
       contactName: "",
       gst: "",
       pan: "",
+      note: "",
     })
     setErrors({
       name: "",
@@ -325,6 +329,7 @@ export default function ClientDetailsPage() {
         userId: parsed.id,
         pan: formData.pan || undefined,
         status: "active",
+        note: formData.note,
       }
 
       if (clientType === "individual") {
@@ -493,6 +498,12 @@ export default function ClientDetailsPage() {
               <p className="text-sm text-gray-600">Status</p>
               <Badge variant={client.status === "active" ? "default" : "secondary"}>{client.status}</Badge>
             </div>
+             {client.note && (
+              <div>
+                <p className="text-sm text-gray-600">Note</p>
+                <p className="font-medium">{client.note}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -736,6 +747,17 @@ export default function ClientDetailsPage() {
                   />
                   {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                 </div>
+              </div>
+               <div className="space-y-1">
+                <Label htmlFor="note">Note</Label>
+                <Textarea
+                  id="note"
+                  value={formData.note}
+                  placeholder="Enter note"
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  rows={2}
+                />
+                {/* {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>} */}
               </div>
             </form>
           </div>

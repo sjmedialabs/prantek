@@ -38,9 +38,10 @@ export default function CompanyDetailsPage() {
     gstin: "",
     pan: "",
     tan: "",
+    personalId: ""
   })
 
-  const [companyData, setCompanyData] = useState<CompanySetting>({
+  const [companyData, setCompanyData] = useState<CompanySetting & { personalId?: string }>({
     userId: "",
     companyName: "",
     email: "",
@@ -55,6 +56,7 @@ export default function CompanyDetailsPage() {
     tan: "",
     logo: "",
     website: "",
+    personalId: "",
     createdAt: new Date(),
     updatedAt: new Date(),
   })
@@ -72,7 +74,61 @@ export default function CompanyDetailsPage() {
     }
     loadDetails()
   }, [])
+const noCompanyIds =
+  !companyData.gstin?.trim() &&
+  !companyData.pan?.trim() &&
+  !companyData.tan?.trim()
 
+  const panRegex1 = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+const aadhaarRegex = /^\d{12}$/;
+
+// Aadhaar Verhoeff checksum (real Aadhaar validation)
+const validateAadhaar = (aadhaar: string) => {
+  const d = [
+    [0,1,2,3,4,5,6,7,8,9],
+    [1,2,3,4,0,6,7,8,9,5],
+    [2,3,4,0,1,7,8,9,5,6],
+    [3,4,0,1,2,8,9,5,6,7],
+    [4,0,1,2,3,9,5,6,7,8],
+    [5,9,8,7,6,0,4,3,2,1],
+    [6,5,9,8,7,1,0,4,3,2],
+    [7,6,5,9,8,2,1,0,4,3],
+    [8,7,6,5,9,3,2,1,0,4],
+    [9,8,7,6,5,4,3,2,1,0],
+  ];
+
+  const p = [
+    [0,1,2,3,4,5,6,7,8,9],
+    [1,5,7,6,2,8,3,0,9,4],
+    [5,8,0,3,7,9,6,1,4,2],
+    [8,9,1,6,0,4,3,5,2,7],
+    [9,4,5,3,1,2,6,8,7,0],
+    [4,2,8,6,5,7,3,9,0,1],
+    [2,7,9,3,8,0,6,4,1,5],
+    [7,0,4,6,9,1,3,2,5,8],
+  ];
+
+  let c = 0;
+  aadhaar
+    .split("")
+    .reverse()
+    .forEach((num, i) => {
+      c = d[c][p[i % 8][parseInt(num)]];
+    });
+
+  return c === 0;
+};
+
+const isValidPersonalId = (value: string) => {
+  const v = value.trim().toUpperCase();
+
+  if (panRegex1.test(v)) return true;
+
+  if (aadhaarRegex.test(v)) return validateAadhaar(v);
+
+  return false;
+};
   // ✅ VALIDATION FUNCTION
   const validateFields = () => {
     const newErrors: any = {
@@ -96,10 +152,10 @@ export default function CompanyDetailsPage() {
     if (!companyData.city?.trim()) newErrors.city = "City is required"
     if (!companyData.state?.trim()) newErrors.state = "State is required"
     if (!companyData.pincode?.trim()) newErrors.pincode = "Pincode is required"
-    if (!companyData.gstin?.trim()) newErrors.gstin = "GSTIN is required"
-    if (!companyData.pan?.trim()) newErrors.pan = "PAN is required"
-    if (!companyData.tan?.trim()) newErrors.tan = "TAN is required"
-
+    // if (!companyData.gstin?.trim()) newErrors.gstin = "GSTIN is required"
+    // if (!companyData.pan?.trim()) newErrors.pan = "PAN is required"
+    // if (!companyData.tan?.trim()) newErrors.tan = "TAN is required"
+    
     // Pattern validations
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (companyData.email && !emailRegex.test(companyData.email))
@@ -128,7 +184,13 @@ if (companyData.phone2 && !validatePhone(companyData.phone2)) {
     const tanRegex = /^[A-Z]{4}[0-9]{5}[A-Z]$/
     if (companyData.tan && !tanRegex.test(companyData.tan))
       newErrors.tan = "Invalid TAN format"
-
+if (noCompanyIds) {
+  if (!companyData.personalId?.trim()) {
+    newErrors.personalId = "Personal ID (PAN or Aadhaar) is required";
+  } else if (!isValidPersonalId(companyData.personalId)) {
+    newErrors.personalId = "Enter a valid PAN or Aadhaar number";
+  }
+}
     setFieldErrors(newErrors)
 
     // If ANY error has a value → fail
@@ -399,7 +461,7 @@ if (companyData.phone2 && !validatePhone(companyData.phone2)) {
             </div>
             {/* ✅ GSTIN */}
             <div className="space-y-2">
-              <Label htmlFor="gstin" required className="flex items-center gap-1">
+              <Label htmlFor="gstin" className="flex items-center gap-1">
                 GSTIN
                 <InfoTooltip content="GSTIN format: 15 chars → 2 digits state code, 10-char PAN, 1 entity code, 'Z', 1 checksum." side="right" />
               </Label>
@@ -415,7 +477,7 @@ if (companyData.phone2 && !validatePhone(companyData.phone2)) {
 
             {/* ✅ PAN */}
             <div className="space-y-2">
-              <Label htmlFor="pan" required className="flex items-center gap-1">
+              <Label htmlFor="pan" className="flex items-center gap-1">
                 PAN
                 <InfoTooltip content="PAN format: 5 letters, 4 digits, 1 letter. Example: ABCDE1234F" side="right" />
               </Label>
@@ -429,7 +491,7 @@ if (companyData.phone2 && !validatePhone(companyData.phone2)) {
             </div>
             {/* ✅ TAN */}
             <div className="space-y-2">
-              <Label htmlFor="tan" required className="flex items-center gap-1">
+              <Label htmlFor="tan" className="flex items-center gap-1">
                 TAN
                 <InfoTooltip content="TAN format: 4 letters, 5 digits, 1 letter. Example: ABCD12345E" side="right" />
               </Label>
@@ -442,6 +504,27 @@ if (companyData.phone2 && !validatePhone(companyData.phone2)) {
               />
               {fieldErrors.tan && <p className="text-red-500 text-sm">{fieldErrors.tan}</p>}
             </div>
+            {noCompanyIds && (
+  <div className="space-y-2">
+    <Label htmlFor="personalId" required>
+      Personal Identity Proof (Aadhaar / PAN)
+      <InfoTooltip content="If Do not have company Pan, Tan and GSTIN then please fill any of identity proof for verificaion" side="right" />
+    </Label>
+
+    <Input
+      id="personalId"
+      value={companyData.personalId}
+      onChange={(e) =>
+        setCompanyData({ ...companyData, personalId: e.target.value })
+      }
+      placeholder="Enter Aadhaar or PAN"
+    />
+
+    {fieldErrors.personalId && (
+      <p className="text-red-500 text-sm">{fieldErrors.personalId}</p>
+    )}
+  </div>
+)}
           </div>
 
         </CardContent>
