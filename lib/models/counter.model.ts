@@ -2,6 +2,7 @@ import { getDb } from '../mongodb'
 import { COLLECTIONS } from '../db-config'
 import type { Collection, Document } from 'mongodb'
 
+
 export interface Counter extends Document {
   _id: string // The counter name/type (e.g., 'receipt', 'payment', 'quotation')
   prefix: string // The prefix (e.g., 'RC', 'PAY', 'QT')
@@ -11,7 +12,14 @@ export interface Counter extends Document {
 
 export class CounterModel {
   private collectionName = 'counters'
+private getFinancialYear(): number {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1 // Jan = 1
 
+  // April or later → next year
+  return month >= 4 ? year + 1 : year
+}
   private async getCollection(): Promise<Collection<Counter>> {
     const db = await getDb()
     return db.collection<Counter>(this.collectionName)
@@ -37,31 +45,47 @@ export class CounterModel {
    * @param prefix - Prefix for the number (e.g., 'RC', 'PAY', 'QT')
    * @param clientName - Optional client name to extract 2-letter code from
    */
-  async getNextSequence(counterType: string, prefix: string, clientName?: string): Promise<string> {
-    const collection = await this.getCollection()
-    const currentYear = new Date().getFullYear()
-    const clientCode = this.getClientCode(clientName)
-    
-    const result = await collection.findOneAndUpdate(
+async getNextSequence(counterType: string, prefix: string): Promise<string> {
+  const collection = await this.getCollection()
+
+  const financialYear = this.getFinancialYear()
+
+  const counter = await collection.findOne({ _id: counterType })
+
+  // If no counter OR financial year changed → reset
+  if (!counter || counter.financialYear !== financialYear) {
+    await collection.updateOne(
       { _id: counterType },
-      { 
-        $inc: { sequence: 1 },
-        $set: { lastUpdated: new Date() },
-        $setOnInsert: { prefix }
+      {
+        $set: {
+          prefix,
+          sequence: 1,
+          financialYear,
+          lastUpdated: new Date(),
+        },
       },
-      { 
-        upsert: true,
-        returnDocument: 'after'
-      }
+      { upsert: true }
     )
 
-    if (!result) {
-      throw new Error(`Failed to generate sequence for ${counterType}`)
-    }
-
-    const sequence = result.sequence
-    return `${prefix}-${clientCode}-${currentYear}-${String(sequence).padStart(3, '0')}`
+    return `${prefix}-${financialYear}-001`
   }
+
+  // Normal increment
+  const result = await collection.findOneAndUpdate(
+    { _id: counterType },
+    {
+      $inc: { sequence: 1 },
+      $set: { lastUpdated: new Date() },
+    },
+    {
+      returnDocument: "after",
+    }
+  )
+
+  if (!result) throw new Error("Counter update failed")
+
+  return `${prefix}-${financialYear}-${String(result.sequence).padStart(3, "0")}`
+}
 
   /**
    * Initialize a counter with a starting value

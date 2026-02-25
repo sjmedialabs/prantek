@@ -189,7 +189,7 @@ export async function logActivity(
  * @param userId - User ID (not used in global counter but kept for backward compatibility)
  * @returns Promise<string> - The generated number (e.g., 'RC000001')
  */
-export async function generateNextNumber(collection: string, prefix: string, userId?: string, clientName?: string): Promise<string> {
+export async function generateNextNumber(collection: string, prefix: string): Promise<string> {
   try {
     // Map collection name to counter type
     const counterType = collection === 'receipts' ? 'receipt' : 
@@ -198,7 +198,7 @@ export async function generateNextNumber(collection: string, prefix: string, use
                        collection === 'payments' ? 'payment' : collection
     
     // Use the counter model to get the next globally unique sequence
-    const nextNumber = await counterModel.getNextSequence(counterType, prefix, clientName)
+const nextNumber = await counterModel.getNextSequence(counterType, prefix)
     
     console.log(`[Counter] Generated ${counterType} number: ${nextNumber}`)
     
@@ -218,36 +218,26 @@ export async function generateNextNumber(collection: string, prefix: string, use
  * @param clientName - Optional client name for generating the code
  * @returns Promise<string> - The next number that will be generated
  */
-export async function peekNextNumber(collection: string, prefix: string, clientName?: string): Promise<string> {
-  try {
-    const counterType = collection === 'receipts' ? 'receipt' : 
-                       collection === 'quotations' ? 'quotation' : 
-                       collection === 'salesInvoice' ? 'salesInvoice' :
-                       collection === 'payments' ? 'payment' : collection
-    
-    const counter = await counterModel.getCounter(counterType)
-    const currentYear = new Date().getFullYear()
-    
-    // Extract client code
-    const getClientCode = (name?: string): string => {
-      if (!name || name.length === 0) return 'XX'
-      const cleaned = name.replace(/[^a-zA-Z]/g, '').toUpperCase()
-      return cleaned.length >= 2 ? cleaned.substring(0, 2) : cleaned.padEnd(2, 'X')
-    }
-    const clientCode = getClientCode(clientName)
-    
-    if (!counter) {
-      // Counter doesn't exist yet, return the first number
-      return `${prefix}-${clientCode}-${currentYear}-${String(1).padStart(3, '0')}`
-    }
-    
-    // Return the next number that will be generated
-    const nextSequence = counter.sequence + 1
-    return `${prefix}-${clientCode}-${currentYear}-${String(nextSequence).padStart(3, '0')}`
-  } catch (error) {
-    console.error(`[Counter] Error peeking next number for ${collection}:`, error)
-    const currentYear = new Date().getFullYear()
-    const clientCode = 'XX'
-    return `${prefix}-${clientCode}-${currentYear}-${String(1).padStart(3, '0')}`
+export async function peekNextNumber(collection: string, prefix: string) {
+  const counterType =
+    collection === "receipts"
+      ? "receipt"
+      : collection === "quotations"
+      ? "quotation"
+      : collection === "salesInvoice"
+      ? "salesInvoice"
+      : collection === "payments"
+      ? "payment"
+      : collection
+
+  const counter = await counterModel.getCounter(counterType)
+
+  const now = new Date()
+  const fy = now.getMonth() + 1 >= 4 ? now.getFullYear() + 1 : now.getFullYear()
+
+  if (!counter || counter.financialYear !== fy) {
+    return `${prefix}-${fy}-001`
   }
+
+  return `${prefix}-${fy}-${String(counter.sequence + 1).padStart(3, "0")}`
 }

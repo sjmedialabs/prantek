@@ -15,6 +15,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       return NextResponse.json({
         success: true,
         planFeatures: {
+          dashboard: true,
           cashBook: true,
           clients: true,
           vendors: true,
@@ -43,6 +44,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       return NextResponse.json({
         success: true,
         planFeatures: {
+          dashboard: true,
           cashBook: true,  // Always available
           clients: false,
           vendors: false,
@@ -71,6 +73,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       return NextResponse.json({
         success: true,
         planFeatures: {
+          dashboard:true,
           cashBook: true,
           clients: false,
           vendors: false,
@@ -90,6 +93,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
 
     // Return the plan features
     const planFeatures = plan.planFeatures || {
+      dashboard: true,
       cashBook: true,
       clients: false,
       vendors: false,

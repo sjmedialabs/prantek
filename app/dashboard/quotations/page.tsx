@@ -262,7 +262,7 @@ const handleConvertToInvoice = async () => {
 
     // ✅ mark quotation confirmed
     await api.quotations.update(quotationToConvert._id, {
-      status: "confirmed",
+      status: "invice created",
               salesInvoiceId: result.data._id.toString(),
   convertedAt: new Date(),
     })

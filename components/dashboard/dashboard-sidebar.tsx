@@ -70,7 +70,7 @@ function hasActiveSubscription(user: any): boolean {
 }
 
 const navigationItems: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: null },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard" },
   { name: "Cash Book", href: "/dashboard/cashBook", icon: BookOpen, permission: "view_cash_book" },
   { name: "Clients", href: "/dashboard/clients", icon: Users, permission: "view_clients" },
   { name: "Vendors", href: "/dashboard/vendor", icon: Users, permission: "view_vendors" },
@@ -126,21 +126,21 @@ const navigationItems: NavItem[] = [
         icon: Settings,
         permission: "tenant_settings",
         submenu:[
-      {
-        name: "Party Type",
-        href: "/dashboard/settings/recipient-types",
-        permission: "tenant_settings",
-      },
+      // {
+      //   name: "Party Type",
+      //   href: "/dashboard/settings/recipient-types",
+      //   permission: "tenant_settings",
+      // },
       {
         name: "Ledger Head",
         href: "/dashboard/settings/payment-categories",
         permission: "tenant_settings",
       },
-      {
-        name: "Payment Methods",
-        href: "/dashboard/settings/payment-methods",
-        permission: "tenant_settings",
-      },
+      // {
+      //   name: "Payment Methods",
+      //   href: "/dashboard/settings/payment-methods",
+      //   permission: "tenant_settings",
+      // },
         ]
       },
       {
@@ -170,11 +170,11 @@ const navigationItems: NavItem[] = [
             name: "Employee Management",
             permission: "tenant_settings",
             submenu: [
-              {
-                name: "Employment Type",
-                href: "/dashboard/hr/member-types",
-                permission: "tenant_settings",
-              },
+              // {
+              //   name: "Employment Type",
+              //   href: "/dashboard/hr/member-types",
+              //   permission: "tenant_settings",
+              // },
               {
                 name: "Employee Roles",
                 href: "/dashboard/hr/employee-roles",
@@ -230,6 +230,12 @@ const navigationItems: NavItem[] = [
         href: "/dashboard/settings/terms",
         permission: "tenant_settings",
       },
+            {
+        name: "Backup",
+        icon: Settings,
+        href: "/dashboard/settings/backup",
+        permission: "backup",
+      },
     ],
   },
 ];
@@ -273,6 +279,7 @@ export default function DashboardSidebar() {
     
     // Map menu items to plan features
     const featureMap: Record<string, string> = {
+      'Dashboard': 'dashboard',
       'Cash Book': 'cashBook',
       'Clients': 'clients',
       'Vendors': 'vendors',

@@ -211,7 +211,7 @@ const totalPayments = filteredEntries
     )
   }
 
-    if (!hasPermission("view_cashbook")) {
+    if (!hasPermission("view_cash_book")) {
       return (
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold">Access Denied</h2>

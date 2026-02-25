@@ -36,22 +36,37 @@ import DateFilter, {
 import Link from "next/link";
 import ReceiptsPage from "./receipts/page";
 
+// const normalizeDate = (date: string | Date) => {
+//   const d = new Date(date)
+//   return new Date(
+//     d.getFullYear(),
+//     d.getMonth(),
+//     d.getDate(),
+//     d.getHours(),
+//     d.getMinutes(),
+//     d.getSeconds(),
+//     d.getMilliseconds()
+//   )
+// }
+
+// const isTillEndDate = (date: string | Date, range: DateRange) => {
+//   if (!date) return false
+//   return new Date(date) <= range.to
+// }
+
 const normalizeDate = (date: string | Date) => {
   const d = new Date(date)
-  return new Date(
-    d.getFullYear(),
-    d.getMonth(),
-    d.getDate(),
-    d.getHours(),
-    d.getMinutes(),
-    d.getSeconds(),
-    d.getMilliseconds()
-  )
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
-const isTillEndDate = (date: string | Date, range: DateRange) => {
+const isBetweenRange = (date: string | Date, range: DateRange) => {
   if (!date) return false
-  return new Date(date) <= range.to
+
+  const d = normalizeDate(date)
+  const from = normalizeDate(range.from)
+  const to = normalizeDate(range.to)
+
+  return d >= from && d <= to
 }
 
 
@@ -177,44 +192,51 @@ const getEntityDate = (entity: any) =>
         }
       }
 const filteredReceipts = receipts.filter((r: any) =>
-  isTillEndDate(getEntityDate(r), dateRange)
+  isBetweenRange(getEntityDate(r), dateRange)
 )
 // console.log("receipts", filteredReceipts)
 const filteredPayments = payments.filter((p: any) =>
-  isTillEndDate(getEntityDate(p), dateRange)
+  isBetweenRange(getEntityDate(p), dateRange)
 )
 
 const filteredClients = clients.filter((c: any) =>
-  isTillEndDate(getEntityDate(c), dateRange)
+  isBetweenRange(getEntityDate(c), dateRange)
 )
 
 
       const filteredQuotations = quotations.filter((q: any) =>
-        isTillEndDate(getEntityDate(q), dateRange)
+        isBetweenRange(getEntityDate(q), dateRange)
       )
       const filteredSalesInvoice = salesInvoice.filter((s: any) =>
-        isTillEndDate(getEntityDate(s), dateRange) )
+        isBetweenRange(getEntityDate(s), dateRange) )
       const filteredVendors = vendors.filter((v: any) =>
-        isTillEndDate(getEntityDate(v), dateRange)
+        isBetweenRange(getEntityDate(v), dateRange)
       )
 
       const filteredItems = items.filter((i: any) =>
-        isTillEndDate(getEntityDate(i), dateRange)
+        isBetweenRange(getEntityDate(i), dateRange)
       )
 
       const filteredAssets = assets.filter((a: any) =>
-        isTillEndDate(getEntityDate(a), dateRange)
+        isBetweenRange(getEntityDate(a), dateRange)
       )
 
       const filteredEmployees = employees.filter((e: any) =>
-        isTillEndDate(getEntityDate(e), dateRange)
+        isBetweenRange(getEntityDate(e), dateRange)
       )
-      const totalReceipts = filteredReceipts.reduce(
+const clearedReceipts = filteredReceipts.filter(
+  (r: any) => r.status === "cleared"
+)
+      console.log("filtered receipt", filteredReceipts)
+      const totalReceipts = clearedReceipts.reduce(
         (sum: number, r: any) => sum + (r.ReceiptAmount || 0),
         0
       )
-
-      const totalPayments = filteredPayments.reduce(
+      console.log("filtered pay,ents", filteredPayments)
+const clearedPayments = filteredPayments.filter(
+  (p:any) => p.status === "completed"
+)
+      const totalPayments = clearedPayments.reduce(
         (sum: number, p: any) => sum + (p.amount || 0),
         0
       )
@@ -434,14 +456,14 @@ const badDept = filteredReceipts.reduce(
       color: "text-cyan-600",
     },
     {
-      title: "Unpaid Receipts",
+      title: "Unclear Receipts",
       value: stats.pendingReceipt?.toString(),
       change: `${stats.receipts} total receipts`,
       icon: FileText,
       color: "text-cyan-600",
     },
     {
-      title: "Unpaid Payments",
+      title: "Unclear Payments",
       value: stats.unClearPayments?.toString(),
       change: `${stats.payments} total payments`,
       icon: FileText,
@@ -480,6 +502,14 @@ const badDept = filteredReceipts.reduce(
       </div>
     );
   }
+      if (!hasPermission("dashboard")) {
+      return (
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold">Access Denied</h2>
+          <p className="text-gray-600">You cannot view Dashboard records.</p>
+        </div>
+      )
+    }
   // Debug logging for trial data
   console.log("[DASHBOARD] User trial data:", {
     subscriptionStatus: user?.subscriptionStatus,

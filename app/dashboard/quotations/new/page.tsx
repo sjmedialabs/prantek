@@ -229,7 +229,16 @@ export default function NewQuotationPage() {
     }
     loadData()
   }, [])
+  useEffect(() => {
+    if (!date) return
 
+    const selectedDate = new Date(date)
+    selectedDate.setDate(selectedDate.getDate() + 7)
+
+    const formatted = selectedDate.toISOString().split("T")[0]
+
+    setValidityDate(formatted)
+  }, [date])
   useEffect(() => {
     if (selectedClientId) {
       const client = clients.find((c) => c._id === selectedClientId)
@@ -382,7 +391,7 @@ export default function NewQuotationPage() {
             if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
             updatedItem.taxName = taxParts.join(" + ")
           }
-          
+
           updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
           updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
           updatedItem.total = updatedItem.amount + updatedItem.taxAmount
@@ -404,19 +413,36 @@ export default function NewQuotationPage() {
     console.log("[v0] Saving quotation with status:", status)
     const prefix = "QT";
 
-    // First 2 characters of client name
-    const initials = clientName.trim().substring(0, 2).toUpperCase();
+    // ✅ Get Financial Year
+    const getFinancialYear = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // Jan = 1
 
-    const year = new Date().getFullYear();
-    // Key for each client per year
+      // April or later → next year
+      return month >= 4 ? year + 1 : year;
+    };
 
-    const count = (quotations?.length || 0) + 1;
+    const financialYear = getFinancialYear();
+
+    // ✅ Get existing quotations for current FY only
+    const currentFYQuotations = quotations?.filter((q: any) => {
+      if (!q.quotationNumber) return false;
+
+      const parts = q.quotationNumber.split("-");
+      const fy = Number(parts[1]);
+
+      return fy === financialYear;
+    }) || [];
+
+    // ✅ Count for this FY only
+    const count = currentFYQuotations.length + 1;
 
     const sequence = String(count).padStart(3, "0");
-    const clientKey = `QT-${initials}-${year}-${sequence}`;
 
-    setQuotationNumber(clientKey)
-    console.log("Quotation number is:::", quotationNumber)
+    const quotationKey = `${prefix}-${financialYear}-${sequence}`;
+
+    setQuotationNumber(quotationKey);
 
     // ---- VALIDATION START ----
     if (!clientName.trim()) {
@@ -464,7 +490,7 @@ export default function NewQuotationPage() {
         clientEmail,
         clientAddress,
         clientContact,
-        quotationNumber: clientKey,
+        quotationNumber: quotationKey,
         clientId: selectedClientId,
         items: items.map((item) => ({
           type: item.type,
@@ -486,7 +512,7 @@ export default function NewQuotationPage() {
         grandTotal: quotationTotal,
         paidAmount: 0,
         balanceAmount: quotationTotal,
-        status: status === "sent" ? "pending" : "pending",
+        status: status === "sent" ? "created" : "created",
         isActive: "active",
         createdBy: companyName,
         createdAt: new Date().toISOString(),
@@ -497,7 +523,7 @@ export default function NewQuotationPage() {
       const createdQuotation = await api.quotations.create(quotationData)
       console.log("[v0] Quotation created successfully:", createdQuotation)
 
-      toast.success(`Quotation ${status === "sent" ? "Created" : "saved as draft"} successfully!`)
+      toast.success(`Quotation ${status === "sent" ? "created" : "saved as draft"} successfully!`)
       router.push("/dashboard/quotations")
 
     } catch (error) {
@@ -1288,7 +1314,7 @@ export default function NewQuotationPage() {
                     <Input
                       id="validityDate"
                       type="date"
-                      min={today}
+                      min={date || today}   // 👈 cannot be before quotation date
                       value={validityDate}
                       onChange={(e) => setValidityDate(e.target.value)}
                     />
