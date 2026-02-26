@@ -555,6 +555,7 @@ async function handleSave() {
                             <Label>Description</Label>
                             <Textarea
                               value={item.description}
+                              disabled
                               onChange={(e) =>
                                 updateItem(item.id, "description", e.target.value)
                               }
@@ -587,6 +588,7 @@ async function handleSave() {
                               <Input
                                 type="number"
                                 value={item.price}
+                                disabled
                                 onChange={(e) =>
                                   updateItem(
                                     item.id,
@@ -627,7 +629,7 @@ async function handleSave() {
                                   <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="0">0%</SelectItem>
+                                  {/* <SelectItem value="0">0%</SelectItem> */}
                                   {taxRates
                                     .filter((r) => r.type === "CGST" && r.isActive)
                                     .map((r) => (
@@ -646,7 +648,7 @@ async function handleSave() {
                                   <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="0">0%</SelectItem>
+                                  {/* <SelectItem value="0">0%</SelectItem> */}
                                   {taxRates
                                     .filter((r) => r.type === "SGST" && r.isActive)
                                     .map((r) => (
@@ -665,7 +667,7 @@ async function handleSave() {
                                   <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="0">0%</SelectItem>
+                                  {/* <SelectItem value="0">0%</SelectItem> */}
                                   {taxRates
                                     .filter((r) => r.type === "IGST" && r.isActive)
                                     .map((r) => (
@@ -770,6 +772,7 @@ async function handleSave() {
                         theme="snow"
                         value={terms}
                         onChange={setTerms}
+                        readOnly={true}
                       />
                     </div>
                   </div>

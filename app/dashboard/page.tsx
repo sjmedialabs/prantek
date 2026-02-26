@@ -107,7 +107,7 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<DateFilterType>("monthly");
+  const [dateFilter, setDateFilter] = useState<DateFilterType>("lifetime");
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);

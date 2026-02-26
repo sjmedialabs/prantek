@@ -14,8 +14,9 @@ import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {Quotation} from "@/lib/models/types"
+import { Quotation } from "@/lib/models/types"
 import dynamic from "next/dynamic"
+import { Check, Repeat } from "lucide-react"
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
 import {
@@ -47,13 +48,13 @@ import { useRouter } from "next/navigation"
 // }
 
 export default function QuotationsPage() {
-    const router = useRouter()
+  const router = useRouter()
   const { hasPermission } = useUser()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedBankAccount, setSelectedBankAccount] = useState<any>(null)
-    const [bankAccounts, setBankAccounts] = useState<any>([]);
+  const [bankAccounts, setBankAccounts] = useState<any>([]);
   // Accept dialog
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null)
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false)
@@ -84,22 +85,22 @@ export default function QuotationsPage() {
   }, [])
 
   const loadQuotations = async () => {
-    const [data,bankAccountsData, termsRes] = await Promise.all([
+    const [data, bankAccountsData, termsRes] = await Promise.all([
       api.quotations.getAll(),
-            api.bankAccounts.getAll(),
+      api.bankAccounts.getAll(),
       fetch("/api/terms?type=invoice"),
     ])
     const termsData = await termsRes.json()
-     const formattedTerms = termsData
-            .filter((t: any) => t.isActive)
-            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-            .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
-            .join("")
-            setAvailableTerms(formattedTerms)
-            console.log("formattedTerms", formattedTerms)
-            console.log("bankAccountsData", bankAccountsData)
-                setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
-                console.log("bankAccountsData", bankAccountsData)
+    const formattedTerms = termsData
+      .filter((t: any) => t.isActive)
+      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+      .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
+      .join("")
+    setAvailableTerms(formattedTerms)
+    console.log("formattedTerms", formattedTerms)
+    console.log("bankAccountsData", bankAccountsData)
+    setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
+    console.log("bankAccountsData", bankAccountsData)
     // if (termsData.success) {
     //   setAvailableTerms(termsData.data.filter((t: any) => t.type === 'invoice' && t.isActive))
     // }
@@ -166,12 +167,12 @@ export default function QuotationsPage() {
   console.log("bank acounts list ", bankAccounts)
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "bg-blue-100 text-blue-800"
+      case "created":
+        return "bg-gray-100 text-gray-800"
       case "accepted":
+        return "bg-blue-100 text-blue-800"
+      case ("invoice created"):
         return "bg-green-100 text-green-800"
-      case "confirmed":
-        return "bg-emerald-100 text-emerald-800"
       case "expired":
         return "bg-red-100 text-red-800"
       default:
@@ -210,75 +211,75 @@ export default function QuotationsPage() {
       console.error(error)
     }
   }
-const handleConvertToInvoice = async () => {
-  if (!quotationToConvert) return
-  console.log("quotationToConvert", quotationToConvert)
-  setLoading(true)
+  const handleConvertToInvoice = async () => {
+    if (!quotationToConvert) return
+    console.log("quotationToConvert", quotationToConvert)
+    setLoading(true)
 
-  try {
-    const payload = {
-      // 👇 SALES INVOICE fields ONLY
+    try {
+      const payload = {
+        // 👇 SALES INVOICE fields ONLY
 
-      invoiceType: "quotation",
-      quotationNumber: quotationToConvert.quotationNumber,
-      clientId: quotationToConvert.clientId,
-      clientName: quotationToConvert.clientName,
-      clientAddress: quotationToConvert.clientAddress,
-      clientPhone: quotationToConvert.clientContact, // mapping
-      clientEmail: quotationToConvert.clientEmail,
+        invoiceType: "quotation",
+        quotationNumber: quotationToConvert.quotationNumber,
+        clientId: quotationToConvert.clientId,
+        clientName: quotationToConvert.clientName,
+        clientAddress: quotationToConvert.clientAddress,
+        clientPhone: quotationToConvert.clientContact, // mapping
+        clientEmail: quotationToConvert.clientEmail,
 
-      items: quotationToConvert.items,
-      grandTotal: quotationToConvert.grandTotal,
+        items: quotationToConvert.items,
+        grandTotal: quotationToConvert.grandTotal,
 
-      paidAmount: 0,
-      balanceAmount: quotationToConvert.grandTotal,
+        paidAmount: 0,
+        balanceAmount: quotationToConvert.grandTotal,
 
-      date: new Date().toISOString(),
-      status: "Not Cleared",
+        date: new Date().toISOString(),
+        status: "Not Cleared",
 
-      terms: availableTerms,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        terms: availableTerms,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
 
-      description: invoiceDescription,
-      quotationId: quotationToConvert._id,
-      isActive : "active",
-      createdBy: companyName,
-      bankDetails: selectedBankAccount,
+        description: invoiceDescription,
+        quotationId: quotationToConvert._id,
+        isActive: "active",
+        createdBy: companyName,
+        bankDetails: selectedBankAccount,
+      }
+
+      console.log("Invoice Payload", payload)
+
+      const res = await fetch("/api/salesInvoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await res.json()
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create invoice")
+      }
+
+      // ✅ mark quotation confirmed
+      await api.quotations.update(quotationToConvert._id, {
+        status: "invoice created",
+        salesInvoiceId: result.data._id.toString(),
+        convertedAt: new Date(),
+      })
+
+      toast.success("Invoice created successfully")
+
+      setConvertDialogOpen(false)
+      setInvoiceDescription("")
+      router.push("/dashboard/salesInvoices")
+    } catch (err) {
+      console.error(err)
+      toast.error("Failed to convert quotation to invoice")
+    } finally {
+      setLoading(false)
     }
-
-    console.log("Invoice Payload", payload)
-
-    const res = await fetch("/api/salesInvoice", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-
-    const result = await res.json()
-
-    if (!result.success) {
-      throw new Error(result.error || "Failed to create invoice")
-    }
-
-    // ✅ mark quotation confirmed
-    await api.quotations.update(quotationToConvert._id, {
-      status: "invice created",
-              salesInvoiceId: result.data._id.toString(),
-  convertedAt: new Date(),
-    })
-
-    toast.success("Invoice created successfully")
-
-    setConvertDialogOpen(false)
-    setInvoiceDescription("")
-    router.push("/dashboard/salesInvoices")
-  } catch (err) {
-    console.error(err)
-    toast.error("Failed to convert quotation to invoice")
-  } finally {
-    setLoading(false)
   }
-}
 
 
 
@@ -291,7 +292,15 @@ const handleConvertToInvoice = async () => {
       toast.error("Failed to update")
     }
   }
-
+  const handleAcceptQuotation = async (id: string) => {
+    try {
+      await api.quotations.update(id, { status: "accepted" })
+      toast.success("Quotation accepted")
+      loadQuotations()
+    } catch (error) {
+      toast.error("Failed to accept quotation")
+    }
+  }
   const uniqueClients = Array.from(new Set(quotations.map((q) => q.clientName)))
 
   const clearFilters = () => {
@@ -443,7 +452,6 @@ const handleConvertToInvoice = async () => {
                   <TableHead>Validity</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>SalesInvoice</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -463,46 +471,69 @@ const handleConvertToInvoice = async () => {
                     <TableCell>₹{(q.balanceAmount || 0).toLocaleString()}</TableCell>
 
                     <TableCell>
-                      <Badge className={getStatusColor(q.status)}>{q.status}</Badge>
-                    </TableCell>
-                    <TableCell>{!q.salesInvoiceId && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-600"
-                        onClick={() => {
-                          setQuotationToConvert(q)
-                          setConvertDialogOpen(true)
-                        }}
-                      >
-                        Convert to Invoice
-                      </Button>
-                    )}
-
+                      <Badge className={getStatusColor(q.status)}><span className="capitalize">{q.status}</span></Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
+
+                      {/* VIEW */}
                       <Link href={`/dashboard/quotations/${q._id}`}>
-                        <Button variant="outline" size="sm" title="View in detail"><Eye className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
                       </Link>
 
-                      {hasPermission("edit_quotations") && !q.salesInvoiceId && (
-                        <Link href={`/dashboard/quotations/${q._id}/edit`}>
-                          <Button size="sm" variant="outline" title="Edit Quotation details">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                      {/* IF ACTIVE ONLY */}
+                      {q.isActive === "active" && (
+
+                        <>
+                          {/* CREATED → SHOW ACCEPT ICON */}
+                          {q.status === "created" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-600"
+                              title="Accept Quotation"
+                              onClick={() => handleAcceptQuotation(q._id)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {/* ACCEPTED → SHOW CONVERT ICON */}
+                          {q.status === "accepted" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 border-blue-600"
+                              title="Convert to Invoice"
+                              onClick={() => {
+                                setQuotationToConvert(q)
+                                setConvertDialogOpen(true)
+                              }}
+                            >
+                              <Repeat className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {/* EDIT allowed only before invoice created */}
+                          {hasPermission("edit_quotations") &&
+                            q.status !== "invoice created" && (
+                              <Link href={`/dashboard/quotations/${q._id}/edit`}>
+                                <Button size="sm" variant="outline">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            )}
+                        </>
                       )}
 
-
-                      {
-                        (hasPermission("edit_quotations")) && (
-                          <Switch
-                            checked={q.isActive === "active"}
-                            onCheckedChange={(e) => handleStatusToggle(q._id, q.isActive)}
-                            title="Update Status(Active/Inactive)"
-                          />
-                        )
-                      }
+                      {/* STATUS TOGGLE ALWAYS AVAILABLE */}
+                      {hasPermission("edit_quotations") && (
+                        <Switch
+                          checked={q.isActive === "active"}
+                          onCheckedChange={() => handleStatusToggle(q._id, q.isActive)}
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -568,59 +599,59 @@ const handleConvertToInvoice = async () => {
                       </div>
                     </div>
                   )}
-                                  <div>
-                                    <Label>
-                                      Bank Account
-                                    </Label>
-                                    <Select
-                                      value={selectedBankAccount?._id}
-                                      onValueChange={(id) => {
-                                        const bank = bankAccounts.find((b: any) => b._id === id)
-                                        setSelectedBankAccount(bank)
-                                      }}
-                                    >
-                  
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Slect Bank Accounts" />
-                                      </SelectTrigger>
-                                      <SelectContent className="z-9999">
-                                        {bankAccounts.length !== 0 ?(bankAccounts.map((acc : any) => (
-                                          <SelectItem key={acc._id} value={acc._id}>
-                                            {acc.bankName}
-                                          </SelectItem>
-                  
-                                        ))):(
-                                           <p >
-                                            No Bank Accounts Available. Please Add Bank Account
-                                          </p>
-                                        )}
-                                      </SelectContent>
-                                    </Select>
-                                    {selectedBankAccount && (
-                                      <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
-                                        <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
-                                        <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
-                                        <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
-                                        <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
-                                        <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
-                  
-                                        {selectedBankAccount.upiId && (
-                                          <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>
-                                        )}
-                                        {selectedBankAccount?.upiScanner && (
-                                          <div className="mt-3">
-                                            <p className="text-sm font-medium mb-1">UPI QR Code</p>
-                                            <img
-                                              src={selectedBankAccount.upiScanner}
-                                              alt="UPI Scanner"
-                                              className="h-40 w-40 object-contain border rounded"
-                                            />
-                                          </div>
-                                        )}
-                  
-                                      </div>
-                                    )}
-                                  </div>
+                  <div>
+                    <Label>
+                      Bank Account
+                    </Label>
+                    <Select
+                      value={selectedBankAccount?._id}
+                      onValueChange={(id) => {
+                        const bank = bankAccounts.find((b: any) => b._id === id)
+                        setSelectedBankAccount(bank)
+                      }}
+                    >
+
+                      <SelectTrigger>
+                        <SelectValue placeholder="Slect Bank Accounts" />
+                      </SelectTrigger>
+                      <SelectContent className="z-9999">
+                        {bankAccounts.length !== 0 ? (bankAccounts.map((acc: any) => (
+                          <SelectItem key={acc._id} value={acc._id}>
+                            {acc.bankName}
+                          </SelectItem>
+
+                        ))) : (
+                          <p >
+                            No Bank Accounts Available. Please Add Bank Account
+                          </p>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {selectedBankAccount && (
+                      <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
+                        <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
+                        <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
+                        <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
+                        <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
+                        <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+
+                        {selectedBankAccount.upiId && (
+                          <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>
+                        )}
+                        {selectedBankAccount?.upiScanner && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                            <img
+                              src={selectedBankAccount.upiScanner}
+                              alt="UPI Scanner"
+                              className="h-40 w-40 object-contain border rounded"
+                            />
+                          </div>
+                        )}
+
+                      </div>
+                    )}
+                  </div>
                   {/* Terms */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Terms & Conditions</label>
