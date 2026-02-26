@@ -1,5 +1,6 @@
 "use client"
 
+import { useUser } from "@/components/auth/user-context"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -49,6 +50,7 @@ interface MasterItem {
 }
 export default function ReceiptsPage() {
   const router = useRouter()
+  const { user } = useUser()
   const { toast } = useToast()
   const [selectedAccount, setSelectedAccount] = useState<any>(null)
   // Shared state
@@ -76,13 +78,14 @@ export default function ReceiptsPage() {
       total: 0,
     },
   ])
+  const [loadingClients, setLoadingClients] = useState(false);
   const [taxRates, setTaxRates] = useState<TaxRate[]>([])
   const [notes, setNotes] = useState("")
   const [masterItems, setMasterItems] = useState<MasterItem[]>([])
   const [loading, setLoading] = useState(false)
   const [paymentType, setPaymentType] = useState<any>("FullPayment")// Ful, Payment or Partial Payment
   const [amountToPay, setAmountToPay] = useState(0)// if partial amount is selected then need to enter amount they paying currently
-  const [paymentMethods, setPaymentMethods] = useState<any>([])
+  // const [paymentMethods, setPaymentMethods] = useState<any>([])
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [referenceNumber, setReferenceNumber] = useState("");
   const [bankAccounts, setBankAccounts] = useState<any>([]);
@@ -158,7 +161,11 @@ export default function ReceiptsPage() {
       setAdvanceReceipts(advances)
     }
   }
-
+  useEffect(() => {
+    if (user?.name) {
+      setCompanyName(user.name)
+    }
+  }, [user])
   const loadData = async () => {
     try {
       const [clientsData, itemsData, taxRatesData, bankAccountsData, companyData] = await Promise.all([
@@ -174,7 +181,7 @@ export default function ReceiptsPage() {
       setTaxRates(taxRatesData || [])
       setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
       if (companyData?.company) {
-        setCompanyName(companyData.company.companyName || companyData.company.name || "")
+        // setCompanyName(companyData.company.companyName || companyData.company.name || "")
         setSellerState(companyData.company.state || "")
       }
 
@@ -200,7 +207,7 @@ export default function ReceiptsPage() {
     try {
       const response = await fetch("/api/company", { credentials: "include" })
       const result = await response.json()
-      setCompanyName(result.company.companyName || result.company.name || "")
+      // setCompanyName(result.company.companyName || result.company.name || "")
       setSellerState(result.company.state || "")
     }
     catch (error) {
@@ -251,7 +258,7 @@ export default function ReceiptsPage() {
     const bankAccountsData = await api.bankAccounts.getAll();
 
     console.log("bank Accounts Avaible Are:::", bankAccountsData);
-    setPaymentMethods(data.filter((eachItem: any) => (eachItem.isEnabled === true)));
+    // setPaymentMethods(data.filter((eachItem: any) => (eachItem.isEnabled === true)));
     setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
   }
   //  console.log("Avavilbele Payment Methods are:::",paymentMethods)
@@ -385,7 +392,7 @@ export default function ReceiptsPage() {
         clientName: invoiceDetails.clientName,
         clientAddress: invoiceDetails.clientAddress,
         clientEmail: invoiceDetails.clientEmail,
-        clientPhone: invoiceDetails.clientPhone,
+        clientContact: invoiceDetails.clientContact,
 
         items: invoiceDetails.items,
 
@@ -400,10 +407,10 @@ export default function ReceiptsPage() {
         bankDetails: invoiceDetails.bankDetails || selectedBankAcount,
         referenceNumber,
 
-        status: selectedPaymentMethod.toLowerCase() === "cash" ? "cleared" : "Pending",
+        status: selectedPaymentMethod.toLowerCase() === "cash" ? "cleared" : "received",
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || null,
         advanceAppliedAmount: advanceApplyAmount || 0,
-        createdBy: invoiceDetails.createdBy,
+        createdBy: companyName,
         userId: invoiceDetails.userId,
         notes: notes,
         date: new Date().toISOString()
@@ -425,7 +432,7 @@ export default function ReceiptsPage() {
         body: JSON.stringify({
           paidAmount: Number(invoiceDetails.paidAmount) + Number(receiptAmount),
           balanceAmount: invoiceBalance,
-          status: invoiceBalance <= 0 ? "cleared" : "Partial",
+          status: invoiceBalance <= 0 ? "collected" : "partially collected",
         }),
       })
 
@@ -637,7 +644,7 @@ export default function ReceiptsPage() {
         clientId: scenario2Client,
         clientName: client?.name || "",
         clientEmail: client?.email || "",
-        clientPhone: client?.phone || "",
+        clientContact: client?.phone || "",
         clientAddress: `${client?.address}, ${client?.city}, ${client?.state}, ${client?.pincode}` || "",
         items: items,
         subtotal,
@@ -705,7 +712,7 @@ export default function ReceiptsPage() {
         clientId: scenario3Client,
         clientName: client?.name || "",
         clientEmail: client?.email || "",
-        clientPhone: client?.phone || "",
+        clientContact: client?.phone || "",
         clientAddress: `${client?.address}, ${client?.city}, ${client?.state}, ${client?.pincode}` || "",
         items: [],
         // subtotal: totalAmount,
@@ -761,7 +768,7 @@ export default function ReceiptsPage() {
         clientId: scenario3Client,
         clientName: client?.name || "",
         clientEmail: client?.email || "",
-        clientPhone: client?.phone || "",
+        clientContact: client?.phone || "",
         clientAddress: `${client?.address}, ${client?.city}, ${client?.state}, ${client?.pincode}` || "",
         items: [],
         // subtotal: totalAmount,
@@ -799,7 +806,21 @@ export default function ReceiptsPage() {
     }
   }
 
-
+  const quotationOptions = salesInvoices.map((q: any) => ({
+    value: q._id,
+    label: `${q.salesInvoiceNumber} - ${q.clientName}`,
+    quotationNumber: q.salesInvoiceNumber,
+    email: q.clientEmail,
+    phone: q.clientContact,
+  }));
+  const clientOptions = clients.map((c) => ({
+    value: String(c._id),
+    label: c.clientName || c.name || "Unnamed",
+    email: c.email,
+    phone: c.phone,
+  }));
+  const selectedScenario2Client =
+    clients.find((c) => c._id === scenario2Client) || null;
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -828,7 +849,7 @@ export default function ReceiptsPage() {
               <div className="space-y-4">
                 <div>
                   <Label>Select SalesInvoice</Label>
-                  <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
+                  {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a invoice" />
                     </SelectTrigger>
@@ -840,7 +861,14 @@ export default function ReceiptsPage() {
                       ))}
 
                     </SelectContent>
-                  </Select>
+                  </Select> */}
+                  <OwnSearchableSelect
+                    options={quotationOptions}
+                    value={selectedInvoice}
+                    onValueChange={handleInvoiceSelect}
+                    placeholder="Search by Sales Invoice No. no, client, email, or phone..."
+                    emptyText="No invoice found"
+                  />
                 </div>
                 {advanceReceipts.length > 0 && (
                   <div>
@@ -925,11 +953,19 @@ export default function ReceiptsPage() {
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
-                      {paymentMethods.map((method: any) => (
-                        <SelectItem key={method._id} value={method.name}>
-                          {method.name}
-                        </SelectItem>
-                      ))}
+
+                      <SelectItem value="cash">
+                        Cash
+                      </SelectItem>
+                      <SelectItem value="upi">
+                        UPI
+                      </SelectItem>
+                      <SelectItem value="cheque">
+                        Cheque
+                      </SelectItem>
+                      <SelectItem value="bankTransfer">
+                        Bank Transfer
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -1037,7 +1073,7 @@ export default function ReceiptsPage() {
                 <div>
                   <Label>Client *</Label>
                   <div className="flex gap-2">
-                    <Select value={scenario2Client} onValueChange={setScenario2Client}>
+                    {/* <Select value={scenario2Client} onValueChange={setScenario2Client}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -1048,7 +1084,15 @@ export default function ReceiptsPage() {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                    <OwnSearchableSelect
+                      options={clientOptions}
+                      value={scenario2Client}
+                      onValueChange={setScenario2Client}
+                      placeholder="Search and select a client..."
+                      searchPlaceholder="Type to filter..."
+                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                    />
                     <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
                       <DialogTrigger asChild>
                         {/* <Button variant="outline" size="icon">
@@ -1096,6 +1140,39 @@ export default function ReceiptsPage() {
                       </DialogContent>
                     </Dialog>
                   </div>
+                                      {selectedScenario2Client && (
+                      <Card className="mt-4 bg-slate-50 border">
+                        <CardContent className="p-4 text-sm space-y-2">
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Client Name:</span>
+                            <span className="font-medium">
+                              {selectedScenario2Client.name || selectedScenario2Client.clientName}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Email:</span>
+                            <span>{selectedScenario2Client.email}</span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Contact:</span>
+                            <span>{selectedScenario2Client.phone}</span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Address:</span>
+                            <p className="mt-1">
+                              {selectedScenario2Client.address},
+                              {" "}{selectedScenario2Client.city},
+                              {" "}{selectedScenario2Client.state} - {selectedScenario2Client.pincode}
+                            </p>
+                          </div>
+
+                        </CardContent>
+                      </Card>
+                    )}
                 </div>
 
                 {/* Items card */}
@@ -1185,6 +1262,7 @@ export default function ReceiptsPage() {
                                   min="0"
                                   step="0.01"
                                   className="bg-white"
+                                  disabled
                                 />
                               </div>
                               <div>
@@ -1380,11 +1458,19 @@ export default function ReceiptsPage() {
                         <SelectValue placeholder="Slect Payment Method" />
                       </SelectTrigger>
                       <SelectContent>
-                        {paymentMethods.map((method: any) => (
-                          <SelectItem key={method._id} value={method.name}>
-                            {method.name}
-                          </SelectItem>
-                        ))}
+
+                        <SelectItem value="cash">
+                          Cash
+                        </SelectItem>
+                        <SelectItem value="upi">
+                          UPI
+                        </SelectItem>
+                        <SelectItem value="cheque">
+                          Cheque
+                        </SelectItem>
+                        <SelectItem value="bankTransfer">
+                          Bank Transfer
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1477,8 +1563,9 @@ export default function ReceiptsPage() {
                     <Label>Amount Paid</Label>
                     <Input
                       type="number"
-                      value={scenario2AmountPaid}
+                      value={(grandTotal - (advanceApplyAmount || 0)).toLocaleString()}
                       onChange={(e) => setScenario2AmountPaid(e.target.value)}
+                      disabled
                       placeholder="Enter amount paid (full or advance)"
                     />
                     {(scenario2AmountPaid || selectedAdvanceReceipt) && (
@@ -1602,11 +1689,19 @@ export default function ReceiptsPage() {
                         <SelectValue placeholder="Slect Payment Method" />
                       </SelectTrigger>
                       <SelectContent>
-                        {paymentMethods.map((method: any) => (
-                          <SelectItem key={method._id} value={method.name}>
-                            {method.name}
-                          </SelectItem>
-                        ))}
+
+                        <SelectItem value="cash">
+                          Cash
+                        </SelectItem>
+                        <SelectItem value="upi">
+                          UPI
+                        </SelectItem>
+                        <SelectItem value="cheque">
+                          Cheque
+                        </SelectItem>
+                        <SelectItem value="bankTransfer">
+                          Bank Transfer
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1632,7 +1727,7 @@ export default function ReceiptsPage() {
                     </Select>
                   </div> */}
                   {/* account no. and refrence no. if no cash */}
-                  {scenario2PaymentMethod.trim().toLowerCase() != ("Cash" || "cash") && (
+                  {scenario2PaymentMethod.trim().toLowerCase() != ("cash") && (
                     <div className="flex space-x-4">
                       <div>
                         <Label>Reference Number </Label>
@@ -1822,11 +1917,19 @@ export default function ReceiptsPage() {
                         <SelectValue placeholder="Slect Payment Method" />
                       </SelectTrigger>
                       <SelectContent>
-                        {paymentMethods.map((method: any) => (
-                          <SelectItem key={method._id} value={method.name}>
-                            {method.name}
-                          </SelectItem>
-                        ))}
+
+                        <SelectItem value="cash">
+                          Cash
+                        </SelectItem>
+                        <SelectItem value="upi">
+                          UPI
+                        </SelectItem>
+                        <SelectItem value="cheque">
+                          Cheque
+                        </SelectItem>
+                        <SelectItem value="bankTransfer">
+                          Bank Transfer
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

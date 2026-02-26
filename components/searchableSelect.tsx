@@ -10,6 +10,8 @@ type Option = {
   label: string;
   email?: string;
   phone?: string;
+  quotationNumber?: string;
+  invoiceNumber?: string;
 };
 
 interface SearchableSelectProps {
@@ -40,7 +42,9 @@ const filtered = React.useMemo(() => {
     return (
       o.label?.toLowerCase().includes(q) ||
       o.email?.toLowerCase().includes(q) ||
-      o.phone?.toLowerCase().includes(q)
+      o.phone?.toLowerCase().includes(q) ||
+      o.quotationNumber?.toLowerCase().includes(q) ||
+      o.invoiceNumber?.toLowerCase().includes(q)
     );
   });
 }, [options, query]);

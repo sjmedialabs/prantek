@@ -58,7 +58,7 @@ export default function ReceiptDetailsPage() {
       client: {
         name: receipt.clientName,
         address: receipt.clientAddress || "",
-        phone: receipt.clientPhone || "",
+        phone: receipt.clientContact || "",
         email: receipt.clientEmail || "",
       },
 
@@ -249,10 +249,10 @@ export default function ReceiptDetailsPage() {
                   <p className="font-semibold">{receipt.clientEmail}</p>
                 </div>
               )}
-              {receipt.clientPhone && (
+              {receipt.clientContact && (
                 <div>
                   <p className="text-sm text-gray-600">Phone</p>
-                  <p className="font-semibold">{receipt.clientPhone}</p>
+                  <p className="font-semibold">{receipt.clientContact}</p>
                 </div>
               )}
               {receipt.clientAddress && (

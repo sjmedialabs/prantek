@@ -50,7 +50,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Generate invoice number if not provided
     if (!body.salesInvoiceNumber) {
-      body.salesInvoiceNumber = await generateNextNumber("salesInvoice", "INV", filterUserId, body.clientName)
+      body.salesInvoiceNumber = await generateNextNumber("salesInvoice", "SI")
     }
 
     const invoice = await mongoStore.create("salesInvoice", { ...body, userId: filterUserId })

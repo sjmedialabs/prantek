@@ -151,7 +151,7 @@ export default function EditSalesInvoicePage() {
       setSelectedClientId(data.clientId ?? "")
       setClientName(data.clientName ?? "")
       setClientAddress(data.clientAddress ?? "")
-      setClientContact(data.clientPhone ?? "")
+      setClientContact(data.clientContact ?? "")
       setClientEmail(data.clientEmail ?? "")
       setDescription(data.description ?? "")
       setCreatedBy(data.createdBy ?? "")
@@ -421,7 +421,7 @@ export default function EditSalesInvoicePage() {
       clientName,
       clientEmail,
       clientAddress,
-      clientPhone: clientContact,
+      clientContact: clientContact,
       items: items.map((i) => ({
         type: i.type,
         itemName: i.itemName,
@@ -683,6 +683,7 @@ export default function EditSalesInvoicePage() {
                               <Input
                                 type="number"
                                 value={item.price}
+                                disabled
                                 onChange={(e) =>
                                   updateItem(
                                     item.itemId,
@@ -935,6 +936,7 @@ export default function EditSalesInvoicePage() {
                         theme="snow"
                         value={terms}
                         onChange={setTerms}
+                        readOnly={true}
                       />
                     </div>
                   </div>

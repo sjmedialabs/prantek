@@ -312,10 +312,10 @@ console.log("payment amount is ", paymentAmount)
               <p className="font-semibold">{receipt.clientEmail}</p>
             </div>
           )}
-          {receipt.clientPhone && (
+          {receipt.clientContact && (
             <div>
               <p className="text-sm text-gray-600">Phone</p>
-              <p className="font-semibold">{receipt.clientPhone}</p>
+              <p className="font-semibold">{receipt.clientContact}</p>
             </div>
           )}
           {receipt.clientAddress && (

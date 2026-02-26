@@ -108,7 +108,7 @@ const quotationForPrint = {
   note: quotation.note || "",
   client: {
     name: quotation.clientName,
-    phone: quotation.clientPhone || "",
+    phone: quotation.clientContact || "",
     email: quotation.clientEmail,
   },
   items: quotation.items.map((item) => {
@@ -399,10 +399,10 @@ const quotationForPrint = {
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="font-semibold">{quotation.clientEmail}</p>
               </div>
-              {quotation.clientPhone && (
+              {quotation.clientContact && (
                 <div>
                   <p className="text-sm text-gray-600">Phone</p>
-                  <p className="font-semibold">{quotation.clientPhone}</p>
+                  <p className="font-semibold">{quotation.clientContact}</p>
                 </div>
               )}
               {quotation.clientAddress && (

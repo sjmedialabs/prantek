@@ -225,7 +225,7 @@ export default function QuotationsPage() {
         clientId: quotationToConvert.clientId,
         clientName: quotationToConvert.clientName,
         clientAddress: quotationToConvert.clientAddress,
-        clientPhone: quotationToConvert.clientContact, // mapping
+        clientContact: quotationToConvert.clientContact, // mapping
         clientEmail: quotationToConvert.clientEmail,
 
         items: quotationToConvert.items,
@@ -235,7 +235,7 @@ export default function QuotationsPage() {
         balanceAmount: quotationToConvert.grandTotal,
 
         date: new Date().toISOString(),
-        status: "Not Cleared",
+        status: "not collected",
 
         terms: availableTerms,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
@@ -397,9 +397,9 @@ export default function QuotationsPage() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="created">Created</SelectItem>
                     <SelectItem value="accepted">Accepted</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="invoice created">Invoice Created</SelectItem>
                     <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
