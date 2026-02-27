@@ -73,7 +73,7 @@ interface Employee {
 const STATIC_MEMBER_TYPES = [
   { _id: "1", name: "Full Time" },
   { _id: "2", name: "Part Time" },
-  { _id: "3", name: "Contract Based" },
+  { _id: "3", name: "Contract" },
 ];
 
 export default function EmployeePage() {

@@ -282,11 +282,15 @@ export default function EditSalesInvoicePage() {
       setItems((prev) => prev.filter((i) => i.id !== id))
     }
   }
-
+const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
+  return taxRates.some(
+    (t) => t.type === type && Number(t.rate) === Number(rate) && t.isActive
+  )
+}
   const updateItem = (id: string, field: keyof QuotationItem, value: any) => {
     setItems((prev) =>
       prev.map((item) => {
-        if (item.itemId !== id) return item
+        if (item.id !== id) return item
 
         let updated = { ...item, [field]: value }
 
@@ -304,43 +308,82 @@ export default function EditSalesInvoicePage() {
             taxRate: 0,
             taxName: "",
             itemId: "",
+            amount: 0,
+            taxAmount: 0,
+            total: 0,
           }
         }
 
         // Auto-fill on itemName change
         if (field === "itemName" && value) {
           const master = masterItems.find(
-            (m: any) => m.name === value && m.type === updated.type
+           (i) => i._id === value
           )
           if (master) {
             updated.description = master.description ?? ""
             updated.price = master.price
             updated.itemId = master._id
+if (master.applyTax) {
+  const masterCgst = master.cgst ?? 0
+  const masterSgst = master.sgst ?? 0
+  const masterIgst = master.igst ?? 0
 
-            if (master.applyTax) {
-              updated.cgst = master.cgst ?? 0
-              updated.sgst = master.sgst ?? 0
-              updated.igst = master.igst ?? 0
-            } else {
-              updated.cgst = updated.sgst = updated.igst = 0
-            }
+  updated.cgst =
+    masterCgst && isTaxActive("CGST", masterCgst)
+      ? masterCgst
+      : 0
+
+  updated.sgst =
+    masterSgst && isTaxActive("SGST", masterSgst)
+      ? masterSgst
+      : 0
+
+  updated.igst =
+    masterIgst && isTaxActive("IGST", masterIgst)
+      ? masterIgst
+      : 0
+} else {
+  updated.cgst = 0
+  updated.sgst = 0
+  updated.igst = 0
+}
           }
         }
+let cgst = 0
+let sgst = 0
+let igst = 0
 
-        const taxRate = (Number(updated.cgst) || 0) + (Number(updated.sgst) || 0) + (Number(updated.igst) || 0)
-        updated.taxRate = taxRate
+if (updated.cgst && isTaxActive("CGST", updated.cgst)) {
+  cgst = Number(updated.cgst)
+}
 
-        const taxParts = []
-        if (updated.cgst) taxParts.push(`CGST (${updated.cgst}%)`)
-        if (updated.sgst) taxParts.push(`SGST (${updated.sgst}%)`)
-        if (updated.igst) taxParts.push(`IGST (${updated.igst}%)`)
-        updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
+if (updated.sgst && isTaxActive("SGST", updated.sgst)) {
+  sgst = Number(updated.sgst)
+}
 
+if (updated.igst && isTaxActive("IGST", updated.igst)) {
+  igst = Number(updated.igst)
+}
+
+updated.cgst = cgst
+updated.sgst = sgst
+updated.igst = igst
+
+const taxRate = cgst + sgst + igst
+updated.taxRate = taxRate
+        // updated.taxRate = taxRate
+        
+const taxParts = []
+if (cgst > 0) taxParts.push(`CGST (${cgst}%)`)
+if (sgst > 0) taxParts.push(`SGST (${sgst}%)`)
+if (igst > 0) taxParts.push(`IGST (${igst}%)`)
+
+updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
+        console.log("applied tax rates", updated.taxRate, updated.cgst, updated.sgst, updated.igst)
         return recalcItem(updated)
       })
     )
   }
-
   const invoiceTotal = items.reduce((sum, i) => sum + i.total, 0)
   const subTotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) // Gross subtotal
   const totalDiscount = items.reduce((sum, i) => sum + (i.discount * i.quantity), 0)
@@ -582,14 +625,14 @@ export default function EditSalesInvoicePage() {
                   <div className="space-y-4">
                     {items.map((item, index) => (
                       <div
-                        key={item.itemId}
+                        key={item.id}
                         className="border rounded-lg p-4 bg-gray-50"
                       >
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-medium">Item {index + 1}</h4>
                           {items.length > 1 && (
                             <Button
-                              onClick={() => removeItem(item.itemId)}
+                              onClick={() => removeItem(item.id)}
                               size="sm"
                               variant="outline"
                               className="text-red-600"
@@ -606,7 +649,7 @@ export default function EditSalesInvoicePage() {
                             <Select
                               value={item.type}
                               onValueChange={(v: "product" | "service") =>
-                                updateItem(item.itemId, "type", v)
+                                updateItem(item.id, "type", v)
                               }
                             >
                               <SelectTrigger>
@@ -630,15 +673,14 @@ export default function EditSalesInvoicePage() {
                                     m.type === item.type && m.isActive === true
                                 )
                                 .map((m: any) => ({
-                                  value: m.name,
+                                  value: m._id,
                                   label: m.name,
                                 }))}
                               value={item.itemName}
                               onValueChange={(v) =>
-                                updateItem(item.itemId, "itemName", v)
+                                updateItem(item.id, "itemName", v)
                               }
                               placeholder="Search item..."
-                              emptyText="No items found. Create one first."
                             />
 
                             <p className="text-xs text-gray-500 mt-1">
@@ -647,17 +689,18 @@ export default function EditSalesInvoicePage() {
                           </div>
 
                           {/* DESCRIPTION */}
-                          {/* <div>
+                          <div>
                             <Label>Description</Label>
                             <Textarea
                               value={item.description}
+                              disabled
                               onChange={(e) =>
                                 updateItem(item.id, "description", e.target.value)
                               }
                               rows={2}
                               className="bg-white"
                             />
-                          </div> */}
+                          </div>
 
                           {/* PRICE / DISCOUNT / QTY */}
                           <div className="grid grid-cols-3 gap-3">
@@ -667,11 +710,12 @@ export default function EditSalesInvoicePage() {
                                 type="number"
                                 value={item.quantity}
                                 onChange={(e) =>
+                                 { const value = e.target.value
                                   updateItem(
-                                    item.itemId,
-                                    "quantity",
-                                    Number(e.target.value) || 0
-                                  )
+                                    item.id,
+                                    "quantity", value === "" ? "" : 
+                                    Number(value)
+                                  )}
                                 }
                                 min={1}
                                 className="bg-white"
@@ -686,9 +730,9 @@ export default function EditSalesInvoicePage() {
                                 disabled
                                 onChange={(e) =>
                                   updateItem(
-                                    item.itemId,
+                                    item.id,
                                     "price",
-                                    Number(e.target.value) || 0
+                                    Number(e.target.value) 
                                   )
                                 }
                                 className="bg-white"
@@ -696,17 +740,25 @@ export default function EditSalesInvoicePage() {
                             </div>
 
                             <div>
-                              <Label>Discount (Total)</Label>
+                              <Label>Discount</Label>
                               <Input
                                 type="number"
                                 value={item.discount}
-                                onChange={(e) =>
-                                  updateItem(
-                                    item.itemId,
-                                    "discount",
-                                    Number(e.target.value) || 0
-                                  )
-                                }
+                                // onChange={(e) =>
+                                //   updateItem(
+                                //     item.id,
+                                //     "discount",
+                                //     Number(e.target.value)
+                                //   )
+                                // }
+                                onChange={(e) => {
+  const value = e.target.value
+  updateItem(
+    item.id,
+    "discount",
+    value === "" ? "" : Number.parseFloat(value)
+  )
+}}
                                 className="bg-white"
                               />
                             </div>
@@ -718,10 +770,10 @@ export default function EditSalesInvoicePage() {
                               <Label>CGST (%)</Label>
                               <Select
                                 value={String(item.cgst || 0)}
-                                onValueChange={(v) => updateItem(item.itemId, "cgst", Number(v))}
+                                onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select CGST" />
+                                  <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {/* <SelectItem value="0">0%</SelectItem> */}
@@ -737,10 +789,10 @@ export default function EditSalesInvoicePage() {
                               <Label>SGST (%)</Label>
                               <Select
                                 value={String(item.sgst || 0)}
-                                onValueChange={(v) => updateItem(item.itemId, "sgst", Number(v))}
+                                onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select SGST" />
+                                  <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {/* <SelectItem value="0">0%</SelectItem> */}
@@ -756,10 +808,10 @@ export default function EditSalesInvoicePage() {
                               <Label>IGST (%)</Label>
                               <Select
                                 value={String(item.igst || 0)}
-                                onValueChange={(v) => updateItem(item.itemId, "igst", Number(v))}
+                                onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select IGST" />
+                                  <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {/* <SelectItem value="0">0%</SelectItem> */}
@@ -776,9 +828,9 @@ export default function EditSalesInvoicePage() {
                           {/* TOTALS */}
                           <div className="pt-3 border-t space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Amount (Excl. Tax):</span>
+                              <span className="text-gray-600">Amount:</span>
                               <span className="font-medium">
-                                ₹{item?.amount?.toLocaleString()}
+                                ₹{item?.amount.toLocaleString()}
                               </span>
                             </div>
 
@@ -787,7 +839,7 @@ export default function EditSalesInvoicePage() {
                                 Tax Amount:
                               </span>
                               <span className="font-medium">
-                                ₹{item?.taxAmount?.toLocaleString()}
+                                ₹{item?.taxAmount.toLocaleString()}
                               </span>
                             </div>
 

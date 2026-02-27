@@ -50,7 +50,7 @@ useEffect(() => {
       console.log("Accepted quotation View Details:::",data);
       if (data) {
         // Check for expiry
-        if (data.status === "pending" && data.validity) {
+        if (data.status === "created" && data.validity) {
           const today = new Date()
           today.setHours(0, 0, 0, 0)
           const validityDate = new Date(data.validity)
@@ -160,7 +160,7 @@ const quotationForPrint = {
   taxTotal: invoiceTaxTotal,
   grandTotal: quotation.grandTotal,
   terms: quotation.terms,
-  status: quotation.status === "pending"? "Pending": "Cleared",
+  status: quotation.status === "created"? "created": "invoice created",
   acceptedDate: quotation.acceptedDate,
 };
 
@@ -168,11 +168,11 @@ const quotationForPrint = {
   console.log("Quatation for Print ::",quotationForPrint.items);
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
+      case "created":
         return "bg-blue-100 text-blue-800"
       case "accepted":
         return "bg-green-100 text-green-800"
-      case "confirmed":
+      case "invoice created":
         return "bg-emerald-100 text-emerald-800"
       case "expired":
         return "bg-red-100 text-red-800"
@@ -270,23 +270,23 @@ const quotationForPrint = {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Valid Until</p>
-                  <p className="font-semibold">{new Date(quotation.validity).toLocaleDateString()}</p>
+                  <p className="font-semibold">{new Date(quotation?.validity).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
                   <Badge className={getStatusColor(quotation.status)}>
                     {/* {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)} */}
-                    {quotation.status}
+                   <span className="capitalize"> {quotation.status}</span>
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Balance Amount</p>
                   <p className="font-semibold">{quotation.balanceAmount}</p>
                 </div>
-                                <div>
+                                {/* <div>
                   <p className="text-sm text-gray-600">Paid Amount</p>
                   <p className="font-semibold">{quotation.paidAmount}</p>
-                </div>
+                </div> */}
               </div>
               {quotation.acceptedDate && (
                 <>
@@ -436,7 +436,7 @@ const quotationForPrint = {
           </Card>
 
           {/* Status Card */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Status</CardTitle>
             </CardHeader>
@@ -444,11 +444,11 @@ const quotationForPrint = {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Current Status</span>
-                  <Badge className={getStatusColor(quotation.status)}>
+                  <Badge className={getStatusColor(quotation.status)}> */}
                     {/* {quotation.status.charAt(0).toUpperCase() + quotation.status.slice(1)} */}
-                    {quotation.status}
-                  </Badge>
-                </div>
+                   {/* <span className="capitalize"> {quotation.status}</span>
+                  </Badge> */}
+                {/* </div> */}
                 {/* {quotation.status === "accepted" && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-800 font-medium">Quotation/Agreement Accepted</p>
@@ -464,9 +464,9 @@ const quotationForPrint = {
                     <p className="text-sm text-blue-800 font-medium">Awaiting Acceptance</p>
                   </div>
                 )} */}
-              </div>
+              {/* </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
                   
