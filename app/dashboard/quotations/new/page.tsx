@@ -321,7 +321,11 @@ export default function NewQuotationPage() {
   // console.log("clients state is",clients[0]._id)
   // console.log(typeof clients[0]._id, clients[0]._id)
 
-
+const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
+  return taxRates.some(
+    (t) => t.type === type && Number(t.rate) === Number(rate) && t.isActive
+  )
+}
   const updateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
     console.log("Selected Item Id is:::", id)
     setItems(
@@ -337,64 +341,89 @@ export default function NewQuotationPage() {
             updatedItem.taxRate = 0
           }
 
-          if (field === "itemName") {
-            const masterItem = masterItems.find((i) => i.name === value)
+    if (field === "itemName") {
+  const masterItem = masterItems.find((i) => i._id === value)
 
-            if (masterItem) {
-              updatedItem.description = masterItem.description
-              updatedItem.price = masterItem.price
-              updatedItem.itemId = masterItem._id;
+  if (masterItem) {
+    updatedItem.description = masterItem.description ?? ""
+    updatedItem.price = masterItem.price ?? 0
+    updatedItem.itemId = masterItem._id
 
-              if (masterItem) {
+    const buyer = clients.find(c => c._id === selectedClientId)
+    const buyerState = buyer?.state || ""
 
-                // 🔹 Fetch seller & buyer states
-                const buyer = clients.find(c => c._id === selectedClientId)
-                const buyerState = buyer?.state || ""
+    let cgst = 0
+    let sgst = 0
+    let igst = 0
 
-                // 🔹 Same state → CGST + SGST
-                if (sellerState && buyerState && sellerState.toLowerCase() === buyerState.toLowerCase()) {
-                  updatedItem.cgst = masterItem.cgst || 0
-                  updatedItem.sgst = masterItem.sgst || 0
-                  updatedItem.igst = 0
+    if (sellerState && buyerState &&
+        sellerState.toLowerCase() === buyerState.toLowerCase()) {
 
-                  updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
-                  updatedItem.taxName = "CGST + SGST"
-                }
-                // 🔹 Different state → IGST
-                else {
-                  updatedItem.cgst = 0
-                  updatedItem.sgst = 0
-                  updatedItem.igst = masterItem.igst || ((masterItem.cgst || 0) + (masterItem.sgst || 0))
+      // 🔹 Intra-state → CGST + SGST
+      if (masterItem.cgst && isTaxActive("CGST", masterItem.cgst)) {
+        cgst = masterItem.cgst
+      }
 
-                  updatedItem.taxRate = updatedItem.igst
-                  updatedItem.taxName = "IGST"
-                }
+      if (masterItem.sgst && isTaxActive("SGST", masterItem.sgst)) {
+        sgst = masterItem.sgst
+      }
 
-              } else {
+    } else {
 
-                updatedItem.cgst = 0
-                updatedItem.sgst = 0
-                updatedItem.igst = 0
-                updatedItem.taxRate = 0
-                updatedItem.taxName = ""
-              }
+      // 🔹 Inter-state → IGST
+      const igstRate =
+        masterItem.igst ||
+        ((masterItem.cgst || 0) + (masterItem.sgst || 0))
 
-            }
-          }
+      if (igstRate && isTaxActive("IGST", igstRate)) {
+        igst = igstRate
+      }
+    }
 
-          if (field === "cgst" || field === "sgst" || field === "igst") {
-            updatedItem.taxRate = (Number(updatedItem.cgst) || 0) + (Number(updatedItem.sgst) || 0) + (Number(updatedItem.igst) || 0)
+    updatedItem.cgst = cgst
+    updatedItem.sgst = sgst
+    updatedItem.igst = igst
+  }
+}
 
-            const taxParts = []
-            if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
-            if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
-            if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
-            updatedItem.taxName = taxParts.join(" + ")
-          }
+       if (field === "cgst" || field === "sgst" || field === "igst") {
 
-          updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
-          updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
-          updatedItem.total = updatedItem.amount + updatedItem.taxAmount
+  let cgst = Number(updatedItem.cgst) || 0
+  let sgst = Number(updatedItem.sgst) || 0
+  let igst = Number(updatedItem.igst) || 0
+
+  // Validate active status again
+  if (cgst && !isTaxActive("CGST", cgst)) cgst = 0
+  if (sgst && !isTaxActive("SGST", sgst)) sgst = 0
+  if (igst && !isTaxActive("IGST", igst)) igst = 0
+
+  updatedItem.cgst = cgst
+  updatedItem.sgst = sgst
+  updatedItem.igst = igst
+}
+const taxRate =
+  (Number(updatedItem.cgst) || 0) +
+  (Number(updatedItem.sgst) || 0) +
+  (Number(updatedItem.igst) || 0)
+
+updatedItem.taxRate = taxRate
+
+const taxParts = []
+if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
+if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
+if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
+
+updatedItem.taxName = taxParts.join(" + ")
+
+updatedItem.amount =
+  (Number(updatedItem.price) - Number(updatedItem.discount || 0)) *
+  Number(updatedItem.quantity)
+
+updatedItem.taxAmount =
+  (updatedItem.amount * taxRate) / 100
+
+updatedItem.total =
+  updatedItem.amount + updatedItem.taxAmount
 
 
           return updatedItem
@@ -1153,7 +1182,7 @@ export default function NewQuotationPage() {
                                 options={masterItems
                                   .filter((masterItem) => (masterItem.type === item.type && masterItem.isActive === true))
                                   .map((masterItem) => ({
-                                    value: masterItem.name,
+                                    value: masterItem._id,
                                     label: masterItem.name,
                                   }))}
                                 value={item.itemName}
@@ -1188,7 +1217,7 @@ export default function NewQuotationPage() {
                                   <Input
                                     type="number"
                                     value={item.quantity}
-                                    onChange={(e) => updateItem(item.id, "quantity", Number.parseInt(e.target.value) || 0)}
+                                    onChange={(e) => updateItem(item.id, "quantity", Number.parseInt(e.target.value))}
                                     min="1"
                                     className="bg-white"
                                   />
@@ -1217,9 +1246,17 @@ export default function NewQuotationPage() {
                                 <Input
                                   type="number"
                                   value={item.discount}
-                                  onChange={(e) =>
-                                    updateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
-                                  }
+                                  // onChange={(e) =>
+                                  //   updateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
+                                  // }
+                                  onChange={(e) => {
+  const value = e.target.value
+  updateItem(
+    item.id,
+    "discount",
+    value === "" ? "" : Number.parseFloat(value)
+  )
+}}
                                   min="0"
                                   step="1"
                                   placeholder="0"
@@ -1396,12 +1433,12 @@ export default function NewQuotationPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4 shadow-lg z-40">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-
-          <Button type="button" variant="outline" onClick={router.back}>
+        <div className="max-w-7xl mx-auto flex gap-4 justify-end items-center">
+              <div>
+          <Button type="button" variant="outline" onClick={router.back} size="lg">
             Cancel
           </Button>
-
+              </div>
           <div className="flex gap-3">
             {!isLastTab ? (
               <Button onClick={handleContinue} size="lg" className="min-w-[200px]">

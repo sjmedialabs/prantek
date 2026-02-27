@@ -7,6 +7,42 @@ import { downloadCSV } from "@/lib/export-utils"
 import { toast } from "@/lib/toast"
 
 export default function BackupPage() {
+  const fieldsToCapitalize = [
+  "type",
+  "address",
+  "city",
+  "status",
+  "name",
+  "pan",
+  "category",
+  "notes",
+  "note",
+  "clientName",
+  "clientAddress",
+  "isActive",
+  "createdBy",
+  "invoiceType",
+  "description",
+  "receiptType",
+  "recipientType",
+  "recipientName",
+  "recipientAddress",
+  "condition",
+  "location",
+  "assignedToName",
+  "employeeName",
+  "surName",
+  "employmentStatus",
+  "roleName",
+  "unitType",
+]
+const capitalizeWords = (value: any) => {
+  if (typeof value !== "string") return value
+
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
   const exportData = async (
     label: string,
     fetcher: () => Promise<any[]>
@@ -19,12 +55,42 @@ export default function BackupPage() {
         return
       }
 
+      const formatHeader = (key: string) => {
+        return key
+          // convert camelCase to space
+          .replace(/([A-Z])/g, " $1")
+          // convert snake_case to space
+          .replace(/_/g, " ")
+          // capitalize first letter of every word
+          .replace(/\b\w/g, (char) => char.toUpperCase())
+      }
+
       const columns = Object.keys(data[0]).map((k) => ({
         key: k,
-        label: k,
+        label: formatHeader(k),
       }))
+const formattedData = data.map((row) => {
+  const newRow: any = {}
 
-      downloadCSV(`${label}.csv`, data, columns)
+  Object.keys(row).forEach((key) => {
+    let value = row[key]
+
+    // ✅ If value is object or array → stringify it
+    if (typeof value === "object" && value !== null) {
+      value = JSON.stringify(value)
+    }
+
+    // ✅ Apply capitalization only for selected fields
+    if (fieldsToCapitalize.includes(key)) {
+      value = capitalizeWords(value)
+    }
+
+    newRow[key] = value
+  })
+
+  return newRow
+})
+      downloadCSV(`${label}.csv`, formattedData, columns)
 
       toast({ title: `${label} exported` })
     } catch (err) {

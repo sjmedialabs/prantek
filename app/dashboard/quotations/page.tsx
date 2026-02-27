@@ -50,6 +50,7 @@ import { useRouter } from "next/navigation"
 export default function QuotationsPage() {
   const router = useRouter()
   const { hasPermission } = useUser()
+  const {user} = useUser()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -73,13 +74,17 @@ export default function QuotationsPage() {
   const [quotationToConvert, setQuotationToConvert] = useState<Quotation | null>(null)
   // const [terms, setTerms] = useState("")
   const [availableTerms, setAvailableTerms] = useState("")
-  const [dueDate, setDueDate] = useState("")
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split("T")[0])
   const [date, setInvoiceDate] = useState(new Date().toISOString().split("T")[0])
   const [companyName, setCompanyName] = useState("")
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
-
+  useEffect(() => {
+    if (user?.email) {
+      setCompanyName(user.email)
+    }
+  }, [user])
   useEffect(() => {
     loadQuotations()
   }, [])
@@ -185,7 +190,7 @@ export default function QuotationsPage() {
         result = await res
 
       if (result?.company) {
-        setCompanyName(result.company.companyName || result.company.name || "")
+        // setCompanyName(result.company.companyName || result.company.name || "")
         console.log("companyName", companyName)
       }
     } catch (error) {
@@ -528,12 +533,12 @@ export default function QuotationsPage() {
                       )}
 
                       {/* STATUS TOGGLE ALWAYS AVAILABLE */}
-                      {hasPermission("edit_quotations") && (
+                      {/* {hasPermission("edit_quotations") && (
                         <Switch
                           checked={q.isActive === "active"}
                           onCheckedChange={() => handleStatusToggle(q._id, q.isActive)}
                         />
-                      )}
+                      )} */}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -561,8 +566,8 @@ export default function QuotationsPage() {
                   </div>
 
                   {/* Due Date */}
-                  <div className="flex flex-row gap-2">
-                    <div>
+                  <div className="flex flex-row flex-wrap gap-2">
+                    <div className="">
                       <Label>Invoice Date</Label>
                       <Input type="date" value={date} onChange={(e) => setInvoiceDate(e.target.value)} />
                     </div>
@@ -574,7 +579,7 @@ export default function QuotationsPage() {
                         onChange={(e) => setDueDate(e.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="w-full">
                       <Label>Created By</Label>
                       <Input value={companyName} readOnly className="bg-gray-100" />
                     </div>

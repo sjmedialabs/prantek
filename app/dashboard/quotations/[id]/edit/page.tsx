@@ -156,7 +156,11 @@ export default function EditQuotationPage() {
       setLoading(false)
     }
   }, [quotationId])
-
+const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
+  return taxRates.some(
+    (t) => t.type === type && Number(t.rate) === Number(rate) && t.isActive
+  )
+}
   /* ---------------- INIT LOAD ---------------- */
   useEffect(() => {
     loadSupportingData()
@@ -233,34 +237,69 @@ export default function EditQuotationPage() {
         }
 
         // Auto-fill on itemName change
-        if (field === "itemName" && value) {
-          const master = masterItems.find(
-            (m: any) => m.name === value && m.type === updated.type
-          )
+        if (field === "itemName") {
+          const master = masterItems.find((i) => i._id === value)
           if (master) {
             updated.description = master.description ?? ""
             updated.price = master.price
             updated.itemId = master._id
+if (master.applyTax) {
+  const masterCgst = master.cgst ?? 0
+  const masterSgst = master.sgst ?? 0
+  const masterIgst = master.igst ?? 0
 
-            if (master.applyTax) {
-              updated.cgst = master.cgst ?? 0
-              updated.sgst = master.sgst ?? 0
-              updated.igst = master.igst ?? 0
-            } else {
-              updated.cgst = updated.sgst = updated.igst = 0
-            }
+  updated.cgst =
+    masterCgst && isTaxActive("CGST", masterCgst)
+      ? masterCgst
+      : 0
+
+  updated.sgst =
+    masterSgst && isTaxActive("SGST", masterSgst)
+      ? masterSgst
+      : 0
+
+  updated.igst =
+    masterIgst && isTaxActive("IGST", masterIgst)
+      ? masterIgst
+      : 0
+} else {
+  updated.cgst = 0
+  updated.sgst = 0
+  updated.igst = 0
+}
           }
         }
+let cgst = 0
+let sgst = 0
+let igst = 0
 
-        const taxRate = (Number(updated.cgst) || 0) + (Number(updated.sgst) || 0) + (Number(updated.igst) || 0)
-        updated.taxRate = taxRate
+if (updated.cgst && isTaxActive("CGST", updated.cgst)) {
+  cgst = Number(updated.cgst)
+}
+
+if (updated.sgst && isTaxActive("SGST", updated.sgst)) {
+  sgst = Number(updated.sgst)
+}
+
+if (updated.igst && isTaxActive("IGST", updated.igst)) {
+  igst = Number(updated.igst)
+}
+
+updated.cgst = cgst
+updated.sgst = sgst
+updated.igst = igst
+
+const taxRate = cgst + sgst + igst
+updated.taxRate = taxRate
+        // updated.taxRate = taxRate
         
-        const taxParts = []
-        if (updated.cgst) taxParts.push(`CGST (${updated.cgst}%)`)
-        if (updated.sgst) taxParts.push(`SGST (${updated.sgst}%)`)
-        if (updated.igst) taxParts.push(`IGST (${updated.igst}%)`)
-        updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
-        
+const taxParts = []
+if (cgst > 0) taxParts.push(`CGST (${cgst}%)`)
+if (sgst > 0) taxParts.push(`SGST (${sgst}%)`)
+if (igst > 0) taxParts.push(`IGST (${igst}%)`)
+
+updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
+        console.log("applied tax rates", updated.taxRate, updated.cgst, updated.sgst, updated.igst)
         return recalcItem(updated)
       })
     )
@@ -353,7 +392,7 @@ async function handleSave() {
     grandTotal: quotationTotal,
     paidAmount: paidAmount,
     balanceAmount: quotationTotal - paidAmount,
-    status: "pending",
+    status: "created",
   }
 
   try {
@@ -485,227 +524,208 @@ async function handleSave() {
 
                 <CardContent>
                   <div className="space-y-4">
-                    {items.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="border rounded-lg p-4 bg-gray-50"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium">Item {index + 1}</h4>
-                          {items.length > 1 && (
-                            <Button
-                              onClick={() => removeItem(item.id)}
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600"
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          {/* TYPE */}
-                          <div>
-                            <Label>Type *</Label>
-                            <Select
-                              value={item.type}
-                              onValueChange={(v: "product" | "service") =>
-                                updateItem(item.id, "type", v)
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="product">Product</SelectItem>
-                                <SelectItem value="service">Service</SelectItem>
-                              </SelectContent>
-                            </Select>
+                    {items.map((item, index) => {
+                      const isMasterItemSelected = !!item.itemId;
+                      return (
+                        <div key={item.id} className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-medium">Item {index + 1}</h4>
+                            {items.length > 1 && (
+                              <Button
+                                onClick={() => removeItem(item.id)}
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
-
-                          {/* ITEM NAME */}
-                          <div>
-                            <Label>Item Name *</Label>
-
-                            <OwnSearchableSelect
-                              options={masterItems
-                                .filter(
-                                  (m: any) =>
-                                    m.type === item.type && m.isActive === true
-                                )
-                                .map((m: any) => ({
-                                  value: m.name,
-                                  label: m.name,
-                                }))}
-                              value={item.itemName}
-                              onValueChange={(v) =>
-                                updateItem(item.id, "itemName", v)
-                              }
-                              placeholder="Search item..."
-                            />
-
-                            <p className="text-xs text-gray-500 mt-1">
-                              Showing active {item.type}s only
-                            </p>
-                          </div>
-
-                          {/* DESCRIPTION */}
-                          <div>
-                            <Label>Description</Label>
-                            <Textarea
-                              value={item.description}
-                              disabled
-                              onChange={(e) =>
-                                updateItem(item.id, "description", e.target.value)
-                              }
-                              rows={2}
-                              className="bg-white"
-                            />
-                          </div>
-
-                          {/* PRICE / DISCOUNT / QTY */}
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-3">
                             <div>
-                              <Label>Quantity *</Label>
-                              <Input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) =>
-                                  updateItem(
-                                    item.id,
-                                    "quantity",
-                                    Number(e.target.value) || 0
-                                  )
-                                }
-                                min={1}
-                                className="bg-white"
-                              />
-                            </div>
-
-                            <div>
-                              <Label>Price *</Label>
-                              <Input
-                                type="number"
-                                value={item.price}
-                                disabled
-                                onChange={(e) =>
-                                  updateItem(
-                                    item.id,
-                                    "price",
-                                    Number(e.target.value) || 0
-                                  )
-                                }
-                                className="bg-white"
-                              />
-                            </div>
-
-                            <div>
-                              <Label>Discount</Label>
-                              <Input
-                                type="number"
-                                value={item.discount}
-                                onChange={(e) =>
-                                  updateItem(
-                                    item.id,
-                                    "discount",
-                                    Number(e.target.value) || 0
-                                  )
-                                }
-                                className="bg-white"
-                              />
-                            </div>
-                          </div>
-
-                          {/* TAXES */}
-                          <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <Label>CGST (%)</Label>
+                              <Label required>Type</Label>
                               <Select
-                                value={String(item.cgst || 0)}
-                                onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
+                                value={item.type}
+                                onValueChange={(value: "product" | "service") => updateItem(item.id, "type", value)}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="0" />
+                                  <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {/* <SelectItem value="0">0%</SelectItem> */}
-                                  {taxRates
-                                    .filter((r) => r.type === "CGST" && r.isActive)
-                                    .map((r) => (
-                                      <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
-                                    ))}
+                                  <SelectItem value="product">Product</SelectItem>
+                                  <SelectItem value="service">Service</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
+
                             <div>
-                              <Label>SGST (%)</Label>
-                              <Select
-                                value={String(item.sgst || 0)}
-                                onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="0" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {/* <SelectItem value="0">0%</SelectItem> */}
-                                  {taxRates
-                                    .filter((r) => r.type === "SGST" && r.isActive)
-                                    .map((r) => (
-                                      <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
+                              <Label required>Item Name</Label>
+                              <OwnSearchableSelect
+                                options={masterItems
+                                  .filter((masterItem) => (masterItem.type === item.type && masterItem.isActive === true))
+                                  .map((masterItem) => ({
+                                    value: masterItem._id,
+                                    label: masterItem.name,
+                                  }))}
+                                value={item.itemName}
+                                onValueChange={(value) => updateItem(item.id, "itemName", value)}
+                                placeholder="Search and select an item..."
+                                searchPlaceholder="Type to search items..."
+                                emptyText={`No ${item.type === "product" ? "products" : "services"} found. Create a new one in settings.`}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Showing {item.type === "product" ? "products" : "services"} only
+                              </p>
                             </div>
                             <div>
-                              <Label>IGST (%)</Label>
-                              <Select
-                                value={String(item.igst || 0)}
-                                onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="0" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {/* <SelectItem value="0">0%</SelectItem> */}
-                                  {taxRates
-                                    .filter((r) => r.type === "IGST" && r.isActive)
-                                    .map((r) => (
-                                      <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
+                              <Label>Description</Label>
+                              <Textarea
+                                value={item.description}
+                                onChange={(e) => updateItem(item.id, "description", e.target.value)}
+                                placeholder="Item description"
+                                rows={2}
+                                disabled={isMasterItemSelected}
+                                className={
+                                  isMasterItemSelected
+                                    ? "bg-gray-100 cursor-not-allowed"
+                                    : "bg-white"
+                                }
+                              />
                             </div>
-                          </div>
-
-                          {/* TOTALS */}
-                          <div className="pt-3 border-t space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Amount:</span>
-                              <span className="font-medium">
-                                ₹{item.amount.toLocaleString()}
-                              </span>
+                            <div className="grid grid-cols-3 gap-3">
+                              {item.type === "product" && (
+                                <div>
+                                  <Label required>Quantity</Label>
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateItem(item.id, "quantity", Number.parseInt(e.target.value))}
+                                    min="1"
+                                    className="bg-white"
+                                  />
+                                </div>
+                              )}
+                              <div>
+                                <Label required>Price</Label>
+                                <Input
+                                  type="number"
+                                  value={item.price}
+                                  onChange={(e) =>
+                                    updateItem(item.id, "price", Number.parseFloat(e.target.value) || 0)
+                                  }
+                                  min="0"
+                                  step="0.01"
+                                  disabled={isMasterItemSelected}
+                                  className={
+                                    isMasterItemSelected
+                                      ? "bg-gray-100 cursor-not-allowed"
+                                      : "bg-white"
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <Label>Discount</Label>
+                                <Input
+                                  type="number"
+                                  value={item.discount}
+                                  // onChange={(e) =>
+                                  //   updateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
+                                  // }
+                                  onChange={(e) => {
+  const value = e.target.value
+  updateItem(
+    item.id,
+    "discount",
+    value === "" ? "" : Number.parseFloat(value)
+  )
+}}
+                                  min="0"
+                                  step="1"
+                                  placeholder="0"
+                                  className="bg-white"
+                                />
+                              </div>
                             </div>
 
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">
-                                Tax Amount:
-                              </span>
-                              <span className="font-medium">
-                                ₹{item.taxAmount.toLocaleString()}
-                              </span>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <Label>CGST (%)</Label>
+                                <Select
+                                  value={String(item.cgst || 0)}
+                                  onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select CGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* <SelectItem value="0">0%</SelectItem> */}
+                                    {taxRates
+                                      .filter((r) => r.type === "CGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>SGST (%)</Label>
+                                <Select
+                                  value={String(item.sgst || 0)}
+                                  onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select SGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* <SelectItem value="0">0%</SelectItem> */}
+                                    {taxRates
+                                      .filter((r) => r.type === "SGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>IGST (%)</Label>
+                                <Select
+                                  value={String(item.igst || 0)}
+                                  onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select IGST" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {/* <SelectItem value="0">0%</SelectItem> */}
+                                    {taxRates
+                                      .filter((r) => r.type === "IGST" && r.isActive)
+                                      .map((r) => (
+                                        <SelectItem key={r.id || String(r._id)} value={String(r.rate)}>{r.rate}%</SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
 
-                            <div className="flex justify-between font-semibold">
-                              <span>Total:</span>
-                              <span className="text-purple-600">
-                                ₹{item.total.toLocaleString()}
-                              </span>
+
+                            <div className="pt-3 border-t space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Amount:</span>
+                                <span className="font-medium"> ₹{item.amount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Tax Amount:</span>
+                                <span className="font-medium">₹{item.taxAmount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between font-semibold">
+                                <span>Total:</span>
+                                <span className="text-purple-600">₹{item.total.toLocaleString()}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -818,11 +838,12 @@ async function handleSave() {
 
       {/* ---------------- FIXED FOOTER ---------------- */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4 shadow-lg z-40">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Button variant="outline" onClick={() => router.back()}>
+        <div className="max-w-7xl mx-auto flex justify-end gap-4 items-center">
+          <div>
+          <Button variant="outline" size="lg" onClick={() => router.back()}>
             Cancel
           </Button>
-
+          </div>
           <div className="flex gap-3">
             {!isLastTab ? (
               <Button
