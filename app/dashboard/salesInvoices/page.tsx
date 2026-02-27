@@ -238,10 +238,10 @@ export default function SalesInvoicesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="Not Cleared">Not Cleared</SelectItem>
-                      <SelectItem value="cleared">Cleared</SelectItem>
+                      <SelectItem value="not collected">Not Collected</SelectItem>
+                      <SelectItem value="collected">Collected</SelectItem>
                       <SelectItem value="overdue">Overdue</SelectItem>
-                      <SelectItem value="Partial">Partial</SelectItem>
+                      <SelectItem value="partially collected">Partial Collected</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -299,7 +299,7 @@ export default function SalesInvoicesPage() {
                         <TableCell>{invoice.quotationNumber || invoice.quotationId || '-'}</TableCell>
                         <TableCell className="font-semibold">₹{(invoice.balanceAmount || 0).toLocaleString()}</TableCell>
                         <TableCell>
-                            <Badge variant={invoice.status === "cleared" ? "default" : invoice.status === "Not Cleared" ? "secondary" : "outline"}>
+                            <Badge variant={invoice.status === "collected" ? "default" : invoice.status === "not collected" ? "secondary" : "outline"} className="capitalize">
                             {invoice.status}
                             </Badge>
                         </TableCell>
@@ -308,7 +308,7 @@ export default function SalesInvoicesPage() {
                                 <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
                                 <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" /></Button>
                                 </Link>
-                                {hasPermission("edit_sales_invoices") && invoice.status !== "cleared" && (
+                                {hasPermission("edit_sales_invoices") && invoice.status === "not collected" && (
                                   <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
                                     <Button variant="ghost" size="sm" title="Edit Details">
                                       <Edit className="h-4 w-4" />

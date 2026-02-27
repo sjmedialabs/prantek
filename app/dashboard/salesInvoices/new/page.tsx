@@ -1,5 +1,6 @@
 "use client"
 
+import { useUser } from "@/components/auth/user-context"
 import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -18,6 +19,81 @@ const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 
+function numberToIndianCurrencyWords(amount: number): string {
+  if (isNaN(amount)) return "";
+
+  const ones = [
+    "", "One", "Two", "Three", "Four", "Five", "Six",
+    "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+    "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"
+  ];
+
+  const tens = [
+    "", "", "Twenty", "Thirty", "Forty",
+    "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+  ];
+
+  const convertBelowThousand = (num: number): string => {
+    let str = "";
+
+    if (num >= 100) {
+      str += ones[Math.floor(num / 100)] + " Hundred ";
+      num %= 100;
+    }
+
+    if (num >= 20) {
+      str += tens[Math.floor(num / 10)] + " ";
+      num %= 10;
+    }
+
+    if (num > 0) {
+      str += ones[num] + " ";
+    }
+
+    return str.trim();
+  };
+
+  const convert = (num: number): string => {
+    if (num === 0) return "Zero";
+
+    let result = "";
+
+    if (Math.floor(num / 10000000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 10000000)) + " Crore ";
+      num %= 10000000;
+    }
+
+    if (Math.floor(num / 100000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 100000)) + " Lakh ";
+      num %= 100000;
+    }
+
+    if (Math.floor(num / 1000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 1000)) + " Thousand ";
+      num %= 1000;
+    }
+
+    if (num > 0) {
+      result += convertBelowThousand(num);
+    }
+
+    return result.trim();
+  };
+
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+
+  let words = convert(rupees) + " Rupees";
+
+  if (paise > 0) {
+    words += " and " + convert(paise) + " Paise";
+  }
+
+  words += " Only";
+
+  return words;
+}
 interface QuotationItem {
   id: string
   type: "product" | "service"
@@ -53,12 +129,12 @@ export default function NewSalesInvoicePage() {
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const editId = searchParams.get("id")
-
+  const { user } = useUser()
   const [activeTab, setActiveTab] = useState("quotation")
   const [loading, setLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [selectedBankAccount, setSelectedBankAccount] = useState<any>(null)
-
+  const [errors, setErrors] = useState<any>({})
   // Data
   const [clients, setClients] = useState<Client[]>([])
   const [items, setItems] = useState<QuotationItem[]>([
@@ -132,14 +208,18 @@ export default function NewSalesInvoicePage() {
   }>>([])
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0])
   const [dueDate, setDueDate] = useState("")
-
+  const [loadingClients, setLoadingClients] = useState(false);
   useEffect(() => {
     loadData()
     if (editId) {
       loadInvoiceForEdit(editId)
     }
   }, [])
-
+  useEffect(() => {
+    if (user?.name) {
+      setCompanyName(user.name)
+    }
+  }, [user])
   useEffect(() => {
     if (selectedClientId) {
       const client = clients.find(c => c._id === selectedClientId)
@@ -147,7 +227,7 @@ export default function NewSalesInvoicePage() {
     } else {
       setSelectedClientDetails(null)
     }
-  }, [])
+  }, [selectedClientId, clients])
 
   const loadData = async () => {
     try {
@@ -162,11 +242,11 @@ export default function NewSalesInvoicePage() {
 
       setClients(clientsData.filter((c: any) => c.status === "active"))
       setMasterItems(itemsData.filter((i: any) => i.isActive))
-      setQuotations(quotationsData.filter((q: any) => q.isActive === "active" && q.status !== "confirmed"))
+      setQuotations(quotationsData.filter((q: any) => q.isActive === "active" && q.status === "accepted"))
       setTaxRates(taxRatesData || [])
       setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
       if (companyData?.company) {
-        setCompanyName(companyData.company.companyName || companyData.company.name || "")
+        // setCompanyName(companyData.company.companyName || companyData.company.name || "")
         setSellerState(companyData.company.state || "")
       }
 
@@ -187,7 +267,40 @@ export default function NewSalesInvoicePage() {
       toast({ title: "Error", description: "Failed to load initial data", variant: "destructive" })
     }
   }
+  const validateDirectInvoice = () => {
+    const newErrors: any = {}
 
+    if (!invoiceDate) {
+      newErrors.invoiceDate = "Invoice date is required"
+    }
+
+    if (!dueDate) {
+      newErrors.dueDate = "Due date is required"
+    }
+
+    if (!selectedBankAccount) {
+      newErrors.bank = "Bank account is required"
+    }
+
+    if (!selectedClientId) {
+      newErrors.client = "Client is required"
+    }
+
+    const validItems = items.filter(
+      (item) =>
+        item.itemName &&
+        item.quantity > 0 &&
+        item.price > 0
+    )
+
+    if (validItems.length === 0) {
+      newErrors.items = "At least one valid item is required"
+    }
+
+    setErrors(newErrors)
+
+    return Object.keys(newErrors).length === 0
+  }
   const loadInvoiceForEdit = async (id: string) => {
     try {
       setLoading(true)
@@ -410,9 +523,58 @@ export default function NewSalesInvoicePage() {
     const total = subtotal + taxAmount;
     return { subtotal, totalDiscount, taxAmount, total };
   }
+  useEffect(() => {
+    if (!invoiceDate) return
 
+    const selectedDate = new Date(invoiceDate)
+    selectedDate.setDate(selectedDate.getDate() + 7)
+
+    const formatted = selectedDate.toISOString().split("T")[0]
+
+    setDueDate(formatted)
+  }, [invoiceDate])
+  const validateQuotationInvoice = () => {
+  const newErrors: any = {}
+
+  if (!selectedQuotationId) {
+    newErrors.quotation = "Please select a quotation"
+  }
+
+  if (!invoiceDate) {
+    newErrors.invoiceDate = "Invoice date is required"
+  }
+
+  if (!dueDate) {
+    newErrors.dueDate = "Due date is required"
+  }
+
+  if (invoiceDate && dueDate) {
+    const inv = new Date(invoiceDate)
+    const due = new Date(dueDate)
+
+    if (due < inv) {
+      newErrors.dueDate = "Due date cannot be before invoice date"
+    }
+  }
+
+  if (!selectedBankAccount) {
+    newErrors.bank = "Bank account is required"
+  }
+
+  setErrors(newErrors)
+
+  return Object.keys(newErrors).length === 0
+}
   // Create Invoice from Quotation
   const handleCreateFromQuotation = async () => {
+      if (!validateQuotationInvoice()) {
+    toast({
+      title: "Validation Error",
+      description: "Please fix required fields",
+      variant: "destructive",
+    })
+    return
+  }
     if (!quotationDetails) return
 
     setLoading(true)
@@ -426,7 +588,7 @@ export default function NewSalesInvoicePage() {
         clientId: quotationDetails.clientId,
         clientName: quotationDetails.clientName,
         clientAddress: quotationDetails.clientAddress,
-        clientPhone: quotationDetails.clientContact, // mapping
+        clientContact: quotationDetails.clientContact, // mapping
         clientEmail: quotationDetails.clientEmail,
 
         items: quotationDetails.items,
@@ -436,7 +598,7 @@ export default function NewSalesInvoicePage() {
         balanceAmount: quotationDetails.grandTotal,
 
         date: new Date().toISOString(),
-        status: "pending",
+        status: "not collected",
 
         terms: terms,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
@@ -462,7 +624,7 @@ export default function NewSalesInvoicePage() {
 
       // Optional but recommended
       await api.quotations.update(quotationDetails._id!, {
-        status: "confirmed",
+        status: "invoice created",
         salesInvoiceId: result.data._id.toString(),
         convertedAt: new Date(),
       })
@@ -507,7 +669,7 @@ export default function NewSalesInvoicePage() {
         clientId: selectedClientId,
         clientName: client?.name || "",
         clientAddress: client?.address || "",
-        clientPhone: client?.phone || "",
+        clientContact: client?.phone || "",
         clientEmail: client?.email || "",
         items: invoiceItems,
         subtotal: directTotals.subtotal,
@@ -541,10 +703,10 @@ export default function NewSalesInvoicePage() {
   const quotationTotal = items.reduce((sum, item) => sum + item.total, 0)
   // Create Direct Invoice
   const handleCreateDirect = async () => {
-    if (!selectedClientId || items.length === 0) {
+    if (!validateDirectInvoice()) {
       toast({
-        title: "Error",
-        description: "Please select client and add items",
+        title: "Validation Error",
+        description: "Please fix required fields",
         variant: "destructive",
       })
       return
@@ -566,7 +728,7 @@ export default function NewSalesInvoicePage() {
         clientId: selectedClientId,
         clientName: client?.name || "",
         clientAddress: `${client?.address}, ${client?.city}, ${client?.state}, ${client?.pincode}` || "",
-        clientPhone: client?.phone || "",
+        clientContact: client?.phone || "",
         clientEmail: client?.email || "",
 
         items: items.map((item) => ({
@@ -593,7 +755,7 @@ export default function NewSalesInvoicePage() {
         description: invoiceDescription,
         date: new Date(invoiceDate).toISOString(),
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        status: "Not Cleared",
+        status: "not collected",
         terms,
         createdBy: companyName,
         isActive: "active",
@@ -631,6 +793,20 @@ export default function NewSalesInvoicePage() {
   }
 
   const directTotals = calculateTotals(invoiceItems)
+  const quotationOptions = quotations.map((q) => ({
+    value: q._id,
+    label: `${q.quotationNumber} - ${q.clientName}`,
+    quotationNumber: q.quotationNumber,
+    email: q.clientEmail,
+    phone: q.clientContact,
+  }));
+  // Transform your backend array exactly as before
+  const clientOptions = clients.map((c) => ({
+    value: String(c._id),
+    label: c.clientName || c.name || "Unnamed",
+    email: c.email,
+    phone: c.phone,
+  }));
 
   return (
     <div className="container mx-auto py-6">
@@ -656,10 +832,10 @@ export default function NewSalesInvoicePage() {
             {/* FROM QUOTATION TAB */}
             <TabsContent value="quotation" className="space-y-4 mt-4">
               <div className="space-y-4">
-                <div className="flex flex-row justify-between">
-                  <div>
-                    <Label>Select Quotation</Label>
-                    <Select value={selectedQuotationId} onValueChange={handleQuotationSelect}>
+                <div className="flex flex-row gap-4">
+                  <div className="w-full">
+                    <Label required>Select Quotation</Label>
+                    {/* <Select value={selectedQuotationId} onValueChange={handleQuotationSelect}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a quotation" />
                       </SelectTrigger>
@@ -675,16 +851,34 @@ export default function NewSalesInvoicePage() {
                           </div>
                         )}
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                    <OwnSearchableSelect
+                      options={quotationOptions}
+                      value={selectedQuotationId}
+                      onValueChange={handleQuotationSelect}
+                      placeholder="Search by quotation no, client, email, or phone..."
+                      emptyText="No quotations found"
+                    />
+                    {errors.quotation && (
+  <p className="text-red-500 text-xs mt-1">
+    {errors.quotation}
+  </p>
+)}
                   </div>
-                  <div className="flex flex-row gap-4">
+                  <div className="flex flex-row gap-4 w-full">
                     <div>
-                      <Label>Invoice Date</Label>
+                      <Label required>Invoice Date</Label>
                       <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                      {errors.invoiceDate && (
+                        <p className="text-red-500 text-xs mt-1">{errors.invoiceDate}</p>
+                      )}
                     </div>
                     <div>
-                      <Label>Due Date</Label>
+                      <Label required>Due Date</Label>
                       <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                      {errors.dueDate && (
+                        <p className="text-red-500 text-xs mt-1">{errors.dueDate}</p>
+                      )}
                     </div>
                     <div>
                       <Label>Created By</Label>
@@ -700,6 +894,7 @@ export default function NewSalesInvoicePage() {
                       <div>Date: {new Date(quotationDetails.date).toLocaleDateString()}</div>
                       <div>Total Amount: ₹{quotationDetails.grandTotal.toLocaleString()}</div>
                       <div>Items: {quotationDetails.items.length}</div>
+                      <div>Amount In Words : {numberToIndianCurrencyWords(quotationDetails.grandTotal)}</div>
                     </div>
                   </div>
                 )}
@@ -727,6 +922,9 @@ export default function NewSalesInvoicePage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.bank && (
+                    <p className="text-red-500 text-xs mt-1">{errors.bank}</p>
+                  )}
                   {selectedBankAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
                       <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
@@ -781,7 +979,8 @@ export default function NewSalesInvoicePage() {
                       theme="snow"
                       value={terms}
                       onChange={setTerms}
-                      placeholder="Enter terms and conditions..."
+                      placeholder="No Terms and conditions Found"
+                      readOnly={true}
                     />
                   </div>
 
@@ -800,10 +999,11 @@ export default function NewSalesInvoicePage() {
             {/* DIRECT INVOICE TAB */}
             <TabsContent value="direct" className="space-y-4 mt-4">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 items-center">
                   <div>
-                    <Label>Client *</Label>
-                    <Select value={selectedClientId || ""} onValueChange={setSelectedClientId}>
+
+                    <Label required>Client</Label>
+                    {/* <Select value={selectedClientId || ""} onValueChange={setSelectedClientId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -814,16 +1014,37 @@ export default function NewSalesInvoicePage() {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                    <OwnSearchableSelect
+                      options={clientOptions}
+                      value={selectedClientId}
+                      onValueChange={setSelectedClientId}
+                      placeholder="Search and select a client..."
+                      searchPlaceholder="Type to filter..."
+                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                    />
+                    {errors.client && (
+                      <p className="text-red-500 text-xs mt-1">{errors.client}</p>
+                    )}
                   </div>
                   <div className="flex flex-row gap-4">
                     <div>
-                      <Label>Invoice Date</Label>
+                      <Label required>Invoice Date</Label>
                       <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                      {errors.invoiceDate && (
+  <p className="text-red-500 text-xs mt-1">
+    {errors.invoiceDate}
+  </p>
+)}
                     </div>
                     <div>
-                      <Label>Due Date</Label>
+                      <Label required>Due Date</Label>
                       <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                      {errors.dueDate && (
+  <p className="text-red-500 text-xs mt-1">
+    {errors.dueDate}
+  </p>
+)}
                     </div>
                     <div>
                       <Label>Created By</Label>
@@ -908,6 +1129,9 @@ export default function NewSalesInvoicePage() {
                               <p className="text-xs text-gray-500 mt-1">
                                 Showing {item.type === "product" ? "products" : "services"} only
                               </p>
+                              {errors.items && (
+                                <p className="text-red-500 text-sm mt-2">{errors.items}</p>
+                              )}
                             </div>
                             <div>
                               <Label>Description</Label>
@@ -917,6 +1141,7 @@ export default function NewSalesInvoicePage() {
                                 placeholder="Item description"
                                 rows={2}
                                 className="bg-white"
+                                disabled
                               />
                             </div>
                             <div className="grid grid-cols-3 gap-3">
@@ -940,6 +1165,7 @@ export default function NewSalesInvoicePage() {
                                   onChange={(e) => handleUpdateItem(item.id, "price", Number.parseFloat(e.target.value) || 0)}
                                   min="0"
                                   step="0.01"
+                                  disabled
                                   className="bg-white"
                                 />
                               </div>
@@ -1062,6 +1288,13 @@ export default function NewSalesInvoicePage() {
                           <span>Grand Total:</span>
                           <span className="text-purple-600">₹{quotationTotal.toLocaleString()}</span>
                         </div>
+                        {/* AMOUNT IN WORDS */}
+                        <p className="mt-2 text-sm text-gray-600 italic">
+                          Amount in words:{" "}
+                          <span className="font-medium text-gray-800">
+                            {numberToIndianCurrencyWords(quotationTotal)}
+                          </span>
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1199,7 +1432,7 @@ export default function NewSalesInvoicePage() {
                     </div>
                   </div>
                 )} */}
-                                <div>
+                <div>
                   <Label>
                     Bank Account <span className="text-red-500">*</span>
                   </Label>
@@ -1223,6 +1456,11 @@ export default function NewSalesInvoicePage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.bank && (
+  <p className="text-red-500 text-xs mt-1">
+    {errors.bank}
+  </p>
+)}
                   {selectedBankAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
                       <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
@@ -1278,7 +1516,8 @@ export default function NewSalesInvoicePage() {
                       theme="snow"
                       value={terms}
                       onChange={setTerms}
-                      placeholder="Enter terms and conditions..."
+                      placeholder="No terms and conditions Found..."
+                      readOnly={true}
                     />
                   </div>
 

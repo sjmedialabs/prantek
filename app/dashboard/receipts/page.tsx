@@ -368,13 +368,13 @@ export default function ReceiptsPage() {
                       <TableCell>{receipt.salesInvoiceNumber}</TableCell>
                       <TableCell className="font-semibold">₹{(receipt?.ReceiptAmount || 0).toLocaleString()}</TableCell>
                       <TableCell>
-                        <Badge variant={receipt.paymentType === "full" ? "default" : "secondary"}>
+                        <Badge variant={receipt.paymentType === "Full Payment" ? "default" : "secondary"}>
                           {formatPaymentType(receipt.paymentType)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{receipt.paymentMethod}</TableCell>
+                      <TableCell><span className="capitalize">{receipt.paymentMethod}</span></TableCell>
                       <TableCell>
-                        <Badge variant={receipt.status === ("cleared") ? "default" : "secondary"}>
+                        <Badge variant={receipt.status === ("cleared") ? "default" : "secondary"} className="capitalize">
                           {formatStatus(receipt.status)}
                         </Badge>
                       </TableCell>
@@ -386,7 +386,7 @@ export default function ReceiptsPage() {
                               </Button>
                             </Link>
                            {
-                            (hasPermission("edit_receipts")) && (
+                            (hasPermission("edit_receipts")) && receipt.status !== "cleared" &&(
                                <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
                               <Button variant="ghost" size="sm" title="Edit Receipt">
                                 <Edit className="h-4 w-4" />

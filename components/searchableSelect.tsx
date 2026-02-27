@@ -5,7 +5,14 @@ import { Combobox, Transition } from "@headlessui/react";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
 import { cn } from "@/lib/utils";
 
-type Option = { value: string; label: string };
+type Option = {
+  value: string;
+  label: string;
+  email?: string;
+  phone?: string;
+  quotationNumber?: string;
+  invoiceNumber?: string;
+};
 
 interface SearchableSelectProps {
   options: Option[];
@@ -26,11 +33,21 @@ export function OwnSearchableSelect({
 }: SearchableSelectProps) {
   const [query, setQuery] = React.useState("");
 
-  const filtered = React.useMemo(() => {
-    if (!query) return options;
-    const q = query.toLowerCase();
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-  }, [options, query]);
+const filtered = React.useMemo(() => {
+  if (!query) return options;
+
+  const q = query.toLowerCase();
+
+  return options.filter((o) => {
+    return (
+      o.label?.toLowerCase().includes(q) ||
+      o.email?.toLowerCase().includes(q) ||
+      o.phone?.toLowerCase().includes(q) ||
+      o.quotationNumber?.toLowerCase().includes(q) ||
+      o.invoiceNumber?.toLowerCase().includes(q)
+    );
+  });
+}, [options, query]);
 
   const selected = React.useMemo(
     () => options.find((o) => o.value === value) ?? null,

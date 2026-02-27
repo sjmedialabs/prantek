@@ -142,7 +142,7 @@ export default function SalesInvoiceDetailsPage() {
             Back
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">Invoice {invoice.salesInvoiceNumber}</h1>
-          <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
+          <Badge className={getStatusColor(invoice.status)}><span className="capitalize">{invoice.status}</span></Badge>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleDownload} title="While downloading please cross verify Your owned company Detils in settings">
@@ -180,8 +180,8 @@ export default function SalesInvoiceDetailsPage() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Client</p>
-                  <p className="font-medium">{invoice.clientName}</p>
+                  <p className="text-sm text-gray-500 mb-1">Created By</p>
+                  <p className="font-medium capitalize">{invoice.createdBy}</p>
                 </div>
               </div>
 
@@ -304,10 +304,10 @@ export default function SalesInvoiceDetailsPage() {
                   <p className="font-medium">{invoice.clientEmail}</p>
                 </div>
               )}
-              {invoice.clientPhone && (
+              {invoice.clientContact && (
                 <div>
                   <p className="text-gray-500">Phone</p>
-                  <p className="font-medium">{invoice.clientPhone}</p>
+                  <p className="font-medium">{invoice.clientContact}</p>
                 </div>
               )}
               {invoice.clientAddress && (

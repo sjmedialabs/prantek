@@ -54,7 +54,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
 
     if (!body.receiptNumber) {
-      body.receiptNumber = await generateNextNumber("receipts", "RC", filterUserId, clientName)
+      body.receiptNumber = await generateNextNumber("receipts", "REC")
     }
 
     const receipt = await mongoStore.create("receipts", { ...body, userId: filterUserId })
