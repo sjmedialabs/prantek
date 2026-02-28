@@ -90,6 +90,7 @@ export default function DashboardPage() {
     pendingReceipt:0,
     pendingInvoices: 0,
     billsDue: 0,
+    salesInvoices: 0,
     activeClients: 0,
     activeVendors: 0,
     activeQuotations: 0,
@@ -262,7 +263,7 @@ const badDept = filteredReceipts.reduce(
 )
 
       console.log("badDept", badDept)
-      const receivables = pendingReceiptAmount - badDept
+      const receivables = filteredSalesInvoice.reduce((sum: number, inv: any) => sum + (inv.balanceAmount || 0), 0)
       // ✅ payables (filtered by date range)
       const recentPayments = (
         Array.isArray(filteredPayments) ? filteredPayments : filteredPayments?.data || []
@@ -324,6 +325,7 @@ const badDept = filteredReceipts.reduce(
         payables,
         activeUsers: filteredEmployees.length,
         monthlyRevenue,
+        salesInvoices: filteredSalesInvoice.length,
         Assets: Assets,
         assetsManaged: assetsManaged.length,
         growthRate: Number(growthRate.toFixed(2)),
@@ -420,7 +422,7 @@ const badDept = filteredReceipts.reduce(
     {
       title: "Receivables",
       value: formatCurrency(stats.receivables),
-      change: `${stats.pendingReceipt} pending receipts`,
+      change: `${stats.salesInvoices} Total Sales Invoices`,
       icon: ArrowUpRight,
       color: "text-blue-600",
     },
