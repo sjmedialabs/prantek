@@ -6,14 +6,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, FileText, Filter, X, Eye } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" 
+import { Plus, Search, FileText, Filter, X, Eye, Ban, ShieldOff } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Edit } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { SalesInvoice } from "@/lib/models/types"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 // interface SalesInvoice {
 //   _id: string
@@ -43,6 +46,12 @@ export default function SalesInvoicesPage() {
   const [dateToFilter, setDateToFilter] = useState("")
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
+
+  const [isBadDebtDialogOpen, setIsBadDebtDialogOpen] = useState(false)
+  const [selectedInvoiceForBadDebt, setSelectedInvoiceForBadDebt] = useState<SalesInvoice | null>(null)
+  const [badDebtAmount, setBadDebtAmount] = useState(0)
+  const [badDebtReason, setBadDebtReason] = useState("")
+
   useEffect(() => {
     loadInvoices()
   }, [])
@@ -126,6 +135,88 @@ export default function SalesInvoicesPage() {
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" })
+    }
+  }
+
+  const handleCancelInvoice = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this invoice?")) return
+
+    try {
+      const res = await fetch(`/api/salesInvoice/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled', balanceAmount: 0 })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: "Success", description: "Invoice cancelled" })
+        loadInvoices()
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to cancel invoice", variant: "destructive" })
+    }
+  }
+
+  const handleOpenBadDebtDialog = (invoice: SalesInvoice) => {
+    setSelectedInvoiceForBadDebt(invoice)
+    setBadDebtAmount(invoice.balanceAmount || 0)
+    setBadDebtReason("test")
+    setIsBadDebtDialogOpen(true)
+  }
+
+  const handleBadDebtSubmit = async () => {
+    if (!selectedInvoiceForBadDebt) return
+    if (badDebtAmount <= 0) {
+      toast({ title: "Error", description: "Bad debt amount must be greater than 0.", variant: "destructive" })
+      return
+    }
+    if (badDebtAmount > (selectedInvoiceForBadDebt.balanceAmount || 0)) {
+      toast({ title: "Error", description: "Bad debt amount cannot be greater than the balance amount.", variant: "destructive" })
+      return
+    }
+
+    const newBalanceAmount = (selectedInvoiceForBadDebt.balanceAmount || 0) - badDebtAmount
+    const newStatus = newBalanceAmount <= 0 ? 'collected' : selectedInvoiceForBadDebt.status
+
+    try {
+      const res = await fetch(`/api/salesInvoice/${selectedInvoiceForBadDebt._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          badDeptAmount: (selectedInvoiceForBadDebt.badDeptAmount || 0) + badDebtAmount,
+          badDeptReason: badDebtReason,
+          balanceAmount: newBalanceAmount,
+          status: newStatus
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: "Success", description: "Bad debt recorded and invoice updated." })
+        setIsBadDebtDialogOpen(false)
+        loadInvoices()
+      } else {
+        throw new Error(data.error || "API request failed")
+      }
+    } catch (error) {
+      console.error("Failed to update bad debt", error)
+      toast({ title: "Error", description: "Failed to record bad debt.", variant: "destructive" })
+    }
+  }
+
+  const getStatusBadgeClass = (status?: string) => {
+    switch (status) {
+      case "collected":
+        return "bg-green-100 text-green-800"
+      case "not collected":
+        return "bg-blue-100 text-blue-800"
+      case "partially collected":
+        return "bg-yellow-100 text-yellow-800"
+      case "overdue":
+        return "bg-orange-100 text-orange-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
   }
 
@@ -299,12 +390,12 @@ export default function SalesInvoicesPage() {
                         <TableCell>{invoice.quotationNumber || invoice.quotationId || '-'}</TableCell>
                         <TableCell className="font-semibold">₹{(invoice.balanceAmount || 0).toLocaleString()}</TableCell>
                         <TableCell>
-                            <Badge variant={invoice.status === "collected" ? "default" : invoice.status === "not collected" ? "secondary" : "outline"} className="capitalize">
-                            {invoice.status}
+                            <Badge className={`${getStatusBadgeClass(invoice.status)} capitalize`}>
+                              {invoice.status}
                             </Badge>
                         </TableCell>
                         <TableCell>
-                           <div className="flex space-x-2 items-center">
+                           <div className="flex space-x-2 items-center justify-center">
                                 <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
                                 <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" /></Button>
                                 </Link>
@@ -315,12 +406,34 @@ export default function SalesInvoicesPage() {
                                     </Button>
                                   </Link>
                                 )}
+                                {hasPermission("edit_sales_invoice") && invoice.status === "not collected" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Cancel Invoice"
+                                    className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                                    onClick={() => handleCancelInvoice(invoice._id)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {hasPermission("edit_sales_invoice") && invoice.status === "partially collected" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Mark as Bad Debt"
+                                    className="text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100"
+                                    onClick={() => handleOpenBadDebtDialog(invoice)}
+                                  >
+                                    <ShieldOff className="h-4 w-4" />
+                                  </Button>
+                                )}
                            
-                         {hasPermission("edit_sales_invoice") &&( <Switch
+                         {/* {hasPermission("edit_sales_invoice") &&( <Switch
                             checked={invoice.isActive !== "deactive"}
                             onCheckedChange={() => handleStatusToggle(invoice._id, invoice.isActive !== "deactive")}
                             title="Change Status(Active/Inactive)"
-                          />)}
+                          />)} */}
                            </div>
                         </TableCell>
                         </TableRow>
@@ -356,6 +469,50 @@ export default function SalesInvoicesPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isBadDebtDialogOpen} onOpenChange={setIsBadDebtDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Record Bad Debt</DialogTitle>
+                <DialogDescription>
+                    Write off a portion of the balance for invoice {selectedInvoiceForBadDebt?.salesInvoiceNumber}.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="badDebtAmount">Bad Debt Amount</Label>
+                    <Input
+                        id="badDebtAmount"
+                        type="number"
+                        value={badDebtAmount}
+                        onChange={(e) => setBadDebtAmount(Number(e.target.value))}
+                        max={selectedInvoiceForBadDebt?.balanceAmount || 0}
+                    />
+                    <p className="text-xs text-gray-500">
+                        Current balance: ₹{(selectedInvoiceForBadDebt?.balanceAmount || 0).toLocaleString()}
+                    </p>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="badDebtReason">Reason</Label>
+                    <Textarea
+                        id="badDebtReason"
+                        value={badDebtReason}
+                        onChange={(e) => setBadDebtReason(e.target.value)}
+                        placeholder="Enter reason for writing off this amount..."
+                    />
+                </div>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                    <p>New Balance after this action will be: 
+                        <span className="font-bold"> ₹{((selectedInvoiceForBadDebt?.balanceAmount || 0) - badDebtAmount).toLocaleString()}</span>
+                    </p>
+                </div>
+            </div>
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsBadDebtDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleBadDebtSubmit}>Confirm</Button>
+            </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

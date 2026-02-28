@@ -241,6 +241,17 @@ export default function SalesInvoiceDetailsPage() {
                     <span>Grand Total</span>
                     <span>₹{invoice?.grandTotal?.toLocaleString()}</span>
                   </div>
+                  {invoice.badDeptAmount > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm text-orange-500">
+                        <span>Bad Debt Written Off</span>
+                        <span>- ₹{invoice.badDeptAmount.toLocaleString()}</span>
+                      </div>
+                      {invoice.badDeptReason && (
+                        <p className="text-xs text-gray-500 text-right">Reason: {invoice.badDeptReason}</p>
+                      )}
+                    </>
+                  )}
                   {invoice.balanceAmount > 0 && (
                     <div className="flex justify-between text-sm font-medium text-red-600 mt-2">
                       <span>Balance Due</span>
