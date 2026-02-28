@@ -14,6 +14,82 @@ import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
 import type { Receipt } from "@/lib/models/types"
 
+
+function numberToIndianCurrencyWords(amount: number): string {
+  if (isNaN(amount)) return "";
+
+  const ones = [
+    "", "One", "Two", "Three", "Four", "Five", "Six",
+    "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+    "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"
+  ];
+
+  const tens = [
+    "", "", "Twenty", "Thirty", "Forty",
+    "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+  ];
+
+  const convertBelowThousand = (num: number): string => {
+    let str = "";
+
+    if (num >= 100) {
+      str += ones[Math.floor(num / 100)] + " Hundred ";
+      num %= 100;
+    }
+
+    if (num >= 20) {
+      str += tens[Math.floor(num / 10)] + " ";
+      num %= 10;
+    }
+
+    if (num > 0) {
+      str += ones[num] + " ";
+    }
+
+    return str.trim();
+  };
+
+  const convert = (num: number): string => {
+    if (num === 0) return "Zero";
+
+    let result = "";
+
+    if (Math.floor(num / 10000000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 10000000)) + " Crore ";
+      num %= 10000000;
+    }
+
+    if (Math.floor(num / 100000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 100000)) + " Lakh ";
+      num %= 100000;
+    }
+
+    if (Math.floor(num / 1000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 1000)) + " Thousand ";
+      num %= 1000;
+    }
+
+    if (num > 0) {
+      result += convertBelowThousand(num);
+    }
+
+    return result.trim();
+  };
+
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+
+  let words = convert(rupees) + " Rupees";
+
+  if (paise > 0) {
+    words += " and " + convert(paise) + " Paise";
+  }
+
+  words += " Only";
+
+  return words;
+}
 export default function ReceiptDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -325,17 +401,29 @@ export default function ReceiptDetailsPage() {
               <span className="text-gray-600">Grand Total</span>
               <span className="font-semibold">
                 ₹{(receipt?.invoicegrandTotal || receipt?.total || 0).toLocaleString()}
+                
               </span>
             </div>
 
             <Separator />
-
+  {(receipt as any).advanceAppliedAmount > 0 && (
+    <>
+              <div className="flex justify-between text-blue-600">
+                <span className="font-semibold">Advance Applied</span>
+                <span className="font-bold mb-2">
+                  ₹{(receipt as any).advanceAppliedAmount.toLocaleString()}
+                </span>
+                 
+              </div>  <Separator /></>
+            )}
             <div className="flex justify-between text-green-600">
               <span className="font-semibold">Receipt Amount(Paid)</span>
               <span className="font-bold">
                 ₹{(receipt.ReceiptAmount || 0).toLocaleString()}
               </span>
+           
             </div>
+                <span className="text-sm">In words: {numberToIndianCurrencyWords(receipt.ReceiptAmount || 0)}</span>
             {receipt?.badDeptAmount > 0 && (<>
               <Separator />
               <div className="flex justify-between text-green-600">
@@ -346,14 +434,6 @@ export default function ReceiptDetailsPage() {
               </div>
               <span className="text-gray-200 text-xs capitalize">{receipt.badDeptReason}</span>
             </>)}
-            {(receipt as any).advanceAppliedAmount > 0 && (
-              <div className="flex justify-between text-blue-600">
-                <span className="font-semibold">Advance Applied</span>
-                <span className="font-bold">
-                  ₹{(receipt as any).advanceAppliedAmount.toLocaleString()}
-                </span>
-              </div>
-            )}
 
             <Separator />
             {(receipt.invoiceBalance || receipt.balanceAmount || 0) > 0 && (

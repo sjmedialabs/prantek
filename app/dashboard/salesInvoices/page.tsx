@@ -406,7 +406,7 @@ export default function SalesInvoicesPage() {
                                     </Button>
                                   </Link>
                                 )}
-                                {hasPermission("edit_sales_invoice") && invoice.status === "not collected" && (
+                                {hasPermission("edit_sales_invoice") && ["not collected", "overdue"].includes(invoice.status) && (
                                   <Button
                                     variant="ghost"
                                     size="sm"

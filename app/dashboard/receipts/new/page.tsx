@@ -15,8 +15,83 @@ import { useToast } from "@/hooks/use-toast"
 import { Client, Item, Quotation, Receipt, TaxRate } from "@/lib/models/types"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
+import FileUpload from "@/components/file-upload"
 
+function numberToIndianCurrencyWords(amount: number): string {
+  if (isNaN(amount)) return "";
 
+  const ones = [
+    "", "One", "Two", "Three", "Four", "Five", "Six",
+    "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+    "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"
+  ];
+
+  const tens = [
+    "", "", "Twenty", "Thirty", "Forty",
+    "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+  ];
+
+  const convertBelowThousand = (num: number): string => {
+    let str = "";
+
+    if (num >= 100) {
+      str += ones[Math.floor(num / 100)] + " Hundred ";
+      num %= 100;
+    }
+
+    if (num >= 20) {
+      str += tens[Math.floor(num / 10)] + " ";
+      num %= 10;
+    }
+
+    if (num > 0) {
+      str += ones[num] + " ";
+    }
+
+    return str.trim();
+  };
+
+  const convert = (num: number): string => {
+    if (num === 0) return "Zero";
+
+    let result = "";
+
+    if (Math.floor(num / 10000000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 10000000)) + " Crore ";
+      num %= 10000000;
+    }
+
+    if (Math.floor(num / 100000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 100000)) + " Lakh ";
+      num %= 100000;
+    }
+
+    if (Math.floor(num / 1000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 1000)) + " Thousand ";
+      num %= 1000;
+    }
+
+    if (num > 0) {
+      result += convertBelowThousand(num);
+    }
+
+    return result.trim();
+  };
+
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+
+  let words = convert(rupees) + " Rupees";
+
+  if (paise > 0) {
+    words += " and " + convert(paise) + " Paise";
+  }
+
+  words += " Only";
+
+  return words;
+}
 interface QuotationItem {
   id: string
   type: "product" | "service"
@@ -53,6 +128,9 @@ export default function ReceiptsPage() {
   const { user } = useUser()
   const { toast } = useToast()
   const [selectedAccount, setSelectedAccount] = useState<any>(null)
+  const [screenshotUrl, setScreenshotUrl] = useState("")
+  const [scenario2ScreenshotUrl, setScenario2ScreenshotUrl] = useState("")
+  const [scenario3ScreenshotUrl, setScenario3ScreenshotUrl] = useState("")
   // Shared state
   const [salesInvoices, setSalesInvoices] = useState<any[]>([])
   const [selectedInvoice, setSelectedInvoice] = useState("")
@@ -155,15 +233,15 @@ export default function ReceiptsPage() {
       const advances = result.data.filter((r: any) =>
         r.receiptType === "advance" &&
         r.status === ("cleared") &&
-        !r.parentReceiptNumber
+        (r.balanceAmount === undefined ? r.ReceiptAmount > 0 : r.balanceAmount > 0)
       )
 
       setAdvanceReceipts(advances)
     }
   }
   useEffect(() => {
-    if (user?.name) {
-      setCompanyName(user.name)
+    if (user?.email) {
+      setCompanyName(user.email)
     }
   }, [user])
   const loadData = async () => {
@@ -196,7 +274,7 @@ export default function ReceiptsPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSalesInvoices(result.data.filter((i: any) => i.isActive === "active" && i.status !== "cleared"))
+        setSalesInvoices(result.data.filter((i: any) => i.isActive === "active" && i.status !== "collected"))
       }
     } catch (err) {
       console.error(err)
@@ -370,6 +448,22 @@ export default function ReceiptsPage() {
   const handleCreateFromInvoice = async () => {
     if (!invoiceDetails) return
 
+    // if (amountToPay <= 0) {
+    //   toast({ title: "Validation Error", description: "Paid amount must be greater than zero.", variant: "destructive" })
+    //   return
+    // }
+
+    if (selectedPaymentMethod.toLowerCase() !== 'cash') {
+      if (!referenceNumber) {
+        toast({ title: "Validation Error", description: "Reference number is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+      if (!selectedBankAcount) {
+        toast({ title: "Validation Error", description: "Bank account is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+    }
+
     setLoading(true)
 
     try {
@@ -406,6 +500,7 @@ export default function ReceiptsPage() {
 
         bankDetails: invoiceDetails.bankDetails || selectedBankAcount,
         referenceNumber,
+        screenshotUrl,
 
         status: selectedPaymentMethod.toLowerCase() === "cash" ? "cleared" : "received",
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || null,
@@ -433,6 +528,15 @@ export default function ReceiptsPage() {
           paidAmount: Number(invoiceDetails.paidAmount) + Number(receiptAmount),
           balanceAmount: invoiceBalance,
           status: invoiceBalance <= 0 ? "collected" : "partially collected",
+        }),
+      })
+            await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
+        method: "PUT", // or PATCH depending on your API
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          balanceAmount: (selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount) - advanceApplyAmount,
         }),
       })
 
@@ -523,7 +627,11 @@ export default function ReceiptsPage() {
     }
     setItems([...items, newItem])
   }
-
+const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
+  return taxRates.some(
+    (t) => t.type === type && Number(t.rate) === Number(rate) && t.isActive
+  )
+}
   // Scenario 2: Update item quantity/price
   const handleUpdateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
     console.log("Selected Item Id is:::", id)
@@ -540,68 +648,94 @@ export default function ReceiptsPage() {
             updatedItem.taxRate = 0
           }
 
-          if (field === "itemName") {
-            const masterItem = masterItems.find((i) => i.name === value)
+    if (field === "itemName") {
+  const masterItem = masterItems.find((i) => i._id === value)
 
-            if (masterItem) {
-              updatedItem.description = masterItem.description
-              updatedItem.price = masterItem.price
-              updatedItem.itemId = masterItem._id;
+  if (masterItem) {
+    updatedItem.description = masterItem.description ?? ""
+    updatedItem.price = masterItem.price ?? 0
+    updatedItem.itemId = masterItem._id
 
-              if (masterItem) {
+    const buyer = clients.find(c => c._id === selectedScenario2Client?._id)
+    const buyerState = buyer?.state || ""
 
-                // 🔹 Fetch seller & buyer states
-                const buyer = clients.find(c => c._id === setScenario2Client)
-                const buyerState = buyer?.state || ""
+    let cgst = 0
+    let sgst = 0
+    let igst = 0
 
-                // 🔹 Same state → CGST + SGST
-                if (sellerState && buyerState && sellerState.toLowerCase() === buyerState.toLowerCase()) {
-                  updatedItem.cgst = masterItem.cgst || 0
-                  updatedItem.sgst = masterItem.sgst || 0
-                  updatedItem.igst = 0
+    if (sellerState && buyerState &&
+        sellerState.toLowerCase() === buyerState.toLowerCase()) {
 
-                  updatedItem.taxRate = (masterItem.cgst || 0) + (masterItem.sgst || 0)
-                  updatedItem.taxName = "CGST + SGST"
-                }
-                // 🔹 Different state → IGST
-                else {
-                  updatedItem.cgst = 0
-                  updatedItem.sgst = 0
-                  updatedItem.igst = masterItem.igst || ((masterItem.cgst || 0) + (masterItem.sgst || 0))
+      // 🔹 Intra-state → CGST + SGST
+      if (masterItem.cgst && isTaxActive("CGST", masterItem.cgst)) {
+        cgst = masterItem.cgst
+      }
 
-                  updatedItem.taxRate = updatedItem.igst
-                  updatedItem.taxName = "IGST"
-                }
+      if (masterItem.sgst && isTaxActive("SGST", masterItem.sgst)) {
+        sgst = masterItem.sgst
+      }
 
-              } else {
+    } else {
 
-                updatedItem.cgst = 0
-                updatedItem.sgst = 0
-                updatedItem.igst = 0
-                updatedItem.taxRate = 0
-                updatedItem.taxName = ""
-              }
+      // 🔹 Inter-state → IGST
+      const igstRate =
+        masterItem.igst ||
+        ((masterItem.cgst || 0) + (masterItem.sgst || 0))
 
-            }
-          }
+      if (igstRate && isTaxActive("IGST", igstRate)) {
+        igst = igstRate
+      }
+    }
 
-          if (field === "cgst" || field === "sgst" || field === "igst") {
-            updatedItem.taxRate = (Number(updatedItem.cgst) || 0) + (Number(updatedItem.sgst) || 0) + (Number(updatedItem.igst) || 0)
+    updatedItem.cgst = cgst
+    updatedItem.sgst = sgst
+    updatedItem.igst = igst
+  }
+}
 
-            const taxParts = []
-            if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
-            if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
-            if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
-            updatedItem.taxName = taxParts.join(" + ")
-          }
+       if (field === "cgst" || field === "sgst" || field === "igst") {
 
-          updatedItem.amount = (updatedItem.price - updatedItem.discount) * updatedItem.quantity
-          updatedItem.taxAmount = (updatedItem.amount * updatedItem.taxRate) / 100
-          updatedItem.total = updatedItem.amount + updatedItem.taxAmount
+  let cgst = Number(updatedItem.cgst) || 0
+  let sgst = Number(updatedItem.sgst) || 0
+  let igst = Number(updatedItem.igst) || 0
+
+  // Validate active status again
+  if (cgst && !isTaxActive("CGST", cgst)) cgst = 0
+  if (sgst && !isTaxActive("SGST", sgst)) sgst = 0
+  if (igst && !isTaxActive("IGST", igst)) igst = 0
+
+  updatedItem.cgst = cgst
+  updatedItem.sgst = sgst
+  updatedItem.igst = igst
+}
+const taxRate =
+  (Number(updatedItem.cgst) || 0) +
+  (Number(updatedItem.sgst) || 0) +
+  (Number(updatedItem.igst) || 0)
+
+updatedItem.taxRate = taxRate
+
+const taxParts = []
+if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
+if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
+if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
+
+updatedItem.taxName = taxParts.join(" + ")
+
+updatedItem.amount =
+  (Number(updatedItem.price) - Number(updatedItem.discount || 0)) *
+  Number(updatedItem.quantity)
+
+updatedItem.taxAmount =
+  (updatedItem.amount * taxRate) / 100
+
+updatedItem.total =
+  updatedItem.amount + updatedItem.taxAmount
 
 
           return updatedItem
         }
+   
         return item
       }),
     )
@@ -633,10 +767,27 @@ export default function ReceiptsPage() {
       return
     }
 
+    const { subtotal, taxAmount, total } = calculateScenario2Totals(items)
+    const amountPaid = total - (advanceApplyAmount || 0)
+
+    if (amountPaid <= 0 && (advanceApplyAmount || 0) <= 0) {
+      toast({ title: "Validation Error", description: "Amount paid must be greater than zero.", variant: "destructive" })
+      return
+    }
+
+    if (amountPaid > 0 && scenario2PaymentMethod.toLowerCase() !== 'cash') {
+      if (!scenario2ReferenceNumber) {
+        toast({ title: "Validation Error", description: "Reference number is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+      if (!selectedAccount) {
+        toast({ title: "Validation Error", description: "Bank account is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+    }
+
     setLoading(true)
     try {
-      const { subtotal, taxAmount, total } = calculateScenario2Totals(items)
-      const amountPaid = parseFloat(scenario2AmountPaid) || 0
       const client = clients.find(c => c._id === scenario2Client)
 
       const receiptData = {
@@ -651,15 +802,16 @@ export default function ReceiptsPage() {
         taxAmount,
         total,
         ReceiptAmount: amountPaid,
-        balanceAmount: total - amountPaid - (advanceApplyAmount || 0),
-        paymentType: (amountPaid + (advanceApplyAmount || 0)) >= total ? "Full Payment" : "Partial Payment",
+        balanceAmount: 0,
+        paymentType: "Full Payment",
         paymentMethod: scenario2PaymentMethod,
         referenceNumber: scenario2ReferenceNumber,
+        screenshotUrl: scenario2ScreenshotUrl,
         bankDetails: selectedAccount,
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || null,
         advanceAppliedAmount: advanceApplyAmount || 0,
         date: new Date().toISOString(),
-        status: `${scenario2PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "Pending"}`,
+        status: `${scenario2PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
         createdBy: companyName
       }
@@ -676,7 +828,8 @@ export default function ReceiptsPage() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            parentReceiptNumber: result.data.receiptNumber
+            parentReceiptNumber: result.data.receiptNumber,
+            balanceAmount: (selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount) - advanceApplyAmount
           })
         })
       }
@@ -701,6 +854,23 @@ export default function ReceiptsPage() {
       return
     }
 
+    const amountPaid = parseFloat(scenario3AmountPaid) || 0
+    if (amountPaid <= 0) {
+      toast({ title: "Validation Error", description: "Amount paid must be greater than zero.", variant: "destructive" })
+      return
+    }
+
+    if (scenario3PaymentMethod.toLowerCase() !== 'cash') {
+      if (!scenario3ReferenceNumber) {
+        toast({ title: "Validation Error", description: "Reference number is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+      if (!selectedAccount) {
+        toast({ title: "Validation Error", description: "Bank account is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+    }
+
     setLoading(true)
     try {
       const totalAmount = parseFloat(scenario3Amount)
@@ -723,9 +893,10 @@ export default function ReceiptsPage() {
         paymentType: amountPaid < totalAmount ? "Partial Payment" : "Full Payment",
         paymentMethod: scenario3PaymentMethod,
         bankDetails: selectedAccount,
+        screenshotUrl: scenario3ScreenshotUrl,
         referenceNumber: scenario3ReferenceNumber,
         date: new Date().toISOString(),
-        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "Pending"}`,
+        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
         createdBy: companyName
       }
@@ -757,6 +928,23 @@ export default function ReceiptsPage() {
       return
     }
 
+    const amountPaid = parseFloat(scenario3AmountPaid) || 0
+    if (amountPaid <= 0) {
+      toast({ title: "Validation Error", description: "Amount paid must be greater than zero.", variant: "destructive" })
+      return
+    }
+
+    if (scenario3PaymentMethod.toLowerCase() !== 'cash') {
+      if (!scenario3ReferenceNumber) {
+        toast({ title: "Validation Error", description: "Reference number is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+      if (!selectedAccount) {
+        toast({ title: "Validation Error", description: "Bank account is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+    }
+
     setLoading(true)
     try {
 
@@ -775,13 +963,14 @@ export default function ReceiptsPage() {
         taxAmount: 0,
         // total: totalAmount,
         ReceiptAmount: amountPaid,
-        // balanceAmount: totalAmount - amountPaid,
+        balanceAmount: amountPaid,
         paymentType: "Advance Payment",
         paymentMethod: scenario3PaymentMethod,
         bankDetails: selectedAccount,
+        screenshotUrl: scenario3ScreenshotUrl,
         referenceNumber: scenario3ReferenceNumber,
         date: new Date().toISOString(),
-        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "Pending"}`,
+        status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
         createdBy: companyName
       }
@@ -821,6 +1010,8 @@ export default function ReceiptsPage() {
   }));
   const selectedScenario2Client =
     clients.find((c) => c._id === scenario2Client) || null;
+      const selectedScenario3Client =
+    clients.find((c) => c._id === scenario3Client) || null;
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -847,7 +1038,8 @@ export default function ReceiptsPage() {
             {/* Scenario 1: From SalesInvoice */}
             <TabsContent value="invoice" className="space-y-4">
               <div className="space-y-4">
-                <div>
+                <div className="flex flex-row gap-2">
+                <div className="w-full">
                   <Label>Select SalesInvoice</Label>
                   {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
                     <SelectTrigger>
@@ -870,7 +1062,11 @@ export default function ReceiptsPage() {
                     emptyText="No invoice found"
                   />
                 </div>
-                {advanceReceipts.length > 0 && (
+                <div className="w-full">
+                    <Label>Created By</Label>
+                    <Input value={companyName} readOnly className="bg-gray-100" />
+                  </div></div>
+                {advanceReceipts.filter(adv => !invoiceDetails || adv.clientId === invoiceDetails.clientId).length > 0 && (
                   <div>
                     <Label>Apply Advance Receipt</Label>
 
@@ -879,7 +1075,9 @@ export default function ReceiptsPage() {
                       onValueChange={(id) => {
                         const adv = advanceReceipts.find(r => r._id === id)
                         setSelectedAdvanceReceipt(adv)
-                        setAdvanceApplyAmount(adv?.ReceiptAmount || 0)
+                        const balance = invoiceDetails?.balanceAmount || Infinity
+                        const amount = adv?.balanceAmount ?? adv?.ReceiptAmount ?? 0
+                        setAdvanceApplyAmount(amount > balance ? balance : amount)
                       }}
                     >
                       <SelectTrigger>
@@ -887,9 +1085,9 @@ export default function ReceiptsPage() {
                       </SelectTrigger>
 
                       <SelectContent>
-                        {advanceReceipts.map((adv) => (
+                        {advanceReceipts.filter(adv => !invoiceDetails || adv.clientId === invoiceDetails.clientId).map((adv) => (
                           <SelectItem key={adv._id} value={adv._id}>
-                            {adv.receiptNumber} — ₹{adv.ReceiptAmount}
+                            {adv.receiptNumber}:{adv.clientName} — ₹{adv.balanceAmount ?? adv.ReceiptAmount}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -903,19 +1101,20 @@ export default function ReceiptsPage() {
                     <Input
                       type="number"
                       value={advanceApplyAmount}
-                      max={selectedAdvanceReceipt.ReceiptAmount}
+                      max={selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount}
                       onChange={(e) =>
                         setAdvanceApplyAmount(
                           Math.min(
                             Number(e.target.value),
-                            selectedAdvanceReceipt.ReceiptAmount
+                            selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount,
+                            invoiceDetails?.balanceAmount || Infinity
                           )
                         )
                       }
                     />
 
                     <p className="text-xs text-gray-500 mt-1">
-                      Max: ₹{selectedAdvanceReceipt.ReceiptAmount}
+                      Max: ₹{Math.min(selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount, invoiceDetails?.balanceAmount || Infinity)}
                     </p>
                   </div>
                 )}
@@ -960,11 +1159,17 @@ export default function ReceiptsPage() {
                       <SelectItem value="upi">
                         UPI
                       </SelectItem>
+                       <SelectItem value="card">
+                       Card
+                      </SelectItem>
                       <SelectItem value="cheque">
                         Cheque
                       </SelectItem>
                       <SelectItem value="bankTransfer">
                         Bank Transfer
+                      </SelectItem>
+                      <SelectItem value="other">
+                        Other
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -985,17 +1190,18 @@ export default function ReceiptsPage() {
                   )}
                 </div>
                 {selectedPaymentMethod.trim().toLowerCase() != "cash" && (
+                  <div className="space-y-4">
                   <div className="flex space-x-4">
-                    <div>
+                    <div className="flex-1">
                       <Label>Reference Number </Label>
                       <Input
                         type="text"
                         value={referenceNumber}
                         onChange={(e) => (setReferenceNumber(e.target.value))}
-                        placeholder="Enter Your Regerence Number"
+                        placeholder="Enter Your Reference Number"
                         required />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <Label htmlFor="paymentMethod">
                         Bank Account <span className="text-red-500">*</span>
                       </Label>
@@ -1005,7 +1211,7 @@ export default function ReceiptsPage() {
                         required
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Slect Bank Accounts" />
+                          <SelectValue placeholder="Select Bank Accounts" />
                         </SelectTrigger>
                         <SelectContent>
                           {bankAccounts.map((method: any) => (
@@ -1017,6 +1223,11 @@ export default function ReceiptsPage() {
                       </Select>
                     </div>
                   </div>
+                  <div>
+                    <Label>Payment Screenshot</Label>
+                    <FileUpload value={screenshotUrl} onChange={setScreenshotUrl} />
+                  </div>
+                  </div>
                 )}
                 {invoiceDetails && (
                   <div className="border rounded-lg p-4 space-y-2 bg-gray-50">
@@ -1024,9 +1235,12 @@ export default function ReceiptsPage() {
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>Client: {invoiceDetails.clientName}</div>
+                      <div>Email: {invoiceDetails.clientEmail}</div>
+                      <div>Contact: {invoiceDetails.clientContact}</div>
+                      <div>Address: {invoiceDetails.clientAddress}</div>
                       <div>Invoice: {invoiceDetails.salesInvoiceNumber}</div>
                       <div>Original Invoice Total: ₹{invoiceDetails.grandTotal?.toLocaleString()}</div>
-                      {/* <div>Current Balance: ₹{invoiceDetails.balanceAmount?.toLocaleString()}</div> */}
+                      <div>Current Balance: ₹{invoiceDetails.balanceAmount?.toLocaleString()}</div>
 
                       {selectedAdvanceReceipt && (
                         <div className="text-blue-600 font-medium">
@@ -1037,6 +1251,7 @@ export default function ReceiptsPage() {
                       <div className="font-semibold col-span-2 border-t pt-2 mt-2">
                         Net Payable Amount: ₹{(invoiceDetails.balanceAmount - (advanceApplyAmount || 0))?.toLocaleString()}
                       </div>
+                      <div>Amount In Words : {numberToIndianCurrencyWords(invoiceDetails.balanceAmount - (advanceApplyAmount || 0))}</div>
                       {paymentType === "Partial Payment" && (
                         <div>
                           New Balance After This Payment: ₹{(invoiceDetails.balanceAmount - (advanceApplyAmount || 0) - amountToPay)?.toLocaleString()}
@@ -1069,8 +1284,9 @@ export default function ReceiptsPage() {
             {/* Scenario 2: With Items */}
             <TabsContent value="nonInvoiced" className="space-y-4">
               <div className="space-y-4">
+                <div className="flex flex-row gap-2 iems-center">
                 {/* Client Selector */}
-                <div>
+                <div className="w-full">
                   <Label>Client *</Label>
                   <div className="flex gap-2">
                     {/* <Select value={scenario2Client} onValueChange={setScenario2Client}>
@@ -1093,6 +1309,8 @@ export default function ReceiptsPage() {
                       searchPlaceholder="Type to filter..."
                       emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
                     />
+                     {/* created by */}
+            
                     <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
                       <DialogTrigger asChild>
                         {/* <Button variant="outline" size="icon">
@@ -1140,7 +1358,13 @@ export default function ReceiptsPage() {
                       </DialogContent>
                     </Dialog>
                   </div>
-                                      {selectedScenario2Client && (
+                  
+                </div>
+                      <div className="w-full">
+                    <Label>Created By</Label>
+                    <Input value={companyName} readOnly className="bg-gray-100" />
+                  </div></div>
+                    {selectedScenario2Client && (
                       <Card className="mt-4 bg-slate-50 border">
                         <CardContent className="p-4 text-sm space-y-2">
 
@@ -1173,8 +1397,6 @@ export default function ReceiptsPage() {
                         </CardContent>
                       </Card>
                     )}
-                </div>
-
                 {/* Items card */}
 
                 <Card>
@@ -1227,7 +1449,7 @@ export default function ReceiptsPage() {
                                 options={masterItems
                                   .filter((masterItem) => (masterItem.type === item.type && masterItem.isActive === true))
                                   .map((masterItem) => ({
-                                    value: masterItem.name,
+                                    value: masterItem._id,
                                     label: masterItem.name,
                                   }))}
                                 value={item.itemName}
@@ -1247,7 +1469,7 @@ export default function ReceiptsPage() {
                                   <Input
                                     type="number"
                                     value={item.quantity}
-                                    onChange={(e) => handleUpdateItem(item.id, "quantity", Number.parseInt(e.target.value) || 0)}
+                                    onChange={(e) => handleUpdateItem(item.id, "quantity", Number.parseInt(e.target.value))}
                                     min="1"
                                     className="bg-white"
                                   />
@@ -1271,7 +1493,7 @@ export default function ReceiptsPage() {
                                   type="number"
                                   value={item.discount}
                                   onChange={(e) =>
-                                    handleUpdateItem(item.id, "discount", Number.parseFloat(e.target.value) || 0)
+                                    handleUpdateItem(item.id, "discount", Number.parseFloat(e.target.value))
                                   }
                                   min="0"
                                   step="1"
@@ -1379,27 +1601,30 @@ export default function ReceiptsPage() {
                           </div>
                         )
                     )}
-                    {selectedAdvanceReceipt && (
-                      <div className="flex justify-between text-sm text-blue-600">
-                        <span>Advance Applied:</span>
-                        <span>- ₹{advanceApplyAmount?.toLocaleString()}</span>
-                      </div>
-                    )}
                     <div className="pt-2 border-t-2">
                       <div className="flex justify-between font-bold text-lg">
                         <span>Grand Total:</span>
                         <span className="text-purple-600">₹{grandTotal.toLocaleString()}</span>
                       </div>
+                           {selectedAdvanceReceipt && (
+                      <div className="flex justify-between text-sm text-blue-600">
+                        <span>Advance Applied:</span>
+                        <span>- ₹{advanceApplyAmount?.toLocaleString()}</span>
+                      </div>
+                    )}
                       {selectedAdvanceReceipt && (
                         <div className="flex justify-between font-bold text-lg mt-2 border-t pt-2">
                           <span>Net Payable:</span>
                           <span className="text-green-600">₹{(grandTotal - (advanceApplyAmount || 0)).toLocaleString()}</span>
                         </div>
                       )}
+                      <div className="flex flex-row justify-between">
+                       <span> In Words:</span> <span> {numberToIndianCurrencyWords(grandTotal - (advanceApplyAmount || 0))}</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                {advanceReceipts.length > 0 && (
+                {advanceReceipts.filter(adv => !scenario2Client || adv.clientId === scenario2Client).length > 0 && (
                   <div>
                     <Label>Apply Advance Receipt</Label>
 
@@ -1408,7 +1633,8 @@ export default function ReceiptsPage() {
                       onValueChange={(id) => {
                         const adv = advanceReceipts.find(r => r._id === id)
                         setSelectedAdvanceReceipt(adv)
-                        setAdvanceApplyAmount(adv?.ReceiptAmount || 0)
+                        const amount = adv?.balanceAmount ?? adv?.ReceiptAmount ?? 0
+                        setAdvanceApplyAmount(amount > grandTotal ? grandTotal : amount)
                       }}
                     >
                       <SelectTrigger>
@@ -1416,9 +1642,9 @@ export default function ReceiptsPage() {
                       </SelectTrigger>
 
                       <SelectContent>
-                        {advanceReceipts.map((adv) => (
+                        {advanceReceipts.filter(adv => !scenario2Client || adv.clientId === scenario2Client).map((adv) => (
                           <SelectItem key={adv._id} value={adv._id}>
-                            {adv.receiptNumber} — ₹{adv.ReceiptAmount}
+                            {adv.receiptNumber} — ₹{adv.balanceAmount ?? adv.ReceiptAmount}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1432,19 +1658,20 @@ export default function ReceiptsPage() {
                     <Input
                       type="number"
                       value={advanceApplyAmount}
-                      max={selectedAdvanceReceipt.ReceiptAmount}
+                      max={selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount}
                       onChange={(e) =>
                         setAdvanceApplyAmount(
                           Math.min(
                             Number(e.target.value),
-                            selectedAdvanceReceipt.ReceiptAmount
+                            selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount,
+                            grandTotal
                           )
                         )
                       }
                     />
 
                     <p className="text-xs text-gray-500 mt-1">
-                      Max: ₹{selectedAdvanceReceipt.ReceiptAmount}
+                      Max: ₹{Math.min(selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount, grandTotal)}
                     </p>
                   </div>
                 )}
@@ -1465,11 +1692,17 @@ export default function ReceiptsPage() {
                         <SelectItem value="upi">
                           UPI
                         </SelectItem>
+                        <SelectItem value="card">
+                          Card
+                        </SelectItem>
                         <SelectItem value="cheque">
                           Cheque
                         </SelectItem>
                         <SelectItem value="bankTransfer">
                           Bank Transfer
+                        </SelectItem>
+                        <SelectItem value="other">
+                         Other
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -1497,8 +1730,9 @@ export default function ReceiptsPage() {
                   </div> */}
                   {/* account no. and refrence no. if no cash */}
                   {scenario2PaymentMethod.trim().toLowerCase() != "cash" && (
+                    <div className="space-y-4">
                     <div className="flex space-x-4">
-                      <div>
+                      <div className="flex-1">
                         <Label>Reference Number </Label>
                         <Input
                           type="text"
@@ -1507,7 +1741,7 @@ export default function ReceiptsPage() {
                           placeholder="Enter Your Reference Number"
                           required />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <Label>
                           Bank Account <span className="text-red-500">*</span>
                         </Label>
@@ -1520,7 +1754,7 @@ export default function ReceiptsPage() {
                         >
 
                           <SelectTrigger>
-                            <SelectValue placeholder="Slect Bank Accounts" />
+                            <SelectValue placeholder="Select Bank Accounts" />
                           </SelectTrigger>
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
@@ -1557,28 +1791,23 @@ export default function ReceiptsPage() {
                   )} */}
                       </div>
                     </div>
+                    <div>
+                      <Label>Payment Screenshot</Label>
+                      <FileUpload value={scenario2ScreenshotUrl} onChange={setScenario2ScreenshotUrl} />
+                    </div>
+                    </div>
                   )}
                   {/* amounnt paying  */}
                   <div>
                     <Label>Amount Paid</Label>
                     <Input
-                      type="number"
+                      type="text"
                       value={(grandTotal - (advanceApplyAmount || 0)).toLocaleString()}
-                      onChange={(e) => setScenario2AmountPaid(e.target.value)}
                       disabled
                       placeholder="Enter amount paid (full or advance)"
                     />
-                    {(scenario2AmountPaid || selectedAdvanceReceipt) && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Balance: ₹{(grandTotal - (parseFloat(scenario2AmountPaid) || 0) - (advanceApplyAmount || 0)).toFixed(2)}
-                      </div>
-                    )}
                   </div>
-                  {/* created by */}
-                  <div>
-                    <Label>Created By</Label>
-                    <Input value={companyName} readOnly className="bg-gray-100" />
-                  </div>
+                 
                 </div>
                 {/* notes */}
                 <div>
@@ -1605,11 +1834,12 @@ export default function ReceiptsPage() {
             {/* Scenario 3: Quick Receipt */}
             <TabsContent value="quick" className="space-y-4">
               <div className="space-y-4">
+                              <div className="flex flex-row items-center gap-2">
                 {/* Client Selector */}
-                <div>
+                <div className="w-full">
                   <Label>Client *</Label>
                   <div className="flex gap-2">
-                    <Select value={scenario3Client} onValueChange={setScenario3Client}>
+                    {/* <Select value={scenario3Client} onValueChange={setScenario3Client}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -1620,7 +1850,15 @@ export default function ReceiptsPage() {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                     <OwnSearchableSelect
+                      options={clientOptions}
+                      value={scenario3Client}
+                      onValueChange={setScenario3Client}
+                      placeholder="Search and select a client..."
+                      searchPlaceholder="Type to filter..."
+                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                    />
                     <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
                       <DialogTrigger asChild>
                         {/* <Button variant="outline" size="icon">
@@ -1667,8 +1905,49 @@ export default function ReceiptsPage() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                    
                   </div>
+                
                 </div>
+                                      {/* created by */}
+                  <div className="w-full">
+                    <Label>Created By</Label>
+                    <Input value={companyName} readOnly className="bg-gray-100" />
+                  </div>
+                  </div>
+                                           {selectedScenario3Client && (
+                      <Card className="mt-4 bg-slate-50 border">
+                        <CardContent className="p-4 text-sm space-y-2">
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Client Name:</span>
+                            <span className="font-medium">
+                              {selectedScenario3Client.name || selectedScenario3Client.clientName}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Email:</span>
+                            <span>{selectedScenario3Client.email}</span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Contact:</span>
+                            <span>{selectedScenario3Client.phone}</span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Address:</span>
+                            <p className="mt-1">
+                              {selectedScenario3Client.address},
+                              {" "}{selectedScenario3Client.city},
+                              {" "}{selectedScenario3Client.state} - {selectedScenario3Client.pincode}
+                            </p>
+                          </div>
+
+                        </CardContent>
+                      </Card>
+                    )}
 
                 {/* Amount */}
                 {/* <div>
@@ -1696,11 +1975,17 @@ export default function ReceiptsPage() {
                         <SelectItem value="upi">
                           UPI
                         </SelectItem>
+                        <SelectItem value="card">
+                         Card
+                        </SelectItem>
                         <SelectItem value="cheque">
                           Cheque
                         </SelectItem>
                         <SelectItem value="bankTransfer">
                           Bank Transfer
+                        </SelectItem>
+                         <SelectItem value="other">
+                        Other
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -1727,9 +2012,10 @@ export default function ReceiptsPage() {
                     </Select>
                   </div> */}
                   {/* account no. and refrence no. if no cash */}
-                  {scenario2PaymentMethod.trim().toLowerCase() != ("cash") && (
+                  {scenario3PaymentMethod.trim().toLowerCase() != ("cash") && (
+                    <div className="space-y-4">
                     <div className="flex space-x-4">
-                      <div>
+                      <div className="flex-1">
                         <Label>Reference Number </Label>
                         <Input
                           type="text"
@@ -1738,7 +2024,7 @@ export default function ReceiptsPage() {
                           placeholder="Enter Your Reference Number"
                           required />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <Label>
                           Bank Account <span className="text-red-500">*</span>
                         </Label>
@@ -1751,7 +2037,7 @@ export default function ReceiptsPage() {
                         >
 
                           <SelectTrigger>
-                            <SelectValue placeholder="Slect Bank Accounts" />
+                            <SelectValue placeholder="Select Bank Accounts" />
                           </SelectTrigger>
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
@@ -1788,6 +2074,11 @@ export default function ReceiptsPage() {
                   )} */}
                       </div>
                     </div>
+                    <div>
+                      <Label>Payment Screenshot</Label>
+                      <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} />
+                    </div>
+                    </div>
                   )}
                   {/* amounnt paying  */}
                   <div>
@@ -1803,12 +2094,14 @@ export default function ReceiptsPage() {
                         Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
                       </div>
                     )} */}
+                       <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
                   </div>
+                  
                   {/* created by */}
-                  <div>
+                  {/* <div>
                     <Label>Created By</Label>
                     <Input value={companyName} readOnly className="bg-gray-100" />
-                  </div>
+                  </div> */}
                 </div>
                 <div>
                   <label className="text-sm font-medium">
@@ -1833,11 +2126,12 @@ export default function ReceiptsPage() {
             {/* Scenario 4: Advance Receipt */}
             <TabsContent value="advance" className="space-y-4">
               <div className="space-y-4">
+                <div className="flex flex-row items-center gap-2">
                 {/* Client Selector */}
-                <div>
+                <div className="w-full">
                   <Label>Client *</Label>
                   <div className="flex gap-2">
-                    <Select value={scenario3Client} onValueChange={setScenario3Client}>
+                    {/* <Select value={scenario3Client} onValueChange={setScenario3Client}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -1848,7 +2142,15 @@ export default function ReceiptsPage() {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                     <OwnSearchableSelect
+                      options={clientOptions}
+                      value={scenario3Client}
+                      onValueChange={setScenario3Client}
+                      placeholder="Search and select a client..."
+                      searchPlaceholder="Type to filter..."
+                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                    />
                     <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
                       <DialogTrigger asChild>
                         {/* <Button variant="outline" size="icon">
@@ -1895,9 +2197,49 @@ export default function ReceiptsPage() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                    
                   </div>
+                
                 </div>
+                                      {/* created by */}
+                  <div className="w-full">
+                    <Label>Created By</Label>
+                    <Input value={companyName} readOnly className="bg-gray-100" />
+                  </div>
+                  </div>
+                                           {selectedScenario3Client && (
+                      <Card className="mt-4 bg-slate-50 border">
+                        <CardContent className="p-4 text-sm space-y-2">
 
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Client Name:</span>
+                            <span className="font-medium">
+                              {selectedScenario3Client.name || selectedScenario3Client.clientName}
+                            </span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Email:</span>
+                            <span>{selectedScenario3Client.email}</span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Contact:</span>
+                            <span>{selectedScenario3Client.phone}</span>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <span className="text-gray-500">Address:</span>
+                            <p className="mt-1">
+                              {selectedScenario3Client.address},
+                              {" "}{selectedScenario3Client.city},
+                              {" "}{selectedScenario3Client.state} - {selectedScenario3Client.pincode}
+                            </p>
+                          </div>
+
+                        </CardContent>
+                      </Card>
+                    )}
                 {/* Amount */}
                 {/* <div>
                   <Label>Total Amount *</Label>
@@ -1924,11 +2266,17 @@ export default function ReceiptsPage() {
                         <SelectItem value="upi">
                           UPI
                         </SelectItem>
+                        <SelectItem value="card">
+                         Card
+                        </SelectItem>
                         <SelectItem value="cheque">
                           Cheque
                         </SelectItem>
                         <SelectItem value="bankTransfer">
                           Bank Transfer
+                        </SelectItem>
+                         <SelectItem value="other">
+                        Other
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -1956,8 +2304,9 @@ export default function ReceiptsPage() {
                   </div> */}
                   {/* account no. and refrence no. if no cash */}
                   {scenario3PaymentMethod.trim().toLowerCase() != "cash" && (
+                    <div className="space-y-4">
                     <div className="flex space-x-4">
-                      <div>
+                      <div className="flex-1">
                         <Label>Reference Number </Label>
                         <Input
                           type="text"
@@ -1966,7 +2315,7 @@ export default function ReceiptsPage() {
                           placeholder="Enter Your Reference Number"
                           required />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <Label>
                           Bank Account <span className="text-red-500">*</span>
                         </Label>
@@ -1979,7 +2328,7 @@ export default function ReceiptsPage() {
                         >
 
                           <SelectTrigger>
-                            <SelectValue placeholder="Slect Bank Accounts" />
+                            <SelectValue placeholder="Select Bank Accounts" />
                           </SelectTrigger>
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
@@ -2016,6 +2365,11 @@ export default function ReceiptsPage() {
                   )} */}
                       </div>
                     </div>
+                    <div>
+                      <Label>Payment Screenshot</Label>
+                      <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} size="sm" width={20} height={20}/>
+                    </div>
+                    </div>
                   )}
                   {/* amounnt paying  */}
                   <div>
@@ -2026,17 +2380,14 @@ export default function ReceiptsPage() {
                       onChange={(e) => setScenario3AmountPaid(e.target.value)}
                       placeholder="Enter amount paid (full or advance)"
                     />
+                    <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
                     {/* {scenario3AmountPaid && (
                       <div className="text-sm text-muted-foreground mt-1">
                         Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
                       </div>
                     )} */}
                   </div>
-                  {/* created by */}
-                  <div>
-                    <Label>Created By</Label>
-                    <Input value={companyName} readOnly className="bg-gray-100" />
-                  </div>
+
                 </div>
                 <div>
                   <label className="text-sm font-medium">

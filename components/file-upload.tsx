@@ -338,7 +338,7 @@ const handleFileSelect = async (files: FileList | null) => {
               <img
                 src={displayUrl}
                 alt="Preview"
-                className="max-h-full max-w-full object-contain rounded"
+                className="max-h-full max-w-full object-contain rounded w-20 h-20"
               />
             )}
 

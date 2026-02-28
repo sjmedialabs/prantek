@@ -284,7 +284,7 @@ export default function SalesInvoiceDetailsPage() {
           </h4>
 
           <div
-            className="prose prose-sm max-w-none text-gray-600"
+            className="prose prose-sm max-w-none text-gray-600 break-words"
             dangerouslySetInnerHTML={{
               __html: invoice.terms,
             }}
