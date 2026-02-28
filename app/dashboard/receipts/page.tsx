@@ -12,7 +12,7 @@ import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
 import type { Receipt } from "@/lib/models/types"
-
+import { useToast } from "@/hooks/use-toast"
 
 export default function ReceiptsPage() {
   const { hasPermission, user } = useUser()
@@ -30,7 +30,7 @@ export default function ReceiptsPage() {
   const [clientFilter, setClientFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // rows per page
-
+  const { toast } = useToast()
   useEffect(() => {
     loadReceipts()
   }, [])
@@ -100,7 +100,24 @@ export default function ReceiptsPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  const handleCancelInvoice = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this receipt?")) return
 
+    try {
+      const res = await fetch(`/api/receipts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled', balanceAmount: 0 })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: "Success", description: "Receipt cancelled" })
+         loadReceipts()
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to cancel invoice", variant: "destructive" })
+    }
+  }
   const clearFilters = () => {
     setStatusFilter("all")
     setPaymentTypeFilter("all")
@@ -251,8 +268,9 @@ export default function ReceiptsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="received">Received</SelectItem>
                       <SelectItem value="cleared">Cleared</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
                       {/* <SelectItem value="cleared">Failed</SelectItem> */}
                     </SelectContent>
                   </Select>
@@ -394,6 +412,17 @@ export default function ReceiptsPage() {
                             </Link>
                             )
                            }
+                             {hasPermission("edit_receipts") && ["received"].includes(receipt.status) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Cancel Invoice"
+                                    className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                                    onClick={() => handleCancelInvoice(receipt._id)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
                           </div>
                         </TableCell>
                       )}

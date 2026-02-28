@@ -16,6 +16,82 @@ import { useUser } from "@/components/auth/user-context"
 import { noSSR } from "next/dynamic"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+
+function numberToIndianCurrencyWords(amount: number): string {
+  if (isNaN(amount)) return "";
+
+  const ones = [
+    "", "One", "Two", "Three", "Four", "Five", "Six",
+    "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve",
+    "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"
+  ];
+
+  const tens = [
+    "", "", "Twenty", "Thirty", "Forty",
+    "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+  ];
+
+  const convertBelowThousand = (num: number): string => {
+    let str = "";
+
+    if (num >= 100) {
+      str += ones[Math.floor(num / 100)] + " Hundred ";
+      num %= 100;
+    }
+
+    if (num >= 20) {
+      str += tens[Math.floor(num / 10)] + " ";
+      num %= 10;
+    }
+
+    if (num > 0) {
+      str += ones[num] + " ";
+    }
+
+    return str.trim();
+  };
+
+  const convert = (num: number): string => {
+    if (num === 0) return "Zero";
+
+    let result = "";
+
+    if (Math.floor(num / 10000000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 10000000)) + " Crore ";
+      num %= 10000000;
+    }
+
+    if (Math.floor(num / 100000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 100000)) + " Lakh ";
+      num %= 100000;
+    }
+
+    if (Math.floor(num / 1000) > 0) {
+      result += convertBelowThousand(Math.floor(num / 1000)) + " Thousand ";
+      num %= 1000;
+    }
+
+    if (num > 0) {
+      result += convertBelowThousand(num);
+    }
+
+    return result.trim();
+  };
+
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+
+  let words = convert(rupees) + " Rupees";
+
+  if (paise > 0) {
+    words += " and " + convert(paise) + " Paise";
+  }
+
+  words += " Only";
+
+  return words;
+}
 export default function EditReceiptPage() {
   const params = useParams()
   const receiptId = params.id as string
@@ -99,14 +175,16 @@ export default function EditReceiptPage() {
 
       setPaymentMethod(
         loadedReceipt.paymentMethod === "cash"
-          ? ("Cash" || "cash")
-          : loadedReceipt.paymentMethod === "bank-transfer"
-            ? "Bank Transfer"
-            : loadedReceipt.paymentMethod === "UPI"
-              ? "UPI"
+          ? ("cash")
+          : loadedReceipt.paymentMethod === "bank transfer"
+            ? "bank transfer"
+            : loadedReceipt.paymentMethod === "upi"
+              ? "upi"
               : loadedReceipt.paymentMethod === "cheque"
-                ? "Cheque"
-                : "Card"
+                ? "cheque"
+                : loadedReceipt.paymentMethod === "card"
+                ? "card"
+                : "other"
       )
         setPaymentAmount(parseFloat(loadedReceipt.ReceiptAmount) || 0)
       setPaymentType(loadedReceipt.paymentType || "Full Payment")
@@ -196,20 +274,36 @@ console.log("payment amount is ", paymentAmount)
           })
         })
       }
+    // if (amountPaid <= 0) {
+    //   toast({ title: "Validation Error", description: "Amount paid must be greater than zero.", variant: "destructive" })
+    //   return
+    // }
 
+    if (paymentMethod.toLowerCase() !== 'cash') {
+      if (!referenceNumber) {
+        toast({ title: "Validation Error", description: "Reference number is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+      if (!bankAccount) {
+        toast({ title: "Validation Error", description: "Bank account is required for non-cash payments.", variant: "destructive" })
+        return
+      }
+    }
       const payload = {
         ReceiptAmount: paymentAmount,
         paymentType,
         paymentMethod:
-          paymentMethod === ("Cash" || "cash")
+          paymentMethod === ("cash")
             ? "cash"
-            : paymentMethod === "Bank Transfer"
-              ? "bank-transfer"
-              : paymentMethod === "Cheque"
+            : paymentMethod === "bank transfer"
+              ? "bank transfer"
+              : paymentMethod === "cheque"
                 ? "cheque"
-                : paymentMethod === "UPI"
+                : paymentMethod === "upi"
                   ? "upi"
-                  : "card",
+                  : paymentMethod === "card"
+                  ? "card"
+                  : "other",
 
         bankDetails: bankAccount,
         invoiceBalance: updatedBalanceAmount,
@@ -488,7 +582,7 @@ console.log("payment amount is ", paymentAmount)
       ₹{(receipt.ReceiptAmount || 0).toLocaleString()}
     </span>
   </div>
-
+  <span className="text-sm">In words: {numberToIndianCurrencyWords(receipt.ReceiptAmount || 0)}</span>
   {(receipt.invoiceBalance || receipt.balanceAmount) > 0 && (
     <div className="flex justify-between text-orange-600">
       <span className="font-semibold">Balance Due</span>
@@ -582,13 +676,14 @@ console.log("payment amount is ", paymentAmount)
             <div>
               <Label required>Payment Method</Label>
               <Select disabled={isCleared} value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select payment method" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={"Cash" || "cash"}>Cash</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Cheque">Cheque</SelectItem>
-                  <SelectItem value="UPI">UPI</SelectItem>
-                  <SelectItem value="Card">Card</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -596,7 +691,7 @@ console.log("payment amount is ", paymentAmount)
             <div>
               <Label required>Payment Type</Label>
               <Select
-                disabled={isCleared}
+                disabled={isCleared || receipt.receiptType !== "salesInvoice"}
                 value={paymentType}
                 onValueChange={(v: any) => setPaymentType(v)}
               >
@@ -612,7 +707,7 @@ console.log("payment amount is ", paymentAmount)
             <div>
               <Label>Status</Label>
               <Input
-                value={paymentMethod === ("Cash" || "cash") ? "cleared" : "Received"}
+                value={paymentMethod === ("cash") ? "cleared" : "received"}
                 disabled
                 className="bg-gray-50"
               />
@@ -660,7 +755,7 @@ console.log("payment amount is ", paymentAmount)
           )}
 
           {/* BANK DETAILS */}
-          {paymentMethod !== ("Cash" || "cash") && (
+          {paymentMethod !== ("cash") && (
             <div className="grid grid-cols-2 gap-4">
 
               <div>
@@ -710,7 +805,7 @@ console.log("payment amount is ", paymentAmount)
           </div>
 
           {/* Bad Debt Fields */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Bad Debt Amount</Label>
               <Input
@@ -729,7 +824,7 @@ console.log("payment amount is ", paymentAmount)
                 rows={2}
               />
             </div>
-          </div>
+          </div> */}
 
         </CardContent>
       </Card>
