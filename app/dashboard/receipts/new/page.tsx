@@ -16,6 +16,9 @@ import { Client, Item, Quotation, Receipt, TaxRate } from "@/lib/models/types"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import FileUpload from "@/components/file-upload"
+import dynamic from "next/dynamic"
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+import "react-quill/dist/quill.snow.css"
 
 function numberToIndianCurrencyWords(amount: number): string {
   if (isNaN(amount)) return "";
@@ -159,6 +162,7 @@ export default function ReceiptsPage() {
   const [loadingClients, setLoadingClients] = useState(false);
   const [taxRates, setTaxRates] = useState<TaxRate[]>([])
   const [notes, setNotes] = useState("")
+  const [terms, setTerms] = useState("")
   const [masterItems, setMasterItems] = useState<MasterItem[]>([])
   const [loading, setLoading] = useState(false)
   const [paymentType, setPaymentType] = useState<any>("FullPayment")// Ful, Payment or Partial Payment
@@ -224,6 +228,7 @@ export default function ReceiptsPage() {
     loadSalesInvoices()
     loadPaymentMethods()
     loadAdvanceReceipts()
+    loadTerms()
   }, [])
   const loadAdvanceReceipts = async () => {
     const res = await fetch("/api/receipts")
@@ -237,6 +242,22 @@ export default function ReceiptsPage() {
       )
 
       setAdvanceReceipts(advances)
+    }
+  }
+  const loadTerms = async () => {
+    try {
+      const termsRes = await fetch("/api/terms?type=receipt")
+      if (termsRes.ok) {
+        const termsData = await termsRes.json()
+        const formattedTerms = termsData
+          .filter((t: any) => t.isActive)
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .map((t: any) => (t.title ? `<p><strong>${t.title}</strong></p>${t.content}` : t.content))
+          .join("")
+        setTerms(formattedTerms)
+      }
+    } catch (error) {
+      console.error("Failed to load terms", error)
     }
   }
   useEffect(() => {
@@ -508,6 +529,7 @@ export default function ReceiptsPage() {
         createdBy: companyName,
         userId: invoiceDetails.userId,
         notes: notes,
+        terms: terms,
         date: new Date().toISOString()
       }
 
@@ -813,6 +835,7 @@ updatedItem.total =
         date: new Date().toISOString(),
         status: `${scenario2PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
+        terms: terms,
         createdBy: companyName
       }
 
@@ -898,6 +921,7 @@ updatedItem.total =
         date: new Date().toISOString(),
         status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
+        terms: terms,
         createdBy: companyName
       }
 
@@ -972,6 +996,7 @@ updatedItem.total =
         date: new Date().toISOString(),
         status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
+        terms: terms,
         createdBy: companyName
       }
 
@@ -1269,6 +1294,16 @@ updatedItem.total =
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label>Terms & Conditions</Label>
+                  <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
+                    <ReactQuill
+                      theme="snow"
+                      value={terms}
+                      onChange={setTerms}
+                    />
+                  </div>
                 </div>
 
                 <Button
@@ -1820,6 +1855,16 @@ updatedItem.total =
                     onChange={(e) => setNotes(e.target.value)}
                   />
                 </div>
+                <div>
+                  <Label>Terms & Conditions</Label>
+                  <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
+                    <ReactQuill
+                      theme="snow"
+                      value={terms}
+                      onChange={setTerms}
+                    />
+                  </div>
+                </div>
 
                 <Button
                   onClick={handleCreateWithItems}
@@ -2113,6 +2158,16 @@ updatedItem.total =
                     onChange={(e) => setNotes(e.target.value)}
                   />
                 </div>
+                <div>
+                  <Label>Terms & Conditions</Label>
+                  <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
+                    <ReactQuill
+                      theme="snow"
+                      value={terms}
+                      onChange={setTerms}
+                    />
+                  </div>
+                </div>
                 <Button
                   onClick={handleCreateQuickReceipt}
                   disabled={loading || !scenario3Client}
@@ -2398,6 +2453,16 @@ updatedItem.total =
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
+                </div>
+                <div>
+                  <Label>Terms & Conditions</Label>
+                  <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
+                    <ReactQuill
+                      theme="snow"
+                      value={terms}
+                      onChange={setTerms}
+                    />
+                  </div>
                 </div>
                 <Button
                   onClick={handleCreateAdvanceReceipt}

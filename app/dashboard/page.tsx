@@ -167,7 +167,7 @@ const getEntityDate = (entity: any) =>
   const loadDashboardData = async () => {
     // console.log('[DASHBOARD] Loading data with date range:', { from: dateRange.from, to: dateRange.to })
     try {
-      const [quotations, receipts, payments, employees, assets, plans, clients, vendors, items, salesInvoice] =
+      const [quotations, receipts, payments, employees, assets, plans, clients, vendors, items, salesInvoice, purchaseInvoice] =
         await Promise.all([
           api.quotations.getAll(),
           api.receipts.getAll(),
@@ -179,6 +179,7 @@ const getEntityDate = (entity: any) =>
           api.vendors.getAll(),
           api.items.getAll(),
           api.salesInvoice.getAll(),
+          fetch("/api/purchaseInvoice").then(res => res.json()).then(res => res.data || []),
         ]);
 
       // Fetch current plan details
@@ -210,6 +211,9 @@ const filteredClients = clients.filter((c: any) =>
       )
       const filteredSalesInvoice = salesInvoice.filter((s: any) =>
         isBetweenRange(getEntityDate(s), dateRange) )
+      const filteredPurchaseInvoices = purchaseInvoice.filter((p: any) =>
+        isBetweenRange(getEntityDate(p), dateRange)
+      )
       const filteredVendors = vendors.filter((v: any) =>
         isBetweenRange(getEntityDate(v), dateRange)
       )
@@ -271,8 +275,7 @@ const badDept = filteredReceipts.reduce(
         const d = new Date(p.date);
         return d >= dateRange.from && d <= dateRange.to;
       });
-      const pendingAmount = filteredPayments.filter((p: any) => p.status === "pending").reduce((sum: number, p: any) => sum + p.amount, 0)
-      const payables = pendingAmount
+      const payables = filteredPurchaseInvoices.reduce((sum: number, inv: any) => sum + (inv.balanceAmount || 0), 0)
 
       console.log("[DASHBOARD] Filtered data counts:", {
         receipts: filteredReceipts.length,
@@ -333,7 +336,7 @@ const badDept = filteredReceipts.reduce(
         pendingQuotations: pendingQuotations.length,
         pendingReceipt: pendingReceipt.length,
         pendingInvoices: pendingInvoices.length,
-        billsDue: recentPayments.length,
+        billsDue: filteredPurchaseInvoices.length,
         activeClients: activeClients.length,
         activeVendors: filteredVendors.length,
         activeQuotations: filteredQuotations.length,
@@ -429,7 +432,7 @@ const badDept = filteredReceipts.reduce(
     {
       title: "Payables",
       value: formatCurrency(stats.payables),
-      change: `${stats.billsDue} bills due`,
+      change: `${stats.billsDue} Total Purchase Invoices`,
       icon: ArrowDownLeft,
       color: "text-red-600",
     },

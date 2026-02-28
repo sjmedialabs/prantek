@@ -391,6 +391,17 @@ export default function ReceiptDetailsPage() {
               )}
             </CardContent>
           </Card>)}
+
+          {(receipt as any).terms && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Terms & Conditions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none text-gray-600 break-words" dangerouslySetInnerHTML={{ __html: (receipt as any).terms }} />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
