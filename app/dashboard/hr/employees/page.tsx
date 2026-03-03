@@ -88,48 +88,48 @@ export default function EmployeePage() {
   const [roleName, setRolesName] = useState<any[]>([])
   const [member, setMember] = useState<any[]>([])
   const itemsPerPage = 10
-const [formData, setFormData] = useState<Employee>({
-  id: "",
-  _id: "",
-  employeeNumber: "",
-  employeeName: "",
-  surname: "",
-  photo: "",
-  mobileNo: "",
-  email: "",
-  address: "",
-  state: "",
-  city: "",
-  pincode: "",
-  emergencyName: "",
-  emergencyNo: "",
-  aadharNo: "",
-  aadharUpload: "",
-  joiningDate: "",
-  relievingDate: "",
-  description: "",
-  memberType: "",
-  role: "",
-  resume: "",
-  panCard: "",
-  panCardNo: "",
-  bankName: "",
-  branchName: "",
-  accountHolderName: "",
-  accountNumber: "",
-  ifscCode: "",
-  educationCertificates: [],
-  experienceCertificates: [],
-  isActive: true,
-  isSystem: false,
-  userCount: 0,
-  createdAt: "",
-  updatedAt: "",
-})
-const loadEmployees = async () => {
-  const loadedEmployees = await api.employees.getAll()
-  setEmployees(loadedEmployees)
-}
+  const [formData, setFormData] = useState<Employee>({
+    id: "",
+    _id: "",
+    employeeNumber: "",
+    employeeName: "",
+    surname: "",
+    photo: "",
+    mobileNo: "",
+    email: "",
+    address: "",
+    state: "",
+    city: "",
+    pincode: "",
+    emergencyName: "",
+    emergencyNo: "",
+    aadharNo: "",
+    aadharUpload: "",
+    joiningDate: "",
+    relievingDate: "",
+    description: "",
+    memberType: "",
+    role: "",
+    resume: "",
+    panCard: "",
+    panCardNo: "",
+    bankName: "",
+    branchName: "",
+    accountHolderName: "",
+    accountNumber: "",
+    ifscCode: "",
+    educationCertificates: [],
+    experienceCertificates: [],
+    isActive: true,
+    isSystem: false,
+    userCount: 0,
+    createdAt: "",
+    updatedAt: "",
+  })
+  const loadEmployees = async () => {
+    const loadedEmployees = await api.employees.getAll()
+    setEmployees(loadedEmployees)
+  }
 
 
   useEffect(() => {
@@ -143,7 +143,7 @@ const loadEmployees = async () => {
       const roles = loadedRoles.filter((t: any) => t.isActive === true)
       console.log("loadedRoles", loadedRoles)
       setRoles(roles)
- setMemberTypes(STATIC_MEMBER_TYPES);
+      setMemberTypes(STATIC_MEMBER_TYPES);
       setRolesName(loadedRoles)
       setMember(loadedMemberTypes)
     }
@@ -201,39 +201,39 @@ const loadEmployees = async () => {
       return
     }
     if (!(formData.emergencyName).trim()) {
-  toast({ title: "Validation Error", description: "Please enter emergency contact name", variant: "destructive" })
-  return
-}
+      toast({ title: "Validation Error", description: "Please enter emergency contact name", variant: "destructive" })
+      return
+    }
 
-if (!formData.emergencyNo.trim()) {
-  toast({ title: "Validation Error", description: "Please enter emergency contact number", variant: "destructive" })
-  return
-}
+    if (!formData.emergencyNo.trim()) {
+      toast({ title: "Validation Error", description: "Please enter emergency contact number", variant: "destructive" })
+      return
+    }
 
-if (!formData.state.trim()) {
-  toast({ title: "Validation Error", description: "Please enter state", variant: "destructive" })
-  return
-}
+    if (!formData.state.trim()) {
+      toast({ title: "Validation Error", description: "Please enter state", variant: "destructive" })
+      return
+    }
 
-if (!formData.city.trim()) {
-  toast({ title: "Validation Error", description: "Please enter city", variant: "destructive" })
-  return
-}
+    if (!formData.city.trim()) {
+      toast({ title: "Validation Error", description: "Please enter city", variant: "destructive" })
+      return
+    }
 
-if (!formData.pincode.trim()) {
-  toast({ title: "Validation Error", description: "Please enter pincode", variant: "destructive" })
-  return
-}
+    if (!formData.pincode.trim()) {
+      toast({ title: "Validation Error", description: "Please enter pincode", variant: "destructive" })
+      return
+    }
 
-if (formData.pincode.length !== 6) {
-  toast({ title: "Validation Error", description: "Pincode must be 6 digits", variant: "destructive" })
-  return
-}
+    if (formData.pincode.length !== 6) {
+      toast({ title: "Validation Error", description: "Pincode must be 6 digits", variant: "destructive" })
+      return
+    }
 
-if (!formData.panCardNo.trim()) {
-  toast({ title: "Validation Error", description: "Please enter PAN Card number", variant: "destructive" })
-  return
-}
+    if (!formData.panCardNo.trim()) {
+      toast({ title: "Validation Error", description: "Please enter PAN Card number", variant: "destructive" })
+      return
+    }
 
     if (!formData.aadharNo.trim()) {
       toast({ title: "Validation Error", description: "Please enter Aadhar number", variant: "destructive" })
@@ -253,71 +253,76 @@ if (!formData.panCardNo.trim()) {
     }
     console.log("Saving employee as editing employee:", editingEmployee)
     console.log("Saving employee:", formData)
-if (editingEmployee?._id) {
-  await api.employees.update(editingEmployee._id, formData)
-} else {
-  await api.employees.create({
-    ...formData,
-    employeeNumber: generateEmployeeNumber(),
-  })
-}
+    try {
+      if (editingEmployee?._id) {
+        await api.employees.update(editingEmployee._id, formData)
+      } else {
+        await api.employees.create({
+          ...formData,
+          employeeNumber: generateEmployeeNumber(),
+        })
+      }
 
-// REFRESH LIST
-await loadEmployees()
+      await loadEmployees()
+      setCurrentPage(1)
+      setIsDialogOpen(false)
+      resetForm()
 
-// Reset pagination
-setCurrentPage(1)
+      toast({
+        title: "Success",
+        description: "Employee saved successfully!",
+      })
 
-    console.log("Employee saved successfully", employees)
-    setIsDialogOpen(false)
-    setEditingEmployee(null)
-    resetForm()
-    setSaved(true)
-    toast({ title: "Success", description: "Employee saved successfully!" })
-    setTimeout(() => setSaved(false), 3000)
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to save employee",
+        variant: "destructive",
+      })
+    }
     // window.location.reload()
   }
 
-const resetForm = () => {
-  setFormData({
-    id: "",
-    _id: "",
-    employeeNumber: "",
-    employeeName: "",
-    surname: "",
-    photo: "",
-    mobileNo: "",
-    email: "",
-    address: "",
-    state: "",
-    city: "",
-    pincode: "",
-    emergencyName: "",
-    emergencyNo: "",
-    aadharNo: "",
-    aadharUpload: "",
-    joiningDate: "",
-    relievingDate: "",
-    description: "",
-    memberType: "",
-    role: "",
-    resume: "",
-    panCard: "",
-    panCardNo: "",
-    bankName: "",
-    branchName: "",
-    accountHolderName: "",
-    accountNumber: "",
-    ifscCode: "",
-    educationCertificates: [],
-    experienceCertificates: [],
-    isActive: true,
-    isSystem: false,
-    userCount: 0,
-    createdAt: "",
-    updatedAt: "",
-  })
-}
+  const resetForm = () => {
+    setFormData({
+      id: "",
+      _id: "",
+      employeeNumber: "",
+      employeeName: "",
+      surname: "",
+      photo: "",
+      mobileNo: "",
+      email: "",
+      address: "",
+      state: "",
+      city: "",
+      pincode: "",
+      emergencyName: "",
+      emergencyNo: "",
+      aadharNo: "",
+      aadharUpload: "",
+      joiningDate: "",
+      relievingDate: "",
+      description: "",
+      memberType: "",
+      role: "",
+      resume: "",
+      panCard: "",
+      panCardNo: "",
+      bankName: "",
+      branchName: "",
+      accountHolderName: "",
+      accountNumber: "",
+      ifscCode: "",
+      educationCertificates: [],
+      experienceCertificates: [],
+      isActive: true,
+      isSystem: false,
+      userCount: 0,
+      createdAt: "",
+      updatedAt: "",
+    })
+  }
 
 
   const handleEdit = (employee: Employee) => {
@@ -460,20 +465,20 @@ const resetForm = () => {
                           onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
                         >
                           <SelectTrigger className="z-1000">
-                            <SelectValue  placeholder="Employment type" />
+                            <SelectValue placeholder="Employment type" />
                           </SelectTrigger>
                           <SelectContent>
-                          {memberTypes.length === 0 ? (
+                            {memberTypes.length === 0 ? (
                               <SelectItem value="no-member" disabled>
                                 No Types available. Please create EmployeeType first.
                               </SelectItem>
-                          ) :(
-                             memberTypes.map((type) => (
-                              <SelectItem key={type._id} value={String(type._id)}>
-                                {type.name}
-                              </SelectItem>
-                            ))
-                          )
+                            ) : (
+                              memberTypes.map((type) => (
+                                <SelectItem key={type._id} value={String(type.name)}>
+                                  {type.name}
+                                </SelectItem>
+                              ))
+                            )
                             }
                           </SelectContent>
                         </Select>
@@ -748,33 +753,33 @@ const resetForm = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex gap-4">
-                    <div className="space-y-2 md:basis-1/2">
-                      <Label htmlFor="aadharNo" className="text-sm font-medium" required>
-                        Aadhar No (12 digits)
-                      </Label>
-                      <Input
-                        id="aadharNo"
-                        value={formData.aadharNo}
-                        onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
-                        placeholder="XXXX XXXX XXXX"
-                        maxLength={14}
-                        required
-                      />
-                    </div>
+                      <div className="space-y-2 md:basis-1/2">
+                        <Label htmlFor="aadharNo" className="text-sm font-medium" required>
+                          Aadhar No (12 digits)
+                        </Label>
+                        <Input
+                          id="aadharNo"
+                          value={formData.aadharNo}
+                          onChange={(e) => setFormData({ ...formData, aadharNo: e.target.value })}
+                          placeholder="XXXX XXXX XXXX"
+                          maxLength={14}
+                          required
+                        />
+                      </div>
 
-                    <div className="space-y-2 md:basis-1/2">
-                      <Label htmlFor="panCardNo" className="text-sm font-medium" required>
-                        PAN Card No
-                      </Label>
-                      <Input
-                        id="panCardNo"
-                        value={formData.panCardNo || ""}
-                        onChange={(e) => setFormData({ ...formData, panCardNo: e.target.value })}
-                        placeholder="ABCDE1234F"
-                        maxLength={10}
-                        required
-                      />
-                    </div>
+                      <div className="space-y-2 md:basis-1/2">
+                        <Label htmlFor="panCardNo" className="text-sm font-medium" required>
+                          PAN Card No
+                        </Label>
+                        <Input
+                          id="panCardNo"
+                          value={formData.panCardNo || ""}
+                          onChange={(e) => setFormData({ ...formData, panCardNo: e.target.value })}
+                          placeholder="ABCDE1234F"
+                          maxLength={10}
+                          required
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -954,7 +959,7 @@ const resetForm = () => {
                     {currentEmployees?.map((employee, index) => (
                       <TableRow
                         key={employee?._id || index}
-                        className= ""
+                        className=""
                       >
                         <TableCell className="p-3 font-medium">{indexOfFirstItem + index + 1}</TableCell>
                         <TableCell className="p-3">{employee?.employeeNumber}</TableCell>

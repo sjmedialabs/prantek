@@ -733,7 +733,7 @@ export default function NewPurchaseInvoicePage() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="/dashboard/payments">
+          <Link href="/dashboard/purchaseInvoices">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
