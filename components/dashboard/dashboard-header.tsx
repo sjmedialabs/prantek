@@ -100,7 +100,46 @@ export default function DashboardHeader() {
       router.push(notification.link);
     }
   };
+  const handleMarkAllAsRead = async () => {
+  try {
+    const token = tokenStorage.getAccessToken();
 
+    await fetch("/api/notifications/mark-all-read", {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    // Update UI instantly
+    setNotifications([]); // because you show only unread
+    setUnreadCount(0);
+  } catch (error) {
+    console.error("Failed to mark all notifications as read:", error);
+  }
+};
+const handleClearAllNotifications = async () => {
+  try {
+    const token = tokenStorage.getAccessToken();
+
+    await fetch("/api/notifications/clear-all", {
+      method: "PATCH", // or DELETE depending on backend
+      credentials: "include",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    // Clear locally
+    setNotifications([]);
+    setUnreadCount(0);
+  } catch (error) {
+    console.error("Failed to clear notifications:", error);
+  }
+};
   const formatNotificationTime = (date: Date) => {
     const now = new Date();
     const notifDate = new Date(date);
@@ -137,7 +176,20 @@ export default function DashboardHeader() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <div className="flex items-center justify-between px-2 py-1.5">
+  <DropdownMenuLabel className="p-0">
+    Notifications
+  </DropdownMenuLabel>
+
+  {notifications.length > 0 && (
+    <button
+      onClick={handleMarkAllAsRead}
+      className="text-xs text-blue-600 hover:underline"
+    >
+      Mark all as read
+    </button>
+  )}
+</div>
               <DropdownMenuSeparator />
               <div className="max-h-96 overflow-y-auto">
                 {notifications.length === 0 ? (
@@ -173,6 +225,16 @@ export default function DashboardHeader() {
                   ))
                 )}
               </div>
+              {/* <div className="flex justify-end">
+                {notifications.length > 0 && (
+    <button
+      onClick={handleClearAllNotifications}
+      className="text-xs text-red-600 hover:underline"
+    >
+      Clear All
+    </button>
+  )}
+  </div> */}
             </DropdownMenuContent>
           </DropdownMenu>
             )

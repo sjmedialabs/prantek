@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
@@ -34,6 +35,7 @@ interface AssignmentHistory {
 }
 
 interface Asset {
+  _id: string
   id: string
   name?: string
   category?: "equipment" | "vehicle" | "property" | "software" | "furniture"
@@ -49,13 +51,14 @@ interface Asset {
   lastMaintenance?: string
   nextMaintenance?: string
   depreciationRate?: number
-  status: "active" | "maintenance" | "retired" | "sold" | "assigned" | "available"
+  status: "active" | "maintenance" | "retired" | "sold" | "assigned" | "available" | "inactive"
   assignedTo?: string
   assignedToName?: string
   assignedDate?: string
   assignedBy?: string
   submittedDate?: string
   assignmentHistory?: AssignmentHistory[]
+  isActive?: boolean
 }
 
 const COLORS = ["#8b5cf6", "#06b6d4", "##10b981", "#f59e0b", "#ef4444"]
@@ -177,6 +180,7 @@ const categoryData = categories
         warranty: newAsset.warranty,
         status: "available",
         assignmentHistory: [],
+        isActive: true,
       }
 
       console.log("sending payload", payload)
@@ -252,6 +256,19 @@ const categoryData = categories
     setIsAssignDialogOpen(true)
   }
   const totalPages = Math.ceil(filteredAssets.length / rowsPerPage)
+
+  const handleStatusToggle = async (assetId: string, currentIsActive: boolean) => {
+    try {
+      const newStatus = !currentIsActive ? "available" : "inactive";
+      await api.assets.update(assetId, { isActive: !currentIsActive, status: newStatus });
+      toast.success(`Asset status updated to ${!currentIsActive ? 'active' : 'inactive'}`);
+      const loadedAssets = await api.assets.getAll();
+      setAssets(loadedAssets || []);
+    } catch (error) {
+      toast.error("Failed to update asset status.");
+      console.error("Failed to update asset status:", error);
+    }
+  };
 
   const paginatedAssets = filteredAssets.slice(
     (currentPage - 1) * rowsPerPage,
@@ -350,6 +367,7 @@ const categoryData = categories
       case "maintenance":
         return "bg-orange-100 text-orange-800"
       case "retired":
+      case "inactive":
         return "bg-gray-100 text-gray-800"
       case "sold":
         return "bg-purple-100 text-purple-800"
@@ -667,6 +685,7 @@ const categoryData = categories
                       <SelectItem value="maintenance">Maintenance</SelectItem>
                       <SelectItem value="retired">Retired</SelectItem>
                       <SelectItem value="sold">Sold</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -744,6 +763,7 @@ const categoryData = categories
                               size="sm"
                               variant="outline"
                               onClick={() => handleReassignAsset(asset)}
+                              disabled={!asset.isActive}
                             >
                               <UserPlus className="h-4 w-4 mr-1" />
                               Assign
@@ -752,6 +772,11 @@ const categoryData = categories
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(asset)}>
                             <Edit className="h-4 w-4" />
                           </Button>
+                          <Switch
+                            checked={asset.isActive === true}
+                            onCheckedChange={() => handleStatusToggle(asset._id, asset.isActive === true)}
+                            title={asset.isActive === true ? "Deactivate Asset" : "Activate Asset"}
+                          />
 
                         </div>
                           )

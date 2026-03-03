@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter, X, Download, Receipt, Plus, CreditCard, Eye } from "lucide-react"
+import { Search, Filter, X, Download, Receipt, Plus, CreditCard, Eye, FileText } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
 import Link from "next/link";
+import { generatePDF } from "@/lib/pdf-utils"
 interface CashEntry {
   id: string
   entryType: "receipt" | "payment"
@@ -24,6 +25,7 @@ interface CashEntry {
   amount: number
   referenceNumber?: string
   createdBy: string
+  balance?: number
 }
 
 export default function CashbookPage() {
@@ -55,7 +57,9 @@ export default function CashbookPage() {
     const receipts = await api.receipts.getAll()
     const payments = await api.payments.getAll()
     console.log("All receipt and pyments", receipts, payments)
-    const formattedReceipts = receipts.map((r: any) => ({
+    const formattedReceipts = receipts
+      .filter((r: any) => r.status?.toLowerCase() === "cleared")
+      .map((r: any) => ({
       id: r._id,
       entryType: "receipt",
       date: r.createdAt,
@@ -69,7 +73,9 @@ export default function CashbookPage() {
       //   createdBy: r.createdBy
     }))
     console.log("formattedReceipts", formattedReceipts)
-    const formattedPayments = payments.map((p: any) => ({
+    const formattedPayments = payments
+      .filter((p: any) => p.status?.toLowerCase() === "cleared")
+      .map((p: any) => ({
       id: p._id,
       entryType: "payment",
       paymentNumber: p.paymentNumber,
@@ -120,12 +126,47 @@ export default function CashbookPage() {
       matchesMaxAmount
     )
   })
-  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+
+  // Calculate Opening Balance based on Date Filter
+  let openingBalance = 0
+  if (dateFromFilter) {
+    const fromDate = new Date(dateFromFilter)
+    // Reset time to midnight to ensure strict comparison against dates with times
+    fromDate.setHours(0, 0, 0, 0)
+
+    openingBalance = entries.reduce((acc, entry) => {
+      const entryDate = new Date(entry.date)
+      if (entryDate < fromDate) {
+        if (entry.entryType === "receipt") return acc + (Number(entry.amount) || 0)
+        if (entry.entryType === "payment") return acc - (Number(entry.amount) || 0)
+      }
+      return acc
+    }, 0)
+    console.log("Opening Balance", openingBalance)
+  }
+ console.log("Opening Balance", openingBalance)
+  // Calculate Running Balance for Filtered Entries
+  // 1. Sort Ascending (Oldest First) to calculate running balance
+  const sortedAsc = [...filteredEntries].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
+
+  let currentRunningBalance = openingBalance
+  const entriesWithBalanceAsc = sortedAsc.map((entry) => {
+    if (entry.entryType === "receipt") currentRunningBalance += Number(entry.amount) || 0
+    else currentRunningBalance -= Number(entry.amount) || 0
+    return { ...entry, balance: currentRunningBalance }
+  })
+console.log("entriesWithBalanceAsc",entriesWithBalanceAsc, currentRunningBalance)
+  // 2. Reverse back to Descending (Newest First) for display
+  const entriesWithBalance = entriesWithBalanceAsc
+
+  const totalPages = Math.ceil(entriesWithBalance.length / itemsPerPage)
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, typeFilter, partyTypeFilter, categoryFilter, dateFromFilter, dateToFilter, minAmountFilter, maxAmountFilter]);
 
-  const paginatedEntries = filteredEntries.slice(
+  const paginatedEntries = entriesWithBalance.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -157,7 +198,7 @@ const totalPayments = filteredEntries
   }
 
   const exportCSV = () => {
-    if (entries.length === 0) {
+    if (entriesWithBalance.length === 0) {
       alert("No data available to export.")
       return
     }
@@ -169,21 +210,23 @@ const totalPayments = filteredEntries
       "Party Name",
       "Party Type",
       "Category",
-      
       "Reference No",
-      "Amount"
+      "Receipt Amount",
+      "Payment Amount",
+      "Balance"
     ]
 
-    const rows = entries.map((e) => [
+    const rows = entriesWithBalance.map((e) => [
       e.date,
       e.receiptNumber,
       e.entryType,
       e.partyName || "",
       e.partyType || "",
       e.category || "",
-      
       e.referenceNumber || "",
-      e.amount || 0
+      e.entryType === "receipt" ? e.amount : 0,
+      e.entryType === "payment" ? e.amount : 0,
+      e.balance || 0
     ])
 
     const csvContent =
@@ -197,6 +240,10 @@ const totalPayments = filteredEntries
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const handleExportPDF = async () => {
+    await generatePDF("cashbook-print-content", "Cashbook.pdf")
   }
 
 
@@ -229,10 +276,16 @@ const totalPayments = filteredEntries
           <p className="text-gray-600">View all receipts and payments</p>
         </div>
 
-        <Button variant="outline" onClick={exportCSV}>
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -249,7 +302,12 @@ const totalPayments = filteredEntries
 
         <Card>
           <CardHeader><CardTitle>Net Balance</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">₹{netBalance.toLocaleString()}</div></CardContent>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{netBalance.toLocaleString()}</div>
+            {dateFromFilter && (
+              <p className="text-xs text-gray-500 mt-1">Opening Balance: ₹{openingBalance.toLocaleString()}</p>
+            )}
+          </CardContent>
         </Card>
       </div>
       {/* Quick Action Cards */}
@@ -317,7 +375,7 @@ const totalPayments = filteredEntries
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Cashbook Entries ({filteredEntries.length})</CardTitle>
+          <CardTitle>Cashbook Entries ({entriesWithBalance.length})</CardTitle>
           <CardDescription>Receipts + Payments</CardDescription>
         </CardHeader>
 
@@ -437,7 +495,9 @@ const totalPayments = filteredEntries
                 <TableHead>Party</TableHead>
                 <TableHead>Party Type</TableHead>
                 <TableHead>Ledger</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Receipt Amount</TableHead>
+                <TableHead className="text-right">Payment Amount</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -466,8 +526,14 @@ const totalPayments = filteredEntries
                       <Badge variant="outline">{entry.category}</Badge>
                     </TableCell>
 
-                    <TableCell className="text-right font-semibold">
-                      ₹{(entry.amount || 0).toLocaleString()}
+                    <TableCell className="text-right font-semibold text-green-600">
+                      {entry.entryType === "receipt" ? `₹${(entry.amount || 0).toLocaleString()}` : "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-red-600">
+                      {entry.entryType === "payment" ? `₹${(entry.amount || 0).toLocaleString()}` : "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-bold">
+                      ₹{(entry.balance || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Link
@@ -516,6 +582,45 @@ const totalPayments = filteredEntries
           )}
         </CardContent>
       </Card>
+
+      {/* Hidden Print Content */}
+      <div id="cashbook-print-content" className="hidden">
+        <div className="p-8">
+          <h1 className="text-2xl font-bold mb-4 text-center">Cashbook Report</h1>
+          <table className="w-full text-sm border-collapse border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Date</th>
+                <th className="border p-2">No.</th>
+                <th className="border p-2">Party</th>
+                <th className="border p-2">Category</th>
+                <th className="border p-2 text-right">Receipt (₹)</th>
+                <th className="border p-2 text-right">Payment (₹)</th>
+                <th className="border p-2 text-right">Balance (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entriesWithBalance.map((entry, i) => (
+                <tr key={i}>
+                  <td className="border p-2">{new Date(entry.date).toLocaleDateString()}</td>
+                  <td className="border p-2">{entry.entryType === "receipt" ? entry.receiptNumber : entry.paymentNumber}</td>
+                  <td className="border p-2">{entry.partyName}</td>
+                  <td className="border p-2">{entry.category}</td>
+                  <td className="border p-2 text-right text-green-600">
+                    {entry.entryType === "receipt" ? entry.amount.toLocaleString() : "-"}
+                  </td>
+                  <td className="border p-2 text-right text-red-600">
+                    {entry.entryType === "payment" ? entry.amount.toLocaleString() : "-"}
+                  </td>
+                  <td className="border p-2 text-right font-bold">
+                    {entry.balance?.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }

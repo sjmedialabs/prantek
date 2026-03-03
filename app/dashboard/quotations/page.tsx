@@ -116,13 +116,13 @@ export default function QuotationsPage() {
 
     const updates: Promise<any>[] = []
     const updatedData = data.map((q: Quotation) => {
-      if (q.status === "pending" && q.validity) {
+      if ((q.status === "created" || q.status === "pending") && q.validity) {
         const validity = new Date(q.validity)
         validity.setHours(0, 0, 0, 0)
 
         if (validity < today) {
-          updates.push(api.quotations.update(q._id, { status: "expired" }))
-          return { ...q, status: "expired" }
+          updates.push(api.quotations.update(q._id, { status: "overdue" }))
+          return { ...q, status: "overdue" }
         }
       }
       return q
@@ -179,6 +179,7 @@ export default function QuotationsPage() {
       case ("invoice created"):
         return "bg-green-100 text-green-800"
       case "expired":
+      case "overdue":
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
@@ -406,6 +407,7 @@ export default function QuotationsPage() {
                     <SelectItem value="accepted">Accepted</SelectItem>
                     <SelectItem value="invoice created">Invoice Created</SelectItem>
                     <SelectItem value="expired">Expired</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -492,7 +494,7 @@ export default function QuotationsPage() {
 
                         <>
                           {/* CREATED → SHOW ACCEPT ICON */}
-                          {q.status === "created" && (
+                          {(q.status === "created" || q.status === "overdue") && (
                             <Button
                               size="sm"
                               variant="outline"

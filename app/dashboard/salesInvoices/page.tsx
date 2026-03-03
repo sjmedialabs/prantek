@@ -139,28 +139,53 @@ export default function SalesInvoicesPage() {
   }
 
   const handleCancelInvoice = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this invoice?")) return
+    if (!confirm("Are you sure you want to cancel this invoice? This will revert any associated quotation.")) return
 
     try {
-      const res = await fetch(`/api/salesInvoice/${id}`, {
+      // 1. Get the invoice to be cancelled from state
+      const invoiceToCancel = invoices.find(i => i._id === id);
+      if (!invoiceToCancel) {
+        toast({ title: "Error", description: "Invoice not found.", variant: "destructive" });
+        return;
+      }
+
+      // 2. If it's linked to a quotation, revert the quotation status
+      if (invoiceToCancel.quotationId) {
+        const updateQuotationRes = await fetch(`/api/quotations/${invoiceToCancel.quotationId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'accepted'
+          })
+        });
+
+        if (!updateQuotationRes.ok) {
+          throw new Error("Failed to update the associated quotation.");
+        }
+      }
+
+      // 3. Cancel the original invoice
+      const cancelInvoiceRes = await fetch(`/api/salesInvoice/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelled', balanceAmount: 0 })
       })
-      const data = await res.json()
+      const data = await cancelInvoiceRes.json()
       if (data.success) {
-        toast({ title: "Success", description: "Invoice cancelled" })
+        toast({ title: "Success", description: "Invoice cancelled and quotation reverted." })
         loadInvoices()
+      } else {
+        throw new Error(data.error || "Failed to cancel invoice.");
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to cancel invoice", variant: "destructive" })
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to cancel invoice", variant: "destructive" })
     }
   }
 
   const handleOpenBadDebtDialog = (invoice: SalesInvoice) => {
     setSelectedInvoiceForBadDebt(invoice)
     setBadDebtAmount(invoice.balanceAmount || 0)
-    setBadDebtReason("test")
+    setBadDebtReason("")
     setIsBadDebtDialogOpen(true)
   }
 
@@ -399,7 +424,7 @@ export default function SalesInvoicesPage() {
                                 <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
                                 <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" /></Button>
                                 </Link>
-                                {hasPermission("edit_sales_invoices") && invoice.status === "not collected" && (
+                                {hasPermission("edit_sales_invoices") && ["not collected", "overdue"].includes(invoice.status) && (
                                   <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
                                     <Button variant="ghost" size="sm" title="Edit Details">
                                       <Edit className="h-4 w-4" />

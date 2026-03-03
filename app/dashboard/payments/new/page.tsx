@@ -48,7 +48,7 @@ export default function NewPaymentPage() {
     category: "",
     description: "",
     amount: "",
-    paymentMethod: "",
+    paymentMethod: "cash",
     payAbleAmount: 0,
     invoiceDate: new Date().toISOString().split("T")[0],
     bankAccount: "",
@@ -58,6 +58,7 @@ export default function NewPaymentPage() {
     paymentType: "full" as "full" | "partial",
     createdBy: "",
   })
+
   const [amountInWords, setAmountInWords] = useState("")
   const [activeTab, setActiveTab] = useState("payment-details")
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -145,18 +146,18 @@ setRecipientTypes(uniqueRecipientTypes);
 
         // Filter Open Purchase Invoices with Balance > 0
         const openInvoices = (invoicesData || []).filter((inv: any) => 
-          (inv.invoiceStatus === "Open" || inv.invoiceStatus === "Partial") && 
+          (inv.invoiceStatus === "Open" || inv.invoiceStatus === "Partial" || inv.invoiceStatus === "overdue") && 
           (Number(inv.balanceAmount) > 0)
         );
         setPurchaseInvoices(openInvoices);
-        setCompanyName(companyData.companyName || "")
+      
       } catch (error) {
         console.error("Failed to load data:", error);
       }
     };
-
+  setCompanyName(user?.email)
     loadData();
-  }, []);
+  }, [user]);
 
   // const uniqueRecipientTypes = Array.from(
   //   new Map(recipientTypes.map((type) => [type.value, type])).values()
@@ -212,19 +213,18 @@ setRecipientTypes(uniqueRecipientTypes);
       errors.paymentMethod = "Payment method is required"
     }
 
-    const requiresReference = ["Bank Transfer", "UPI", "Check"].includes(paymentData.paymentMethod)
+    const isNotCash = paymentData.paymentMethod && paymentData.paymentMethod.toLowerCase() !== 'cash';
 
-    if (requiresReference && !paymentData.referenceNumber) {
-      errors.referenceNumber = "Reference number is required for this payment method"
+    if (isNotCash && !paymentData.referenceNumber) {
+      errors.referenceNumber = "Reference number is required for non-cash payment methods."
+    }
+    if (isNotCash && !paymentData.bankAccount) {
+      errors.bankAccount = "Bank account is required for non-cash payment methods."
     }
 
-    if (["Bank Transfer", "UPI"].includes(paymentData.paymentMethod) && !paymentData.bankAccount) {
-      errors.bankAccount = "Bank account is required for this payment method"
-    }
-
-    if (requiresReference && !paymentData.billFile) {
-      errors.billFile = "Bill upload is required for this payment method"
-    }
+    // if (requiresReference && !paymentData.billFile) {
+    //   errors.billFile = "Bill upload is required for this payment method"
+    // }
 
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
@@ -409,20 +409,25 @@ const handleRecipientChange = (recipientId: string) => {
           const paymentAmount = Number.parseFloat(paymentData.amount);
           const originalBalance = Number(originalInvoice.balanceAmount);
           const newBalance = originalBalance - paymentAmount;
+          const originalPaidAmount = Number(originalInvoice.paidAmount || 0);
+          const newPaidAmount = originalPaidAmount + paymentAmount;
 
-          let newPaymentStatus: "Paid" | "Partial" | "Unpaid" = "Partial";
-          let newInvoiceStatus: "Open" | "Closed" | "Partial" = "Partial";
+          let newPaymentStatus: string;
+          let newInvoiceStatus: string;
 
           if (newBalance <= 0) {
             newPaymentStatus = "Paid";
             newInvoiceStatus = "Closed";
+          } else {
+            newPaymentStatus = "Partial";
+            newInvoiceStatus = "Partial";
           }
 
           await api.purchaseInvoice.update(paymentData.purchaseInvoiceId, {
             balanceAmount: newBalance,
             paymentStatus: newPaymentStatus,
             invoiceStatus: newInvoiceStatus,
-            paidAmount: Number.parseFloat(paymentData.amount)
+            paidAmount: newPaidAmount
           });
         }
       }
@@ -449,7 +454,7 @@ const handleRecipientChange = (recipientId: string) => {
         screenshotFile: paymentData.screenshotFile,
         billFile: paymentData.billFile,
         paymentType: paymentData.paymentType,
-        status: paymentData.paymentMethod === "Cash" ? "completed" : "pending",
+        status: paymentData.paymentMethod === "cash" ? "cleared" : "Paid",
         bankAccount: paymentData.bankAccount,
         referenceNumber: paymentData.referenceNumber,
         createdBy: companyName || "",
@@ -1377,20 +1382,47 @@ const handleRecipientChange = (recipientId: string) => {
                       {paymentData.recipientId && creationMode === "non-invoiced" && (
                         <div className="space-y-2">
                           <Label>Recipient Details</Label>
-                          <Textarea value={paymentData.recipientName+" "+paymentData.recipientDetails} disabled rows={4} />
+                          <Textarea value={paymentData.recipientName+" "+paymentData.recipientEmail+" "+paymentData.recipientPhone+" "+paymentData.recipientAddress} disabled rows={4} />
                         </div>
                       )}
                     </div>
 
                     {creationMode === "invoiced" && paymentData.purchaseInvoiceId && (
-                      <div className="p-4 bg-slate-50 rounded-lg border space-y-2">
-                        <div className="text-sm font-medium">Invoice Details</div>
-                        <div className="text-sm text-gray-600">Vendor: {paymentData.recipientName}</div>
-                        {/* <div className="text-sm text-gray-600">Invoice Date: {paymentData.recipient}</div> */}
-                        <div className="text-sm text-gray-600">Invoice Amount: {paymentData.payAbleAmount}</div>
-                        <div className="text-sm text-gray-600">Invoice Number: {paymentData.purchaseInvoiceNumber}</div>
-                        <div className="text-sm text-gray-600">Category: {paymentData.category}</div>
-                      </div>
+                      <Card className="bg-slate-50">
+                        <CardHeader>
+                          <CardTitle>Selected Invoice Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-500">Invoice #: </span>
+                            <span className="text-gray-800">{paymentData.purchaseInvoiceNumber}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-500">Category: </span>
+                            <span className="text-gray-800">{paymentData.category}</span>
+                          </div>
+                          <div className="md:col-span-2">
+                            <span className="font-medium text-gray-500">Vendor: </span>
+                            <span className="text-gray-800 font-semibold">{paymentData.recipientName}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-500">Email: </span>
+                            <span className="text-gray-800">{paymentData.recipientEmail || "-"}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-500">Phone: </span>
+                            <span className="text-gray-800">{paymentData.recipientPhone || "-"}</span>
+                          </div>
+                          <div className="md:col-span-2">
+                            <span className="font-medium text-gray-500">Address: </span>
+                            <span className="text-gray-800">{paymentData.recipientAddress || "-"}</span>
+                          </div>
+                          <div className="md:col-span-2 border-t pt-3 mt-1">
+                            <span className="font-medium text-gray-500">Balance Due: </span>
+                            <span className="text-red-600 font-bold">₹{Number(paymentData.payAbleAmount || 0).toLocaleString()}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     )}
 
                     <div className="space-y-2">
@@ -1471,19 +1503,33 @@ const handleRecipientChange = (recipientId: string) => {
                           <SelectValue placeholder="Select payment method" />
                         </SelectTrigger>
                         <SelectContent>
-                          {paymentMethods.map((method) => (
-                            <SelectItem key={method._id} value={method.name}>
-                              {method.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
+
+                        <SelectItem value="cash">
+                          Cash
+                        </SelectItem>
+                        <SelectItem value="upi">
+                          UPI
+                        </SelectItem>
+                        <SelectItem value="card">
+                         Card
+                        </SelectItem>
+                        <SelectItem value="cheque">
+                          Cheque
+                        </SelectItem>
+                        <SelectItem value="bankTransfer">
+                          Bank Transfer
+                        </SelectItem>
+                         <SelectItem value="other">
+                        Other
+                        </SelectItem>
+                      </SelectContent>
                       </Select>
                       {validationErrors.paymentMethod && (
                         <p className="text-xs text-red-500">{validationErrors.paymentMethod}</p>
                       )}
                     </div>
 
-                    {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
+                    {paymentData.paymentMethod.trim().toLowerCase()!=="cash" && (
                       <div className="space-y-2">
                         <Label htmlFor="bankAccount">
                           Bank Account <span className="text-red-500">*</span>
@@ -1540,7 +1586,7 @@ const handleRecipientChange = (recipientId: string) => {
                     )}
                     {/* BILL UPLOAD */}
  {( <div className="mb-2">
-    <Label>Bill Upload <span className="text-red-500">*</span></Label>
+    <Label>Bill Upload</Label>
 
     <ImageUpload
       label="Bill File"

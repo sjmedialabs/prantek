@@ -266,7 +266,7 @@ export default function SalesInvoiceDetailsPage() {
 {/* Terms and Notes */}
 {(invoice.terms || invoice.description) && (
   <Card>
-    <CardContent className="space-y-4">
+    <CardContent className="space-y-4 flex-1 min-w-0">
       {invoice.description && (
         <div>
           <h4 className="font-semibold text-sm mb-1" title="Only for Admin Visiblility">Description</h4>
@@ -276,21 +276,21 @@ export default function SalesInvoiceDetailsPage() {
         </div>
       )}
 
-      {invoice.terms && (
-        <div>
-          <h4 className="font-semibold text-lg mb-1 flex items-center">
-             <FileText className="h-5 w-5 mr-2 text-gray-500" />
-            Terms & Conditions
-          </h4>
+{invoice.terms && (
+  <div className="w-full overflow-hidden">
+    <h4 className="font-semibold text-lg mb-1 flex items-center">
+      <FileText className="h-5 w-5 mr-2 text-gray-500" />
+      Terms & Conditions
+    </h4>
 
-          <div
-            className="prose prose-sm max-w-none text-gray-600 break-words"
-            dangerouslySetInnerHTML={{
-              __html: invoice.terms,
-            }}
-          />
-        </div>
-      )}
+    <div
+      className="prose prose-sm max-w-none text-gray-600 break-words break-all whitespace-pre-wrap overflow-hidden"
+      dangerouslySetInnerHTML={{
+        __html: invoice.terms,
+      }}
+    />
+  </div>
+)}
     </CardContent>
   </Card>
 )}

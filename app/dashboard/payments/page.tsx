@@ -11,6 +11,7 @@ import { Plus, Search, Download, Filter, X, Eye, Edit } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
 
 interface Payment {
   _id: string
@@ -25,11 +26,14 @@ interface Payment {
   paymentMethod: string
   bankAccount?: string
   referenceNumber?: string
-  status: "completed" | "pending" | "failed" // Updated status values
+  status: "completed" | "pending" | "failed" | "cancelled" | "cleared" // Updated status values
   createdBy: string
+  purchaseInvoiceNumber?: string
+  purchaseInvoiceId?: string
 }
 
 export default function PaymentsPage() {
+  const { toast } = useToast()
   const { hasPermission, user } = useUser()
   const [searchTerm, setSearchTerm] = useState("")
   const [payments, setPayments] = useState<Payment[]>([])
@@ -184,6 +188,55 @@ const exportToCSV = () => {
   URL.revokeObjectURL(url);
 };
 
+  const handleCancelPayment = async (payment: Payment) => {
+    if (!confirm("Are you sure you want to cancel this payment?")) return
+
+    try {
+      // 1. Update Payment Status
+      const res = await fetch(`/api/payments/${payment._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      })
+
+      if (!res.ok) throw new Error("Failed to cancel payment")
+
+      // 2. Revert Invoice if exists
+      if (payment.purchaseInvoiceId) {
+        const invoice = await api.purchaseInvoice.getById(payment.purchaseInvoiceId)
+        if (invoice) {
+          const currentBalance = Number(invoice.balanceAmount || 0)
+          const currentPaid = Number(invoice.paidAmount || 0)
+          const paymentAmount = Number(payment.amount || 0)
+
+          const newBalance = currentBalance + paymentAmount
+          const newPaid = Math.max(0, currentPaid - paymentAmount)
+
+          let newInvoiceStatus = "Partial"
+          let newPaymentStatus = "Partial"
+
+          // If practically nothing is paid, revert to Open/Unpaid
+          if (newPaid < 1) {
+            newInvoiceStatus = "Open"
+            newPaymentStatus = "Unpaid"
+          }
+
+          await api.purchaseInvoice.update(payment.purchaseInvoiceId, {
+            balanceAmount: newBalance,
+            paidAmount: newPaid,
+            invoiceStatus: newInvoiceStatus,
+            paymentStatus: newPaymentStatus,
+          })
+        }
+      }
+
+      toast({ title: "Success", description: "Payment cancelled successfully" })
+      loadPayments()
+    } catch (error) {
+      console.error(error)
+      toast({ title: "Error", description: "Failed to cancel payment", variant: "destructive" })
+    }
+  }
 
   if (loading) {
     return (
@@ -489,7 +542,7 @@ const exportToCSV = () => {
                 <TableHead>Party Type</TableHead>
                 <TableHead>Party</TableHead>
                 <TableHead>Ledger</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Invoice No.</TableHead>
                 <TableHead>Payment Method</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -511,7 +564,7 @@ const exportToCSV = () => {
                   <TableCell>
                     <Badge variant="outline">{payment.category}</Badge>
                   </TableCell>
-                  <TableCell>{payment.description}</TableCell>
+                  <TableCell>{payment.purchaseInvoiceNumber || "-"}</TableCell>
                   <TableCell>{payment.paymentMethod}</TableCell>
                   <TableCell>
                     <Badge
@@ -520,6 +573,8 @@ const exportToCSV = () => {
                           ? "default"
                           : payment.status === "pending"
                             ? "secondary"
+                            : payment.status === "cancelled"
+                            ? "destructive"
                             : "destructive"
                       }
                     >
@@ -534,11 +589,14 @@ const exportToCSV = () => {
                           <Button variant="ghost" size="sm"title="View Payment details"><Eye className="h-4 w-4" />
                           </Button>
                         </Link>
-                          {!(payment.status === "completed") && (
+                          {!(payment.status === "completed" || payment.status === "cleared" || payment.status === "cancelled") && (
                                                 <Link href={`/dashboard/payments/${payment._id}/edit`}>
                                                   <Button size="icon" variant="ghost" title="Edit Payment"><Edit className="h-4 w-4" /></Button>
                                                 </Link>
                                               )}
+                          {!(payment.status === "completed" || payment.status === "cleared" || payment.status === "cancelled") && (
+                            <Button size="icon" variant="ghost" title="Cancel Payment" onClick={() => handleCancelPayment(payment)} className="text-red-600 hover:text-red-700 hover:bg-red-100"><X className="h-4 w-4" /></Button>
+                          )}
                       </div>
                     </TableCell>
                   )}

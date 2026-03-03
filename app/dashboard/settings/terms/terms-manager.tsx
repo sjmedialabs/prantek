@@ -59,18 +59,18 @@ export default function TermsManager() {
           terms.map((term) => (
             <div
               key={term._id}
-              className="border rounded p-3 flex justify-between items-start"
+              className="border rounded p-3 flex justify-between items-start gap-4"
             >
-              <div>
+              <div className="flex-1 min-w-0">
                 {term.title && <p className="font-medium">{term.title}</p>}
 
                 <div
-                  className="text-sm text-muted-foreground [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
+                  className="text-sm text-muted-foreground break-words break-all whitespace-pre-wrap leading-relaxed [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:list-decimal [&>ol]:pl-5"
                   dangerouslySetInnerHTML={{ __html: term.content }}
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <Button
                   size="sm"
                   variant="outline"

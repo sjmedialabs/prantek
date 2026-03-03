@@ -295,7 +295,7 @@ export default function ReceiptsPage() {
       const result = await res.json()
 
       if (result.success) {
-        setSalesInvoices(result.data.filter((i: any) => i.isActive === "active" && i.status !== "collected"))
+        setSalesInvoices(result.data.filter((i: any) => !["collected", "cancelled"].includes(i.status) && i.balanceAmount > 0))
       }
     } catch (err) {
       console.error(err)
@@ -552,7 +552,7 @@ export default function ReceiptsPage() {
           status: invoiceBalance <= 0 ? "collected" : "partially collected",
         }),
       })
-            await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
+      await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
         method: "PUT", // or PATCH depending on your API
         headers: {
           "Content-Type": "application/json",
@@ -649,11 +649,11 @@ export default function ReceiptsPage() {
     }
     setItems([...items, newItem])
   }
-const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
-  return taxRates.some(
-    (t) => t.type === type && Number(t.rate) === Number(rate) && t.isActive
-  )
-}
+  const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
+    return taxRates.some(
+      (t) => t.type === type && Number(t.rate) === Number(rate) && t.isActive
+    )
+  }
   // Scenario 2: Update item quantity/price
   const handleUpdateItem = (id: string, field: keyof QuotationItem, value: string | number) => {
     console.log("Selected Item Id is:::", id)
@@ -670,94 +670,94 @@ const isTaxActive = (type: "CGST" | "SGST" | "IGST", rate: number) => {
             updatedItem.taxRate = 0
           }
 
-    if (field === "itemName") {
-  const masterItem = masterItems.find((i) => i._id === value)
+          if (field === "itemName") {
+            const masterItem = masterItems.find((i) => i._id === value)
 
-  if (masterItem) {
-    updatedItem.description = masterItem.description ?? ""
-    updatedItem.price = masterItem.price ?? 0
-    updatedItem.itemId = masterItem._id
+            if (masterItem) {
+              updatedItem.description = masterItem.description ?? ""
+              updatedItem.price = masterItem.price ?? 0
+              updatedItem.itemId = masterItem._id
 
-    const buyer = clients.find(c => c._id === selectedScenario2Client?._id)
-    const buyerState = buyer?.state || ""
+              const buyer = clients.find(c => c._id === selectedScenario2Client?._id)
+              const buyerState = buyer?.state || ""
 
-    let cgst = 0
-    let sgst = 0
-    let igst = 0
+              let cgst = 0
+              let sgst = 0
+              let igst = 0
 
-    if (sellerState && buyerState &&
-        sellerState.toLowerCase() === buyerState.toLowerCase()) {
+              if (sellerState && buyerState &&
+                sellerState.toLowerCase() === buyerState.toLowerCase()) {
 
-      // 🔹 Intra-state → CGST + SGST
-      if (masterItem.cgst && isTaxActive("CGST", masterItem.cgst)) {
-        cgst = masterItem.cgst
-      }
+                // 🔹 Intra-state → CGST + SGST
+                if (masterItem.cgst && isTaxActive("CGST", masterItem.cgst)) {
+                  cgst = masterItem.cgst
+                }
 
-      if (masterItem.sgst && isTaxActive("SGST", masterItem.sgst)) {
-        sgst = masterItem.sgst
-      }
+                if (masterItem.sgst && isTaxActive("SGST", masterItem.sgst)) {
+                  sgst = masterItem.sgst
+                }
 
-    } else {
+              } else {
 
-      // 🔹 Inter-state → IGST
-      const igstRate =
-        masterItem.igst ||
-        ((masterItem.cgst || 0) + (masterItem.sgst || 0))
+                // 🔹 Inter-state → IGST
+                const igstRate =
+                  masterItem.igst ||
+                  ((masterItem.cgst || 0) + (masterItem.sgst || 0))
 
-      if (igstRate && isTaxActive("IGST", igstRate)) {
-        igst = igstRate
-      }
-    }
+                if (igstRate && isTaxActive("IGST", igstRate)) {
+                  igst = igstRate
+                }
+              }
 
-    updatedItem.cgst = cgst
-    updatedItem.sgst = sgst
-    updatedItem.igst = igst
-  }
-}
+              updatedItem.cgst = cgst
+              updatedItem.sgst = sgst
+              updatedItem.igst = igst
+            }
+          }
 
-       if (field === "cgst" || field === "sgst" || field === "igst") {
+          if (field === "cgst" || field === "sgst" || field === "igst") {
 
-  let cgst = Number(updatedItem.cgst) || 0
-  let sgst = Number(updatedItem.sgst) || 0
-  let igst = Number(updatedItem.igst) || 0
+            let cgst = Number(updatedItem.cgst) || 0
+            let sgst = Number(updatedItem.sgst) || 0
+            let igst = Number(updatedItem.igst) || 0
 
-  // Validate active status again
-  if (cgst && !isTaxActive("CGST", cgst)) cgst = 0
-  if (sgst && !isTaxActive("SGST", sgst)) sgst = 0
-  if (igst && !isTaxActive("IGST", igst)) igst = 0
+            // Validate active status again
+            if (cgst && !isTaxActive("CGST", cgst)) cgst = 0
+            if (sgst && !isTaxActive("SGST", sgst)) sgst = 0
+            if (igst && !isTaxActive("IGST", igst)) igst = 0
 
-  updatedItem.cgst = cgst
-  updatedItem.sgst = sgst
-  updatedItem.igst = igst
-}
-const taxRate =
-  (Number(updatedItem.cgst) || 0) +
-  (Number(updatedItem.sgst) || 0) +
-  (Number(updatedItem.igst) || 0)
+            updatedItem.cgst = cgst
+            updatedItem.sgst = sgst
+            updatedItem.igst = igst
+          }
+          const taxRate =
+            (Number(updatedItem.cgst) || 0) +
+            (Number(updatedItem.sgst) || 0) +
+            (Number(updatedItem.igst) || 0)
 
-updatedItem.taxRate = taxRate
+          updatedItem.taxRate = taxRate
 
-const taxParts = []
-if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
-if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
-if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
+          const taxParts = []
+          if (updatedItem.cgst) taxParts.push(`CGST (${updatedItem.cgst}%)`)
+          if (updatedItem.sgst) taxParts.push(`SGST (${updatedItem.sgst}%)`)
+          if (updatedItem.igst) taxParts.push(`IGST (${updatedItem.igst}%)`)
 
-updatedItem.taxName = taxParts.join(" + ")
+          updatedItem.taxName = taxParts.join(" + ")
 
-updatedItem.amount =
-  (Number(updatedItem.price) - Number(updatedItem.discount || 0)) *
-  Number(updatedItem.quantity)
+          updatedItem.amount =
+            (Number(updatedItem.price) - Number(updatedItem.discount || 0)) *
+            Number(updatedItem.quantity)
 
-updatedItem.taxAmount =
-  (updatedItem.amount * taxRate) / 100
+          updatedItem.taxAmount =
+            (updatedItem.amount * taxRate) / 100
 
-updatedItem.total =
-  updatedItem.amount + updatedItem.taxAmount
+          updatedItem.total =
+            updatedItem.amount + updatedItem.taxAmount
 
 
           return updatedItem
         }
-   
+
         return item
       }),
     )
@@ -1035,8 +1035,15 @@ updatedItem.total =
   }));
   const selectedScenario2Client =
     clients.find((c) => c._id === scenario2Client) || null;
-      const selectedScenario3Client =
+  const selectedScenario3Client =
     clients.find((c) => c._id === scenario3Client) || null;
+  const receiptBalance =
+    selectedAdvanceReceipt?.balanceAmount ??
+    selectedAdvanceReceipt?.ReceiptAmount;
+
+  const invoiceBalance = invoiceDetails?.balanceAmount ?? 0;
+
+  const finalMax = Math.min(receiptBalance, invoiceBalance);
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
@@ -1064,9 +1071,9 @@ updatedItem.total =
             <TabsContent value="invoice" className="space-y-4">
               <div className="space-y-4">
                 <div className="flex flex-row gap-2">
-                <div className="w-full">
-                  <Label>Select SalesInvoice</Label>
-                  {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
+                  <div className="w-full">
+                    <Label>Select SalesInvoice</Label>
+                    {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a invoice" />
                     </SelectTrigger>
@@ -1079,15 +1086,15 @@ updatedItem.total =
 
                     </SelectContent>
                   </Select> */}
-                  <OwnSearchableSelect
-                    options={quotationOptions}
-                    value={selectedInvoice}
-                    onValueChange={handleInvoiceSelect}
-                    placeholder="Search by Sales Invoice No. no, client, email, or phone..."
-                    emptyText="No invoice found"
-                  />
-                </div>
-                <div className="w-full">
+                    <OwnSearchableSelect
+                      options={quotationOptions}
+                      value={selectedInvoice}
+                      onValueChange={handleInvoiceSelect}
+                      placeholder="Search by Sales Invoice No. no, client, email, or phone..."
+                      emptyText="No invoice found"
+                    />
+                  </div>
+                  <div className="w-full">
                     <Label>Created By</Label>
                     <Input value={companyName} readOnly className="bg-gray-100" />
                   </div></div>
@@ -1126,20 +1133,15 @@ updatedItem.total =
                     <Input
                       type="number"
                       value={advanceApplyAmount}
-                      max={selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount}
-                      onChange={(e) =>
-                        setAdvanceApplyAmount(
-                          Math.min(
-                            Number(e.target.value),
-                            selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount,
-                            invoiceDetails?.balanceAmount || Infinity
-                          )
-                        )
-                      }
+                      max={finalMax}
+                      onChange={(e) => {
+                        const value = Number(e.target.value) || 0;
+                        setAdvanceApplyAmount(Math.min(value, finalMax));
+                      }}s
                     />
 
                     <p className="text-xs text-gray-500 mt-1">
-                      Max: ₹{Math.min(selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount, invoiceDetails?.balanceAmount || Infinity)}
+                      Max: ₹{finalMax.toLocaleString("en-IN")}
                     </p>
                   </div>
                 )}
@@ -1184,8 +1186,8 @@ updatedItem.total =
                       <SelectItem value="upi">
                         UPI
                       </SelectItem>
-                       <SelectItem value="card">
-                       Card
+                      <SelectItem value="card">
+                        Card
                       </SelectItem>
                       <SelectItem value="cheque">
                         Cheque
@@ -1216,42 +1218,42 @@ updatedItem.total =
                 </div>
                 {selectedPaymentMethod.trim().toLowerCase() != "cash" && (
                   <div className="space-y-4">
-                  <div className="flex space-x-4">
-                    <div className="flex-1">
-                      <Label>Reference Number </Label>
-                      <Input
-                        type="text"
-                        value={referenceNumber}
-                        onChange={(e) => (setReferenceNumber(e.target.value))}
-                        placeholder="Enter Your Reference Number"
-                        required />
+                    <div className="flex space-x-4">
+                      <div className="flex-1">
+                        <Label>Reference Number </Label>
+                        <Input
+                          type="text"
+                          value={referenceNumber}
+                          onChange={(e) => (setReferenceNumber(e.target.value))}
+                          placeholder="Enter Your Reference Number"
+                          required />
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor="paymentMethod">
+                          Bank Account <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={selectedBankAcount}
+                          onValueChange={(value) => setSelectedBankAccount(value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Bank Accounts" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map((method: any) => (
+                              <SelectItem key={method._id} value={method._id}>
+                                {method.bankName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <Label htmlFor="paymentMethod">
-                        Bank Account <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={selectedBankAcount}
-                        onValueChange={(value) => setSelectedBankAccount(value)}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Bank Accounts" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bankAccounts.map((method: any) => (
-                            <SelectItem key={method._id} value={method._id}>
-                              {method.bankName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div>
+                      <Label>Payment Screenshot</Label>
+                      <FileUpload value={screenshotUrl} onChange={setScreenshotUrl} />
                     </div>
-                  </div>
-                  <div>
-                    <Label>Payment Screenshot</Label>
-                    <FileUpload value={screenshotUrl} onChange={setScreenshotUrl} />
-                  </div>
                   </div>
                 )}
                 {invoiceDetails && (
@@ -1320,11 +1322,11 @@ updatedItem.total =
             <TabsContent value="nonInvoiced" className="space-y-4">
               <div className="space-y-4">
                 <div className="flex flex-row gap-2 iems-center">
-                {/* Client Selector */}
-                <div className="w-full">
-                  <Label>Client *</Label>
-                  <div className="flex gap-2">
-                    {/* <Select value={scenario2Client} onValueChange={setScenario2Client}>
+                  {/* Client Selector */}
+                  <div className="w-full">
+                    <Label>Client *</Label>
+                    <div className="flex gap-2">
+                      {/* <Select value={scenario2Client} onValueChange={setScenario2Client}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -1336,102 +1338,102 @@ updatedItem.total =
                         ))}
                       </SelectContent>
                     </Select> */}
-                    <OwnSearchableSelect
-                      options={clientOptions}
-                      value={scenario2Client}
-                      onValueChange={setScenario2Client}
-                      placeholder="Search and select a client..."
-                      searchPlaceholder="Type to filter..."
-                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
-                    />
-                     {/* created by */}
-            
-                    <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
-                      <DialogTrigger asChild>
-                        {/* <Button variant="outline" size="icon">
+                      <OwnSearchableSelect
+                        options={clientOptions}
+                        value={scenario2Client}
+                        onValueChange={setScenario2Client}
+                        placeholder="Search and select a client..."
+                        searchPlaceholder="Type to filter..."
+                        emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                      />
+                      {/* created by */}
+
+                      <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+                        <DialogTrigger asChild>
+                          {/* <Button variant="outline" size="icon">
                           <Plus className="h-4 w-4" />
                         </Button> */}
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create New Client</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3">
-                          <div>
-                            <Label>Name *</Label>
-                            <Input
-                              value={newClient.name}
-                              onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                            />
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Client</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <div>
+                              <Label>Name *</Label>
+                              <Input
+                                value={newClient.name}
+                                onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Phone *</Label>
+                              <Input
+                                value={newClient.phone}
+                                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Email</Label>
+                              <Input
+                                type="email"
+                                value={newClient.email}
+                                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Address</Label>
+                              <Input
+                                value={newClient.address}
+                                onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label>Phone *</Label>
-                            <Input
-                              value={newClient.phone}
-                              onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Email</Label>
-                            <Input
-                              type="email"
-                              value={newClient.email}
-                              onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Address</Label>
-                            <Input
-                              value={newClient.address}
-                              onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleCreateClient}>Create Client</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                          <DialogFooter>
+                            <Button onClick={handleCreateClient}>Create Client</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
                   </div>
-                  
-                </div>
-                      <div className="w-full">
+                  <div className="w-full">
                     <Label>Created By</Label>
                     <Input value={companyName} readOnly className="bg-gray-100" />
                   </div></div>
-                    {selectedScenario2Client && (
-                      <Card className="mt-4 bg-slate-50 border">
-                        <CardContent className="p-4 text-sm space-y-2">
+                {selectedScenario2Client && (
+                  <Card className="mt-4 bg-slate-50 border">
+                    <CardContent className="p-4 text-sm space-y-2">
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Client Name:</span>
-                            <span className="font-medium">
-                              {selectedScenario2Client.name || selectedScenario2Client.clientName}
-                            </span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Client Name:</span>
+                        <span className="font-medium">
+                          {selectedScenario2Client.name || selectedScenario2Client.clientName}
+                        </span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Email:</span>
-                            <span>{selectedScenario2Client.email}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Email:</span>
+                        <span>{selectedScenario2Client.email}</span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Contact:</span>
-                            <span>{selectedScenario2Client.phone}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Contact:</span>
+                        <span>{selectedScenario2Client.phone}</span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Address:</span>
-                            <p className="mt-1">
-                              {selectedScenario2Client.address},
-                              {" "}{selectedScenario2Client.city},
-                              {" "}{selectedScenario2Client.state} - {selectedScenario2Client.pincode}
-                            </p>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Address:</span>
+                        <p className="mt-1">
+                          {selectedScenario2Client.address},
+                          {" "}{selectedScenario2Client.city},
+                          {" "}{selectedScenario2Client.state} - {selectedScenario2Client.pincode}
+                        </p>
+                      </div>
 
-                        </CardContent>
-                      </Card>
-                    )}
+                    </CardContent>
+                  </Card>
+                )}
                 {/* Items card */}
 
                 <Card>
@@ -1641,12 +1643,12 @@ updatedItem.total =
                         <span>Grand Total:</span>
                         <span className="text-purple-600">₹{grandTotal.toLocaleString()}</span>
                       </div>
-                           {selectedAdvanceReceipt && (
-                      <div className="flex justify-between text-sm text-blue-600">
-                        <span>Advance Applied:</span>
-                        <span>- ₹{advanceApplyAmount?.toLocaleString()}</span>
-                      </div>
-                    )}
+                      {selectedAdvanceReceipt && (
+                        <div className="flex justify-between text-sm text-blue-600">
+                          <span>Advance Applied:</span>
+                          <span>- ₹{advanceApplyAmount?.toLocaleString()}</span>
+                        </div>
+                      )}
                       {selectedAdvanceReceipt && (
                         <div className="flex justify-between font-bold text-lg mt-2 border-t pt-2">
                           <span>Net Payable:</span>
@@ -1654,7 +1656,7 @@ updatedItem.total =
                         </div>
                       )}
                       <div className="flex flex-row justify-between">
-                       <span> In Words:</span> <span> {numberToIndianCurrencyWords(grandTotal - (advanceApplyAmount || 0))}</span>
+                        <span> In Words:</span> <span> {numberToIndianCurrencyWords(grandTotal - (advanceApplyAmount || 0))}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -1737,7 +1739,7 @@ updatedItem.total =
                           Bank Transfer
                         </SelectItem>
                         <SelectItem value="other">
-                         Other
+                          Other
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -1766,41 +1768,41 @@ updatedItem.total =
                   {/* account no. and refrence no. if no cash */}
                   {scenario2PaymentMethod.trim().toLowerCase() != "cash" && (
                     <div className="space-y-4">
-                    <div className="flex space-x-4">
-                      <div className="flex-1">
-                        <Label>Reference Number </Label>
-                        <Input
-                          type="text"
-                          value={scenario2ReferenceNumber}
-                          onChange={(e) => (setScenario2ReferenceNumber(e.target.value))}
-                          placeholder="Enter Your Reference Number"
-                          required />
-                      </div>
-                      <div className="flex-1">
-                        <Label>
-                          Bank Account <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={selectedAccount?._id}
-                          onValueChange={(id) => {
-                            const bank = bankAccounts.find((b: any) => b._id === id)
-                            setSelectedAccount(bank)
-                          }}
-                        >
+                      <div className="flex space-x-4">
+                        <div className="flex-1">
+                          <Label>Reference Number </Label>
+                          <Input
+                            type="text"
+                            value={scenario2ReferenceNumber}
+                            onChange={(e) => (setScenario2ReferenceNumber(e.target.value))}
+                            placeholder="Enter Your Reference Number"
+                            required />
+                        </div>
+                        <div className="flex-1">
+                          <Label>
+                            Bank Account <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={selectedAccount?._id}
+                            onValueChange={(id) => {
+                              const bank = bankAccounts.find((b: any) => b._id === id)
+                              setSelectedAccount(bank)
+                            }}
+                          >
 
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Bank Accounts" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bankAccounts.map((method: any) => (
-                              <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}
-                              </SelectItem>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Bank Accounts" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map((method: any) => (
+                                <SelectItem key={method._id} value={method._id}>
+                                  {method.bankName}
+                                </SelectItem>
 
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {/* {selectedAccount && (
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {/* {selectedAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
                       <p><strong>Bank:</strong> {selectedAccount.bankName}</p>
                       <p><strong>Account Name:</strong> {selectedAccount.accountName}</p>
@@ -1824,12 +1826,12 @@ updatedItem.total =
 
                     </div>
                   )} */}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <Label>Payment Screenshot</Label>
-                      <FileUpload value={scenario2ScreenshotUrl} onChange={setScenario2ScreenshotUrl} />
-                    </div>
+                      <div>
+                        <Label>Payment Screenshot</Label>
+                        <FileUpload value={scenario2ScreenshotUrl} onChange={setScenario2ScreenshotUrl} />
+                      </div>
                     </div>
                   )}
                   {/* amounnt paying  */}
@@ -1842,7 +1844,7 @@ updatedItem.total =
                       placeholder="Enter amount paid (full or advance)"
                     />
                   </div>
-                 
+
                 </div>
                 {/* notes */}
                 <div>
@@ -1879,12 +1881,12 @@ updatedItem.total =
             {/* Scenario 3: Quick Receipt */}
             <TabsContent value="quick" className="space-y-4">
               <div className="space-y-4">
-                              <div className="flex flex-row items-center gap-2">
-                {/* Client Selector */}
-                <div className="w-full">
-                  <Label>Client *</Label>
-                  <div className="flex gap-2">
-                    {/* <Select value={scenario3Client} onValueChange={setScenario3Client}>
+                <div className="flex flex-row items-center gap-2">
+                  {/* Client Selector */}
+                  <div className="w-full">
+                    <Label>Client *</Label>
+                    <div className="flex gap-2">
+                      {/* <Select value={scenario3Client} onValueChange={setScenario3Client}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -1896,103 +1898,103 @@ updatedItem.total =
                         ))}
                       </SelectContent>
                     </Select> */}
-                     <OwnSearchableSelect
-                      options={clientOptions}
-                      value={scenario3Client}
-                      onValueChange={setScenario3Client}
-                      placeholder="Search and select a client..."
-                      searchPlaceholder="Type to filter..."
-                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
-                    />
-                    <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
-                      <DialogTrigger asChild>
-                        {/* <Button variant="outline" size="icon">
+                      <OwnSearchableSelect
+                        options={clientOptions}
+                        value={scenario3Client}
+                        onValueChange={setScenario3Client}
+                        placeholder="Search and select a client..."
+                        searchPlaceholder="Type to filter..."
+                        emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                      />
+                      <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+                        <DialogTrigger asChild>
+                          {/* <Button variant="outline" size="icon">
                           <Plus className="h-4 w-4" />
                         </Button> */}
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create New Client</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3">
-                          <div>
-                            <Label>Name *</Label>
-                            <Input
-                              value={newClient.name}
-                              onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                            />
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Client</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <div>
+                              <Label>Name *</Label>
+                              <Input
+                                value={newClient.name}
+                                onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Phone *</Label>
+                              <Input
+                                value={newClient.phone}
+                                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Email</Label>
+                              <Input
+                                type="email"
+                                value={newClient.email}
+                                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Address</Label>
+                              <Input
+                                value={newClient.address}
+                                onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label>Phone *</Label>
-                            <Input
-                              value={newClient.phone}
-                              onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Email</Label>
-                            <Input
-                              type="email"
-                              value={newClient.email}
-                              onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Address</Label>
-                            <Input
-                              value={newClient.address}
-                              onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleCreateClient}>Create Client</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
+                          <DialogFooter>
+                            <Button onClick={handleCreateClient}>Create Client</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                    </div>
+
                   </div>
-                
-                </div>
-                                      {/* created by */}
+                  {/* created by */}
                   <div className="w-full">
                     <Label>Created By</Label>
                     <Input value={companyName} readOnly className="bg-gray-100" />
                   </div>
-                  </div>
-                                           {selectedScenario3Client && (
-                      <Card className="mt-4 bg-slate-50 border">
-                        <CardContent className="p-4 text-sm space-y-2">
+                </div>
+                {selectedScenario3Client && (
+                  <Card className="mt-4 bg-slate-50 border">
+                    <CardContent className="p-4 text-sm space-y-2">
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Client Name:</span>
-                            <span className="font-medium">
-                              {selectedScenario3Client.name || selectedScenario3Client.clientName}
-                            </span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Client Name:</span>
+                        <span className="font-medium">
+                          {selectedScenario3Client.name || selectedScenario3Client.clientName}
+                        </span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Email:</span>
-                            <span>{selectedScenario3Client.email}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Email:</span>
+                        <span>{selectedScenario3Client.email}</span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Contact:</span>
-                            <span>{selectedScenario3Client.phone}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Contact:</span>
+                        <span>{selectedScenario3Client.phone}</span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Address:</span>
-                            <p className="mt-1">
-                              {selectedScenario3Client.address},
-                              {" "}{selectedScenario3Client.city},
-                              {" "}{selectedScenario3Client.state} - {selectedScenario3Client.pincode}
-                            </p>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Address:</span>
+                        <p className="mt-1">
+                          {selectedScenario3Client.address},
+                          {" "}{selectedScenario3Client.city},
+                          {" "}{selectedScenario3Client.state} - {selectedScenario3Client.pincode}
+                        </p>
+                      </div>
 
-                        </CardContent>
-                      </Card>
-                    )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Amount */}
                 {/* <div>
@@ -2021,7 +2023,7 @@ updatedItem.total =
                           UPI
                         </SelectItem>
                         <SelectItem value="card">
-                         Card
+                          Card
                         </SelectItem>
                         <SelectItem value="cheque">
                           Cheque
@@ -2029,8 +2031,8 @@ updatedItem.total =
                         <SelectItem value="bankTransfer">
                           Bank Transfer
                         </SelectItem>
-                         <SelectItem value="other">
-                        Other
+                        <SelectItem value="other">
+                          Other
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -2059,41 +2061,41 @@ updatedItem.total =
                   {/* account no. and refrence no. if no cash */}
                   {scenario3PaymentMethod.trim().toLowerCase() != ("cash") && (
                     <div className="space-y-4">
-                    <div className="flex space-x-4">
-                      <div className="flex-1">
-                        <Label>Reference Number </Label>
-                        <Input
-                          type="text"
-                          value={scenario3ReferenceNumber}
-                          onChange={(e) => (setScenario3ReferenceNumber(e.target.value))}
-                          placeholder="Enter Your Reference Number"
-                          required />
-                      </div>
-                      <div className="flex-1">
-                        <Label>
-                          Bank Account <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={selectedAccount?._id}
-                          onValueChange={(id) => {
-                            const bank = bankAccounts.find((b: any) => b._id === id)
-                            setSelectedAccount(bank)
-                          }}
-                        >
+                      <div className="flex space-x-4">
+                        <div className="flex-1">
+                          <Label>Reference Number </Label>
+                          <Input
+                            type="text"
+                            value={scenario3ReferenceNumber}
+                            onChange={(e) => (setScenario3ReferenceNumber(e.target.value))}
+                            placeholder="Enter Your Reference Number"
+                            required />
+                        </div>
+                        <div className="flex-1">
+                          <Label>
+                            Bank Account <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={selectedAccount?._id}
+                            onValueChange={(id) => {
+                              const bank = bankAccounts.find((b: any) => b._id === id)
+                              setSelectedAccount(bank)
+                            }}
+                          >
 
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Bank Accounts" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bankAccounts.map((method: any) => (
-                              <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}
-                              </SelectItem>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Bank Accounts" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map((method: any) => (
+                                <SelectItem key={method._id} value={method._id}>
+                                  {method.bankName}
+                                </SelectItem>
 
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {/* {selectedAccount && (
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {/* {selectedAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
                       <p><strong>Bank:</strong> {selectedAccount.bankName}</p>
                       <p><strong>Account Name:</strong> {selectedAccount.accountName}</p>
@@ -2117,12 +2119,12 @@ updatedItem.total =
 
                     </div>
                   )} */}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <Label>Payment Screenshot</Label>
-                      <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} />
-                    </div>
+                      <div>
+                        <Label>Payment Screenshot</Label>
+                        <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} />
+                      </div>
                     </div>
                   )}
                   {/* amounnt paying  */}
@@ -2139,9 +2141,9 @@ updatedItem.total =
                         Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
                       </div>
                     )} */}
-                       <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
+                    <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
                   </div>
-                  
+
                   {/* created by */}
                   {/* <div>
                     <Label>Created By</Label>
@@ -2182,11 +2184,11 @@ updatedItem.total =
             <TabsContent value="advance" className="space-y-4">
               <div className="space-y-4">
                 <div className="flex flex-row items-center gap-2">
-                {/* Client Selector */}
-                <div className="w-full">
-                  <Label>Client *</Label>
-                  <div className="flex gap-2">
-                    {/* <Select value={scenario3Client} onValueChange={setScenario3Client}>
+                  {/* Client Selector */}
+                  <div className="w-full">
+                    <Label>Client *</Label>
+                    <div className="flex gap-2">
+                      {/* <Select value={scenario3Client} onValueChange={setScenario3Client}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Select client" />
                       </SelectTrigger>
@@ -2198,103 +2200,103 @@ updatedItem.total =
                         ))}
                       </SelectContent>
                     </Select> */}
-                     <OwnSearchableSelect
-                      options={clientOptions}
-                      value={scenario3Client}
-                      onValueChange={setScenario3Client}
-                      placeholder="Search and select a client..."
-                      searchPlaceholder="Type to filter..."
-                      emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
-                    />
-                    <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
-                      <DialogTrigger asChild>
-                        {/* <Button variant="outline" size="icon">
+                      <OwnSearchableSelect
+                        options={clientOptions}
+                        value={scenario3Client}
+                        onValueChange={setScenario3Client}
+                        placeholder="Search and select a client..."
+                        searchPlaceholder="Type to filter..."
+                        emptyText={loadingClients ? "Loading clients..." : "No clients found please create a new client."}
+                      />
+                      <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+                        <DialogTrigger asChild>
+                          {/* <Button variant="outline" size="icon">
                           <Plus className="h-4 w-4" />
                         </Button> */}
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Create New Client</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-3">
-                          <div>
-                            <Label>Name *</Label>
-                            <Input
-                              value={newClient.name}
-                              onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
-                            />
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Client</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-3">
+                            <div>
+                              <Label>Name *</Label>
+                              <Input
+                                value={newClient.name}
+                                onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Phone *</Label>
+                              <Input
+                                value={newClient.phone}
+                                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Email</Label>
+                              <Input
+                                type="email"
+                                value={newClient.email}
+                                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Address</Label>
+                              <Input
+                                value={newClient.address}
+                                onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <Label>Phone *</Label>
-                            <Input
-                              value={newClient.phone}
-                              onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Email</Label>
-                            <Input
-                              type="email"
-                              value={newClient.email}
-                              onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Address</Label>
-                            <Input
-                              value={newClient.address}
-                              onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleCreateClient}>Create Client</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                    
+                          <DialogFooter>
+                            <Button onClick={handleCreateClient}>Create Client</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                    </div>
+
                   </div>
-                
-                </div>
-                                      {/* created by */}
+                  {/* created by */}
                   <div className="w-full">
                     <Label>Created By</Label>
                     <Input value={companyName} readOnly className="bg-gray-100" />
                   </div>
-                  </div>
-                                           {selectedScenario3Client && (
-                      <Card className="mt-4 bg-slate-50 border">
-                        <CardContent className="p-4 text-sm space-y-2">
+                </div>
+                {selectedScenario3Client && (
+                  <Card className="mt-4 bg-slate-50 border">
+                    <CardContent className="p-4 text-sm space-y-2">
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Client Name:</span>
-                            <span className="font-medium">
-                              {selectedScenario3Client.name || selectedScenario3Client.clientName}
-                            </span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Client Name:</span>
+                        <span className="font-medium">
+                          {selectedScenario3Client.name || selectedScenario3Client.clientName}
+                        </span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Email:</span>
-                            <span>{selectedScenario3Client.email}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Email:</span>
+                        <span>{selectedScenario3Client.email}</span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Contact:</span>
-                            <span>{selectedScenario3Client.phone}</span>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Contact:</span>
+                        <span>{selectedScenario3Client.phone}</span>
+                      </div>
 
-                          <div className="flex gap-2">
-                            <span className="text-gray-500">Address:</span>
-                            <p className="mt-1">
-                              {selectedScenario3Client.address},
-                              {" "}{selectedScenario3Client.city},
-                              {" "}{selectedScenario3Client.state} - {selectedScenario3Client.pincode}
-                            </p>
-                          </div>
+                      <div className="flex gap-2">
+                        <span className="text-gray-500">Address:</span>
+                        <p className="mt-1">
+                          {selectedScenario3Client.address},
+                          {" "}{selectedScenario3Client.city},
+                          {" "}{selectedScenario3Client.state} - {selectedScenario3Client.pincode}
+                        </p>
+                      </div>
 
-                        </CardContent>
-                      </Card>
-                    )}
+                    </CardContent>
+                  </Card>
+                )}
                 {/* Amount */}
                 {/* <div>
                   <Label>Total Amount *</Label>
@@ -2322,7 +2324,7 @@ updatedItem.total =
                           UPI
                         </SelectItem>
                         <SelectItem value="card">
-                         Card
+                          Card
                         </SelectItem>
                         <SelectItem value="cheque">
                           Cheque
@@ -2330,8 +2332,8 @@ updatedItem.total =
                         <SelectItem value="bankTransfer">
                           Bank Transfer
                         </SelectItem>
-                         <SelectItem value="other">
-                        Other
+                        <SelectItem value="other">
+                          Other
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -2360,41 +2362,41 @@ updatedItem.total =
                   {/* account no. and refrence no. if no cash */}
                   {scenario3PaymentMethod.trim().toLowerCase() != "cash" && (
                     <div className="space-y-4">
-                    <div className="flex space-x-4">
-                      <div className="flex-1">
-                        <Label>Reference Number </Label>
-                        <Input
-                          type="text"
-                          value={scenario3ReferenceNumber}
-                          onChange={(e) => (setScenario3ReferenceNumber(e.target.value))}
-                          placeholder="Enter Your Reference Number"
-                          required />
-                      </div>
-                      <div className="flex-1">
-                        <Label>
-                          Bank Account <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={selectedAccount?._id}
-                          onValueChange={(id) => {
-                            const bank = bankAccounts.find((b: any) => b._id === id)
-                            setSelectedAccount(bank)
-                          }}
-                        >
+                      <div className="flex space-x-4">
+                        <div className="flex-1">
+                          <Label>Reference Number </Label>
+                          <Input
+                            type="text"
+                            value={scenario3ReferenceNumber}
+                            onChange={(e) => (setScenario3ReferenceNumber(e.target.value))}
+                            placeholder="Enter Your Reference Number"
+                            required />
+                        </div>
+                        <div className="flex-1">
+                          <Label>
+                            Bank Account <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={selectedAccount?._id}
+                            onValueChange={(id) => {
+                              const bank = bankAccounts.find((b: any) => b._id === id)
+                              setSelectedAccount(bank)
+                            }}
+                          >
 
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Bank Accounts" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {bankAccounts.map((method: any) => (
-                              <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}
-                              </SelectItem>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Bank Accounts" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map((method: any) => (
+                                <SelectItem key={method._id} value={method._id}>
+                                  {method.bankName}
+                                </SelectItem>
 
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {/* {selectedAccount && (
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {/* {selectedAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
                       <p><strong>Bank:</strong> {selectedAccount.bankName}</p>
                       <p><strong>Account Name:</strong> {selectedAccount.accountName}</p>
@@ -2418,12 +2420,12 @@ updatedItem.total =
 
                     </div>
                   )} */}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <Label>Payment Screenshot</Label>
-                      <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} size="sm" width={20} height={20}/>
-                    </div>
+                      <div>
+                        <Label>Payment Screenshot</Label>
+                        <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} size="sm" width={20} height={20} />
+                      </div>
                     </div>
                   )}
                   {/* amounnt paying  */}
