@@ -36,9 +36,9 @@ export default function NewPurchaseInvoicePage() {
 
   const [invoiceData, setInvoiceData] = useState<any>({
     date: new Date().toISOString().split("T")[0],
-    dueDate: "",
+    dueDate: new Date().toISOString().split("T")[0],
     vendorInvoiceNumber: "",
-    purchaseInvoiceNumber: `PR-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
+    purchaseInvoiceNumber: "Loading...",
     recipientType: "",
     recipientId: "",
     recipientName: "",
@@ -80,13 +80,12 @@ export default function NewPurchaseInvoicePage() {
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [recipientTypes, setRecipientTypes] = useState<any[]>([])
   const [companyName, setCompanyName] = useState("")
-  const [dueDate, setDueDate] = useState("")
 
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, companyData] = await Promise.all([
+        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, purchaseInvoicesData] = await Promise.all([
           api.clients.getAll(),
           api.vendors.getAll(),
           api.employees.getAll(),
@@ -94,10 +93,10 @@ export default function NewPurchaseInvoicePage() {
           api.paymentCategories.getAll(),
           api.paymentMethods.getAll(),
           api.bankAccounts.getAll(),
-          api.company.get(),
+          api.purchaseInvoice.getAll(),
         ]);
 
-        console.log("Loaded data:", clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts);
+        console.log("Loaded data:", clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, purchaseInvoicesData);
 
         // 🧹 Filter → Dedupe → Set
 
@@ -149,15 +148,46 @@ export default function NewPurchaseInvoicePage() {
 
         const activeBankAccounts = bankAccounts.filter((t: any) => t.isActive);
         setBankAccounts(activeBankAccounts);
-        const company = companyData.companyName || companyData.name || ""
-        setCompanyName(company)
+        setCompanyName(user?.email || "")
+
+        // Calculate Purchase Invoice Number
+        const getFinancialYear = () => {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth() + 1; // Jan = 1
+          return month >= 4 ? year + 1 : year;
+        };
+
+        const financialYear = getFinancialYear();
+        const prefix = "PI";
+
+        const currentFYInvoices = purchaseInvoicesData?.filter((inv: any) => {
+          if (!inv.purchaseInvoiceNumber) return false;
+          const parts = inv.purchaseInvoiceNumber.split("-");
+          if (parts.length < 3) return false;
+          const fy = Number(parts[1]);
+          return fy === financialYear;
+        }) || [];
+
+        const count = currentFYInvoices.length + 1;
+        const sequence = String(count).padStart(3, "0");
+        const newPurchaseInvoiceNumber = `${prefix}-${financialYear}-${sequence}`;
+
+        setInvoiceData((prev: any) => ({
+          ...prev,
+          purchaseInvoiceNumber: newPurchaseInvoiceNumber,
+        }));
       } catch (error) {
         console.error("Failed to load data:", error);
+        setInvoiceData((prev: any) => ({
+          ...prev,
+          purchaseInvoiceNumber: `PI-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
+        }));
       }
     };
 
     loadData();
-  }, []);
+  }, [user]);
 
   // const uniqueRecipientTypes = Array.from(
   //   new Map(recipientTypes.map((type) => [type.value, type])).values()
@@ -171,8 +201,8 @@ export default function NewPurchaseInvoicePage() {
     if (!invoiceData.date && !invoiceData.category) {
       errors.date = "Date is required"
     }
-    if (!invoiceData.amount || Number.parseFloat(invoiceData.amount) <= 0) {
-      errors.amount = "Valid amount is required"
+    if (!invoiceData.invoiceTotal || Number.parseFloat(invoiceData.invoiceTotal) <= 0) {
+      errors.invoiceTotal = "Valid amount is required"
     }
 
     if (!invoiceData.recipientType) {
@@ -217,9 +247,7 @@ export default function NewPurchaseInvoicePage() {
     //   errors.bankAccount = "Bank account is required for this payment method"
     // }
 
-    if (!invoiceData.billFile) {
-      errors.billFile = "Bill upload is required for this payment method"
-    }
+    // Bill upload is now optional
 
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
@@ -307,19 +335,19 @@ export default function NewPurchaseInvoicePage() {
     const expenseAdj = Number.parseFloat(invoiceData.expenseAdjustmentAmount || "0")
 
     const balance =
-      expenseAdj > 0 ? amount - expenseAdj : amount
+      expenseAdj > 0 ? amount - expenseAdj : amount;
 
     setInvoiceData({
       ...invoiceData,
-      amount: value,
-      balance: balance.toFixed(2),
+      invoiceTotal: value,
+      balanceAmount: balance.toFixed(2),
     })
 
     if (value) {
       setAmountInWords(`${amount.toLocaleString()} rupees only`)
 
-      if (validationErrors.amount) {
-        setValidationErrors({ ...validationErrors, amount: "" })
+      if (validationErrors.invoiceTotal) {
+        setValidationErrors({ ...validationErrors, invoiceTotal: "" })
       }
     } else {
       setAmountInWords("")
@@ -360,15 +388,16 @@ export default function NewPurchaseInvoicePage() {
         recipientEmail: invoiceData.recipientEmail,
         recipientPhone: invoiceData.recipientPhone,
         recipientAddress: invoiceData.recipientAddress,
+        vendorInvoiceNumber: invoiceData.vendorInvoiceNumber,
         date: invoiceData.date,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+        dueDate: invoiceData.dueDate ? new Date(invoiceData.dueDate).toISOString() : undefined,
         paymentStatus: "Unpaid",
         invoiceStatus: "Open",
         paymentMethod: invoiceData.paymentMethod,
         paymentCategory: invoiceData.category,
         description: invoiceData.description,
-        invoiceTotalAmount: Number(invoiceData.amount),
-        balanceAmount: Number(invoiceData.balance),
+        invoiceTotalAmount: Number(invoiceData.invoiceTotal),
+        balanceAmount: Number(invoiceData.balanceAmount),
         amountInWords: amountInWords,
         billUpload: invoiceData.billFile,
         expenseAdjustmentAmount: Number(invoiceData.expenseAdjustmentAmount),
@@ -784,9 +813,22 @@ export default function NewPurchaseInvoicePage() {
                           <p className="text-xs text-red-500">{validationErrors.date}</p>
                         )}
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Due Date</Label>
-                        <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                        <Label htmlFor="vendorInvoiceNumber">Vendor Invoice Number</Label>
+                        <Input
+                          id="vendorInvoiceNumber"
+                          value={invoiceData.vendorInvoiceNumber}
+                          onChange={(e) => setInvoiceData({ ...invoiceData, vendorInvoiceNumber: e.target.value })}
+                          placeholder="Enter vendor's invoice number"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dueDate">Due Date</Label>
+                        <Input id="dueDate" type="date" value={invoiceData.dueDate} onChange={(e) =>
+                          setInvoiceData({ ...invoiceData, dueDate: e.target.value })
+                        } />
                       </div>
                     </div>
 
@@ -1300,14 +1342,14 @@ export default function NewPurchaseInvoicePage() {
                         id="amount"
                         type="number"
                         step="0.01"
-                        value={invoiceData.amount}
+                        value={invoiceData.invoiceTotal}
                         onChange={(e) => handleAmountChange(e.target.value)}
                         placeholder="0.00"
-                        className={validationErrors.amount ? "border-red-500" : ""}
+                        className={validationErrors.invoiceTotal ? "border-red-500" : ""}
                         required
                       />
-                      {validationErrors.amount && (
-                        <p className="text-xs text-red-500">{validationErrors.amount}</p>
+                      {validationErrors.invoiceTotal && (
+                        <p className="text-xs text-red-500">{validationErrors.invoiceTotal}</p>
                       )}
                       {amountInWords && <p className="text-sm text-gray-600 italic">{amountInWords}</p>}
                     </div>
@@ -1410,7 +1452,7 @@ export default function NewPurchaseInvoicePage() {
 
                     {/* BILL UPLOAD */}
                     <div className="mb-2">
-                      <Label>Bill Upload <span className="text-red-500">*</span></Label>
+                      <Label>Bill Upload</Label>
 
                       <ImageUpload
                         label="Bill File"
@@ -1433,7 +1475,7 @@ export default function NewPurchaseInvoicePage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="amount">
-                        Expense Adjustment Amount <span className="text-red-500">*</span>
+                        Expense Adjustment Amount
                       </Label>
                       <Input
                         id="amount"
@@ -1442,7 +1484,7 @@ export default function NewPurchaseInvoicePage() {
                         value={invoiceData.expenseAdjustmentAmount}
                         onChange={(e) => {
                           const expenseAdj = Number.parseFloat(e.target.value || "0")
-                          const amount = Number.parseFloat(invoiceData.amount || "0")
+                          const amount = Number.parseFloat(invoiceData.invoiceTotal || "0")
 
                           const balance =
                             expenseAdj > 0 ? amount - expenseAdj : amount
@@ -1450,7 +1492,7 @@ export default function NewPurchaseInvoicePage() {
                           setInvoiceData({
                             ...invoiceData,
                             expenseAdjustmentAmount: e.target.value,
-                            balance: balance.toFixed(2),
+                            balanceAmount: balance.toFixed(2),
                           })
                         }}
                         placeholder="0.00"
@@ -1459,7 +1501,7 @@ export default function NewPurchaseInvoicePage() {
                       <div className="text-sm text-gray-600">
                         Payable Amount:&nbsp;
                         <span className="font-semibold text-purple-600">
-                          ₹{Number(invoiceData.balance || 0).toLocaleString()}
+                          ₹{Number(invoiceData.balanceAmount || 0).toLocaleString()}
                         </span>
                       </div>
 
@@ -1512,18 +1554,16 @@ export default function NewPurchaseInvoicePage() {
                     <div className="space-y-2">
                       <Label>Payment Status</Label>
                       <div>
-                        <Badge variant={invoiceData.paymentStatus === "Paid" ? "default" : "secondary"}>{status}</Badge>
+                        <Badge variant={invoiceData.paymentStatus === "Paid" ? "default" : "secondary"}>{invoiceData.paymentStatus}</Badge>
                         <p className="text-xs text-gray-500 mt-1">
-                          {invoiceData.paymentStatus === "Paid"
-                            ? "Payment Done For this Invoice"
-                            : "Will be marked as Paid until cleared in reconciliation"}
+                          Default status is Unpaid.
                         </p>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Invoice Status</Label>
                       <div>
-                        <Badge variant={invoiceData.invoiceStatus === "Closed" ? "default" : "secondary"}>{status}</Badge>
+                        <Badge variant={invoiceData.invoiceStatus === "Closed" ? "default" : "secondary"}>{invoiceData.invoiceStatus}</Badge>
                         <p className="text-xs text-gray-500 mt-1">
                           {invoiceData.invoiceStatus === "Cleared"
                             ? "Payment Done For this Invoice"
@@ -1546,13 +1586,13 @@ export default function NewPurchaseInvoicePage() {
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
               <CardHeader>
-                <CardTitle>Payment Summary</CardTitle>
+                <CardTitle>Invoice Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Payment Number:</span>
-                    <span className="font-medium">{invoiceData.paymentNumber}</span>
+                    <span className="text-gray-600">Invoice Number:</span>
+                    <span className="font-medium">{invoiceData.purchaseInvoiceNumber}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Date:</span>
@@ -1582,8 +1622,8 @@ export default function NewPurchaseInvoicePage() {
                   )} */}
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Status:</span>
-                    <Badge variant={status === "Cleared" ? "default" : "secondary"} className="text-xs">
-                      {status}
+                    <Badge variant={invoiceData.paymentStatus === "Unpaid" ? "secondary" : "default"} className="text-xs">
+                      {invoiceData.paymentStatus}
                     </Badge>
                   </div>
                 </div>
@@ -1592,7 +1632,7 @@ export default function NewPurchaseInvoicePage() {
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold">Total Amount:</span>
                     <span className="text-2xl font-bold text-gray-900">
-                      ₹{invoiceData.amount ? Number.parseFloat(invoiceData.amount).toLocaleString() : "0.00"}
+                      ₹{invoiceData.invoiceTotal ? Number.parseFloat(invoiceData.invoiceTotal).toLocaleString() : "0.00"}
                     </span>
                   </div>
                   {amountInWords && <p className="text-xs text-gray-600 mt-2 italic">{amountInWords}</p>}
@@ -1614,11 +1654,11 @@ export default function NewPurchaseInvoicePage() {
           <div className="flex gap-3">
             {!isLastTab ? (
               <Button onClick={handleContinue} size="lg" className="min-w-[200px]">
-                Continue to Payment Info
+                Continue
               </Button>
             ) : (
               <Button onClick={handleSubmit} type="button" size="lg" className="min-w-[200px]">
-                Create Payment
+                Create Purchase Invoice
               </Button>
             )}
           </div>

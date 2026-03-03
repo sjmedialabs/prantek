@@ -471,18 +471,25 @@ const quotationForPrint = {
       </div>
                   
           {/* Terms & Conditions */}
-          {quotation.terms && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Terms & Conditions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="prose max-w-none text-sm text-gray-600 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold" 
-                  dangerouslySetInnerHTML={{ __html: quotation.terms }} 
-                />
-              </CardContent>
-            </Card>
-          )}
+   {quotation.terms && (
+  <Card>
+    <CardHeader>
+      <CardTitle>Terms & Conditions</CardTitle>
+    </CardHeader>
+
+    <CardContent className="overflow-hidden">
+      <div
+        className="prose max-w-none text-sm text-gray-600 
+                   break-words break-all whitespace-pre-wrap leading-relaxed
+                   [&_p]:mb-2 
+                   [&_ul]:list-disc [&_ul]:pl-5 
+                   [&_ol]:list-decimal [&_ol]:pl-5 
+                   [&_strong]:font-semibold"
+        dangerouslySetInnerHTML={{ __html: quotation.terms }}
+      />
+    </CardContent>
+  </Card>
+)}
       {/* Accept Dialog */}
       {/* <Dialog open={acceptDialogOpen} onOpenChange={setAcceptDialogOpen}>
         <DialogContent>

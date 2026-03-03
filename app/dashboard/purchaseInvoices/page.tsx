@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useUser } from "@/components/auth/user-context"
+import { useToast } from "@/hooks/use-toast"
 
 interface PurchaseInvoice {
   _id: string
@@ -23,10 +24,12 @@ interface PurchaseInvoice {
   balanceAmount: number
   vendor?: { name: string }
   paidAmount: number
+  dueDate?: string
 }
 
 export default function PurchaseInvoiceList() {
   const { hasPermission } = useUser()
+  const { toast } = useToast()
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -40,14 +43,80 @@ export default function PurchaseInvoiceList() {
   const [dateToFilter, setDateToFilter] = useState("")
   const [minAmountFilter, setMinAmountFilter] = useState("")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
+
+  const loadInvoices = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/purchaseInvoice")
+      const result = await response.json()
+      if (result.success) {
+        const invoicesData: PurchaseInvoice[] = result.data
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        const updates = invoicesData.map(async (inv) => {
+          if ((inv.invoiceStatus === 'Open' || inv.invoiceStatus === 'Partial') && inv.dueDate) {
+            const due = new Date(inv.dueDate)
+            due.setHours(0, 0, 0, 0)
+            if (due < today && inv.invoiceStatus !== 'overdue') {
+              try {
+                await fetch(`/api/purchaseInvoice/${inv._id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ invoiceStatus: 'overdue' })
+                })
+                return { ...inv, invoiceStatus: 'overdue' }
+              } catch (e) {
+                console.error("Failed to update invoice status to overdue", e)
+                return inv
+              }
+            }
+          }
+          return inv
+        })
+
+        const updatedInvoices = await Promise.all(updates)
+        setInvoices(updatedInvoices)
+      }
+    } catch (error) {
+      console.error("Failed to load invoices", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    fetch("/api/purchaseInvoice")
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.success) setInvoices(res.data)
-        setLoading(false)
-      })
+    loadInvoices()
   }, [])
+
+  const handleCancelInvoice = async (invoiceId: string) => {
+    if (!confirm("Are you sure you want to cancel this invoice? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/purchaseInvoice/${invoiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceStatus: "Cancelled", balanceAmount: 0 }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Invoice has been cancelled.",
+        })
+        loadInvoices()
+      } else {
+        throw new Error(result.error || "Failed to cancel invoice.")
+      }
+    } catch (error) {
+      console.error("Cancel invoice error:", error)
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" })
+    }
+  }
 
   const filtered = invoices.filter((i) => {
     const matchSearch =
@@ -71,8 +140,8 @@ export default function PurchaseInvoiceList() {
   }, [search, statusFilter])
 
   const totalAmount = filtered.reduce((s, i) => s + (i.invoiceTotalAmount || 0), 0)
-  const paidAmount = filtered.filter(i => i.paymentStatus === "Paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
-  const unpaidAmount = filtered.filter(i => i.paymentStatus === "Unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
+  const paidAmount = filtered.filter(i => i.paymentStatus === "paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
+  const unpaidAmount = filtered.filter(i => i.paymentStatus === "unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage)
 
@@ -100,6 +169,24 @@ export default function PurchaseInvoiceList() {
     a.download = `purchase_invoices_${Date.now()}.csv`
     a.click()
   }
+
+  const getInvoiceStatusBadgeClass = (status?: string) => {
+    switch (status) {
+      case "Closed":
+        return "bg-green-100 text-green-800"
+      case "Open":
+        return "bg-blue-100 text-blue-800"
+      case "Partial":
+        return "bg-yellow-100 text-yellow-800"
+      case "overdue":
+        return "bg-orange-100 text-orange-800"
+      case "Cancelled":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
 
   if (loading) return <p>Loading...</p>
     if (!hasPermission("view_purchase_invoice")) {
@@ -249,7 +336,7 @@ export default function PurchaseInvoiceList() {
                       </TableCell>
 
                       <TableCell>
-                        <Badge variant={i.invoiceStatus === "Closed" ? "default" : "outline"}>
+                        <Badge className={`${getInvoiceStatusBadgeClass(i.invoiceStatus)}`}>
                           {i.invoiceStatus || "Open"}
                         </Badge>
                       </TableCell>
@@ -261,10 +348,21 @@ export default function PurchaseInvoiceList() {
                           <Link href={`/dashboard/purchaseInvoices/${i._id}`}>
                             <Button size="icon" variant="ghost" title="View Invoice details"><Eye className="h-4 w-4" /></Button>
                           </Link>
-                          {!(i.paymentStatus === "Paid" && i.invoiceStatus === "Closed" && (!i.balanceAmount || i.balanceAmount === 0)) && hasPermission("edit_purchase_invoice") && (
+                          {(["Open", "overdue"].includes(i.invoiceStatus) || (i.invoiceStatus === "Partial" && i.paymentStatus === "Partial")) && hasPermission("edit_purchase_invoice") && (
                             <Link href={`/dashboard/purchaseInvoices/${i._id}/edit`}>
                               <Button size="icon" variant="ghost" title="Edit Invoice"><Edit className="h-4 w-4" /></Button>
                             </Link>
+                          )}
+                          {(i.invoiceStatus === "Open" || i.invoiceStatus === "overdue") && i.paymentStatus === "Unpaid" && hasPermission("edit_purchase_invoice") && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              title="Cancel Invoice"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => handleCancelInvoice(i._id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>

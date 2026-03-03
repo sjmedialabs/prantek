@@ -101,21 +101,80 @@ export default function ReceiptsPage() {
     currentPage * itemsPerPage
   );
   const handleCancelInvoice = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this receipt?")) return
+    if (!confirm("Are you sure you want to cancel this receipt? This will revert any associated invoice payments.")) return
 
     try {
-      const res = await fetch(`/api/receipts/${id}`, {
+      // 1. Get the receipt to be cancelled from state
+      const receiptToCancel = receipts.find(r => r._id === id);
+      if (!receiptToCancel) {
+        toast({ title: "Error", description: "Receipt not found.", variant: "destructive" });
+        return;
+      }
+
+      // 2. If it's linked to a sales invoice, revert the invoice
+      if (receiptToCancel.invoiceId) {
+        // Fetch the invoice
+        const invoiceRes = await fetch(`/api/salesInvoice/${receiptToCancel.invoiceId}`);
+        if (!invoiceRes.ok) {
+          throw new Error("Failed to fetch associated invoice.");
+        }
+        const invoiceData = await invoiceRes.json();
+        const invoice = invoiceData.data;
+
+        if (!invoice) {
+          throw new Error("Associated invoice data not found.");
+        }
+
+        // Calculate amounts to revert. This includes the direct payment and any advance applied.
+        const receiptAmount = receiptToCancel.ReceiptAmount || 0;
+        const advanceApplied = receiptToCancel['advanceAppliedAmount'] || 0;
+        const totalAmountToRevert = receiptAmount + advanceApplied;
+
+        // Calculate new invoice amounts
+        const newPaidAmount = (invoice.paidAmount || 0) - totalAmountToRevert;
+        const newBalanceAmount = (invoice.balanceAmount || 0) + totalAmountToRevert;
+
+        // Determine new status
+        let newStatus = "Partial";
+        if (newBalanceAmount >= invoice.grandTotal) {
+          newStatus = "Not Cleared";
+        } else if (newBalanceAmount <= 0) {
+          newStatus = "Cleared";
+        }
+
+        // Update the invoice
+        const updateInvoiceRes = await fetch(`/api/salesInvoice/${receiptToCancel.invoiceId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paidAmount: newPaidAmount < 0 ? 0 : newPaidAmount,
+            balanceAmount: newBalanceAmount,
+            status: newStatus
+          })
+        });
+
+        if (!updateInvoiceRes.ok) {
+          throw new Error("Failed to update the associated invoice.");
+        }
+      }
+
+      // 3. Cancel the original receipt
+      const cancelReceiptRes = await fetch(`/api/receipts/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled', balanceAmount: 0 })
-      })
-      const data = await res.json()
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+
+      const data = await cancelReceiptRes.json();
       if (data.success) {
-        toast({ title: "Success", description: "Receipt cancelled" })
-         loadReceipts()
+        toast({ title: "Success", description: "Receipt cancelled and invoice reverted." });
+        loadReceipts(); // Reload all receipts to get fresh data
+      } else {
+        throw new Error(data.error || "Failed to cancel receipt.");
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to cancel invoice", variant: "destructive" })
+
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
     }
   }
   const clearFilters = () => {
@@ -366,7 +425,7 @@ export default function ReceiptsPage() {
                   <TableHead>Date</TableHead>
                   <TableHead>Receipt Number</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Agreement Number</TableHead>
+                  <TableHead>Invoice Number</TableHead>
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Payment Type</TableHead>
                   <TableHead>Method</TableHead>

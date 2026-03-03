@@ -19,13 +19,13 @@ export const PUT = withAuth(async (request: NextRequest, user, { params }: any) 
     const expenseAdjustment = body.expenseAdjustment || 0
     const invoiceTotalAmount = body.invoiceTotalAmount || 0
 
-    body.paymentStatus =
-      paidAmount >= invoiceTotalAmount ? "Paid" : "Unpaid"
+    // body.paymentStatus =
+    //   paidAmount >= invoiceTotalAmount ? "Paid" : "Unpaid"
 
-    body.invoiceStatus =
-      paidAmount + expenseAdjustment >= invoiceTotalAmount
-        ? "Closed"
-        : "Open"
+    // body.invoiceStatus =
+    //   paidAmount + expenseAdjustment >= invoiceTotalAmount
+    //     ? "Closed"
+    //     : "Open"
 
     const updated = await mongoStore.update("purchaseInvoice", params.id, body)
 

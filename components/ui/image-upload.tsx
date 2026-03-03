@@ -17,7 +17,7 @@ interface ImageUploadProps {
   className?: string
   previewClassName?: string
   description?: string
-
+  disabled?: boolean
   /** ✅ NEW */
   maxSizeMB?: number
   allowedTypes?: string[]
@@ -33,6 +33,7 @@ export function ImageUpload({
 
   /** ✅ new default props */
   maxSizeMB = 5,
+  disabled,
   allowedTypes = ["image/*", "application/pdf"],
 }: ImageUploadProps) {
   const [uploadMethod, setUploadMethod] = useState<"upload" | "url">("upload")
@@ -171,7 +172,7 @@ export function ImageUpload({
               accept={allowedTypes.join(", ")}
               onChange={handleFileUpload}
               className="max-w-md"
-              disabled={uploading}
+              disabled={uploading || disabled}
             />
             {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
           </div>
@@ -187,6 +188,7 @@ export function ImageUpload({
             value={urlInput}
             onChange={(e) => handleUrlChange(e.target.value)}
             className="max-w-md"
+            disabled={disabled}
           />
           <p className="text-sm text-muted-foreground">Enter direct URL</p>
         </TabsContent>

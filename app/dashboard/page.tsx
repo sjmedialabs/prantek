@@ -196,48 +196,22 @@ const getEntityDate = (entity: any) =>
 const filteredReceipts = receipts.filter((r: any) =>
   isBetweenRange(getEntityDate(r), dateRange)
 )
-// console.log("receipts", filteredReceipts)
 const filteredPayments = payments.filter((p: any) =>
   isBetweenRange(getEntityDate(p), dateRange)
 )
 
-const filteredClients = clients.filter((c: any) =>
-  isBetweenRange(getEntityDate(c), dateRange)
-)
-
-
-      const filteredQuotations = quotations.filter((q: any) =>
-        isBetweenRange(getEntityDate(q), dateRange)
-      )
       const filteredSalesInvoice = salesInvoice.filter((s: any) =>
         isBetweenRange(getEntityDate(s), dateRange) )
       const filteredPurchaseInvoices = purchaseInvoice.filter((p: any) =>
         isBetweenRange(getEntityDate(p), dateRange)
       )
-      const filteredVendors = vendors.filter((v: any) =>
-        isBetweenRange(getEntityDate(v), dateRange)
-      )
-
-      const filteredItems = items.filter((i: any) =>
-        isBetweenRange(getEntityDate(i), dateRange)
-      )
-
-      const filteredAssets = assets.filter((a: any) =>
-        isBetweenRange(getEntityDate(a), dateRange)
-      )
-
-      const filteredEmployees = employees.filter((e: any) =>
-        isBetweenRange(getEntityDate(e), dateRange)
-      )
 const clearedReceipts = filteredReceipts.filter(
   (r: any) => r.status === "cleared"
 )
-      console.log("filtered receipt", filteredReceipts)
       const totalReceipts = clearedReceipts.reduce(
         (sum: number, r: any) => sum + (r.ReceiptAmount || 0),
         0
       )
-      console.log("filtered pay,ents", filteredPayments)
 const clearedPayments = filteredPayments.filter(
   (p:any) => p.status === "completed"
 )
@@ -248,25 +222,6 @@ const clearedPayments = filteredPayments.filter(
       
       const cashInHand = totalReceipts - totalPayments
 
-      const pendingQuotations = filteredQuotations.filter(
-        (q: any) => q.status === "pending" || q.status === "sent"
-      )
-const pendingReceipt = filteredReceipts.filter(
-  (r: any) => r.status?.toString().trim().toLowerCase() === "pending"
-)
-
-      // console.log("pendingReceipt", pendingReceipt)
-      const pendingReceiptAmount = pendingReceipt.reduce(
-        (sum: number, q: any) => sum + (q.ReceiptAmount || 0),
-        0
-      )
-      // console.log("pendingReceiptAmount", pendingReceiptAmount)
-const badDept = filteredReceipts.reduce(
-  (sum: number, r: any) => sum + Number(r.badDeptAmount || 0),
-  0
-)
-
-      console.log("badDept", badDept)
       const receivables = filteredSalesInvoice.reduce((sum: number, inv: any) => sum + (inv.balanceAmount || 0), 0)
       // ✅ payables (filtered by date range)
       const recentPayments = (
@@ -277,18 +232,11 @@ const badDept = filteredReceipts.reduce(
       });
       const payables = filteredPurchaseInvoices.reduce((sum: number, inv: any) => sum + (inv.balanceAmount || 0), 0)
 
-      console.log("[DASHBOARD] Filtered data counts:", {
-        receipts: filteredReceipts.length,
-        payments: recentPayments.length,
-        quotations: pendingQuotations.length,
-      });
       const monthlyRevenue = filteredReceipts.reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),
         0
       );
-      console.log("[DASHBOARD] Period revenue:", monthlyRevenue);
-      const activeClients = filteredClients.filter((p: any) => p.status === "active");
-
+      
       // ✅ Calculate last month revenue
       const lastMonth = new Date();
       lastMonth.setMonth(lastMonth.getMonth() - 1);
@@ -300,24 +248,29 @@ const badDept = filteredReceipts.reduce(
           date.getFullYear() === lastMonth.getFullYear()
         );
       });
-      const activeitems = filteredItems.filter((p: any) => p.isActive === true);
 
       const lastMonthRevenue = lastMonthReceipts.reduce(
         (sum: number, r: any) => sum + (r.amountPaid || 0),
         0
       );
-      const totalClients = filteredClients.length
-      const totalVendors = filteredVendors.length
-      const assetsManaged = filteredAssets.filter((a: any) => a.status === "available");
-      const pendingInvoices = filteredSalesInvoice.filter((r: any) => r.status !== "Cleared");
       // ✅ Growth Rate (MoM %)
       let growthRate = 0;
       if (lastMonthRevenue > 0) {
         growthRate =
           ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
       }
-      const unClearReceipt = filteredReceipts.filter((r: any) => r.status === "received");
-      const Assets = filteredAssets.length
+
+      // Business metrics (lifetime data)
+      const pendingQuotations = quotations.filter(
+        (q: any) => q.status === "pending" || q.status === "sent"
+      );
+      const activeClients = clients.filter((p: any) => p.status === "active");
+      const activeItems = items.filter((p: any) => p.isActive === true);
+      const assetsManaged = assets.filter((a: any) => a.status === "available");
+      const pendingInvoices = salesInvoice.filter((r: any) => r.status !== "Cleared");
+      const unClearReceipts = receipts.filter((r: any) => r.status === "received");
+      const unClearPaymentsList = payments.filter((p: any) => p.status !== "completed");
+
       setStats({
         totalReceipts,
         totalPayments,
@@ -326,26 +279,26 @@ const badDept = filteredReceipts.reduce(
         cashInHand,
         receivables,
         payables,
-        activeUsers: filteredEmployees.length,
+        activeUsers: employees.length,
         monthlyRevenue,
-        salesInvoices: filteredSalesInvoice.length,
-        Assets: Assets,
+        salesInvoices: salesInvoice.length,
+        Assets: assets.length,
         assetsManaged: assetsManaged.length,
         growthRate: Number(growthRate.toFixed(2)),
-        quotations: filteredQuotations.length,
+        quotations: quotations.length,
         pendingQuotations: pendingQuotations.length,
-        pendingReceipt: pendingReceipt.length,
+        pendingReceipt: unClearReceipts.length,
         pendingInvoices: pendingInvoices.length,
-        billsDue: filteredPurchaseInvoices.length,
+        billsDue: purchaseInvoice.length,
         activeClients: activeClients.length,
-        activeVendors: filteredVendors.length,
-        activeQuotations: filteredQuotations.length,
-        activeItems: activeitems.length,
-        unClearReceipt: unClearReceipt.length,
-        unClearPayments: filteredPayments.filter((p: any) => p.status === "pending").length,
-        items: filteredItems.length,
-        clients: totalClients,
-        vendors: totalVendors
+        activeVendors: vendors.length,
+        activeQuotations: quotations.length,
+        activeItems: activeItems.length,
+        unClearReceipt: unClearReceipts.length,
+        unClearPayments: unClearPaymentsList.length,
+        items: items.length,
+        clients: clients.length,
+        vendors: vendors.length
       });
 
       // ✅ Recent Transactions (filtered by date range)
@@ -412,16 +365,15 @@ const badDept = filteredReceipts.reduce(
       icon: Wallet,
       color: "text-green-600",
     },
-    {
-      title: "Net Profit/Loss",
-      value: formatCurrency(stats.cashInHand),
-      change: `${stats.cashInHand >= 0 ? "+" : ""}${(
-        (stats.cashInHand / 1000) *
-        10
-      ).toFixed(1)}% from last month`, // TEMP placeholder
-      icon: Wallet,
-      color: "text-green-600",
-    },
+   {
+  title: "Net Profit/Loss",
+  value: formatCurrency(stats.cashInHand),
+  change: `${stats.cashInHand >= 0 ? "+" : ""}${(
+    (stats.cashInHand / 1000) * 10
+  ).toFixed(1)}% from last month`,
+  icon: Wallet,
+  color: stats.cashInHand >= 0 ? "text-green-600" : "text-red-600",
+},
     {
       title: "Receivables",
       value: formatCurrency(stats.receivables),
@@ -435,6 +387,20 @@ const badDept = filteredReceipts.reduce(
       change: `${stats.billsDue} Total Purchase Invoices`,
       icon: ArrowDownLeft,
       color: "text-red-600",
+    },
+        {
+      title: "Unclear Receipts",
+      value: stats.pendingReceipt?.toString(),
+      change: `${stats.receipts} total receipts`,
+      icon: FileText,
+      color: "text-cyan-600",
+    },
+    {
+      title: "Unclear Payments",
+      value: stats.unClearPayments?.toString(),
+      change: `${stats.payments} total payments`,
+      icon: FileText,
+      color: "text-cyan-600",
     },
   ];
 
@@ -457,20 +423,6 @@ const badDept = filteredReceipts.reduce(
       title: "Quotations",
       value: stats.quotations?.toString(),
       change: `${stats.pendingQuotations} pending approval`,
-      icon: FileText,
-      color: "text-cyan-600",
-    },
-    {
-      title: "Unclear Receipts",
-      value: stats.pendingReceipt?.toString(),
-      change: `${stats.receipts} total receipts`,
-      icon: FileText,
-      color: "text-cyan-600",
-    },
-    {
-      title: "Unclear Payments",
-      value: stats.unClearPayments?.toString(),
-      change: `${stats.payments} total payments`,
       icon: FileText,
       color: "text-cyan-600",
     },
@@ -743,7 +695,7 @@ const badDept = filteredReceipts.reduce(
                   <Icon className={`h-4 w-4 ${stat.color}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">
+                 <div className={`text-2xl font-bold ${stat.title === "Net Profit/Loss" ? stat.color : "text-gray-900"}`}>
                     {stat.value}
                   </div>
                   <p className="text-xs text-gray-600 mt-1">{stat.change}</p>

@@ -79,7 +79,7 @@ const navigationItems: NavItem[] = [
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt, permission: "view_receipts" },
   { name: "Purchase Invoices", href: "/dashboard/purchaseInvoices", icon: ShoppingCart, permission: "view_purchase_invoice" },
   { name: "Payments", href: "/dashboard/payments", icon: CreditCard, permission: "view_payments" },
-  { name: "Reconciliation", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
+  { name: "Clearing", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
   { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "view_assets" },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "view_reports" },
   {
@@ -300,6 +300,15 @@ export default function DashboardSidebar() {
     
     return planFeatures[featureKey] === true;
   };
+  const isChildActive = (item: NavItem): boolean => {
+  if (item.href && pathname === item.href) return true;
+
+  if (item.submenu) {
+    return item.submenu.some((sub) => isChildActive(sub));
+  }
+
+  return false;
+};
 
   const renderNavItem = (item: NavItem, level: number = 0, parentKey: string = "") => {
     // LEVEL 1: Check if user has active subscription
@@ -330,9 +339,10 @@ export default function DashboardSidebar() {
 
     const hasSubmenu = item.submenu && item.submenu.length > 0;
     const menuKey = parentKey ? `${parentKey}.${item.name}` : item.name;
-    const isExpanded = expandedMenus[menuKey];
+const isExpanded =
+  expandedMenus[menuKey] || isChildActive(item);
     const isActive = item.href ? pathname === item.href : false;
-
+    
     if (hasSubmenu) {
       return (
         <div key={menuKey} className={level > 0 ? "ml-2" : ""}>

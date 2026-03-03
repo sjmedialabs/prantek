@@ -71,6 +71,7 @@ export default function EditPurchaseInvoicePage() {
           category: invoice.paymentCategory || invoice.category,
           billFile: invoice.billUpload,
           expenseAdjustmentAmount: invoice.expenseAdjustmentAmount || 0,
+          vendorInvoiceNumber: invoice.vendorInvoiceNumber || "",
         })
         
         setAmountInWords(invoice.amountInWords || "")
@@ -115,12 +116,27 @@ export default function EditPurchaseInvoicePage() {
   const handleAmountChange = (value: string) => {
     const amount = Number.parseFloat(value || "0")
     const expenseAdj = Number.parseFloat(invoiceData.expenseAdjustmentAmount || "0")
-    const balance = expenseAdj > 0 ? amount - expenseAdj : amount
+    const paidAmount = Number.parseFloat(invoiceData.paidAmount || "0")
+
+    const balance = amount - paidAmount - expenseAdj
+
+    let newInvoiceStatus = "Open"
+    let newPaymentStatus = "Unpaid"
+
+    if (balance <= 0) {
+      newInvoiceStatus = "Closed"
+      newPaymentStatus = "Paid"
+    } else if (paidAmount > 0 || expenseAdj > 0) {
+      newInvoiceStatus = "Partial"
+      newPaymentStatus = "Partial"
+    }
 
     setInvoiceData({
       ...invoiceData,
       amount: value,
       balance: balance.toFixed(2),
+      invoiceStatus: newInvoiceStatus,
+      paymentStatus: newPaymentStatus,
     })
     setAmountInWords(value ? `${amount.toLocaleString()} rupees only` : "")
   }
@@ -137,6 +153,7 @@ export default function EditPurchaseInvoicePage() {
         recipientPhone: invoiceData.recipientPhone,
         recipientAddress: invoiceData.recipientAddress,
         date: invoiceData.date,
+        vendorInvoiceNumber: invoiceData.vendorInvoiceNumber,
         dueDate: invoiceData.dueDate,
         paymentCategory: invoiceData.category,
         description: invoiceData.description,
@@ -146,6 +163,8 @@ export default function EditPurchaseInvoicePage() {
         billUpload: invoiceData.billFile,
         expenseAdjustmentAmount: Number(invoiceData.expenseAdjustmentAmount),
         expenseAdjustmentReason: invoiceData.expenseAdjustmentReason,
+        invoiceStatus: invoiceData.invoiceStatus,
+        paymentStatus: invoiceData.paymentStatus,
       })
 
       toast({
@@ -164,6 +183,8 @@ export default function EditPurchaseInvoicePage() {
   }
 
   if (loading) return <div className="p-8 text-center">Loading...</div>
+
+  const isRestricted = invoiceData.invoiceStatus === "Partial"
 
   return (
     <div className="space-y-6 pb-24">
@@ -198,10 +219,21 @@ export default function EditPurchaseInvoicePage() {
                     <CardDescription>Update basic Invoice information</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Invoice Number</Label>
                         <Input value={invoiceData.purchaseInvoiceNumber} disabled />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="vendorInvoiceNumber">Vendor Invoice Number</Label>
+                        <Input
+                          id="vendorInvoiceNumber"
+                          value={invoiceData.vendorInvoiceNumber}
+                          onChange={(e) => setInvoiceData({ ...invoiceData, vendorInvoiceNumber: e.target.value })}
+                          placeholder="Enter vendor's invoice number"
+                          disabled={isRestricted}
+                        />
                       </div>
 
                       <div className="space-y-2">
@@ -211,6 +243,7 @@ export default function EditPurchaseInvoicePage() {
                           value={invoiceData.date ? new Date(invoiceData.date).toISOString().split('T')[0] : ''}
                           onChange={(e) => setInvoiceData({ ...invoiceData, date: e.target.value })}
                           required
+                          disabled={isRestricted}
                         />
                       </div>
                       <div className="space-y-2">
@@ -219,6 +252,7 @@ export default function EditPurchaseInvoicePage() {
                           type="date"
                           value={invoiceData.dueDate ? new Date(invoiceData.dueDate).toISOString().split('T')[0] : ''}
                           onChange={(e) => setInvoiceData({ ...invoiceData, dueDate: e.target.value })}
+                          disabled={isRestricted}
                         />
                       </div>
                     </div>
@@ -228,6 +262,7 @@ export default function EditPurchaseInvoicePage() {
                       <Select
                         value={invoiceData.category}
                         onValueChange={(value) => setInvoiceData({ ...invoiceData, category: value })}
+                        disabled={isRestricted}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select ledger head" />
@@ -245,6 +280,7 @@ export default function EditPurchaseInvoicePage() {
                       <Select
                         value={invoiceData.recipientType}
                         onValueChange={(value) => setInvoiceData({ ...invoiceData, recipientType: value, recipientId: "" })}
+                        disabled={isRestricted}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select party type" />
@@ -268,6 +304,7 @@ export default function EditPurchaseInvoicePage() {
                         value={invoiceData.recipientId}
                         onValueChange={handleRecipientChange}
                         placeholder="Select party..."
+                        disabled={isRestricted}
                       />
                     </div>
 
@@ -287,6 +324,7 @@ export default function EditPurchaseInvoicePage() {
                         value={invoiceData.amount}
                         onChange={(e) => handleAmountChange(e.target.value)}
                         required
+                        disabled={isRestricted}
                       />
                       {amountInWords && <p className="text-sm text-gray-600 italic">{amountInWords}</p>}
                     </div>
@@ -308,6 +346,7 @@ export default function EditPurchaseInvoicePage() {
                         onChange={(value) => setInvoiceData({ ...invoiceData, billFile: value })}
                         previewClassName="w-32 h-32 rounded-lg"
                         allowedTypes={["image/*", "application/pdf"]}
+                        disabled={isRestricted}
                       />
                     </div>
 
@@ -317,18 +356,44 @@ export default function EditPurchaseInvoicePage() {
                         type="number"
                         value={invoiceData.expenseAdjustmentAmount}
                         onChange={(e) => {
-                          const expenseAdj = Number.parseFloat(e.target.value || "0")
+                          let expenseAdj = Number.parseFloat(e.target.value)
                           const amount = Number.parseFloat(invoiceData.amount || "0")
-                          const balance = expenseAdj > 0 ? amount - expenseAdj : amount
+                          const paidAmount = Number.parseFloat(invoiceData.paidAmount || "0")
+                          const maxAdjustment = amount - paidAmount
+
+                          if (expenseAdj > maxAdjustment) {
+                            expenseAdj = maxAdjustment
+                            toast({
+                              title: "Adjustment Limit Reached",
+                              description: `Adjustment cannot be more than the balance amount of ₹${maxAdjustment.toLocaleString()}.`,
+                              variant: "destructive",
+                            })
+                          }
+
+                          const balance = amount - paidAmount - expenseAdj
+
+                          let newInvoiceStatus = "Open"
+                          let newPaymentStatus = "Unpaid"
+
+                          if (balance <= 0) {
+                            newInvoiceStatus = "Closed"
+                            newPaymentStatus = "Paid"
+                          } else if (paidAmount > 0 || expenseAdj > 0) {
+                            newInvoiceStatus = "Partial"
+                            newPaymentStatus = "Partial"
+                          }
+
                           setInvoiceData({
                             ...invoiceData,
-                            expenseAdjustmentAmount: e.target.value,
+                            expenseAdjustmentAmount: expenseAdj,
                             balance: balance.toFixed(2),
+                            invoiceStatus: newInvoiceStatus,
+                            paymentStatus: newPaymentStatus,
                           })
                         }}
                       />
                       <div className="text-sm text-gray-600">
-                        Payable Amount: <span className="font-semibold text-purple-600">₹{Number(invoiceData.balance || 0).toLocaleString()}</span>
+                        Payable Amount: <span className="font-semibold text-purple-600">₹{Number(invoiceData.balanceAmount || 0).toLocaleString()}</span>
                       </div>
                     </div>
 
