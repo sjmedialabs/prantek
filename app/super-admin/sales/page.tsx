@@ -86,7 +86,7 @@ export default function SalesDashboardPage() {
 
   // UI state
   const [selectedPeriod, setSelectedPeriod] = useState<
-    "6months" | "monthly" | "quarterly" | "half-yearly" | "yearly" | "all"
+    "weekly" | "6months" | "monthly" | "quarterly" | "half-yearly" | "yearly" | "all"
   >("6months")
 
   // Raw data (loaded once)
@@ -106,14 +106,25 @@ export default function SalesDashboardPage() {
   const getPeriodStartDate = (period: typeof selectedPeriod) => {
     const now = new Date()
     switch (period) {
+      case "weekly": {
+        const firstDayOfWeek = new Date(now)
+        firstDayOfWeek.setDate(now.getDate() - now.getDay()) // Sunday as first day
+        firstDayOfWeek.setHours(0, 0, 0, 0)
+        return firstDayOfWeek
+      }
       case "monthly":
         return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days
       case "quarterly":
         return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) // 90 days
       case "half-yearly":
         return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000) // 180 days
-      case "yearly":
-        return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000) // 365 days
+      case "yearly": {
+        const month = now.getMonth() // 0-11
+        const year = now.getFullYear()
+        // Financial year starts in April (month 3)
+        const fyStartYear = month >= 3 ? year : year - 1
+        return new Date(fyStartYear, 3, 1)
+      }
       case "all":
         return new Date(0)
       case "6months":
@@ -394,25 +405,28 @@ export default function SalesDashboardPage() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <Calendar className="h-4 w-4 mr-2" />
-                {selectedPeriod === "monthly"
+                {selectedPeriod === "weekly"
+                  ? "This Week"
+                  : selectedPeriod === "monthly"
                   ? "Monthly"
                   : selectedPeriod === "quarterly"
                   ? "Quarterly"
                   : selectedPeriod === "half-yearly"
                   ? "Half-Yearly"
                   : selectedPeriod === "yearly"
-                  ? "Yearly"
+                  ? "This Financial Year"
                   : selectedPeriod === "all"
                   ? "All Time"
                   : "Last 6 Months"}
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setSelectedPeriod("weekly")}>This Week</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSelectedPeriod("monthly")}>Monthly</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSelectedPeriod("quarterly")}>Quarterly</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSelectedPeriod("half-yearly")}>Half-Yearly</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedPeriod("yearly")}>Yearly</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedPeriod("yearly")}>This Financial Year</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSelectedPeriod("all")}>All Time</DropdownMenuItem>
               
             </DropdownMenuContent>

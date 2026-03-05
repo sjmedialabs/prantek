@@ -10,6 +10,7 @@ type Option = {
   label: string;
   email?: string;
   phone?: string;
+  address?: string;
   quotationNumber?: string;
   invoiceNumber?: string;
 };
@@ -43,6 +44,7 @@ const filtered = React.useMemo(() => {
       o.label?.toLowerCase().includes(q) ||
       o.email?.toLowerCase().includes(q) ||
       o.phone?.toLowerCase().includes(q) ||
+      o.address?.toLowerCase().includes(q) ||
       o.quotationNumber?.toLowerCase().includes(q) ||
       o.invoiceNumber?.toLowerCase().includes(q)
     );
