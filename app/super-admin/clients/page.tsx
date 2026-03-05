@@ -135,6 +135,7 @@ export default function ClientAccountsPage() {
   const totalClients = clients.length
   const activeClients = clients.filter((c) => c.status === "active").length
   const suspendedClients = clients.filter((c) => c.status === "suspended").length
+  const trialClients = clients.filter((c) => c.status === "trial").length
   const totalMRR = clients.filter((c) => c.status === "active").reduce((sum, c) => sum + c.monthlyRevenue, 0)
   const [formData, setFormData] = useState({
     name: "",
@@ -319,40 +320,44 @@ export default function ClientAccountsPage() {
   // Super-admin has access to everything - permission check removed
   console.log("Clients List is :::", clients);
   const exportCSV = () => {
-    if (clients.length === 0) {
+    if (filteredClients.length === 0) {
       alert("No data available to export.")
       return
     }
 
     const headers = [
       "Name",
+      "Email",
+      "Phone",
       "Plan",
       "Status",
       "Users",
       "Total Revenue",
       "Payment Status",
       "Last Activity",
-
     ]
 
-    const rows = clients.map((e) => [
+    const rows = filteredClients.map((e) => [
       e.companyName,
+      e.email,
+      e.phone,
       e.plan,
       e.status || "",
       e.userCount || 0,
       e.totalRevenue || "",
       e.paymentStatus || "",
-      e.lastActivity ? `'${e.lastActivity}'` : ""
+      e.lastActivity || ""
     ])
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
       [headers, ...rows].map((row) => row.join(",")).join("\n")
 
+    const filename = `client_accounts_${statusFilter}_${new Date().toISOString().split('T')[0]}.csv`;
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "client_accounts_export.csv")
+    link.setAttribute("download", filename)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -412,12 +417,12 @@ export default function ClientAccountsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Monthly Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-gray-700">Trial Clients</CardTitle>
+            <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">₹{totalMRR.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">From active clients</p>
+            <div className="text-2xl font-bold text-gray-900">{trialClients}</div>
+            <p className="text-xs text-gray-600 mt-1">Currently on trial period</p>
           </CardContent>
         </Card>
       </div>
