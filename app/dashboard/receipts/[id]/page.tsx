@@ -158,7 +158,8 @@ export default function ReceiptDetailsPage() {
       paymentMethod: receipt.paymentMethod,
       referenceNumber: receipt.referenceNumber || "",
       status: receipt.status,
-
+      terms: receipt?.terms || "",
+      invoiceDate: receipt.invoiceDate,
       salesInvoiceNumber: receipt.salesInvoiceNumber || "",
       balanceAmount: receipt.balanceAmount || 0,
     }
@@ -398,7 +399,12 @@ export default function ReceiptDetailsPage() {
                 <CardTitle>Terms & Conditions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-sm max-w-none text-gray-600 break-words" dangerouslySetInnerHTML={{ __html: (receipt as any).terms }} />
+                <div       className="prose max-w-200 text-sm text-gray-600 
+                   break-words break-all whitespace-pre-wrap leading-relaxed
+                   [&_p]:mb-2 
+                   [&_ul]:list-disc [&_ul]:pl-5 
+                   [&_ol]:list-decimal [&_ol]:pl-5 
+                   [&_strong]:font-semibold" dangerouslySetInnerHTML={{ __html: (receipt as any).terms }} />
               </CardContent>
             </Card>
           )}

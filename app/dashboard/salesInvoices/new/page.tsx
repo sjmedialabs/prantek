@@ -844,7 +844,7 @@ export default function NewSalesInvoicePage() {
 
         items: items.map((item) => ({
           type: item.type,
-          itemName: item.itemName,
+         itemName: masterItems.find((m) => m._id === item.itemId)?.name || item.itemName,
           description: item.description,
           quantity: item.quantity,
           price: item.price,

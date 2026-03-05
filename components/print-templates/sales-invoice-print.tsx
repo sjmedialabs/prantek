@@ -150,7 +150,7 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
             <div>
               <h4 className="text-sm font-bold text-gray-700 mb-1">Terms & Conditions:</h4>
               <div
-                className="prose prose-sm max-w-none text-gray-600 flex flex-col gap-1"
+                className="prose max-w-200 text-sm text-gray-600 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold"
                 dangerouslySetInnerHTML={{ __html: invoice.terms }}
               />
             </div>

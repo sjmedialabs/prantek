@@ -467,7 +467,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
       clientContact: clientContact,
       items: items.map((i) => ({
         type: i.type,
-        itemName: i.itemName,
+        itemName: masterItems.find((m) => m._id === i.itemId)?.name || "",
         description: i.description,
         quantity: i.quantity,
         price: i.price,

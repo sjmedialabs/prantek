@@ -18,7 +18,40 @@ export type DateRange = {
   from: Date
   to: Date
 }
+const getFinancialYear = () => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth()
 
+  if (month >= 3) {
+    return {
+      start: new Date(year, 3, 1),
+      end: new Date(year + 1, 2, 31, 23, 59, 59, 999),
+    }
+  } else {
+    return {
+      start: new Date(year - 1, 3, 1),
+      end: new Date(year, 2, 31, 23, 59, 59, 999),
+    }
+  }
+}
+const getFinancialQuarter = () => {
+  const today = new Date()
+  const month = today.getMonth()
+  const year = today.getFullYear()
+
+  if (month >= 3 && month <= 5) {
+    return { from: new Date(year, 3, 1), to: new Date(year, 5, 30, 23, 59, 59, 999) }
+  }
+  if (month >= 6 && month <= 8) {
+    return { from: new Date(year, 6, 1), to: new Date(year, 8, 30, 23, 59, 59, 999) }
+  }
+  if (month >= 9 && month <= 11) {
+    return { from: new Date(year, 9, 1), to: new Date(year, 11, 31, 23, 59, 59, 999) }
+  }
+
+  return { from: new Date(year, 0, 1), to: new Date(year, 2, 31, 23, 59, 59, 999) }
+}
 export type DateFilterType = "today" | "weekly" | "monthly" | "quarterly" | "yearly" | "lifetime" | "custom"
 
 interface DateFilterProps {
@@ -88,26 +121,41 @@ case "weekly": {
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999)
         range = { from: startOfMonth, to: endOfMonth }
         break
+// case "quarterly": {
+//   const quarter = Math.floor(today.getMonth() / 3)
+//   const start = new Date(today.getFullYear(), quarter * 3, 1)
+//   start.setHours(0, 0, 0, 0)
+
+//   const end = new Date(today.getFullYear(), quarter * 3 + 3, 0)
+//   end.setHours(23, 59, 59, 999)
+
+//   range = { from: start, to: end }
+//   break
+// }
 case "quarterly": {
-  const quarter = Math.floor(today.getMonth() / 3)
-  const start = new Date(today.getFullYear(), quarter * 3, 1)
-  start.setHours(0, 0, 0, 0)
-
-  const end = new Date(today.getFullYear(), quarter * 3 + 3, 0)
-  end.setHours(23, 59, 59, 999)
-
-  range = { from: start, to: end }
+  const q = getFinancialQuarter()
+  range = {
+    from: q.from,
+    to: q.to,
+  }
   break
 }
+// case "yearly": {
+//   const start = new Date(today.getFullYear(), 0, 1)
+//   const end = new Date(today.getFullYear(), 11, 31)
+//   end.setHours(23, 59, 59, 999)
+
+//   range = { from: start, to: end }
+//   break
+// }
 case "yearly": {
-  const start = new Date(today.getFullYear(), 0, 1)
-  const end = new Date(today.getFullYear(), 11, 31)
-  end.setHours(23, 59, 59, 999)
-
-  range = { from: start, to: end }
+  const fy = getFinancialYear()
+  range = {
+    from: fy.start,
+    to: fy.end,
+  }
   break
 }
-
       case "lifetime":
         const startOfLifetime = new Date(0)
         const endOfLifetime = new Date(today)

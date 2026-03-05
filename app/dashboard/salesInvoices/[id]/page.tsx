@@ -284,7 +284,12 @@ export default function SalesInvoiceDetailsPage() {
     </h4>
 
     <div
-      className="prose prose-sm max-w-none text-gray-600 break-words break-all whitespace-pre-wrap overflow-hidden"
+      className="prose max-w-200 text-sm text-gray-600 
+                   break-words break-all whitespace-pre-wrap leading-relaxed
+                   [&_p]:mb-2 
+                   [&_ul]:list-disc [&_ul]:pl-5 
+                   [&_ol]:list-decimal [&_ol]:pl-5 
+                   [&_strong]:font-semibold"
       dangerouslySetInnerHTML={{
         __html: invoice.terms,
       }}
