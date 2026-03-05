@@ -37,6 +37,7 @@ import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { OwnSearchableSelect } from "@/components/searchableSelect"
 export default function ReportsPage() {
   const { toast } = useToast()
   const { user, hasPermission } = useUser()
@@ -47,6 +48,7 @@ export default function ReportsPage() {
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  const [salesInvoices, setSalesInvoices] = useState<any[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [hasTaxSettings, setHasTaxSettings] = useState(false)
@@ -54,7 +56,6 @@ export default function ReportsPage() {
   const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null)
 const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
-  const [clientSearchTerm, setClientSearchTerm] = useState("")
   const [selectedClientForDetails, setSelectedClientForDetails] = useState<{ id: string; name: string } | null>(null)
   useEffect(() => {
     const loadData = async () => {
@@ -62,14 +63,19 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
         const loadedReceipts = await api.receipts.getAll()
         const loadedQuotations = await api.quotations.getAll()
         const loadedPayments = await api.payments.getAll()
+        const loadedSalesInvoicesResponse = await fetch("/api/salesInvoice")
+        const loadedSalesInvoicesData = await loadedSalesInvoicesResponse.json()
+        if (loadedSalesInvoicesData.success) {
+          setSalesInvoices(loadedSalesInvoicesData.data)
+        }
         const loadedClients = await api.clients.getAll()
         const loadedItems = await api.items.getAll()
         const loadedTaxSettings = await api.taxRates.getAll()
         const loadedBankAccounts = await api.bankAccounts.getAll()
         const receipt = loadedReceipts.filter((r: any) => r.status === "cleared")
         setReceipts(receipt)
-        setQuotations(loadedQuotations)
-        const payments = loadedPayments.filter((p: any) => p.status === "cleared")
+        setQuotations(loadedQuotations) 
+        const payments = loadedPayments.filter((p: any) => p.status === "completed")
         setPayments(payments)
         const clients = loadedClients.filter((c: any) => c.status === "active")
         setClients(clients)
@@ -80,6 +86,30 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
     }
     loadData()
   }, [hasPermission])
+
+  const clientOptions = useMemo(() => {
+    return clients.map((c) => ({
+      value: c._id,
+      label: c.name,
+      email: c.email,
+      phone: c.phone,
+      address: `${c.address}, ${c.city}, ${c.state} ${c.pincode}`,
+    }))
+  }, [clients])
+
+  const handleClientSelect = (clientId: string) => {
+    if (clientId) {
+      const client = clients.find((c) => c._id === clientId)
+      if (client) {
+        setSelectedClientForDetails({
+          id: client._id,
+          name: client.name,
+        })
+      }
+    } else {
+      setSelectedClientForDetails(null)
+    }
+  }
 
   const dateFilterRange = useMemo(() => {
     const now = new Date()
@@ -161,6 +191,13 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
       return date >= dateFilterRange.from && date <= dateFilterRange.to
     })
   }, [quotations, dateFilterRange])
+
+  const filteredSalesInvoices = useMemo(() => {
+    return salesInvoices.filter((inv) => {
+      const date = new Date(inv.date)
+      return date >= dateFilterRange.from && date <= dateFilterRange.to
+    })
+  }, [salesInvoices, dateFilterRange])
 
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
@@ -433,29 +470,25 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
       if (r.badDeptAmount) stats[clientId].badDebt += (r.badDeptAmount || 0)
     })
 
-    let result = Object.entries(stats).map(([clientId, data]) => ({
+    const result = Object.entries(stats).map(([clientId, data]) => ({
       id: clientId,
       ...data,
     }))
 
-    if (clientSearchTerm) {
-      const lowerTerm = clientSearchTerm.toLowerCase()
-      result = result.filter(c => c.name.toLowerCase().includes(lowerTerm))
-    }
-
     return result.sort((a, b) => b.cleared - a.cleared)
-  }, [filteredReceipts, clientSearchTerm])
+  }, [filteredReceipts])
 
   const selectedClientTransactions = useMemo(() => {
-    if (!selectedClientForDetails) return { receipts: [], quotations: [], payments: [] };
+    if (!selectedClientForDetails) return { receipts: [], quotations: [], payments: [], salesInvoices: [] };
 
     const receipts = filteredReceipts.filter(r => r.clientId === selectedClientForDetails.id);
     const quotations = filteredQuotations.filter(q => q.clientId === selectedClientForDetails.id);
     // Assuming payments to clients have recipientType 'client'
     const payments = filteredPayments.filter(p => p.recipientId === selectedClientForDetails.id && p.recipientType === 'client');
+    const clientSalesInvoices = filteredSalesInvoices.filter(inv => inv.clientId === selectedClientForDetails.id);
 
-    return { receipts, quotations, payments };
-  }, [selectedClientForDetails, filteredReceipts, filteredQuotations, filteredPayments]);
+    return { receipts, quotations, payments, salesInvoices: clientSalesInvoices };
+  }, [selectedClientForDetails, filteredReceipts, filteredQuotations, filteredPayments, filteredSalesInvoices]);
 // const selectedClientTransactions = useMemo(() => {
 //   if (!selectedClientForDetails) 
 //     return { receipts: [], quotations: [], payments: [] }
@@ -477,40 +510,22 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
 // }, [selectedClientForDetails, filteredReceipts, filteredQuotations, filteredPayments])
 
-const clientBalance = useMemo(() => {
+  const clientBalance = useMemo(() => {
+    if (!selectedClientForDetails) return 0
 
-  if (!selectedClientForDetails) return 0
+    // Total amount from all non-cancelled sales invoices for the client in the selected period
+    const totalBilled = selectedClientTransactions.salesInvoices
+      .filter((inv) => inv.status.toLowerCase() !== "cancelled")
+      .reduce((sum, inv) => sum + (inv.grandTotal || 0), 0)
 
-  const totalInvoice = selectedClientTransactions.receipts.reduce(
-    (sum, r) => sum + (r.ReceiptAmount || 0),
-    0
-  )
+    // Total amount from all non-cancelled, cleared receipts for the client in the selected period
+    // Note: `filteredReceipts` is already pre-filtered for 'cleared' status.
+    const totalReceived = selectedClientTransactions.receipts
+      .filter((r) => r.status.toLowerCase() !== "cancelled")
+      .reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0)
 
-  const totalPaid = selectedClientTransactions.payments.reduce(
-    (sum, p) => sum + (p.amount || 0),
-    0
-  )
-
-  return totalInvoice - totalPaid
-
-}, [selectedClientTransactions])
-// const clientBalance = useMemo(() => {
-
-//   if (!selectedClientForDetails) return 0
-
-//   const totalInvoice = selectedClientTransactions.receipts.reduce(
-//     (sum, r) => sum + (r.ReceiptAmount || 0),
-//     0
-//   )
-
-//   const totalPaid = selectedClientTransactions.payments.reduce(
-//     (sum, p) => sum + (p.amount || 0),
-//     0
-//   )
-
-//   return totalInvoice - totalPaid
-
-// }, [selectedClientTransactions])
+    return totalBilled - totalReceived
+  }, [selectedClientTransactions])
 
   const handlePDFExport = async () => {
     try {
@@ -578,6 +593,69 @@ const clientBalance = useMemo(() => {
     (sum, item) => sum + item.revenue,
     0
   )
+
+  const getStatusBadge = (type: 'quotation' | 'sales_invoice' | 'receipt' | 'payment', status?: string) => {
+    const s = (status || '').toLowerCase();
+
+    switch (type) {
+        case 'quotation':
+            switch (s) {
+                case 'pending':
+                case 'created':
+                    return <Badge className="bg-yellow-100 text-yellow-800 capitalize">{status}</Badge>;
+                case 'accepted':
+                    return <Badge className="bg-blue-100 text-blue-800 capitalize">{status}</Badge>;
+                case 'confirmed': // invoice created
+                    return <Badge className="bg-green-100 text-green-800 capitalize">{status}</Badge>;
+                case 'expired':
+                    return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+                case 'cancelled':
+                    return <Badge variant="destructive" className="capitalize">{status}</Badge>;
+                default:
+                    return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+            }
+        case 'sales_invoice':
+            switch (s) {
+                case 'cleared':
+                case 'collected':
+                    return <Badge className="bg-green-100 text-green-800 capitalize">{status}</Badge>;
+                case 'not cleared':
+                case 'not collected':
+                case 'pending':
+                    return <Badge className="bg-blue-100 text-blue-800 capitalize">{status}</Badge>;
+                case 'partial':
+                case 'partially collected':
+                    return <Badge className="bg-yellow-100 text-yellow-800 capitalize">{status}</Badge>;
+                case 'overdue':
+                    return <Badge className="bg-orange-100 text-orange-800 capitalize">{status}</Badge>;
+                case 'cancelled':
+                    return <Badge variant="destructive" className="capitalize">{status}</Badge>;
+                default:
+                    return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+            }
+        case 'receipt':
+            switch (s) {
+                case 'received':
+                case 'pending':
+                    return <Badge className="bg-yellow-100 text-yellow-800 capitalize">{status}</Badge>;
+                case 'cleared':
+                    return <Badge className="bg-green-100 text-green-800 capitalize">{status}</Badge>;
+                case 'cancelled':
+                    return <Badge variant="destructive" className="capitalize">{status}</Badge>;
+                default:
+                    return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+            }
+        case 'payment':
+            // Payments are always 'completed' in this report context, but adding more for robustness
+            if (s === 'completed' || s === 'paid' || s === 'cleared') {
+              return <Badge className="bg-green-100 text-green-800 capitalize">{status}</Badge>;
+            }
+            return <Badge variant="destructive" className="capitalize">{status}</Badge>;
+        default:
+            return <Badge variant="secondary" className="capitalize">{status}</Badge>;
+    }
+};
+
   if (!hasPermission("view_reports")) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -753,7 +831,7 @@ const clientBalance = useMemo(() => {
       {/* Main content wrapper for PDF export */}
       <div id="reports-content">
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
           {kpiData.map((kpi, index) => {
             const Icon = kpi.icon
             return (
@@ -811,18 +889,18 @@ const clientBalance = useMemo(() => {
                   <CardTitle>Revenue Trend</CardTitle>
                   <CardDescription>Monthly income vs expenses over time</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 ">
+                <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                   <ChartContainer
                     config={{
                       income: { label: "Income", color: "#8b5cf6" },
                       expenses: { label: "Expenses", color: "#06b6d4" },
                     }}
-                    className="h-64 lg:h-[300px]"
+                    className="items-center justify-center h-full w-full relative"
                   >
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={financialData}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
+                            <XAxis dataKey="month"  />
                         <YAxis />
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <Area
@@ -853,9 +931,9 @@ const clientBalance = useMemo(() => {
                   <CardTitle>Expense Breakdown</CardTitle>
                   <CardDescription>Distribution of expenses by category</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 ">
+                <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                   {expenseBreakdown.length > 0 ? (
-                    <ChartContainer config={{}} className="h-64 lg:h-[300px]">
+                    <ChartContainer config={{}} className="items-center justify-center h-full w-full relative">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
@@ -893,14 +971,14 @@ const clientBalance = useMemo(() => {
                   <CardTitle>Profit Analysis</CardTitle>
                   <CardDescription>Monthly income, expense, and profit trends</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 ">
+                <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                   <ChartContainer
                     config={{
                       income: { label: "Income", color: "#8b5cf6" },
                       expenses: { label: "Expenses", color: "#ef4444" },
                       profit: { label: "Profit", color: "#10b981" },
                     }}
-                    className="h-64 lg:h-[300px]"
+                    className="items-center justify-center h-full w-full relative"
                   >
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={financialData}>
@@ -968,20 +1046,20 @@ const clientBalance = useMemo(() => {
                   <CardTitle>Top Customers by Revenue</CardTitle>
                   <CardDescription>Highest revenue generating customers</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0">
+                <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                   {customerAnalytics.length > 0 ? (
                     <ChartContainer
                       config={{
                         revenue: { label: "Revenue", color: "#8b5cf6" },
                       }}
-                      className="h-64 lg:h-[300px]"
+                     className="items-center justify-center h-full w-full relative"
                     >
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={customerAnalytics} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" />
+                          <CartesianGrid strokeDasharray="1 1" />
                           <XAxis type="number" />
-                          <YAxis dataKey="name" type="category" width={100} />
-                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <YAxis dataKey="name" type="category"  width={100}/>
+                         <ChartTooltip content={<ChartTooltipContent />} />
                           <Bar dataKey="revenue" fill="#8b5cf6" />
                         </BarChart>
                       </ResponsiveContainer>
@@ -1030,37 +1108,13 @@ const clientBalance = useMemo(() => {
 
   <CardContent className="space-y-4">
 
-    {/* Client Search */}
-    <div className="flex items-center gap-2">
-      <Search className="h-4 w-4 text-gray-400" />
-      <Input
-        placeholder="Search client..."
-        value={clientSearchTerm}
-        onChange={(e) => setClientSearchTerm(e.target.value)}
-      />
-    </div>
-
-    {/* Client List */}
-    <div className="max-h-40 overflow-y-auto border rounded-md">
-      {clients
-        .filter((c) =>
-          c.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
-        )
-        .map((client) => (
-          <div
-            key={client._id}
-            onClick={() =>
-              setSelectedClientForDetails({
-                id: client._id,
-                name: client.name,
-              })
-            }
-            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-          >
-            {client.name}
-          </div>
-        ))}
-    </div>
+    <OwnSearchableSelect
+      options={clientOptions}
+      value={selectedClientForDetails?.id || ""}
+      onValueChange={handleClientSelect}
+      placeholder="Search and select a client by name, email, phone, or address..."
+      emptyText="No clients found."
+    />
     {selectedClientForDetails && (
   <div className="bg-yellow-50 border rounded-md p-3 flex justify-between">
     <span className="font-medium">
@@ -1091,12 +1145,27 @@ const clientBalance = useMemo(() => {
       <TableRow key={q._id}>
         <TableCell>{format(new Date(q.date), "dd MMM yyyy")}</TableCell>
         <TableCell>Quotation</TableCell>
-        <TableCell>{q.number}</TableCell>
+        <TableCell>{q?.quotationNumber}</TableCell>
         <TableCell>
-          <Badge variant="secondary">{q.status}</Badge>
+          {getStatusBadge('quotation', q.status)}
         </TableCell>
         <TableCell className="text-right">
-          ₹{(q.total || 0).toLocaleString()}
+          ₹{(q.grandTotal || 0).toLocaleString()}
+        </TableCell>
+      </TableRow>
+    ))}
+
+    {/* Sales Invoices */}
+    {selectedClientTransactions.salesInvoices.map((inv) => (
+      <TableRow key={inv._id}>
+        <TableCell>{format(new Date(inv.date), "dd MMM yyyy")}</TableCell>
+        <TableCell>Sales Invoice</TableCell>
+        <TableCell>{inv.salesInvoiceNumber}</TableCell>
+        <TableCell>
+          {getStatusBadge('sales_invoice', inv.status)}
+        </TableCell>
+        <TableCell className="text-right">
+          ₹{(inv.grandTotal || 0).toLocaleString()}
         </TableCell>
       </TableRow>
     ))}
@@ -1105,10 +1174,10 @@ const clientBalance = useMemo(() => {
     {selectedClientTransactions.receipts.map((r) => (
       <TableRow key={r._id}>
         <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
-        <TableCell>Invoice</TableCell>
-        <TableCell>{r.number}</TableCell>
+        <TableCell>Receipt</TableCell>
+        <TableCell>{r.receiptNumber}</TableCell>
         <TableCell>
-          <Badge>{r.status}</Badge>
+          {getStatusBadge('receipt', r.status)}
         </TableCell>
         <TableCell className="text-right">
           ₹{(r.ReceiptAmount || 0).toLocaleString()}
@@ -1121,11 +1190,9 @@ const clientBalance = useMemo(() => {
       <TableRow key={p._id}>
         <TableCell>{format(new Date(p.date), "dd MMM yyyy")}</TableCell>
         <TableCell>Payment</TableCell>
-        <TableCell>{p.reference}</TableCell>
+        <TableCell>{p?.paymentNumber}</TableCell>
         <TableCell>
-          <Badge className="bg-green-100 text-green-700">
-            Paid
-          </Badge>
+          {getStatusBadge('payment', p.status)}
         </TableCell>
         <TableCell className="text-right">
           ₹{(p.amount || 0).toLocaleString()}
@@ -1168,7 +1235,7 @@ const clientBalance = useMemo(() => {
                               innerRadius={60}
                               outerRadius={90}
                               paddingAngle={3}
-                            >
+                              >
                               {inventoryAnalytics.slice(0, 6).map((entry, index) => (
                                 <Cell key={index} fill={COLORS[index % COLORS.length]} />
                               ))}
@@ -1204,7 +1271,7 @@ const clientBalance = useMemo(() => {
                 <CardContent className="space-y-4">
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {inventoryAnalytics.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg ">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 truncate">{item.name}</p>
                           <p className="text-sm text-gray-600">{item.quantity} units sold</p>
