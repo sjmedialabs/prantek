@@ -213,7 +213,7 @@ const clearedReceipts = filteredReceipts.filter(
         0
       )
 const clearedPayments = filteredPayments.filter(
-  (p:any) => p.status === "completed"
+  (p:any) => p.status === "cleared"
 )
       const totalPayments = clearedPayments.reduce(
         (sum: number, p: any) => sum + (p.amount || 0),

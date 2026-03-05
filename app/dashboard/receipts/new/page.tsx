@@ -599,6 +599,7 @@ export default function ReceiptsPage() {
       if (buyerState) {
         setItems((prevItems) =>
           prevItems.map((item) => {
+
             if (!item.itemName) return item
             const masterItem = masterItems.find((i) => i.name === item.itemName)
             if (!masterItem) return item
@@ -675,6 +676,7 @@ export default function ReceiptsPage() {
             const masterItem = masterItems.find((i) => i._id === value)
 
             if (masterItem) {
+              
               updatedItem.description = masterItem.description ?? ""
               updatedItem.price = masterItem.price ?? 0
               updatedItem.itemId = masterItem._id
@@ -812,7 +814,7 @@ export default function ReceiptsPage() {
     setLoading(true)
     try {
       const client = clients.find(c => c._id === scenario2Client)
-
+      console.log("items on without SI", items)
       const receiptData = {
         receiptType: "nonInvoiced",
         clientId: scenario2Client,
@@ -820,7 +822,14 @@ export default function ReceiptsPage() {
         clientEmail: client?.email || "",
         clientContact: client?.phone || "",
         clientAddress: `${client?.address}, ${client?.city}, ${client?.state}, ${client?.pincode}` || "",
-        items: items,
+        items: items.map((item) => {
+  const masterItem = masterItems.find((m) => m._id === item.itemName)
+
+  return {
+    ...item,
+    itemName: masterItem?.name || item.itemName
+  }
+}),
         subtotal,
         taxAmount,
         total,

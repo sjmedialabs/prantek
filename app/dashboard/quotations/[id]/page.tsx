@@ -479,7 +479,7 @@ const quotationForPrint = {
 
     <CardContent className="overflow-hidden">
       <div
-        className="prose max-w-200 text-sm text-gray-600 
+        className="prose max-w-400 text-sm text-gray-600 
                    break-words break-all whitespace-pre-wrap leading-relaxed
                    [&_p]:mb-2 
                    [&_ul]:list-disc [&_ul]:pl-5 

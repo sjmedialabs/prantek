@@ -20,20 +20,27 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Area,
+  Tooltip,
   AreaChart,
 } from "recharts"
-import { TrendingUp, TrendingDown, DollarSign, Users, Package, Activity, Download, AlertCircle } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Users, Package, Activity, Download, AlertCircle, Search, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { downloadCSV, downloadJSON, formatCurrencyForExport } from "@/lib/export-utils"
 import { generatePDF } from "@/lib/pdf-utils"
 import { api } from "@/lib/api-client"
 import { generateEnhancedPDF } from "@/lib/enhanced-pdf-utils"
-import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/data-store"
-
+import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/models/types"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
 export default function ReportsPage() {
   const { toast } = useToast()
   const { user, hasPermission } = useUser()
-  const [dateRange, setDateRange] = useState("6months")
+  const [dateRange, setDateRange] = useState("this_month")
   const [reportType, setReportType] = useState("overview")
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
 
@@ -44,7 +51,11 @@ export default function ReportsPage() {
   const [items, setItems] = useState<Item[]>([])
   const [hasTaxSettings, setHasTaxSettings] = useState(false)
   const [hasBankDetails, setHasBankDetails] = useState(false)
-
+  const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
+  const [customStartDate, setCustomStartDate] = useState<Date | null>(null)
+const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
+  const [clientSearchTerm, setClientSearchTerm] = useState("")
+  const [selectedClientForDetails, setSelectedClientForDetails] = useState<{ id: string; name: string } | null>(null)
   useEffect(() => {
     const loadData = async () => {
       if (hasPermission("view_reports")) {
@@ -53,70 +64,136 @@ export default function ReportsPage() {
         const loadedPayments = await api.payments.getAll()
         const loadedClients = await api.clients.getAll()
         const loadedItems = await api.items.getAll()
-        const loadedTaxSettings = await api.taxSetting.get()
+        const loadedTaxSettings = await api.taxRates.getAll()
         const loadedBankAccounts = await api.bankAccounts.getAll()
-
-        setReceipts(loadedReceipts)
+        const receipt = loadedReceipts.filter((r: any) => r.status === "cleared")
+        setReceipts(receipt)
         setQuotations(loadedQuotations)
-        setPayments(loadedPayments)
-        setClients(loadedClients)
+        const payments = loadedPayments.filter((p: any) => p.status === "cleared")
+        setPayments(payments)
+        const clients = loadedClients.filter((c: any) => c.status === "active")
+        setClients(clients)
         setItems(loadedItems)
         setHasTaxSettings(!!loadedTaxSettings)
         setHasBankDetails(Array.isArray(loadedBankAccounts) && loadedBankAccounts.length > 0)
-        console.log("Items data loaded:", loadedItems)
       }
     }
     loadData()
   }, [hasPermission])
 
-  const getDateRangeFilter = useMemo(() => {
+  const dateFilterRange = useMemo(() => {
     const now = new Date()
-    const ranges: Record<string, Date> = {
-      "1month": new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()),
-      "3months": new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()),
-      "6months": new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()),
-      "1year": new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()),
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+
+    const year = now.getFullYear()
+    const month = now.getMonth()
+
+    // Financial year start
+    const fyStart = month >= 3 ? new Date(year, 3, 1) : new Date(year - 1, 3, 1)
+    const fyEnd = new Date(fyStart.getFullYear() + 1, 2, 31, 23, 59, 59, 999)
+
+    switch (dateRange) {
+      case "today":
+        return { from: todayStart, to: todayEnd }
+
+      case "this_week": {
+        const firstDayOfWeek = new Date(todayStart)
+        firstDayOfWeek.setDate(todayStart.getDate() - todayStart.getDay())
+        const lastDayOfWeek = new Date(firstDayOfWeek)
+        lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6)
+        lastDayOfWeek.setHours(23, 59, 59, 999)
+        return { from: firstDayOfWeek, to: lastDayOfWeek }
+      }
+
+      case "this_month": {
+        const from = new Date(year, month, 1)
+        const to = new Date(year, month + 1, 0, 23, 59, 59, 999)
+        return { from, to }
+      }
+
+      case "this_year":
+        return { from: fyStart, to: fyEnd }
+
+      case "this_quarter": {
+        const quarter = Math.floor(month / 3);
+        const from = new Date(year, quarter * 3, 1);
+        const to = new Date(year, quarter * 3 + 3, 0, 23, 59, 59, 999);
+        return { from, to };
+      }
+
+      case "last_6_months": {
+        const from = new Date(year, month - 6, 1)
+        return { from, to: todayEnd }
+      }
+
+      case "all_time":
+        return { from: new Date(0), to: todayEnd }
+
+      case "custom_range": {
+        if (!customStartDate || !customEndDate) {
+          return { from: new Date(0), to: new Date(0) } // Return empty range if not set
+        }
+        const from = customStartDate
+        const to = new Date(customEndDate)
+        to.setHours(23, 59, 59, 999)
+        return { from, to }
+      }
+
+      default: {
+        const from = new Date(year, month, 1)
+        const to = new Date(year, month + 1, 0, 23, 59, 59, 999)
+        return { from, to }
+      }
     }
-    return ranges[dateRange] || ranges["6months"]
-  }, [dateRange])
+  }, [dateRange, customStartDate, customEndDate])
 
   const filteredReceipts = useMemo(() => {
-    return receipts.filter((r) => new Date(r.date) >= getDateRangeFilter)
-  }, [receipts, getDateRangeFilter])
+    return receipts.filter((r) => {
+      const date = new Date(r.date)
+      return date >= dateFilterRange.from && date <= dateFilterRange.to
+    })
+  }, [receipts, dateFilterRange])
 
   const filteredQuotations = useMemo(() => {
-    return quotations.filter((q) => new Date(q.date) >= getDateRangeFilter)
-  }, [quotations, getDateRangeFilter])
+    return quotations.filter((q) => {
+      const date = new Date(q.date)
+      return date >= dateFilterRange.from && date <= dateFilterRange.to
+    })
+  }, [quotations, dateFilterRange])
 
   const filteredPayments = useMemo(() => {
-    return payments.filter((p) => new Date(p.date) >= getDateRangeFilter)
-  }, [payments, getDateRangeFilter])
+    return payments.filter((p) => {
+      const date = new Date(p.date)
+      return date >= dateFilterRange.from && date <= dateFilterRange.to
+    })
+  }, [payments, dateFilterRange])
 
   // Calculate compliance metrics
   const complianceMetrics = useMemo(() => {
     // Calculate client data completeness
-    const clientsWithCompleteData = clients.filter(c => 
+    const clientsWithCompleteData = clients.filter(c =>
       c.name && c.email && c.phone && c.address
     ).length
-    const clientDataScore = clients.length > 0 
-      ? Math.round((clientsWithCompleteData / clients.length) * 100) 
+    const clientDataScore = clients.length > 0
+      ? Math.round((clientsWithCompleteData / clients.length) * 100)
       : 0
-    
+
     // Calculate items with tax configuration
     const itemsWithTax = items.filter(i => i.applyTax && i.applyTax > 0).length
-    const itemTaxScore = items.length > 0 
-      ? Math.round((itemsWithTax / items.length) * 100) 
+    const itemTaxScore = items.length > 0
+      ? Math.round((itemsWithTax / items.length) * 100)
       : 0
-    
+
     // Calculate individual scores
     const taxSettingsScore = hasTaxSettings ? 100 : 0
     const bankDetailsScore = hasBankDetails ? 100 : 0
-    
+
     // Calculate overall score
     const overallScore = Math.round(
       (taxSettingsScore + bankDetailsScore + clientDataScore + itemTaxScore) / 4
     )
-    
+
     return {
       hasTaxSettings,
       hasBankDetails,
@@ -129,35 +206,41 @@ export default function ReportsPage() {
   }, [clients, items, hasTaxSettings, hasBankDetails])
 
   const financialData = useMemo(() => {
-    const monthlyData: Record<string, { income: number; expenses: number; profit: number }> = {}
+    const monthlyData: Record<string, { income: number; expenses: number }> = {}
 
     // Group receipts by month
     filteredReceipts.forEach((receipt) => {
-      const month = new Date(receipt.date).toLocaleDateString("en-US", { month: "short" })
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expenses: 0, profit: 0 }
+      const date = new Date(receipt.date)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}` // YYYY-MM
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { income: 0, expenses: 0 }
       }
-      monthlyData[month].income += receipt.ReceiptAmount || 0
+      monthlyData[monthKey].income += receipt.ReceiptAmount || 0
     })
 
     // Group payments by month
     filteredPayments.forEach((payment) => {
-      const month = new Date(payment.date).toLocaleDateString("en-US", { month: "short" })
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expenses: 0, profit: 0 }
+      const date = new Date(payment.date)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}` // YYYY-MM
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { income: 0, expenses: 0 }
       }
-      monthlyData[month].expenses += payment.amount || 0
+      monthlyData[monthKey].expenses += payment.amount || 0
     })
 
-    // Calculate profit
-    Object.keys(monthlyData).forEach((month) => {
-      monthlyData[month].profit = monthlyData[month].income - monthlyData[month].expenses
-    })
+    const sortedKeys = Object.keys(monthlyData).sort()
 
-    return Object.entries(monthlyData).map(([month, data]) => ({
-      month,
-      ...data,
-    }))
+    return sortedKeys.map((key) => {
+      const [year, monthNum] = key.split("-")
+      const monthName = new Date(parseInt(year), parseInt(monthNum)).toLocaleDateString("en-US", { month: "short" })
+      const data = monthlyData[key]
+      return {
+        month: `${monthName} '${year.slice(2)}`,
+        income: data.income,
+        expenses: data.expenses,
+        profit: data.income - data.expenses,
+      }
+    })
   }, [filteredReceipts, filteredPayments])
 
   const expenseBreakdown = useMemo(() => {
@@ -181,57 +264,94 @@ export default function ReportsPage() {
   }, [filteredPayments])
 
   const kpiData = useMemo(() => {
-    const totalIncome = filteredReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0)
-    const totalExpenses = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
-    const totalProfit = totalIncome - totalExpenses
-    const profitMargin = totalIncome > 0 ? (totalProfit / totalIncome) * 100 : 0
+    const totalIncome = filteredReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0);
+    const totalExpenses = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalProfit = totalIncome - totalExpenses;
+    const profitMargin = totalIncome > 0 ? (totalProfit / totalIncome) * 100 : 0;
 
     // Calculate trends (compare with previous period)
-    const previousPeriodStart = new Date(getDateRangeFilter)
-    previousPeriodStart.setMonth(
-      previousPeriodStart.getMonth() -
-        (dateRange === "1month" ? 1 : dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12),
-    )
+    const currentPeriodStart = dateFilterRange.from;
+    let previousPeriodStart: Date | null = null;
 
-    const previousReceipts = receipts.filter((r) => {
-      const date = new Date(r.date)
-      return date >= previousPeriodStart && date < getDateRangeFilter
-    })
+    if (dateRange === 'today') {
+      previousPeriodStart = new Date(currentPeriodStart);
+      previousPeriodStart.setDate(currentPeriodStart.getDate() - 1);
+    } else if (dateRange === 'this_week') {
+      previousPeriodStart = new Date(currentPeriodStart);
+      previousPeriodStart.setDate(currentPeriodStart.getDate() - 7);
+    } else if (dateRange === 'this_month') {
+      previousPeriodStart = new Date(currentPeriodStart);
+      previousPeriodStart.setMonth(currentPeriodStart.getMonth() - 1);
+    } else if (dateRange === 'last_6_months') {
+      previousPeriodStart = new Date(currentPeriodStart);
+      previousPeriodStart.setMonth(currentPeriodStart.getMonth() - 6);
+    } else if (dateRange === 'this_year') {
+      previousPeriodStart = new Date(currentPeriodStart);
+      previousPeriodStart.setFullYear(currentPeriodStart.getFullYear() - 1);
+    }
 
-    const previousIncome = previousReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0)
-    const incomeChange = previousIncome > 0 ? ((totalIncome - previousIncome) / previousIncome) * 100 : 0
+    let previousIncome = 0;
+    let previousExpenses = 0;
+    let previousProfit = 0;
+
+    if (previousPeriodStart) {
+      const previousReceipts = receipts.filter(r => {
+        const date = new Date(r.date);
+        return date >= previousPeriodStart! && date < currentPeriodStart;
+      });
+      previousIncome = previousReceipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0);
+
+      const previousPayments = payments.filter(p => {
+        const date = new Date(p.date);
+        return date >= previousPeriodStart! && date < currentPeriodStart;
+      });
+      previousExpenses = previousPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      previousProfit = previousIncome - previousExpenses;
+    }
+
+    const calculateChange = (current: number, previous: number) => {
+      if (previous > 0) return ((current - previous) / previous) * 100;
+      if (current > 0) return 100;
+      return 0;
+    };
+
+    const incomeChange = calculateChange(totalIncome, previousIncome);
+    const expenseChange = calculateChange(totalExpenses, previousExpenses);
+
+    const previousProfitMargin = previousIncome > 0 ? (previousProfit / previousIncome) * 100 : 0;
+    const profitMarginChange = profitMargin - previousProfitMargin;
 
     return [
       {
         title: "Total Revenue",
         value: `₹${totalIncome.toLocaleString()}`,
-        change: `${incomeChange >= 0 ? "+" : ""}${incomeChange.toFixed(1)}%`,
+        change: dateRange !== 'all_time' ? `${incomeChange >= 0 ? "+" : ""}${incomeChange.toFixed(1)}%` : 'N/A',
         trend: incomeChange >= 0 ? "up" : "down",
         icon: DollarSign,
       },
       {
         title: "Active Clients",
         value: clients.length.toString(),
-        change: "+0%",
+        change: "All time",
         trend: "up",
         icon: Users,
       },
       {
         title: "Total Expenses",
         value: `₹${totalExpenses.toLocaleString()}`,
-        change: "+0%",
-        trend: "up",
+        change: dateRange !== 'all_time' ? `${expenseChange >= 0 ? "+" : ""}${expenseChange.toFixed(1)}%` : 'N/A',
+        trend: expenseChange >= 0 ? "up" : "down",
         icon: Package,
       },
       {
         title: "Profit Margin",
         value: `${profitMargin.toFixed(1)}%`,
-        change: "+0%",
-        trend: profitMargin > 0 ? "up" : "down",
+        change: dateRange !== 'all_time' ? `${profitMarginChange >= 0 ? "+" : ""}${profitMarginChange.toFixed(1)}pp` : 'N/A', // pp for percentage points
+        trend: profitMarginChange >= 0 ? "up" : "down",
         icon: Activity,
       },
     ]
-  }, [filteredReceipts, filteredPayments, clients, receipts, getDateRangeFilter, dateRange])
+  }, [filteredReceipts, filteredPayments, clients, receipts, payments, dateFilterRange, dateRange])
 
   const customerAnalytics = useMemo(() => {
     const clientStats: Record<string, { name: string; revenue: number; transactions: number }> = {}
@@ -256,88 +376,143 @@ export default function ReportsPage() {
   const inventoryAnalytics = useMemo(() => {
     const itemStats: Record<string, { name: string; quantity: number; revenue: number }> = {}
 
-    filteredQuotations.forEach((quotation) => {
-      ;(quotation.items || []).forEach((item) => {
-        if (!itemStats[item.itemId]) {
-          itemStats[item.itemId] = {
-            name: item.itemName,
-            quantity: 0,
-            revenue: 0,
+    filteredReceipts.forEach((quotation) => {
+      (quotation.items || []).forEach((item) => {
+        // Ensure we have an itemId to work with
+        if (item.itemId) {
+          if (!itemStats[item.itemId]) {
+            // Find the full item details from the `items` state to get the correct name
+            const fullItem = items.find((i) => i._id === item.itemId)
+            itemStats[item.itemId] = {
+              name: fullItem?.name || item.itemName || "Unknown Item",
+              quantity: 0,
+              revenue: 0,
+            }
           }
+          itemStats[item.itemId].quantity += item.quantity || 0
+          itemStats[item.itemId].revenue += item.total || 0
         }
-        itemStats[item.itemId].quantity += item.quantity || 0
-        itemStats[item.itemId].revenue += item.amount || 0
       })
     })
 
-    return Object.values(itemStats)
+    const result = Object.values(itemStats)
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10)
-  }, [filteredQuotations])
 
+    return result
+  }, [filteredReceipts, items])
 
-  const handleExportFinancialData = () => {
-    downloadCSV(`financial-report-${dateRange}-${new Date().toISOString().split("T")[0]}.csv`, financialData, [
-      { key: "month", label: "Month" },
-      { key: "income", label: "Income", format: (v) => formatCurrencyForExport(v, "₹") },
-      { key: "expenses", label: "Expenses", format: (v) => formatCurrencyForExport(v, "₹") },
-      { key: "profit", label: "Profit", format: (v) => formatCurrencyForExport(v, "₹") },
-    ])
-  }
+  const detailedCustomerStats = useMemo(() => {
+    const stats: Record<string, {
+      name: string;
+      cleared: number;
+      uncleared: number;
+      cancelled: number;
+      badDebt: number;
+    }> = {}
 
-  const handleExportCustomerData = () => {
-    downloadCSV(`customer-analytics-${new Date().toISOString().split("T")[0]}.csv`, customerAnalytics, [
-      { key: "name", label: "Customer Name" },
-      { key: "revenue", label: "Total Revenue", format: (v) => formatCurrencyForExport(v, "₹") },
-      { key: "transactions", label: "Transactions" },
-    ])
-  }
+    // This logic uses filteredReceipts, so it respects the global date filter
+    filteredReceipts.forEach((r) => {
+      const clientId = r.clientId || "unknown"
+      if (!stats[clientId]) {
+        stats[clientId] = {
+          name: r.clientName || "Unknown Client",
+          cleared: 0,
+          uncleared: 0,
+          cancelled: 0,
+          badDebt: 0
+        }
+      }
+      const amount = r.ReceiptAmount || 0
+      const status = (r.status || "").toLowerCase()
 
-  const handleExportInventoryData = () => {
-    downloadCSV(`inventory-analytics-${new Date().toISOString().split("T")[0]}.csv`, inventoryAnalytics, [
-      { key: "name", label: "Item Name" },
-      { key: "quantity", label: "Quantity Sold" },
-      { key: "revenue", label: "Revenue", format: (v) => formatCurrencyForExport(v, "₹") },
-    ])
-  }
+      if (status === 'cleared') stats[clientId].cleared += amount
+      else if (status === 'received' || status === 'pending') stats[clientId].uncleared += amount
+      else if (status === 'cancelled') stats[clientId].cancelled += amount
 
-  const handleExportKPIData = () => {
-    const kpiExportData = kpiData.map((kpi) => ({
-      metric: kpi.title,
-      value: kpi.value,
-      change: kpi.change,
-      trend: kpi.trend,
+      if (r.badDeptAmount) stats[clientId].badDebt += (r.badDeptAmount || 0)
+    })
+
+    let result = Object.entries(stats).map(([clientId, data]) => ({
+      id: clientId,
+      ...data,
     }))
 
-    downloadCSV(`kpi-report-${new Date().toISOString().split("T")[0]}.csv`, kpiExportData, [
-      { key: "metric", label: "Metric" },
-      { key: "value", label: "Value" },
-      { key: "change", label: "Change" },
-      { key: "trend", label: "Trend" },
-    ])
-  }
-
-  const handleExportAllData = () => {
-    const allData = {
-      dateRange,
-      reportType,
-      generatedAt: new Date().toISOString(),
-      kpis: kpiData.map((kpi) => ({
-        title: kpi.title,
-        value: kpi.value,
-        change: kpi.change,
-        trend: kpi.trend,
-      })),
-      financialData,
-      expenseBreakdown,
-      customerAnalytics,
-      inventoryAnalytics,
+    if (clientSearchTerm) {
+      const lowerTerm = clientSearchTerm.toLowerCase()
+      result = result.filter(c => c.name.toLowerCase().includes(lowerTerm))
     }
 
-    downloadJSON(`complete-report-${new Date().toISOString().split("T")[0]}.json`, allData)
-  }
+    return result.sort((a, b) => b.cleared - a.cleared)
+  }, [filteredReceipts, clientSearchTerm])
 
-  const handleExportPDF = async () => {
+  const selectedClientTransactions = useMemo(() => {
+    if (!selectedClientForDetails) return { receipts: [], quotations: [], payments: [] };
+
+    const receipts = filteredReceipts.filter(r => r.clientId === selectedClientForDetails.id);
+    const quotations = filteredQuotations.filter(q => q.clientId === selectedClientForDetails.id);
+    // Assuming payments to clients have recipientType 'client'
+    const payments = filteredPayments.filter(p => p.recipientId === selectedClientForDetails.id && p.recipientType === 'client');
+
+    return { receipts, quotations, payments };
+  }, [selectedClientForDetails, filteredReceipts, filteredQuotations, filteredPayments]);
+// const selectedClientTransactions = useMemo(() => {
+//   if (!selectedClientForDetails) 
+//     return { receipts: [], quotations: [], payments: [] }
+
+//   const receipts = filteredReceipts.filter(
+//     r => r.clientId === selectedClientForDetails.id
+//   )
+
+//   const quotations = filteredQuotations.filter(
+//     q => q.clientId === selectedClientForDetails.id
+//   )
+
+//   const payments = filteredPayments.filter(
+//     p => p.recipientId === selectedClientForDetails.id &&
+//          p.recipientType === "client"
+//   )
+
+//   return { receipts, quotations, payments }
+
+// }, [selectedClientForDetails, filteredReceipts, filteredQuotations, filteredPayments])
+
+const clientBalance = useMemo(() => {
+
+  if (!selectedClientForDetails) return 0
+
+  const totalInvoice = selectedClientTransactions.receipts.reduce(
+    (sum, r) => sum + (r.ReceiptAmount || 0),
+    0
+  )
+
+  const totalPaid = selectedClientTransactions.payments.reduce(
+    (sum, p) => sum + (p.amount || 0),
+    0
+  )
+
+  return totalInvoice - totalPaid
+
+}, [selectedClientTransactions])
+// const clientBalance = useMemo(() => {
+
+//   if (!selectedClientForDetails) return 0
+
+//   const totalInvoice = selectedClientTransactions.receipts.reduce(
+//     (sum, r) => sum + (r.ReceiptAmount || 0),
+//     0
+//   )
+
+//   const totalPaid = selectedClientTransactions.payments.reduce(
+//     (sum, p) => sum + (p.amount || 0),
+//     0
+//   )
+
+//   return totalInvoice - totalPaid
+
+// }, [selectedClientTransactions])
+
+  const handlePDFExport = async () => {
     try {
       const companyResponse = await fetch("/api/company")
       const companyData = await companyResponse.json()
@@ -369,7 +544,40 @@ export default function ReportsPage() {
       toast({ title: "Error", description: "Failed to generate PDF", variant: "destructive" })
     }
   }
+  const renderCustomizedLabel = ({
+    cx,
+    cy,
+    midAngle,
+    outerRadius,
+    percent,
+    value
+  }: any) => {
+    // hide labels for very small slices (<3%)
+    if (percent < 0.03) return null
 
+    const RADIAN = Math.PI / 180
+    const radius = outerRadius + 20
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#374151"
+        textAnchor={x > cx ? "start" : "end"}
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight={500}
+      >
+        ₹{value.toLocaleString()}
+      </text>
+    )
+  }
+  const totalRevenue = inventoryAnalytics.reduce(
+    (sum, item) => sum + item.revenue,
+    0
+  )
   if (!hasPermission("view_reports")) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -393,34 +601,143 @@ export default function ReportsPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-full sm:w-40">
-              <SelectValue />
+              <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1month">Last Month</SelectItem>
-              <SelectItem value="3months">Last 3 Months</SelectItem>
-              <SelectItem value="6months">Last 6 Months</SelectItem>
-              <SelectItem value="1year">Last Year</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="this_week">This Week</SelectItem>
+              <SelectItem value="this_month">This Month</SelectItem>
+              <SelectItem value="this_quarter">This Quarter</SelectItem>
+              <SelectItem value="last_6_months">Last 6 Months</SelectItem>
+              <SelectItem value="this_year">This Financial Year</SelectItem>
+              <SelectItem value="custom_range">Custom Range</SelectItem>
+              <SelectItem value="all_time">All Time</SelectItem>
             </SelectContent>
           </Select>
+          {dateRange === "custom_range" && (
+  <div className="flex gap-3">
+
+    {/* Start Date */}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-[180px] justify-start text-left">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {customStartDate ? format(customStartDate, "PPP") : "Start Date"}
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={customStartDate || undefined}
+          onSelect={(date) => {
+            setCustomStartDate(date || null)
+
+            // reset end date if invalid
+            if (customEndDate && date && customEndDate < date) {
+              setCustomEndDate(null)
+            }
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+
+    {/* End Date */}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-[180px] justify-start text-left">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {customEndDate ? format(customEndDate, "PPP") : "End Date"}
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={customEndDate || undefined}
+          disabled={(date) =>
+            customStartDate ? date < customStartDate : false
+          }
+          onSelect={(date) => setCustomEndDate(date || null)}
+        />
+      </PopoverContent>
+    </Popover>
+
+  </div>
+)}
           <Select
             onValueChange={(value) => {
-              if (value === "financial") handleExportFinancialData()
-              else if (value === "customer") handleExportCustomerData()
-              else if (value === "inventory") handleExportInventoryData()
-              else if (value === "kpi") handleExportKPIData()
-              else if (value === "all") handleExportAllData()
-              else if (value === "pdf") handleExportPDF()
+              const dateSuffix = `${dateRange}-${new Date().toISOString().split("T")[0]}`
+              switch (value) {
+                case "financial":
+                  downloadCSV(`financial-report-${dateSuffix}.csv`, financialData, [
+                    { key: "month", label: "Month" },
+                    { key: "income", label: "Income", format: (v) => formatCurrencyForExport(v, "₹") },
+                    { key: "expenses", label: "Expenses", format: (v) => formatCurrencyForExport(v, "₹") },
+                    { key: "profit", label: "Profit", format: (v) => formatCurrencyForExport(v, "₹") },
+                  ])
+                  break
+                case "customer":
+                  downloadCSV(`customer-analytics-${dateSuffix}.csv`, customerAnalytics, [
+                    { key: "name", label: "Customer Name" },
+                    { key: "revenue", label: "Total Revenue", format: (v) => formatCurrencyForExport(v, "₹") },
+                    { key: "transactions", label: "Transactions" },
+                  ])
+                  break
+                case "inventory":
+                  downloadCSV(`inventory-analytics-${dateSuffix}.csv`, inventoryAnalytics, [
+                    { key: "name", label: "Item Name" },
+                    { key: "quantity", label: "Quantity Sold" },
+                    { key: "revenue", label: "Revenue", format: (v) => formatCurrencyForExport(v, "₹") },
+                  ])
+                  break
+                case "kpi":
+                  const kpiExportData = kpiData.map((kpi) => ({
+                    metric: kpi.title,
+                    value: kpi.value,
+                    change: kpi.change,
+                    trend: kpi.trend,
+                  }))
+                  downloadCSV(`kpi-report-${dateSuffix}.csv`, kpiExportData, [
+                    { key: "metric", label: "Metric" },
+                    { key: "value", label: "Value" },
+                    { key: "change", label: "Change" },
+                    { key: "trend", label: "Trend" },
+                  ])
+                  break
+                case "all":
+                  const allData = {
+                    dateRange,
+                    reportType,
+                    generatedAt: new Date().toISOString(),
+                    kpis: kpiData.map((kpi) => ({
+                      title: kpi.title,
+                      value: kpi.value,
+                      change: kpi.change,
+                      trend: kpi.trend,
+                    })),
+                    financialData,
+                    expenseBreakdown,
+                    customerAnalytics,
+                    inventoryAnalytics,
+                  }
+                  downloadJSON(`complete-report-${dateSuffix}.json`, allData)
+                  break
+                case "pdf":
+                  handlePDFExport()
+                  break
+              }
             }}
           >
             {
               (hasPermission("export_reports")) && (
-                   <SelectTrigger className="w-full sm:w-40">
-              <Download className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Export" />
-            </SelectTrigger>
+                <SelectTrigger className="w-full sm:w-40">
+                  <Download className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Export" />
+                </SelectTrigger>
               )
             }
-            
+
             <SelectContent>
               <SelectItem value="financial">Financial Data (CSV)</SelectItem>
               <SelectItem value="customer">Customer Analytics (CSV)</SelectItem>
@@ -443,7 +760,7 @@ export default function ReportsPage() {
               <Card
                 key={index}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                // onClick={() => setSelectedMetric(selectedMetric === kpi.title ? null : kpi.title)}
+              // onClick={() => setSelectedMetric(selectedMetric === kpi.title ? null : kpi.title)}
               >
                 <CardContent className="p-4 lg:p-6">
                   <div className="flex items-center justify-between">
@@ -574,11 +891,13 @@ export default function ReportsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Profit Analysis</CardTitle>
-                  <CardDescription>Monthly profit trends and projections</CardDescription>
+                  <CardDescription>Monthly income, expense, and profit trends</CardDescription>
                 </CardHeader>
                 <CardContent className="px-0 ">
                   <ChartContainer
                     config={{
+                      income: { label: "Income", color: "#8b5cf6" },
+                      expenses: { label: "Expenses", color: "#ef4444" },
                       profit: { label: "Profit", color: "#10b981" },
                     }}
                     className="h-64 lg:h-[300px]"
@@ -589,6 +908,8 @@ export default function ReportsPage() {
                         <XAxis dataKey="month" />
                         <YAxis />
                         <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line type="monotone" dataKey="income" stroke="#8b5cf6" strokeWidth={2} />
+                        <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} />
                         <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={3} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -699,6 +1020,124 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
             </div>
+            <Card>
+  <CardHeader>
+    <CardTitle>Client Transaction Details(This Data Is in under Process)</CardTitle>
+    <CardDescription>
+      View all quotations, invoices/receipts and payments for a specific client
+    </CardDescription>
+  </CardHeader>
+
+  <CardContent className="space-y-4">
+
+    {/* Client Search */}
+    <div className="flex items-center gap-2">
+      <Search className="h-4 w-4 text-gray-400" />
+      <Input
+        placeholder="Search client..."
+        value={clientSearchTerm}
+        onChange={(e) => setClientSearchTerm(e.target.value)}
+      />
+    </div>
+
+    {/* Client List */}
+    <div className="max-h-40 overflow-y-auto border rounded-md">
+      {clients
+        .filter((c) =>
+          c.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+        )
+        .map((client) => (
+          <div
+            key={client._id}
+            onClick={() =>
+              setSelectedClientForDetails({
+                id: client._id,
+                name: client.name,
+              })
+            }
+            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+          >
+            {client.name}
+          </div>
+        ))}
+    </div>
+    {selectedClientForDetails && (
+  <div className="bg-yellow-50 border rounded-md p-3 flex justify-between">
+    <span className="font-medium">
+      Outstanding Balance
+    </span>
+
+    <span className="font-bold text-red-600">
+      ₹{clientBalance.toLocaleString()}
+    </span>
+  </div>
+)}
+{selectedClientForDetails && (
+<Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>Date</TableHead>
+      <TableHead>Type</TableHead>
+      <TableHead>Number</TableHead>
+      <TableHead>Status</TableHead>
+      <TableHead className="text-right">Amount</TableHead>
+    </TableRow>
+  </TableHeader>
+
+  <TableBody>
+
+    {/* Quotations */}
+    {selectedClientTransactions.quotations.map((q) => (
+      <TableRow key={q._id}>
+        <TableCell>{format(new Date(q.date), "dd MMM yyyy")}</TableCell>
+        <TableCell>Quotation</TableCell>
+        <TableCell>{q.number}</TableCell>
+        <TableCell>
+          <Badge variant="secondary">{q.status}</Badge>
+        </TableCell>
+        <TableCell className="text-right">
+          ₹{(q.total || 0).toLocaleString()}
+        </TableCell>
+      </TableRow>
+    ))}
+
+    {/* Receipts / Invoices */}
+    {selectedClientTransactions.receipts.map((r) => (
+      <TableRow key={r._id}>
+        <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
+        <TableCell>Invoice</TableCell>
+        <TableCell>{r.number}</TableCell>
+        <TableCell>
+          <Badge>{r.status}</Badge>
+        </TableCell>
+        <TableCell className="text-right">
+          ₹{(r.ReceiptAmount || 0).toLocaleString()}
+        </TableCell>
+      </TableRow>
+    ))}
+
+    {/* Payments */}
+    {selectedClientTransactions.payments.map((p) => (
+      <TableRow key={p._id}>
+        <TableCell>{format(new Date(p.date), "dd MMM yyyy")}</TableCell>
+        <TableCell>Payment</TableCell>
+        <TableCell>{p.reference}</TableCell>
+        <TableCell>
+          <Badge className="bg-green-100 text-green-700">
+            Paid
+          </Badge>
+        </TableCell>
+        <TableCell className="text-right">
+          ₹{(p.amount || 0).toLocaleString()}
+        </TableCell>
+      </TableRow>
+    ))}
+
+  </TableBody>
+</Table>
+)}
+</CardContent>
+</Card>
           </TabsContent>
 
           <TabsContent value="inventory" className="space-y-6">
@@ -709,23 +1148,44 @@ export default function ReportsPage() {
                   <CardTitle>Top Selling Items</CardTitle>
                   <CardDescription>Best performing products/services</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0">
+                <CardContent className="px-0 h-auto">
                   {inventoryAnalytics.length > 0 ? (
                     <ChartContainer
                       config={{
                         revenue: { label: "Revenue", color: "#10b981" },
                       }}
-                      className="h-64 lg:h-[300px]"
+                      className="items-center justify-center h-full w-full relative"
                     >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={inventoryAnalytics}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                          <YAxis />
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="revenue" fill="#10b981" />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <div className="">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={inventoryAnalytics.slice(0, 6)}
+                              dataKey="revenue"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={90}
+                              paddingAngle={3}
+                            >
+                              {inventoryAnalytics.slice(0, 6).map((entry, index) => (
+                                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+
+                            <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} allowEscapeViewBox={{ x: true, y: true }} wrapperStyle={{ zIndex: 1000 }} offset={20}/>
+                          </PieChart>
+                        </ResponsiveContainer>
+
+                        {/* Center Content */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <p className="text-lg font-bold text-gray-900">
+                            ₹{totalRevenue.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500 max-w-[80px] text-center">Total Revenue by item</p>
+                        </div>
+                      </div>
                     </ChartContainer>
                   ) : (
                     <div className="h-64 lg:h-80 flex items-center justify-center text-gray-500">
@@ -743,7 +1203,7 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {inventoryAnalytics.slice(0, 5).map((item, index) => (
+                    {inventoryAnalytics.map((item, index) => (
                       <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 truncate">{item.name}</p>

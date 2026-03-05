@@ -189,7 +189,7 @@ console.log("items array", quotation.items)
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Terms & Conditions</h3>
               </div>
               <div>
-                <div className="prose max-w-none text-sm text-gray-600 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold" 
+                <div className="prose max-w-200 text-sm text-gray-600 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold" 
                   dangerouslySetInnerHTML={{ __html: quotation.terms }} 
                 />
               </div>
