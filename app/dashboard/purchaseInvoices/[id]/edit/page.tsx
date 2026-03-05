@@ -256,15 +256,15 @@ export default function EditPurchaseInvoicePage() {
                         />
                       </div>
                     </div>
-
-                    <div className="space-y-2">
+                    <div className="flex flex-row gap-2">
+                    <div className="space-y-2 w-full">
                       <Label>Ledger Head</Label>
                       <Select
                         value={invoiceData.category}
                         onValueChange={(value) => setInvoiceData({ ...invoiceData, category: value })}
                         disabled={isRestricted}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select ledger head" />
                         </SelectTrigger>
                         <SelectContent>
@@ -275,14 +275,14 @@ export default function EditPurchaseInvoicePage() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 w-full">
                       <Label>Party Type</Label>
                       <Select
                         value={invoiceData.recipientType}
                         onValueChange={(value) => setInvoiceData({ ...invoiceData, recipientType: value, recipientId: "" })}
                         disabled={isRestricted}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select party type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -293,7 +293,7 @@ export default function EditPurchaseInvoicePage() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 w-full">
                       <Label>Party Name</Label>
                       <ClientSelectSimple
                         options={
@@ -305,9 +305,21 @@ export default function EditPurchaseInvoicePage() {
                         onValueChange={handleRecipientChange}
                         placeholder="Select party..."
                         disabled={isRestricted}
+                        className="w-full"
                       />
                     </div>
-
+                    </div>
+                     {invoiceData.recipientId && (
+                      <div className="space-y-2">
+                        <Label>Recipient Details</Label>
+                        <Textarea
+                          value={`${invoiceData.recipientName || ''}\n${invoiceData.recipientAddress || ''}\n${invoiceData.recipientPhone || ''}\n${invoiceData.recipientEmail || ''}`}
+                          disabled
+                          rows={4}
+                          className="bg-gray-50"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Description</Label>
                       <Textarea

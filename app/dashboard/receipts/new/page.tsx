@@ -443,7 +443,7 @@ export default function ReceiptsPage() {
   // Amount To Pay Handle
 
   const amountPayHandle = (event: any) => {
-    const value = Number(event.target.value) || 0;
+    const value = Number(event.target.value);
     const maxPayable = invoiceDetails ? invoiceDetails.balanceAmount - (advanceApplyAmount || 0) : 0;
     setAmountToPay(value > maxPayable ? maxPayable : value);
   }
@@ -538,7 +538,7 @@ export default function ReceiptsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(receiptPayload)
       })
-
+      console.log("api receipt was done")
       const result = await res.json()
 
       await fetch(`/api/salesInvoice/${invoiceDetails._id}`, {
@@ -552,6 +552,7 @@ export default function ReceiptsPage() {
           status: invoiceBalance <= 0 ? "collected" : "partially collected",
         }),
       })
+       console.log("api salesinvoice update was done")
       await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
         method: "PUT", // or PATCH depending on your API
         headers: {
@@ -561,7 +562,7 @@ export default function ReceiptsPage() {
           balanceAmount: (selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount) - advanceApplyAmount,
         }),
       })
-
+ console.log("api receipt advance done update was done")
       if (selectedAdvanceReceipt) {
         await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
           method: "PUT",
@@ -571,7 +572,7 @@ export default function ReceiptsPage() {
           })
         })
       }
-
+ console.log("api call successfyll update was done", result)
       if (result.success) {
         toast({ title: "Success", description: "Receipt created" })
         router.push("/dashboard/receipts")
@@ -1098,8 +1099,9 @@ export default function ReceiptsPage() {
                     <Label>Created By</Label>
                     <Input value={companyName} readOnly className="bg-gray-100" />
                   </div></div>
+                  <div className="flex flex-row gap-2">
                 {advanceReceipts.filter(adv => !invoiceDetails || adv.clientId === invoiceDetails.clientId).length > 0 && (
-                  <div>
+                  <div className="w-full">
                     <Label>Apply Advance Receipt</Label>
 
                     <Select
@@ -1112,7 +1114,7 @@ export default function ReceiptsPage() {
                         setAdvanceApplyAmount(amount > balance ? balance : amount)
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select advance receipt" />
                       </SelectTrigger>
 
@@ -1127,7 +1129,7 @@ export default function ReceiptsPage() {
                   </div>
                 )}
                 {selectedAdvanceReceipt && (
-                  <div>
+                  <div className="w-full">
                     <Label>Advance Apply Amount</Label>
 
                     <Input
@@ -1137,7 +1139,7 @@ export default function ReceiptsPage() {
                       onChange={(e) => {
                         const value = Number(e.target.value) || 0;
                         setAdvanceApplyAmount(Math.min(value, finalMax));
-                      }}s
+                      }}
                     />
 
                     <p className="text-xs text-gray-500 mt-1">
@@ -1145,9 +1147,11 @@ export default function ReceiptsPage() {
                     </p>
                   </div>
                 )}
-
+                </div>
+                {/* payment details */}
+                <div className="flex flex-row gap-2 flex-wrap items-center">
                 <div>
-                  <Label>
+                  <Label required>
                     Select payment Type <span className="text-red-500">*</span>
                   </Label>
                   <Select
@@ -1157,7 +1161,7 @@ export default function ReceiptsPage() {
                     }
                   >
 
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select FullPayment/Partial" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1166,8 +1170,22 @@ export default function ReceiptsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                                <div>
+                  {paymentType === "Partial Payment" && (
+                    <div>
+                      <Label required>Enter Your Amount</Label>
+                      <Input
+                        value={amountToPay}
+                        type="number"
+                        min="0"
+                        onChange={amountPayHandle}
+                        placeholder="Enter Your Amount"
+                      />
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">
+                  <Label required htmlFor="paymentMethod">
                     Payment Method <span className="text-red-500">*</span>
                   </Label>
                   <Select
@@ -1175,7 +1193,7 @@ export default function ReceiptsPage() {
                     onValueChange={(value) => setSelectedPaymentMethod(value)}
                     required
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select payment method" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1202,25 +1220,11 @@ export default function ReceiptsPage() {
                   </Select>
 
                 </div>
-                <div>
-                  {paymentType === "Partial Payment" && (
-                    <div>
-                      <Label>Enter Your Amount</Label>
-                      <Input
-                        value={amountToPay}
-                        type="number"
-                        min="1"
-                        onChange={amountPayHandle}
-                        placeholder="Enter Your Amount"
-                      />
-                    </div>
-                  )}
-                </div>
                 {selectedPaymentMethod.trim().toLowerCase() != "cash" && (
-                  <div className="space-y-4">
-                    <div className="flex space-x-4">
+                  <>
+                 
                       <div className="flex-1">
-                        <Label>Reference Number </Label>
+                        <Label required>Reference Number </Label>
                         <Input
                           type="text"
                           value={referenceNumber}
@@ -1229,7 +1233,7 @@ export default function ReceiptsPage() {
                           required />
                       </div>
                       <div className="flex-1">
-                        <Label htmlFor="paymentMethod">
+                        <Label required htmlFor="paymentMethod">
                           Bank Account <span className="text-red-500">*</span>
                         </Label>
                         <Select
@@ -1249,13 +1253,15 @@ export default function ReceiptsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                    <div>
+                 
+                    <div className="flex-1">
                       <Label>Payment Screenshot</Label>
-                      <FileUpload value={screenshotUrl} onChange={setScreenshotUrl} />
+                      <FileUpload value={screenshotUrl} onChange={setScreenshotUrl} size="md"  width={20} height={20} />
                     </div>
-                  </div>
+                    
+                  </>
                 )}
+                </div>
                 {invoiceDetails && (
                   <div className="border rounded-lg p-4 space-y-2 bg-gray-50">
                     <h3 className="font-semibold">Invoice Details</h3>
@@ -1661,8 +1667,10 @@ export default function ReceiptsPage() {
                     </div>
                   </CardContent>
                 </Card>
+                {/* advance receipt */}
+                <div className="space-y-3 flex flex-row gap-2">
                 {advanceReceipts.filter(adv => !scenario2Client || adv.clientId === scenario2Client).length > 0 && (
-                  <div>
+                  <div className="w-full">
                     <Label>Apply Advance Receipt</Label>
 
                     <Select
@@ -1674,7 +1682,7 @@ export default function ReceiptsPage() {
                         setAdvanceApplyAmount(amount > grandTotal ? grandTotal : amount)
                       }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select advance receipt" />
                       </SelectTrigger>
 
@@ -1689,7 +1697,7 @@ export default function ReceiptsPage() {
                   </div>
                 )}
                 {selectedAdvanceReceipt && (
-                  <div>
+                  <div className="w-full">
                     <Label>Advance Apply Amount</Label>
 
                     <Input
@@ -1712,13 +1720,13 @@ export default function ReceiptsPage() {
                     </p>
                   </div>
                 )}
-
+                </div>
                 {/* Payment Details */}
                 <div className="space-y-3 flex flex-wrap gap-2">
-                  <div>
-                    <Label>Payment Method</Label>
+                  <div className="w-auto">
+                    <Label required>Payment Method</Label>
                     <Select value={scenario2PaymentMethod} onValueChange={setScenario2PaymentMethod}>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Slect Payment Method" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1744,6 +1752,16 @@ export default function ReceiptsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                                    {/* amounnt paying  */}
+                  <div>
+                    <Label required>Amount Paid</Label>
+                    <Input
+                      type="text"
+                      value={(grandTotal - (advanceApplyAmount || 0)).toLocaleString()}
+                      disabled
+                      placeholder="Enter amount paid (full or advance)"
+                    />
+                  </div>
                   {/* <div>
                     <Label>
                       Select payment Type <span className="text-red-500">*</span>
@@ -1767,10 +1785,10 @@ export default function ReceiptsPage() {
                   </div> */}
                   {/* account no. and refrence no. if no cash */}
                   {scenario2PaymentMethod.trim().toLowerCase() != "cash" && (
-                    <div className="space-y-4">
-                      <div className="flex space-x-4">
+                    <>
+                     
                         <div className="flex-1">
-                          <Label>Reference Number </Label>
+                          <Label required>Reference Number </Label>
                           <Input
                             type="text"
                             value={scenario2ReferenceNumber}
@@ -1779,7 +1797,7 @@ export default function ReceiptsPage() {
                             required />
                         </div>
                         <div className="flex-1">
-                          <Label>
+                          <Label required>
                             Bank Account <span className="text-red-500">*</span>
                           </Label>
                           <Select
@@ -1790,7 +1808,7 @@ export default function ReceiptsPage() {
                             }}
                           >
 
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select Bank Accounts" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1827,23 +1845,13 @@ export default function ReceiptsPage() {
                     </div>
                   )} */}
                         </div>
-                      </div>
+                     
                       <div>
                         <Label>Payment Screenshot</Label>
-                        <FileUpload value={scenario2ScreenshotUrl} onChange={setScenario2ScreenshotUrl} />
+                        <FileUpload value={scenario2ScreenshotUrl} onChange={setScenario2ScreenshotUrl} size="md" width={20} height={20} />
                       </div>
-                    </div>
+                    </>
                   )}
-                  {/* amounnt paying  */}
-                  <div>
-                    <Label>Amount Paid</Label>
-                    <Input
-                      type="text"
-                      value={(grandTotal - (advanceApplyAmount || 0)).toLocaleString()}
-                      disabled
-                      placeholder="Enter amount paid (full or advance)"
-                    />
-                  </div>
 
                 </div>
                 {/* notes */}
@@ -2009,9 +2017,9 @@ export default function ReceiptsPage() {
                 {/* Payment Details */}
                 <div className="space-y-3 flex flex-wrap gap-2">
                   <div>
-                    <Label>Payment Method</Label>
+                    <Label required>Payment Method</Label>
                     <Select value={scenario3PaymentMethod} onValueChange={setScenario3PaymentMethod}>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Slect Payment Method" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2058,12 +2066,28 @@ export default function ReceiptsPage() {
                       </SelectContent>
                     </Select>
                   </div> */}
+                                    {/* amounnt paying  */}
+                  <div>
+                    <Label required>Amount Paid</Label>
+                    <Input
+                      type="number"
+                      value={scenario3AmountPaid}
+                      onChange={(e) => setScenario3AmountPaid(e.target.value)}
+                      placeholder="Enter amount paid (full or advance)"
+                    />
+                    {/* {scenario3AmountPaid && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
+                      </div>
+                    )} */}
+                    <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
+                  </div>
                   {/* account no. and refrence no. if no cash */}
                   {scenario3PaymentMethod.trim().toLowerCase() != ("cash") && (
-                    <div className="space-y-4">
-                      <div className="flex space-x-4">
+                    <>
+                     
                         <div className="flex-1">
-                          <Label>Reference Number </Label>
+                          <Label required>Reference Number </Label>
                           <Input
                             type="text"
                             value={scenario3ReferenceNumber}
@@ -2072,7 +2096,7 @@ export default function ReceiptsPage() {
                             required />
                         </div>
                         <div className="flex-1">
-                          <Label>
+                          <Label required>
                             Bank Account <span className="text-red-500">*</span>
                           </Label>
                           <Select
@@ -2083,7 +2107,7 @@ export default function ReceiptsPage() {
                             }}
                           >
 
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select Bank Accounts" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2120,30 +2144,13 @@ export default function ReceiptsPage() {
                     </div>
                   )} */}
                         </div>
-                      </div>
+                   
                       <div>
                         <Label>Payment Screenshot</Label>
-                        <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} />
+                        <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} size="md"  width={20} height={20} />
                       </div>
-                    </div>
+                    </>
                   )}
-                  {/* amounnt paying  */}
-                  <div>
-                    <Label>Amount Paid</Label>
-                    <Input
-                      type="number"
-                      value={scenario3AmountPaid}
-                      onChange={(e) => setScenario3AmountPaid(e.target.value)}
-                      placeholder="Enter amount paid (full or advance)"
-                    />
-                    {/* {scenario3AmountPaid && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
-                      </div>
-                    )} */}
-                    <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
-                  </div>
-
                   {/* created by */}
                   {/* <div>
                     <Label>Created By</Label>
@@ -2310,9 +2317,9 @@ export default function ReceiptsPage() {
                 {/* Payment Details */}
                 <div className="space-y-3 flex flex-wrap gap-2">
                   <div>
-                    <Label>Payment Method</Label>
+                    <Label required>Payment Method</Label>
                     <Select value={scenario3PaymentMethod} onValueChange={setScenario3PaymentMethod}>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Slect Payment Method" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2338,6 +2345,22 @@ export default function ReceiptsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                                    {/* amounnt paying  */}
+                  <div>
+                    <Label required>Amount Paid</Label>
+                    <Input
+                      type="number"
+                      value={scenario3AmountPaid}
+                      onChange={(e) => setScenario3AmountPaid(e.target.value)}
+                      placeholder="Enter amount paid (full or advance)"
+                    />
+                    <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
+                    {/* {scenario3AmountPaid && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
+                      </div>
+                    )} */}
+                  </div>
                   {/* <div>
                     <Label>
                       Select payment Type <span className="text-red-500">*</span>
@@ -2361,10 +2384,10 @@ export default function ReceiptsPage() {
                   </div> */}
                   {/* account no. and refrence no. if no cash */}
                   {scenario3PaymentMethod.trim().toLowerCase() != "cash" && (
-                    <div className="space-y-4">
-                      <div className="flex space-x-4">
+                    <>
+                     
                         <div className="flex-1">
-                          <Label>Reference Number </Label>
+                          <Label required>Reference Number </Label>
                           <Input
                             type="text"
                             value={scenario3ReferenceNumber}
@@ -2384,7 +2407,7 @@ export default function ReceiptsPage() {
                             }}
                           >
 
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder="Select Bank Accounts" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2421,29 +2444,12 @@ export default function ReceiptsPage() {
                     </div>
                   )} */}
                         </div>
-                      </div>
                       <div>
                         <Label>Payment Screenshot</Label>
-                        <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} size="sm" width={20} height={20} />
+                        <FileUpload value={scenario3ScreenshotUrl} onChange={setScenario3ScreenshotUrl} size="md" width={20} height={20} />
                       </div>
-                    </div>
+                    </>
                   )}
-                  {/* amounnt paying  */}
-                  <div>
-                    <Label>Amount Paid</Label>
-                    <Input
-                      type="number"
-                      value={scenario3AmountPaid}
-                      onChange={(e) => setScenario3AmountPaid(e.target.value)}
-                      placeholder="Enter amount paid (full or advance)"
-                    />
-                    <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
-                    {/* {scenario3AmountPaid && (
-                      <div className="text-sm text-muted-foreground mt-1">
-                        Balance: ₹{(parseFloat(scenario3Amount) - parseFloat(scenario3AmountPaid)).toFixed(2)}
-                      </div>
-                    )} */}
-                  </div>
 
                 </div>
                 <div>

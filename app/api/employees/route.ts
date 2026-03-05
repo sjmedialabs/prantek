@@ -94,9 +94,24 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
       ]
     })
 
-    if(existingEmployee){
-      return NextResponse.json({success:false, error:"Employee with same email, phone, PAN or Aadhar number already exists"}, {status:400});
-    }
+    if (existingEmployee) {
+  let reason = "Duplicate employee found"
+
+  if (existingEmployee.email === employee.email) {
+    reason = "Email already exists"
+  } else if (existingEmployee.mobileNo === employee.mobileNo) {
+    reason = "Mobile number already exists"
+  } else if (existingEmployee.aadharNo === employee.aadharNo) {
+    reason = "Aadhar number already exists"
+  } else if (existingEmployee.panCardNo === employee.panCardNo) {
+    reason = "PAN number already exists"
+  }
+
+  return NextResponse.json(
+    { success: false, error: reason },
+    { status: 400 }
+  )
+}
 
     const result = await db.collection(Collections.EMPLOYEES).insertOne(employee)
     

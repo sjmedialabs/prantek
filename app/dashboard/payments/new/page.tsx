@@ -1485,6 +1485,7 @@ const handleRecipientChange = (recipientId: string) => {
                     <CardDescription>Enter payment method and details</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="flex flex-row gap-2">
                     <div className="space-y-2">
                       <Label htmlFor="paymentMethod">
                         Payment Method <span className="text-red-500">*</span>
@@ -1499,7 +1500,7 @@ const handleRecipientChange = (recipientId: string) => {
                         }}
                         required
                       >
-                        <SelectTrigger className={validationErrors.paymentMethod ? "border-red-500" : ""}>
+                        <SelectTrigger className={validationErrors.paymentMethod ? "border-red-500 w-full" : "w-full"}>
                           <SelectValue placeholder="Select payment method" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1544,7 +1545,7 @@ const handleRecipientChange = (recipientId: string) => {
                           }}
                           required
                         >
-                          <SelectTrigger className={validationErrors.bankAccount ? "border-red-500" : ""}>
+                          <SelectTrigger className={validationErrors.bankAccount ? "border-red-500 w-full" : "w-full"}>
                             <SelectValue placeholder="Select bank account" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1584,6 +1585,7 @@ const handleRecipientChange = (recipientId: string) => {
                         )}
                       </div>
                     )}
+                    </div>
                     {/* BILL UPLOAD */}
  {( <div className="mb-2">
     <Label>Bill Upload</Label>

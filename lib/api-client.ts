@@ -23,28 +23,36 @@ export type CompanyUpdateInput = Omit<CompanySetting, "_id" | "createdAt" | "upd
 async function fetchAPI(url: string, options: RequestInit = {}) {
   const token = tokenStorage.getAccessToken()
 
-//     const cookieStore = await cookies()
-// const token = cookieStore.get("accessToken")
   const response = await fetch(url, {
     ...options,
-    credentials:"include",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      // ...(token ? { Authorization: `Bearer ` } : {}),
-      // ...options.headers,
-      // ...(token ? { Authorization: `Bearer ` } : {}),
-      // ...options.headers,
-      Authorization:`Bearer ${token}`
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
     },
   })
-  //console.log(response.json());
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "Request failed" }))
-    throw new Error(error.message || `HTTP error! status: ${response.status}`)
+  let data: any = null
+
+  try {
+    data = await response.json()
+  } catch {
+    data = null
   }
 
-  return response.json()
+  if (!response.ok) {
+    // 🔥 Extract correct error message from backend
+    const errorMessage =
+      data?.error ||
+      data?.message ||
+      data?.msg ||
+      "Something went wrong"
+
+    throw new Error(errorMessage)
+  }
+
+  return data
 }
 
 export const api = {
