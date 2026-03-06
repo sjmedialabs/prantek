@@ -244,12 +244,8 @@ export default function ReceiptDetailsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Payment Type</p>
-                  <Badge variant="default">
-                    {receipt.paymentType === "full"
-                      ? "Full Payment"
-                      : receipt.paymentType === "partial"
-                        ? "Partial"
-                        : "Partial Payment"}
+                  <Badge variant="default" className="capitalize">
+                    {receipt.paymentType}
                   </Badge>
                 </div>
                 <div>

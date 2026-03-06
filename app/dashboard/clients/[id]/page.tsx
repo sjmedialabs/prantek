@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, CreditCard, Pencil, Download } from "lucide-react"
 import Link from "next/link"
@@ -28,14 +28,14 @@ import { Plus, Building2, User } from "lucide-react"
 
 interface Transaction {
   id: string
-  type: "quotation" | "receipt" | "payment"
+  type: "quotation" | "receipt" | "payment" | "salesInvoice"
   number: string
   date: string
   items: string[]
   amount: number
   paidAmount: number
   balanceAmount: number
-  status: "completed" | "pending" | "partial"
+  status: string
 }
 
 interface Client {
@@ -108,12 +108,13 @@ export default function ClientDetailsPage() {
     const loadClientData = async () => {
       if (params.id) {
         try {
-          const [loadedClient, allQuotations, allReceipts, allPayments] = await Promise.all([
+          const [loadedClient, allQuotations, allReceipts, allPayments, allSalesInvoices] = await Promise.all([
             api.clients.getById(params.id as string),
             api.quotations.getAll(),
             api.receipts.getAll(),
             api.payments.getAll(),
-          ])
+            api.salesInvoice.getAll(),
+          ]);
 
           if (!loadedClient) {
             setClient(null)
@@ -132,8 +133,8 @@ export default function ClientDetailsPage() {
               amount: q.grandTotal || 0,
               paidAmount: q.paidAmount || 0,
               balanceAmount: q.balanceAmount || 0,
-              status: q.balanceAmount <= 0 ? "completed" : q.paidAmount > 0 ? "partial" : "pending",
-            }))
+              status: q.status,
+            }));
 
           const clientReceipts = (allReceipts || [])
             .filter((r: any) => r.clientId === params.id)
@@ -146,8 +147,8 @@ export default function ClientDetailsPage() {
               amount: r.total || r.ReceiptAmount || 0,
               paidAmount: r.ReceiptAmount || r.amountPaid || 0,
               balanceAmount: r.balanceAmount || 0,
-              status: r.status?.toLowerCase() === "cleared" ? "completed" : "pending",
-            }))
+              status: r.status,
+            }));
 
           const clientPayments = (allPayments || [])
             .filter((p: any) => p.recipientId === params.id && p.recipientType === "client")
@@ -160,12 +161,26 @@ export default function ClientDetailsPage() {
               amount: p.amount || 0,
               paidAmount: p.amount || 0,
               balanceAmount: 0,
-              status: p.status === "completed" || p.status === "Cleared" ? "completed" : "pending",
-            }))
+              status: p.status,
+            }));
 
-          const combinedTransactions = [...clientQuotations, ...clientReceipts, ...clientPayments].sort(
+          const clientSalesInvoices = (allSalesInvoices || [])
+            .filter((s: any) => s.clientId === params.id)
+            .map((s: any) => ({
+              id: s._id,
+              type: "salesInvoice" as const,
+              number: s.salesInvoiceNumber,
+              date: s.date,
+              items: s.items?.map((item: any) => item.itemName) || [],
+              amount: s.grandTotal || 0,
+              paidAmount: s.paidAmount || 0,
+              balanceAmount: s.balanceAmount || 0,
+              status: s.status,
+            }));
+
+          const combinedTransactions = [...clientQuotations, ...clientReceipts, ...clientPayments, ...clientSalesInvoices].sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          )
+          );
 
           setTransactions(combinedTransactions)
         } catch (error) {
@@ -187,10 +202,6 @@ export default function ClientDetailsPage() {
   const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0)
   const totalPaid = transactions.reduce((sum, t) => sum + t.paidAmount, 0)
   const totalBalance = transactions.reduce((sum, t) => sum + t.balanceAmount, 0)
-
-  const handleContinuePayment = (transaction: Transaction) => {
-    router.push(`/dashboard/receipts/new?quotationId=${transaction.id}&balance=${transaction.balanceAmount}`)
-  }
 
   const handleExportTransactions = () => {
     const exportData = transactions.map((t) => ({
@@ -355,6 +366,28 @@ export default function ClientDetailsPage() {
     }
   }
 
+  const getStatusBadgeClass = (status?: string) => {
+    if (!status) return "bg-gray-100 text-gray-800"
+    const s = status.toLowerCase()
+    if (
+      s.includes("complete") ||
+      s.includes("cleared") ||
+      s.includes("collected") ||
+      s.includes("confirmed") ||
+      s.includes("accepted")
+    ) {
+      return "bg-green-100 text-green-800"
+    }
+    if (s.includes("partial")) {
+      return "bg-yellow-100 text-yellow-800"
+    }
+    if (s.includes("pending") || s.includes("overdue") || s.includes("expired") || s.includes("not") || s.includes("cancelled")) {
+      return "bg-red-100 text-red-800"
+    }
+    return "bg-blue-100 text-blue-800" // for other statuses like 'sent'
+  }
+
+
   const renderTransactionTable = (data: Transaction[]) => (
     <div className="border rounded-lg">
       <Table>
@@ -378,42 +411,47 @@ export default function ClientDetailsPage() {
               </TableCell>
             </TableRow>
           ) : (
-            data.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell className="font-medium">{transaction.number}</TableCell>
-                <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {transaction.items.slice(0, 2).join(", ")}
-                    {transaction.items.length > 2 && ` +${transaction.items.length - 2} more`}
-                  </div>
-                </TableCell>
-                <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                <TableCell className="text-green-600">₹{transaction.paidAmount.toLocaleString()}</TableCell>
-                <TableCell className="text-red-600">₹{transaction.balanceAmount.toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      transaction.status === "completed"
-                        ? "default"
-                        : transaction.status === "partial"
-                          ? "secondary"
-                          : "destructive"
-                    }
-                  >
-                    {transaction.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {transaction.status !== "completed" && (
-                    <Button size="sm" variant="outline" onClick={() => handleContinuePayment(transaction)}>
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Pay
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
+            data.map((transaction) => {
+              let viewLink = ""
+              switch (transaction.type) {
+                case "quotation":
+                  viewLink = `/dashboard/quotations/${transaction.id}`
+                  break
+                case "salesInvoice":
+                  viewLink = `/dashboard/salesInvoices/${transaction.id}`
+                  break
+                case "receipt":
+                  viewLink = `/dashboard/receipts/${transaction.id}`
+                  break
+                // No link for 'payment'
+              }
+
+              return (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-medium">{transaction.number}</TableCell>
+                  <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {transaction.items.slice(0, 2).join(", ")}
+                      {transaction.items.length > 2 && ` +${transaction.items.length - 2} more`}
+                    </div>
+                  </TableCell>
+                  <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                  <TableCell className="text-green-600">₹{transaction.paidAmount.toLocaleString()}</TableCell>
+                  <TableCell className="text-red-600">₹{transaction.balanceAmount.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Badge className={`${getStatusBadgeClass(transaction.status)} capitalize`}>{transaction.status}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {viewLink && (
+                      <Link href={viewLink}>
+                        <Button size="sm" variant="outline">View</Button>
+                      </Link>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })
           )}
         </TableBody>
       </Table>

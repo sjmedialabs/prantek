@@ -111,17 +111,9 @@ export default function DashboardPage() {
   const [dateFilter, setDateFilter] = useState<DateFilterType>("lifetime");
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(
-      today.getFullYear(),
-      today.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999
-    );
-    return { from: startOfMonth, to: endOfMonth };
+    const endOfLifetime = new Date(today);
+    endOfLifetime.setHours(23, 59, 59, 999);
+    return { from: new Date(0), to: endOfLifetime };
   });
 const getEntityDate = (entity: any) =>
   entity.date ||
@@ -268,8 +260,8 @@ const clearedPayments = filteredPayments.filter(
       const activeItems = items.filter((p: any) => p.isActive === true);
       const assetsManaged = assets.filter((a: any) => a.status === "available");
       const pendingInvoices = salesInvoice.filter((r: any) => r.status !== "Cleared");
-      const unClearReceipts = receipts.filter((r: any) => r.status === "received");
-      const unClearPaymentsList = payments.filter((p: any) => p.status !== "completed");
+      const unClearReceipts = filteredReceipts.filter((r: any) => r.status === "received");
+      const unClearPaymentsList = filteredPayments.filter((p: any) => p.status !== "completed");
 
       setStats({
         totalReceipts,

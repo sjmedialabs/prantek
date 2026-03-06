@@ -1161,7 +1161,7 @@ export default function ReceiptsPage() {
                 <div className="flex flex-row gap-2 flex-wrap items-center">
                 <div>
                   <Label required>
-                    Select payment Type <span className="text-red-500">*</span>
+                    Select payment Type
                   </Label>
                   <Select
                     value={paymentType}
@@ -1195,7 +1195,7 @@ export default function ReceiptsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label required htmlFor="paymentMethod">
-                    Payment Method <span className="text-red-500">*</span>
+                    Payment Method
                   </Label>
                   <Select
                     value={selectedPaymentMethod}
@@ -1243,7 +1243,7 @@ export default function ReceiptsPage() {
                       </div>
                       <div className="flex-1">
                         <Label required htmlFor="paymentMethod">
-                          Bank Account <span className="text-red-500">*</span>
+                          Bank Account 
                         </Label>
                         <Select
                           value={selectedBankAcount}
@@ -1807,7 +1807,7 @@ export default function ReceiptsPage() {
                         </div>
                         <div className="flex-1">
                           <Label required>
-                            Bank Account <span className="text-red-500">*</span>
+                            Bank Account 
                           </Label>
                           <Select
                             value={selectedAccount?._id}
@@ -2106,7 +2106,7 @@ export default function ReceiptsPage() {
                         </div>
                         <div className="flex-1">
                           <Label required>
-                            Bank Account <span className="text-red-500">*</span>
+                            Bank Account
                           </Label>
                           <Select
                             value={selectedAccount?._id}
@@ -2405,8 +2405,8 @@ export default function ReceiptsPage() {
                             required />
                         </div>
                         <div className="flex-1">
-                          <Label>
-                            Bank Account <span className="text-red-500">*</span>
+                          <Label required>
+                            Bank Account 
                           </Label>
                           <Select
                             value={selectedAccount?._id}
