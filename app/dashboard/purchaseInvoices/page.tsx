@@ -140,8 +140,8 @@ export default function PurchaseInvoiceList() {
   }, [search, statusFilter])
 
   const totalAmount = filtered.reduce((s, i) => s + (i.invoiceTotalAmount || 0), 0)
-  const paidAmount = filtered.filter(i => i.paymentStatus === "paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
-  const unpaidAmount = filtered.filter(i => i.paymentStatus === "unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
+  const paidAmount = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
+  const unpaidAmount = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage)
 

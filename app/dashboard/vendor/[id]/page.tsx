@@ -4,11 +4,26 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api-client"
 import type { Vendor } from "@/lib/models/types"
 import { ArrowLeft, Edit, Store } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { useUser } from "@/components/auth/user-context"
+import Link from "next/link"
+
+interface Transaction {
+  id: string
+  type: "purchaseInvoice" | "payment"
+  number: string
+  date: string
+  amount: number
+  paidAmount: number
+  balanceAmount: number
+  status: string
+}
 
 export default function VendorDetailsPage() {
   const {user} = useUser()
@@ -19,6 +34,7 @@ export default function VendorDetailsPage() {
 
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [loading, setLoading] = useState(true)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
 
   useEffect(() => {
     if (vendorId) loadVendor()
@@ -26,10 +42,48 @@ export default function VendorDetailsPage() {
 
   const loadVendor = async () => {
     try {
-      const data = await api.vendors.getById(vendorId)
+      const [data, allPurchaseInvoices, allPayments] = await Promise.all([
+        api.vendors.getById(vendorId),
+        api.purchaseInvoice.getAll(),
+        api.payments.getAll(),
+      ])
       setVendor(data)
+
+      if (data) {
+        const vendorPurchaseInvoices = (allPurchaseInvoices || [])
+          .filter((pi: any) => pi.vendorId === vendorId)
+          .map((pi: any) => ({
+            id: pi._id,
+            type: "purchaseInvoice" as const,
+            number: pi.purchaseInvoiceNumber,
+            date: pi.date,
+            amount: pi.invoiceTotalAmount || 0,
+            paidAmount: pi.paidAmount || 0,
+            balanceAmount: (pi.invoiceTotalAmount || 0) - (pi.paidAmount || 0),
+            status: pi.paymentStatus,
+          }))
+            console.log("vendor PI", vendorPurchaseInvoices)
+        const vendorPayments = (allPayments || [])
+          .filter((p: any) => p.recipientId === vendorId && p.recipientType === "vendor")
+          .map((p: any) => ({
+            id: p._id,
+            type: "payment" as const,
+            number: p.paymentNumber,
+            date: p.date,
+            amount: p.amount || 0,
+            paidAmount: p.amount || 0,
+            balanceAmount: 0,
+            status: p.status,
+          }))
+
+        const combinedTransactions = [...vendorPurchaseInvoices, ...vendorPayments].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+        setTransactions(combinedTransactions)
+      }
     } catch (err) {
-      toast.error("Error", "Failed to load vendor details")
+      console.error("Failed to load vendor data:", err)
+      toast.error("Error", "Failed to load vendor details and transactions")
     } finally {
       setLoading(false)
     }
@@ -51,6 +105,92 @@ export default function VendorDetailsPage() {
     )
   }
 
+  const totalBilled = transactions
+    .filter((t) => t.type === "purchaseInvoice")
+    .reduce((sum, t) => sum + t.amount, 0)
+
+  const balanceDue = transactions
+    .filter((t) => t.type === "purchaseInvoice")
+    .reduce((sum, t) => sum + t.balanceAmount, 0)
+
+  const totalPaid = totalBilled - balanceDue
+
+  const getStatusBadgeClass = (status?: string) => {
+    if (!status) return "bg-gray-100 text-gray-800"
+    const s = status.toLowerCase()
+    if (s.includes("paid") || s.includes("completed") || s.includes("cleared") || s.includes("closed")) {
+      return "bg-green-100 text-green-800"
+    }
+    if (s.includes("partial")) {
+      return "bg-yellow-100 text-yellow-800"
+    }
+    if (s.includes("unpaid") || s.includes("open") || s.includes("pending")) {
+      return "bg-red-100 text-red-800"
+    }
+    return "bg-blue-100 text-blue-800"
+  }
+
+  const renderTransactionTable = (data: Transaction[]) => (
+    <div className="border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Transaction</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Amount</TableHead>
+            <TableHead>Paid</TableHead>
+            <TableHead>Balance</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                No transactions found for this vendor.
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((transaction) => {
+              let viewLink = ""
+              switch (transaction.type) {
+                case "purchaseInvoice":
+                  viewLink = `/dashboard/purchase-invoices/${transaction.id}`
+                  break
+                case "payment":
+                  viewLink = `/dashboard/payments/${transaction.id}`
+                  break
+              }
+
+              return (
+                <TableRow key={transaction.id}>
+                  <TableCell className="font-medium">{transaction.number}</TableCell>
+                  <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
+                  <TableCell className="capitalize">{transaction.type === "purchaseInvoice" ? "Purchase Invoice" : "Payment"}</TableCell>
+                  <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                  <TableCell className="text-green-600">₹{transaction.paidAmount.toLocaleString()}</TableCell>
+                  <TableCell className="text-red-600">₹{transaction.balanceAmount.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Badge className={`${getStatusBadgeClass(transaction.status)} capitalize`}>{transaction.status}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {viewLink && (
+                      <Link href={viewLink}>
+                        <Button size="sm" variant="outline">View</Button>
+                      </Link>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  )
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,52 +207,112 @@ export default function VendorDetailsPage() {
 
       </div>
 
-      {/* Vendor Info Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">{vendor.name}</CardTitle>
-          <CardDescription>Vendor / Supplier Information</CardDescription>
-        </CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Vendor Info Card */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="text-xl">{vendor.name}</CardTitle>
+            <CardDescription>Vendor / Supplier Information</CardDescription>
+          </CardHeader>
 
-        <CardContent className="grid grid-cols-2 gap-6">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-600">Email</p>
-            <p className="font-semibold">{vendor.email}</p>
+          <CardContent className="grid grid-cols-1 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">Email</p>
+              <p className="font-semibold">{vendor.email}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">Phone</p>
+              <p className="font-semibold">{vendor.phone || "—"}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">Address</p>
+              <p className="font-semibold">
+                {vendor.address}, {vendor.city}, {vendor.state} - {vendor.pincode}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">GSTIN</p>
+              <p className="font-semibold">{vendor.gstin || "—"}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">PAN</p>
+              <p className="font-semibold">{vendor.pan || "—"}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">Notes</p>
+              <p className="font-semibold whitespace-pre-line">{vendor.notes || "No notes added."}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-600">Created On</p>
+              <p className="font-semibold">{new Date(vendor.createdAt).toLocaleDateString()}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Billed</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">₹{totalBilled.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-gray-600">Balance Due</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-red-600">₹{balanceDue.toLocaleString()}</p>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-600">Phone</p>
-            <p className="font-semibold">{vendor.phone || "—"}</p>
-          </div>
-
-          <div className="space-y-1 col-span-2">
-            <p className="text-sm font-medium text-gray-600">Address</p>
-            <p className="font-semibold">
-              {vendor.address}, {vendor.city}, {vendor.state} - {vendor.pincode}
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-600">GSTIN</p>
-            <p className="font-semibold">{vendor.gstin || "—"}</p>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-600">PAN</p>
-            <p className="font-semibold">{vendor.pan || "—"}</p>
-          </div>
-
-          <div className="space-y-1 col-span-2">
-            <p className="text-sm font-medium text-gray-600">Notes</p>
-            <p className="font-semibold whitespace-pre-line">{vendor.notes || "No notes added."}</p>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-gray-600">Created On</p>
-            <p className="font-semibold">{new Date(vendor.createdAt).toLocaleDateString()}</p>
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Transaction History</CardTitle>
+              <CardDescription>All purchase invoices and payments for this vendor</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="pending">Pending</TabsTrigger>
+                  <TabsTrigger value="completed">Completed</TabsTrigger>
+                </TabsList>
+                <TabsContent value="all" className="mt-4">
+                  {renderTransactionTable(transactions)}
+                </TabsContent>
+                <TabsContent value="pending" className="mt-4">
+                  {renderTransactionTable(
+                    transactions.filter((t) => ["unpaid", "partial", "pending", "open"].includes(t.status.toLowerCase()))
+                  )}
+                </TabsContent>
+                <TabsContent value="completed" className="mt-4">
+                  {renderTransactionTable(
+                    transactions.filter((t) => ["paid", "completed", "cleared", "closed"].includes(t.status.toLowerCase()))
+                  )}
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
