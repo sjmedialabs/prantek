@@ -95,6 +95,30 @@ export default function ProfilePage() {
     }
   }
 
+  const isSubscriptionExpired = () => {
+    if (!user || !user.subscriptionPlanId) {
+      return false; // Don't show if no plan was ever selected
+    }
+    const status = user.subscriptionStatus
+    const now = new Date()
+
+    if (status === "trial") {
+      if (!user.trialEndsAt) return false // Not expired, just invalid data
+      return new Date(user.trialEndsAt) < now
+    }
+
+    if (status === "active" || status === "cancelled") {
+      if (!user.subscriptionEndDate) return false // Not expired, just invalid data
+      return new Date(user.subscriptionEndDate) < now
+    }
+    
+    if (status === 'expired' || status === 'inactive') {
+        return true;
+    }
+
+    return false
+  }
+
   const handleSaveProfile = async () => {
     if (!user) return
     
@@ -183,6 +207,14 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
         <p className="text-gray-600">Manage your personal information and preferences</p>
       </div>
+
+      {isSubscriptionExpired() && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Your trial or subscription has ended. Please select a new plan to continue using all features.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {saved && (
         <Alert>
@@ -401,9 +433,9 @@ export default function ProfilePage() {
                   Upgrade Plan
                 </Button>
                 </Link>
-                <Button onClick={handleRemovePlan} variant="destructive">
+                {/* <Button onClick={handleRemovePlan} variant="destructive">
                   Cancel Plan
-                </Button>
+                </Button> */}
               </div>
             ) : (
               <Button onClick={() => setShowPlanDialog(true)}>
