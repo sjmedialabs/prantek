@@ -181,9 +181,11 @@ export default function TrialStatusPage() {
                       <TableCell>{formatStatus(u)}</TableCell>
                       <TableCell>
                         {u.razorpayCustomerId && u.razorpayTokenId ? (
-                          <Badge variant="outline">Token Ready</Badge>
+                          <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">
+                            Ready
+                          </Badge>
                         ) : (
-                          <Badge variant="destructive">No Token</Badge>
+                          <Badge variant="secondary">Not set up</Badge>
                         )}
                       </TableCell>
                       <TableCell>
