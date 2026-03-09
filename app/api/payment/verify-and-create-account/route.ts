@@ -10,7 +10,7 @@ import { getPaymentDetails } from "@/lib/razorpay"
 export async function POST(request: NextRequest) {
   try {
     const db = await connectDB()
-    const { signupData, paymentId, razorpayOrderId, razorpaySignature, planAmount, planName } = await request.json()
+    const { signupData, paymentId, razorpayOrderId, razorpaySignature, planAmount, planName, razorpaySubscriptionId } = await request.json()
     
     // Validate required fields
     if (!signupData?.email || !signupData?.password || !signupData?.name) {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       razorpayOrderId: razorpayOrderId || "",
       razorpayCustomerId,
       razorpayTokenId,
-      // New subscription records should be active for cron to consider them
+      razorpaySubscriptionId: razorpaySubscriptionId || undefined,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -85,6 +85,23 @@ export async function POST(request: NextRequest) {
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
     const userId = result.insertedId.toString()
+
+    if (razorpaySubscriptionId && signupData.subscriptionPlanId && razorpayCustomerId) {
+      try {
+        await db.collection(Collections.SUBSCRIPTIONS).insertOne({
+          userId,
+          planId: signupData.subscriptionPlanId,
+          razorpayCustomerId,
+          razorpaySubscriptionId,
+          status: "created",
+          autoDebitEnabled: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      } catch (subErr) {
+        console.error("[Verify] Failed to create subscription record:", subErr)
+      }
+    }
     
     // Get subscription plan details if available
     let planDetails = null

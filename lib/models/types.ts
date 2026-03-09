@@ -54,6 +54,7 @@ export interface User extends BaseDocument {
   // Razorpay recurring billing fields
   razorpayCustomerId?: string
   razorpayTokenId?: string
+  razorpaySubscriptionId?: string // Razorpay subscription id (when using Subscriptions API)
   lastPaymentDate?: Date
   nextPaymentDate?: Date
   paymentFailedAt?: Date
@@ -63,6 +64,28 @@ export interface User extends BaseDocument {
   subscriptionPrice?: number
   paidAmount?: number
   discountPercentage?: number
+}
+
+/** Razorpay subscription lifecycle record (synced via webhooks / cron) */
+export type SubscriptionStatus =
+  | "created"
+  | "active"
+  | "pending"
+  | "past_due"
+  | "cancelled"
+  | "expired"
+
+export interface Subscription extends BaseDocument {
+  userId: string
+  planId: string // local subscription_plans _id
+  razorpayCustomerId: string
+  razorpaySubscriptionId: string
+  razorpayPaymentId?: string // last payment id
+  status: SubscriptionStatus
+  currentPeriodStart?: Date
+  currentPeriodEnd?: Date
+  nextBillingDate?: Date
+  autoDebitEnabled: boolean
 }
 
 // Employee - no dashboard access, only designation/role

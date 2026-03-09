@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       subscriptionEndDate: data.subscriptionEndDate || null,
       razorpayCustomerId,
       razorpayTokenId,
+      razorpaySubscriptionId: data.razorpaySubscriptionId || undefined,
       lastPaymentDate: paymentId ? new Date() : undefined,
       nextPaymentDate: null,
       paymentFailedAt: undefined,
@@ -103,6 +104,24 @@ export async function POST(request: NextRequest) {
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
     const userId = result.insertedId.toString()
+
+    if (data.razorpaySubscriptionId && data.subscriptionPlanId && razorpayCustomerId) {
+      try {
+        await db.collection(Collections.SUBSCRIPTIONS).insertOne({
+          userId,
+          planId: data.subscriptionPlanId,
+          razorpayCustomerId,
+          razorpaySubscriptionId: data.razorpaySubscriptionId,
+          status: "created",
+          autoDebitEnabled: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+      } catch (subErr) {
+        console.error("[Register] Failed to create subscription record:", subErr)
+      }
+    }
+
     const notificationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).insertOne({
       userId: userId,
       quotationNotifications: true,

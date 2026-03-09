@@ -25,6 +25,13 @@ const navigationItems = [
     icon: CreditCard,
     permission: "manage_subscriptions",
   },
+  {
+    name: "Subscription Management",
+    href: "/super-admin/subscription-management",
+    icon: CreditCard,
+    permission: null,
+  },
+  { name: "Trial Status", href: "/super-admin/trial-status", icon: Activity, permission: null },
   { name: "Sales Dashboard", href: "/super-admin/sales", icon: BarChart3, permission: "view_sales_dashboard" },
   { name: "Client Accounts", href: "/super-admin/clients", icon: Building2, permission: "manage_client_accounts" },
   { name: "Activity Log", href: "/super-admin/activity", icon: Activity, permission: null },

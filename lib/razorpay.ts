@@ -156,3 +156,117 @@ export async function getCustomerTokens(customerId: string) {
     throw error
   }
 }
+
+/**
+ * Create a Razorpay customer
+ */
+export async function createCustomer(params: { name: string; email: string; contact?: string }) {
+  try {
+    const instance = getRazorpayInstance()
+    const customer = await instance.customers.create(params)
+    return customer
+  } catch (error) {
+    console.error('Error creating Razorpay customer:', error)
+    throw error
+  }
+}
+
+/**
+ * Create a Razorpay plan (for Subscriptions API)
+ */
+export async function createPlan(params: {
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  interval: number
+  amount: number // in paise
+  currency?: string
+  name: string
+}) {
+  try {
+    const instance = getRazorpayInstance()
+    const plan = await instance.plans.create({
+      period: params.period,
+      interval: params.interval,
+      amount: params.amount,
+      currency: params.currency ?? 'INR',
+      name: params.name,
+    })
+    return plan
+  } catch (error) {
+    console.error('Error creating Razorpay plan:', error)
+    throw error
+  }
+}
+
+/**
+ * Create a Razorpay subscription
+ */
+export async function createSubscription(params: {
+  planId: string
+  customerId: string
+  totalCount: number
+  startAt?: number
+  customerNotify?: 0 | 1
+  notes?: Record<string, string>
+}) {
+  try {
+    const instance = getRazorpayInstance()
+    const sub = await instance.subscriptions.create({
+      plan_id: params.planId,
+      customer_id: params.customerId,
+      total_count: params.totalCount,
+      start_at: params.startAt,
+      customer_notify: params.customerNotify ?? 1,
+      notes: params.notes,
+    })
+    return sub
+  } catch (error) {
+    console.error('Error creating Razorpay subscription:', error)
+    throw error
+  }
+}
+
+/**
+ * Fetch a Razorpay subscription by id
+ */
+export async function fetchSubscription(subscriptionId: string) {
+  try {
+    const instance = getRazorpayInstance()
+    const sub = await instance.subscriptions.fetch(subscriptionId)
+    return sub
+  } catch (error) {
+    console.error('Error fetching Razorpay subscription:', error)
+    throw error
+  }
+}
+
+/**
+ * Cancel a Razorpay subscription
+ */
+export async function cancelRazorpaySubscription(subscriptionId: string, cancelAtCycleEnd = false) {
+  try {
+    const instance = getRazorpayInstance()
+    const sub = await instance.subscriptions.cancel(subscriptionId, {
+      cancel_at_cycle_end: cancelAtCycleEnd,
+    })
+    return sub
+  } catch (error) {
+    console.error('Error cancelling Razorpay subscription:', error)
+    throw error
+  }
+}
+
+/**
+ * Verify Razorpay webhook signature (body as string, x-razorpay-signature header)
+ */
+export function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
+  try {
+    const crypto = require('crypto')
+    const hmac = crypto.createHmac('sha256', secret)
+    hmac.update(payload)
+    const digest = hmac.digest('hex')
+    return digest === signature
+  } catch (error) {
+    console.error('Error verifying webhook signature:', error)
+    return false
+  }
+}

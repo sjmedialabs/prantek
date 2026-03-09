@@ -48,6 +48,16 @@ export default function ProfilePage() {
   const loginedUserLocalStorage = loginedUserLocalStorageString
     ? JSON.parse(loginedUserLocalStorageString)
     : null;
+  const [subscriptionStatus, setSubscriptionStatus] = useState<{
+    plan: string
+    status: string
+    autoDebit: boolean
+    nextBillingDate: string | null
+    daysRemaining: number
+    paymentHistory: { id: string; amount: number; currency: string; status: string; date: string }[]
+  } | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+
   useEffect(() => {
     loadPlans()
     // Update profile data when user changes
@@ -92,6 +102,39 @@ export default function ProfilePage() {
       toast({ title: "Error", description: "Failed to load subscription plans", variant: "destructive" })
     } finally {
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!user?.id) return
+    fetch("/api/user/subscription", { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setSubscriptionStatus(data)
+      })
+      .catch(() => setSubscriptionStatus(null))
+  }, [user?.id])
+
+  const handleCancelSubscription = async () => {
+    if (!confirm("Cancel subscription? You will retain access until the end of the current billing period.")) return
+    setCancelling(true)
+    try {
+      const res = await fetch("/api/user/subscription/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ cancelAtCycleEnd: true }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: "Success", description: data.message })
+        setSubscriptionStatus((prev) => (prev ? { ...prev, status: "cancelled", autoDebit: false } : null))
+        loadPlans()
+      } else toast({ title: "Error", description: data.error || "Failed to cancel", variant: "destructive" })
+    } catch {
+      toast({ title: "Error", description: "Failed to cancel subscription", variant: "destructive" })
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -513,6 +556,82 @@ export default function ProfilePage() {
                     </span>
                   </p>
                 </div>
+              )}
+
+              {subscriptionStatus && (
+                <>
+                  <Separator className="my-4" />
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">Billing & auto-debit</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600">Status</span>
+                      <p className="font-medium capitalize">{subscriptionStatus.status}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Billing type</span>
+                      <p className="font-medium">{subscriptionStatus.autoDebit ? "Auto Debit" : "Manual"}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Next billing date</span>
+                      <p className="font-medium">
+                        {subscriptionStatus.nextBillingDate
+                          ? new Date(subscriptionStatus.nextBillingDate).toLocaleDateString("en-IN")
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Days remaining</span>
+                      <p className="font-medium">{subscriptionStatus.daysRemaining ?? "—"}</p>
+                    </div>
+                  </div>
+                  {subscriptionStatus.paymentHistory && subscriptionStatus.paymentHistory.length > 0 && (
+                    <>
+                      <h4 className="text-sm font-semibold text-gray-900 mt-4 mb-2">Payment history</h4>
+                      <div className="border rounded-md overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-50 border-b">
+                              <th className="text-left p-2">Date</th>
+                              <th className="text-left p-2">Amount</th>
+                              <th className="text-left p-2">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subscriptionStatus.paymentHistory.map((p) => (
+                              <tr key={p.id} className="border-b last:border-0">
+                                <td className="p-2">
+                                  {p.date ? new Date(p.date).toLocaleDateString("en-IN") : "—"}
+                                </td>
+                                <td className="p-2">
+                                  {p.currency === "INR" ? "₹" : p.currency}{" "}
+                                  {Number(p.amount).toLocaleString()}
+                                </td>
+                                <td className="p-2">
+                                  <Badge variant={p.status === "success" ? "default" : "secondary"}>
+                                    {p.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                  {(subscriptionStatus.status === "active" || subscriptionStatus.status === "trial") &&
+                    subscriptionStatus.autoDebit && (
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelSubscription}
+                          disabled={cancelling}
+                        >
+                          {cancelling ? "Cancelling…" : "Cancel subscription"}
+                        </Button>
+                      </div>
+                    )}
+                </>
               )}
             </>
           ) : (

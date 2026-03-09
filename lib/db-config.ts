@@ -11,6 +11,8 @@ export const COLLECTIONS = {
   QUOTATIONS: "quotations",
   PAYMENTS: "payments",
   SUBSCRIPTION_PLANS: "subscription_plans",
+  SUBSCRIPTIONS: "subscriptions", // Razorpay subscription lifecycle (per user)
+  PAYMENT_HISTORY: "payment_history", // Subscription payments / auto-debit history
   EMPLOYEES: "employees",  // Employee records without login access
   PAYMENT_METHODS: "payment_methods",
   RECEIPT_CATEGORIES: "receipt_categories",
@@ -98,6 +100,18 @@ export const INDEXES = {
     { key: { createdAt: -1 } },
   ],
   SUBSCRIPTION_PLANS: [{ key: { name: 1 }, unique: true }, { key: { price: 1 } }],
+  SUBSCRIPTIONS: [
+    { key: { userId: 1 } },
+    { key: { razorpaySubscriptionId: 1 }, unique: true },
+    { key: { status: 1 } },
+    { key: { nextBillingDate: 1 } },
+    { key: { updatedAt: -1 } },
+  ],
+  PAYMENT_HISTORY: [
+    { key: { userId: 1 } },
+    { key: { razorpayPaymentId: 1 } },
+    { key: { paymentDate: -1 } },
+  ],
   EMPLOYEES: [
     { key: { userId: 1 } },
     { key: { employeeNumber: 1 }, unique: true },
