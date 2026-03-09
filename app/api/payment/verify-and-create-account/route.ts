@@ -5,6 +5,7 @@ import { Collections } from "@/lib/db-config"
 import bcrypt from "bcryptjs"
 import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 import { ObjectId } from "mongodb"
+import { getPaymentDetails } from "@/lib/razorpay"
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +37,24 @@ export async function POST(request: NextRequest) {
     const trialEndsAt = signupData.freeTrial 
       ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) 
       : null
+
+    // Fetch Razorpay payment details so we can store customer/token IDs for auto-debit
+    let razorpayCustomerId = ""
+    let razorpayTokenId = ""
+
+    if (paymentId) {
+      try {
+        const paymentDetails = await getPaymentDetails(paymentId)
+        // @ts-expect-error: Razorpay SDK typing may not include these fields explicitly
+        razorpayCustomerId = (paymentDetails as any).customer_id || ""
+        // token_id is present when card/UPI is saved for future use
+        // @ts-expect-error: Razorpay SDK typing may not include this field explicitly
+        razorpayTokenId = (paymentDetails as any).token_id || ""
+        console.log(`[Payment] Stored Razorpay customer ${razorpayCustomerId} and token ${razorpayTokenId}`)
+      } catch (error) {
+        console.error("Error fetching Razorpay payment details:", error)
+      }
+    }
     
     // Create new user
     const newUser = {
@@ -52,8 +71,14 @@ export async function POST(request: NextRequest) {
       discountPercentage: signupData.discountPercentage || 0,
       subscriptionStatus: subscriptionStatus,
       trialEndsAt: trialEndsAt,
+      trialEndDate: trialEndsAt,
+      trialPaymentProcessed: false,
       paymentId: paymentId || "",
       razorpayOrderId: razorpayOrderId || "",
+      razorpayCustomerId,
+      razorpayTokenId,
+      // New subscription records should be active for cron to consider them
+      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs"
 import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
 import { calculateTrialEndDate } from "@/lib/trial-helper"
 import { ObjectId } from "mongodb"
+import { getPaymentDetails } from "@/lib/razorpay"
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,19 +41,33 @@ export async function POST(request: NextRequest) {
     
     // Handle trial registration - Give trial based on system configuration when a plan is selected
     let subscriptionStatus = "inactive"
-    // let trialEndsAt = null
-    let subscriptionStartDate = null
-    // let subscriptionEndDate = null
+    let subscriptionStartDate: Date | null = null
     
     if (data.subscriptionPlanId) {
       // User selected a plan - automatically start trial with configured period
       subscriptionStatus = "trial"
       subscriptionStartDate = new Date()
-      
-      // Set trial end date based on system configuration
-      // const trialEndDate = await calculateTrialEndDate()
-      // trialEndsAt = trialEndDate
-      // subscriptionEndDate = trialEndDate
+    }
+
+    // If this registration was triggered after a Razorpay payment,
+    // attempt to fetch customer and token IDs so cron-based auto-debit can work.
+    let razorpayCustomerId = ""
+    let razorpayTokenId = ""
+    const paymentId: string | undefined = data.paymentId
+
+    if (paymentId) {
+      try {
+        const paymentDetails = await getPaymentDetails(paymentId)
+        // @ts-expect-error: Razorpay SDK typing may not include these fields explicitly
+        razorpayCustomerId = (paymentDetails as any).customer_id || ""
+        // @ts-expect-error: Razorpay SDK typing may not include this field explicitly
+        razorpayTokenId = (paymentDetails as any).token_id || ""
+        console.log(
+          `[Register] Stored Razorpay customer ${razorpayCustomerId} and token ${razorpayTokenId} for ${normalizedEmail}`,
+        )
+      } catch (error) {
+        console.error("[Register] Error fetching Razorpay payment details:", error)
+      }
     }
     
     // Create new user with normalized email
@@ -70,9 +85,18 @@ export async function POST(request: NextRequest) {
       paidAmount: data.paidAmount || 0,
       discountPercentage: data.discountPercentage || 0,
       subscriptionStatus,
-      trialEndsAt:data.trialEndDate || null,
+      trialEndsAt: data.trialEndDate || null,
+      trialEndDate: data.trialEndDate || null,
+      trialPaymentProcessed: false,
       subscriptionStartDate,
       subscriptionEndDate: data.subscriptionEndDate || null,
+      razorpayCustomerId,
+      razorpayTokenId,
+      lastPaymentDate: paymentId ? new Date() : undefined,
+      nextPaymentDate: null,
+      paymentFailedAt: undefined,
+      paymentFailureReason: undefined,
+      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     }

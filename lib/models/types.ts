@@ -42,11 +42,22 @@ export interface User extends BaseDocument {
   address?: string
   avatar?: string
   subscriptionPlanId?: string
-  subscriptionStatus?: "active" | "inactive" | "trial" | "expired" | "cancelled"
+  subscriptionStatus?: "active" | "inactive" | "trial" | "expired" | "cancelled" | "payment_failed"
   subscriptionStartDate?: Date
   subscriptionEndDate?: Date
   trialEndsAt?: Date
+  // Explicit trial end date used by cron-based billing
+  trialEndDate?: Date
+  // Flag to indicate whether the first post-trial payment has been processed
+  trialPaymentProcessed?: boolean
   stripeCustomerId?: string
+  // Razorpay recurring billing fields
+  razorpayCustomerId?: string
+  razorpayTokenId?: string
+  lastPaymentDate?: Date
+  nextPaymentDate?: Date
+  paymentFailedAt?: Date
+  paymentFailureReason?: string
   isActive: boolean
   billingCycle?: "monthly" | "yearly"
   subscriptionPrice?: number

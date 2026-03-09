@@ -138,11 +138,16 @@ export default function PaymentPage() {
       console.log("[v0] Found pending signup data, creating account...")
       console.log("[v0] Updated signup data:", updatedSignupData)
 
-      // Create account directly via register API
+      // Create account directly via register API and pass Razorpay IDs
       const registerResponse = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedSignupData),
+        body: JSON.stringify({
+          ...updatedSignupData,
+          paymentId: response.razorpay_payment_id,
+          razorpayOrderId: response.razorpay_order_id || "",
+          razorpaySignature: response.razorpay_signature || "",
+        }),
       })
 
       if (!registerResponse.ok) {
