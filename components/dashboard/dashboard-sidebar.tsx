@@ -43,30 +43,34 @@ function hasActiveSubscription(user: any): boolean {
     return true
   }
 
-  // No subscription plan
-  if (!user?.subscriptionPlanId) {
+  // No user or no status, no access
+  if (!user || !user.subscriptionStatus) {
     return false
   }
 
   const status = user.subscriptionStatus
+  const now = new Date()
 
-  // If cancelled, check if still within validity period
-  if (status === "cancelled") {
-    if (!user.subscriptionEndDate) {
+  // If trial, check if it's still valid
+  if (status === "trial") {
+    if (!user.trialEndsAt) {
       return false
     }
+    const trialEndDate = new Date(user.trialEndsAt)
+    return now <= trialEndDate
+  }
+
+  // For active or cancelled, check the subscription end date
+  if (status === "active" || status === "cancelled") {
+    if (!user.subscriptionEndDate) {
+      return false // No end date means it's not a valid subscription
+    }
     const endDate = new Date(user.subscriptionEndDate)
-    const now = new Date()
     return now <= endDate
   }
 
-  // If expired or inactive, no access
-  if (status === "expired" || status === "inactive") {
-    return false
-  }
-
-  // Active or trial status
-  return status === "active" || status === "trial"
+  // Any other status (inactive, expired, payment_failed, etc.) means no access
+  return false
 }
 
 const navigationItems: NavItem[] = [
@@ -312,8 +316,8 @@ export default function DashboardSidebar() {
 
   const renderNavItem = (item: NavItem, level: number = 0, parentKey: string = "") => {
     // LEVEL 1: Check if user has active subscription
-    // Only Dashboard and Cash Book are accessible without active subscription
-    if (!hasActiveSubscription(user) && item.permission !== null) {
+    // Only Dashboard is accessible without an active subscription
+    if (!hasActiveSubscription(user) && item.name !== "Dashboard") {
       return null;
     }
 

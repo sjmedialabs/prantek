@@ -292,20 +292,20 @@ const totalPayments = filteredEntries
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader><CardTitle>Total Receipts</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-600">₹{totalReceipts.toLocaleString()}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-green-600">₹{totalReceipts?.toLocaleString()}</div></CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Total Payments</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-red-600">₹{totalPayments.toLocaleString()}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-red-600">₹{totalPayments?.toLocaleString()}</div></CardContent>
         </Card>
 
         <Card>
           <CardHeader><CardTitle>Net Balance</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{netBalance.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₹{netBalance?.toLocaleString()}</div>
             {dateFromFilter && (
-              <p className="text-xs text-gray-500 mt-1">Opening Balance: ₹{openingBalance.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">Opening Balance: ₹{openingBalance?.toLocaleString()}</p>
             )}
           </CardContent>
         </Card>
@@ -511,7 +511,7 @@ const totalPayments = filteredEntries
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell className="text-right font-bold">
-                    ₹{openingBalance.toLocaleString()}
+                    ₹{(openingBalance || 0).toLocaleString()}
                   </TableCell>
                   <TableCell></TableCell>
                 </TableRow>
@@ -620,10 +620,10 @@ const totalPayments = filteredEntries
                   <td className="border p-2">{entry.partyName}</td>
                   <td className="border p-2">{entry.category}</td>
                   <td className="border p-2 text-right text-green-600">
-                    {entry.entryType === "receipt" ? entry.amount.toLocaleString() : "-"}
+                    {entry.entryType === "receipt" ? entry.amount?.toLocaleString() : "-"}
                   </td>
                   <td className="border p-2 text-right text-red-600">
-                    {entry.entryType === "payment" ? entry.amount.toLocaleString() : "-"}
+                    {entry.entryType === "payment" ? entry.amount?.toLocaleString() : "-"}
                   </td>
                   <td className="border p-2 text-right font-bold">
                     {entry.balance?.toLocaleString()}
