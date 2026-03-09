@@ -118,23 +118,48 @@ export default function UsersPage() {
 
       if (data.success) {
         const adminUsers = data.users || []
-        setUsers(adminUsers)
 
         // Now fetch plan and check limit
         if (user?.subscriptionPlanId) {
           try {
             const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
             setCurrentPlan(plan)
-            if (plan?.name?.toLowerCase() === "proffessional" && adminUsers.length >= 5) {
-              setCanAddUser(false)
-            } else {
-              setCanAddUser(true)
+            const maxUsers = plan?.maxUsers || Infinity
+            
+            const activeUsers = adminUsers.filter((u: User) => u.isActive)
+            let activeUserCount = activeUsers.length
+
+            if (activeUserCount > maxUsers) {
+              toast({
+                title: "User Limit Exceeded",
+                description: `Your plan allows ${maxUsers} active users. Deactivating ${activeUserCount - maxUsers} extra user(s).`,
+                variant: "destructive",
+              })
+
+              // Deactivate the most recently added users (assuming they are at the end)
+              const usersToDeactivate = activeUsers.slice(maxUsers)
+              for (const userToDeactivate of usersToDeactivate) {
+                await fetch("/api/users", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ isActive: false, _id: userToDeactivate._id, userType: "admin-user" }),
+                })
+                const userIndex = adminUsers.findIndex((u: User) => u._id === userToDeactivate._id)
+                if (userIndex !== -1) {
+                  adminUsers[userIndex].isActive = false
+                }
+              }
+              activeUserCount = maxUsers
             }
+            
+            setCanAddUser(activeUserCount < maxUsers)
           } catch (planError) {
             console.error("Failed to fetch subscription plan:", planError)
             setCanAddUser(true) // Default to true if plan check fails
           }
         }
+        setUsers(adminUsers)
       } else {
         toast({
           title: "Error",
@@ -603,22 +628,49 @@ function validatePermissions(selectedPermissions: any) {
                           <Switch className="mt-2"
                               checked={user.isActive}
                               onCheckedChange={async (checked) => {
+                                if (checked) { // Trying to activate
+                                  const activeUserCount = users.filter(u => u.isActive).length;
+                                  const maxUsers = currentPlan?.maxUsers || Infinity;
+                                  if (activeUserCount >= maxUsers) {
+                                    toast({
+                                      title: "User Limit Reached",
+                                      description: `Your plan only allows ${maxUsers} active users. Please upgrade your plan to activate more users.`,
+                                      variant: "destructive"
+                                    });
+                                    return; // Prevent activation
+                                  }
+                                }
+
                                 try {
-                                  const newStatus = checked ? true : false
+                                  const newStatus = checked
                                   const response = await fetch("/api/users", {
                                     method: "PUT",
                                     headers: { "Content-Type": "application/json" },
                                     credentials: "include",
                                     body: JSON.stringify({isActive: newStatus, _id: user._id, userType: "admin-user"})
                                   })
-                                  if(response.ok){
-                                    setUsers((prevUsers)=>prevUsers.map((u)=>
-                                      u._id === user._id ? {...u, isActive: newStatus} : u
-                                    ))
-                                    // await fetchUsers()
-                                    
+                                  if (response.ok) {
+                                    setUsers((prevUsers) => {
+                                      const newUsers = prevUsers.map((u) =>
+                                        u._id === user._id ? { ...u, isActive: newStatus } : u
+                                      );
+                                      // After updating state, re-check if we can add more users
+                                      const activeCount = newUsers.filter(u => u.isActive).length;
+                                      const maxUsers = currentPlan?.maxUsers || Infinity;
+                                      setCanAddUser(activeCount < maxUsers);
+                                      return newUsers;
+                                    });
+                                    toast({
+                                      title: "Success",
+                                      description: `User has been ${newStatus ? 'activated' : 'deactivated'}.`
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Error",
+                                      description: `Failed to ${checked ? 'activate' : 'deactivate'} user.`,
+                                      variant: "destructive"
+                                    });
                                   }
-                                  
                                 } catch (err) {
                                   console.log(err)
                                 }

@@ -54,6 +54,7 @@ export default function SubscriptionPlansPage() {
   const [loading, setLoading] = useState(true)
   const [users,setUsers]=useState<any>([]);
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
 
   useEffect(() => {
     loadPlans()
@@ -63,6 +64,18 @@ export default function SubscriptionPlansPage() {
     const data = await api.subscriptionPlans.getAll()
     const loadusers = await api.users.getAll()
     
+    let currentDiscount = 17;
+    try {
+      const settingsResponse = await fetch('/api/system-settings');
+      const settingsData = await settingsResponse.json();
+      if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+        currentDiscount = settingsData.data.yearlyDiscountPercentage;
+        setYearlyDiscount(currentDiscount);
+      }
+    } catch (error) {
+      console.error("Failed to load system settings:", error);
+    }
+    
     // Enrich plans with subscriber count and revenue
     const enrichedPlans = data.map((plan: any) => {
       // Count subscribers for this plan (only subscriber-type users)
@@ -71,7 +84,16 @@ export default function SubscriptionPlansPage() {
       )
       
       const subscriberCount = subscribers.length
-      const revenue = subscriberCount * Number(plan.price || 0)
+      
+      const revenue = subscribers.reduce((acc: number, curr: any) => {
+        const planPrice = Number(plan.price || 0);
+        if (curr.billingCycle === 'yearly') {
+           const yearlyPrice = planPrice * 12;
+           const discountAmount = Math.round(yearlyPrice * (currentDiscount / 100));
+           return acc + (yearlyPrice - discountAmount);
+        }
+        return acc + planPrice;
+      }, 0);
       
       return {
         ...plan,
@@ -93,9 +115,15 @@ export default function SubscriptionPlansPage() {
   let total = 0;
 
   subscriberUsers.forEach((user: any) => {
-    const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
+    const userPlan = plans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId);
     if (userPlan && userPlan.price) {
-      total += Number(userPlan.price);
+      if (user.billingCycle === 'yearly') {
+          const yearlyPrice = Number(userPlan.price) * 12;
+          const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
+          total += (yearlyPrice - discountAmount);
+      } else {
+          total += Number(userPlan.price);
+      }
     }
   });
 
