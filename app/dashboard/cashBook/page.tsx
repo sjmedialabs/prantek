@@ -503,6 +503,19 @@ const totalPayments = filteredEntries
             </TableHeader>
 
             <TableBody>
+              {currentPage === 1 && (
+                <TableRow className="bg-gray-50 font-medium">
+                  <TableCell></TableCell>
+                  <TableCell>{new Date(dateFromFilter).toLocaleDateString()}</TableCell>
+                  <TableCell colSpan={5}>Opening Balance</TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell className="text-right font-bold">
+                    ₹{openingBalance.toLocaleString()}
+                  </TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              )}
               {paginatedEntries.map((entry, index) => {
                 const serial = (currentPage - 1) * itemsPerPage + (index + 1)
                 return (

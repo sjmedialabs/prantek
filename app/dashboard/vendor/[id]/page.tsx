@@ -51,7 +51,7 @@ export default function VendorDetailsPage() {
 
       if (data) {
         const vendorPurchaseInvoices = (allPurchaseInvoices || [])
-          .filter((pi: any) => pi.vendorId === vendorId)
+          .filter((pi: any) => pi.recipientId === vendorId)
           .map((pi: any) => ({
             id: pi._id,
             type: "purchaseInvoice" as const,
@@ -62,7 +62,7 @@ export default function VendorDetailsPage() {
             balanceAmount: (pi.invoiceTotalAmount || 0) - (pi.paidAmount || 0),
             status: pi.paymentStatus,
           }))
-            console.log("vendor PI", vendorPurchaseInvoices)
+            console.log("vendor PI", vendorPurchaseInvoices, allPurchaseInvoices)
         const vendorPayments = (allPayments || [])
           .filter((p: any) => p.recipientId === vendorId && p.recipientType === "vendor")
           .map((p: any) => ({

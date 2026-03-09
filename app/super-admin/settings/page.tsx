@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { Settings, Save, Calendar } from "lucide-react"
+import { Settings, Save, Calendar, Percent } from "lucide-react"
 
 export default function SuperAdminSettingsPage() {
   const [settings, setSettings] = useState({
     defaultTrialDays: "14",
+    yearlyDiscountPercentage: "17",
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -23,7 +24,8 @@ export default function SuperAdminSettingsPage() {
         const data = await response.json()
         if (data.success && data.data.trialPeriodDays) {
           setSettings({
-            defaultTrialDays: String(data.data.trialPeriodDays)
+            defaultTrialDays: String(data.data.trialPeriodDays),
+            yearlyDiscountPercentage: String(data.data.yearlyDiscountPercentage || 17),
           })
         }
       } catch (error) {
@@ -45,8 +47,16 @@ export default function SuperAdminSettingsPage() {
     try {
       // Validate input
       const trialDays = parseInt(settings.defaultTrialDays)
+      const discount = parseInt(settings.yearlyDiscountPercentage)
+
       if (isNaN(trialDays) || trialDays < 1 || trialDays > 365) {
         toast.error('Trial period must be between 1 and 365 days')
+        setSaving(false)
+        return
+      }
+
+      if (isNaN(discount) || discount < 0 || discount > 100) {
+        toast.error("Yearly discount must be between 0 and 100 percent")
         setSaving(false)
         return
       }
@@ -58,7 +68,8 @@ export default function SuperAdminSettingsPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          trialPeriodDays: trialDays
+          trialPeriodDays: trialDays,
+          yearlyDiscountPercentage: discount,
         })
       })
 
@@ -106,14 +117,14 @@ export default function SuperAdminSettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              System Settings
+              Subscription Settings
             </CardTitle>
             <CardDescription>
-              Configure core system parameters that affect all users
+              Configure trial period and billing discounts.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-4">
+            <div className="grid md:grid-cols-2 gap-6">
               {/* Default Trial Days */}
               <div className="space-y-2">
                 <Label htmlFor="defaultTrialDays" className="flex items-center gap-2">
@@ -132,7 +143,28 @@ export default function SuperAdminSettingsPage() {
                   className="max-w-xs"
                 />
                 <p className="text-sm text-gray-500">
-                  Number of days for free trial period when users sign up. This applies to all new registrations.
+                  Number of days for free trial period when users sign up.
+                </p>
+              </div>
+
+              {/* Yearly Discount */}
+              <div className="space-y-2">
+                <Label htmlFor="yearlyDiscount" className="flex items-center gap-2">
+                  <Percent className="h-4 w-4" />
+                  Yearly Plan Discount (%)
+                  <span className="text-xs text-gray-500 font-normal">(0-100%)</span>
+                </Label>
+                <Input
+                  id="yearlyDiscount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={settings.yearlyDiscountPercentage}
+                  onChange={(e) => handleSettingChange("yearlyDiscountPercentage", e.target.value)}
+                  className="max-w-xs"
+                />
+                <p className="text-sm text-gray-500">
+                  Discount for users choosing a yearly billing cycle.
                 </p>
               </div>
             </div>

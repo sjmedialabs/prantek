@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getDb } from "@/lib/mongodb"
+import { connectDB } from "@/lib/mongodb"
 import { invalidateTrialCache } from "@/lib/trial-helper"
 
 // GET - Get system settings (publicly accessible)
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const db = await getDb()
+    const db = await connectDB()
     const settings = await db.collection("system_settings").findOne({ _id: "global_config" })
 
     if (!settings) {
@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          trialPeriodDays: 14
+          trialPeriodDays: 14,
+          yearlyDiscountPercentage: 17,
         }
       })
     }
@@ -21,7 +22,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        trialPeriodDays: settings.trialPeriodDays || 14
+        trialPeriodDays: settings.trialPeriodDays || 14,
+        yearlyDiscountPercentage: settings.yearlyDiscountPercentage || 17,
       }
     })
   } catch (error) {
@@ -39,26 +41,37 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { trialPeriodDays } = body
+    const { trialPeriodDays, yearlyDiscountPercentage } = body
 
-    // Validate trial period
-    if (typeof trialPeriodDays !== "number" || trialPeriodDays < 1 || trialPeriodDays > 365) {
-      return NextResponse.json(
-        { success: false, error: "Trial period must be between 1 and 365 days" },
-        { status: 400 }
-      )
+    const updateSet: any = { updatedAt: new Date() }
+
+    if (trialPeriodDays !== undefined) {
+      if (typeof trialPeriodDays !== "number" || trialPeriodDays < 1 || trialPeriodDays > 365) {
+        return NextResponse.json(
+          { success: false, error: "Trial period must be between 1 and 365 days" },
+          { status: 400 }
+        )
+      }
+      updateSet.trialPeriodDays = trialPeriodDays
     }
 
-    const db = await getDb()
+    if (yearlyDiscountPercentage !== undefined) {
+      if (typeof yearlyDiscountPercentage !== "number" || yearlyDiscountPercentage < 0 || yearlyDiscountPercentage > 100) {
+        return NextResponse.json(
+          { success: false, error: "Yearly discount must be between 0 and 100 percent" },
+          { status: 400 }
+        )
+      }
+      updateSet.yearlyDiscountPercentage = yearlyDiscountPercentage
+    }
+
+    const db = await connectDB()
     
     // Update or insert settings
     await db.collection("system_settings").updateOne(
       { _id: "global_config" },
       {
-        $set: {
-          trialPeriodDays,
-          updatedAt: new Date()
-        },
+        $set: updateSet,
         $setOnInsert: {
           createdAt: new Date()
         }
@@ -69,12 +82,12 @@ export async function PATCH(req: NextRequest) {
     // Invalidate cache after update
     invalidateTrialCache()
 
+    const updatedSettings = await db.collection("system_settings").findOne({ _id: "global_config" })
+
     return NextResponse.json({
       success: true,
       message: "System settings updated successfully",
-      data: {
-        trialPeriodDays
-      }
+      data: updatedSettings,
     })
   } catch (error) {
     console.error("Error updating system settings:", error)

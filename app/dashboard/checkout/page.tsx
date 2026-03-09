@@ -28,8 +28,10 @@ export default function CheckoutPage() {
   const [error, setError] = useState("")
   const [amountFromPreviousSubscription, setAmountFromPreviousSubscription] = useState(0)
   const [previousPlan, setPreviousPlan] = useState<SubscriptionPlan | null>(null)
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
   // const[totalAmount,setTotalAmount]=useState(0);
   const [loginedUserLocalStorage, setLoginedUserLocalStorage] = useState<any>(null)
+   const [yearlyDiscount, setYearlyDiscount] = useState(17);
    const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
 
   const loginedUserLocalStorageDetails = loginedUserLocalStorageString
@@ -47,6 +49,14 @@ export default function CheckoutPage() {
     setLoginedUserLocalStorage(loginString ? JSON.parse(loginString) : null)
   }, [])
 console.log("loginedUserLocalStorage:", loginedUserLocalStorage)
+
+// billing cycle from local storage
+useEffect(() => {
+  const cycle = localStorage.getItem("selected_billing_cycle") as "monthly" | "yearly"
+  if (cycle) {
+    setBillingCycle(cycle)
+  }
+}, [])
   // 3️⃣ Load plan and calculate balance
 useEffect(() => {
   if (!loginedUserLocalStorage) return;
@@ -131,10 +141,25 @@ useEffect(() => {
       setLoading(false);
     }
   };
+  const loadDiscount = async () => {
 
+                // Fetch system settings for discount
+      const settingsResponse = await fetch('/api/system-settings');
+      const settingsData = await settingsResponse.json();
+      if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+        setYearlyDiscount(settingsData.data.yearlyDiscountPercentage);
+      }
+  }
+  loadDiscount();
   loadPlan();
 }, [loginedUserLocalStorage, router, user]);
 
+// base price 
+const basePrice =
+  billingCycle === "yearly"
+    ? Math.round(((plan?.price || 0) * 12) * (1 - yearlyDiscount / 100))
+    : plan?.price
+const priceWithGST = Math.round((basePrice || 0) * 1.18)
   useEffect(() => {
     const script = document.createElement("script")
     script.src = "https://checkout.razorpay.com/v1/checkout.js"
@@ -168,9 +193,9 @@ useEffect(() => {
     setError("")
 
     try {
-      let totalAmount = Math.round(plan.price * 1.18)
+      let totalAmount = Math.round((basePrice || 0) * 1.18)
       console.log("handle payment called:::")
-      if((Math.round((plan.price * 1.18)) - amountFromPreviousSubscription)>0){
+      if((Math.round(((basePrice || 0) * 1.18)) - amountFromPreviousSubscription)>0){
         totalAmount=totalAmount - amountFromPreviousSubscription
       }
       // setTotalAmount(totalAmountTopaid);
@@ -239,7 +264,7 @@ useEffect(() => {
           paymentId: response.razorpay_payment_id,
           planId: plan.id,
           planName: plan.name,
-          amount: Math.round(plan.price * 1.18),
+          amount: Math.round((basePrice || 0) * 1.18),
           timestamp: new Date().toISOString(),
         }),
       )
@@ -305,19 +330,19 @@ useEffect(() => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">₹{plan.price.toLocaleString()}</span>
+                  <span className="font-semibold">₹{basePrice?.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax (18% GST)</span>
-                  <span className="font-semibold">₹{Math.round(plan.price * 0.18).toLocaleString()}</span>
+                  <span className="font-semibold">₹{Math.round((basePrice || 0) * 0.18).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Previous plan Amount</span>
-                  <span className="font-semibold">-₹{Math.round((plan.price * 1.18)-amountFromPreviousSubscription)>0?amountFromPreviousSubscription:0}</span>
+                  <span className="font-semibold">-₹{Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?amountFromPreviousSubscription:0}</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>₹{(Math.round((plan.price * 1.18)-amountFromPreviousSubscription)>0?Math.round((plan.price * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))}</span>
+                  <span>₹{(Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))}</span>
                 </div>
               </div>
               <div className="bg-blue-50 p-4 rounded-lg">
@@ -374,7 +399,7 @@ useEffect(() => {
                     Loading Payment Gateway...
                   </>
                 ) : (
-                  `Pay ₹${((Math.round((plan.price * 1.18)-amountFromPreviousSubscription)>0?Math.round((plan.price * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))).toLocaleString()}`
+                  `Pay ₹${((Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription):Math.round(((basePrice || 0) * 1.18)))).toLocaleString()}`
                 )}
               </Button>
 

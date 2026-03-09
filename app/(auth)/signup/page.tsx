@@ -70,6 +70,7 @@ export default function SignUpPage() {
   const [checkedPhones, setCheckedPhones] = useState<Map<string, boolean>>(new Map());
   const router = useRouter();
   const { trialDays } = useTrialPeriod();
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
 
   // Clear any existing sessions when signup page loads
   useEffect(() => {
@@ -131,6 +132,20 @@ export default function SignUpPage() {
       }
     };
     loadPlans();
+
+    const fetchSystemSettings = async () => {
+      try {
+        const response = await fetch('/api/system-settings');
+        const data = await response.json();
+        if (data.success && data.data.yearlyDiscountPercentage) {
+          setYearlyDiscount(data.data.yearlyDiscountPercentage);
+        }
+      } catch (error) {
+        console.error('Failed to load system settings:', error);
+      }
+    };
+    fetchSystemSettings();
+
   }, []);
 
   // Real-time validation functions
@@ -397,13 +412,15 @@ export default function SignUpPage() {
         phone: formData.phone || "",
         address: formData.address || "",
         subscriptionPlanId: selectedPlan,
+        billingCycle: billingCycle,
       };
       localStorage.setItem("pending_signup", JSON.stringify(signupData));
+      console.log("Pending signup data:", signupData);
 
       // Calculate the final amount based on billing cycle
       // Apply 17% discount for yearly billing
       const yearlyTotal = plan.price * 12;
-      const discount = billingCycle === "yearly" ? Math.round(yearlyTotal * 0.17) : 0;
+      const discount = billingCycle === "yearly" ? Math.round(yearlyTotal * (yearlyDiscount / 100)) : 0;
       const finalAmount = billingCycle === "yearly" ? yearlyTotal - discount : plan.price;
 
       // Save current state to sessionStorage so we can return to step 2
@@ -975,7 +992,7 @@ export default function SignUpPage() {
                 >
                   Yearly
                   <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                    Save 17%
+                    Save {yearlyDiscount}%
                   </span>
                 </button>
               </div>
@@ -997,9 +1014,9 @@ export default function SignUpPage() {
                   const displayPrice =
                     billingCycle === "yearly" ? plan.price * 12 : plan.price;
                   const savingsAmount =
-                    billingCycle === "yearly"
-                      ? Math.round(plan.price * 12 * 0.17) // 17% savings
-                      : 0;
+                    billingCycle === "yearly" ?
+                    Math.round(plan.price * 12 * (yearlyDiscount / 100)) :
+                    0;
                   const discountedYearlyPrice =
                     billingCycle === "yearly"
                       ? plan.price * 12 - savingsAmount

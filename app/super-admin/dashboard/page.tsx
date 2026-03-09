@@ -27,7 +27,7 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true)
    const [users,setUsers]=useState<any>([]);
    const [plans, setPlans] = useState<any[]>([])
-
+    const [yearlyDiscount, setYearlyDiscount] = useState(17);
   useEffect(() => {
     loadDashboardData()
   }, [])
@@ -39,7 +39,17 @@ export default function SuperAdminDashboard() {
       setUsers(allUsers);
       const subscriberUsers = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin")
       const activeClients = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin").length
-       
+           let currentDiscount = 17; 
+      try {
+      const settingsResponse = await fetch('/api/system-settings');
+      const settingsData = await settingsResponse.json();
+      if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+        currentDiscount = settingsData.data.yearlyDiscountPercentage;
+        setYearlyDiscount(currentDiscount);
+      }
+    } catch (error) {
+      console.error("Failed to load system settings:", error);
+    }
       // Fetch subscription plans to calculate revenue and subscriptions
       const loadedplans = await api.subscriptionPlans.getAll()
       setPlans(loadedplans)
@@ -61,23 +71,48 @@ export default function SuperAdminDashboard() {
       setLoading(false)
     }
   }
-  const calculateTotalRevenue = () => {
-      if (!plans.length || !users.length) return 0;
+  // const calculateTotalRevenue = () => {
+  //     if (!plans.length || !users.length) return 0;
 
-      // Only count revenue from subscribers, not admin users
-      const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
+  //     // Only count revenue from subscribers, not admin users
+  //     const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
 
-      let total = 0;
+  //     let total = 0;
 
-      subscriberUsers.forEach((user: any) => {
-        const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
-        if (userPlan && userPlan.price) {
+  //     subscriberUsers.forEach((user: any) => {
+  //       const userPlan = plans.find((plan: any) => plan._id === user.subscriptionPlanId);
+  //       if (userPlan && userPlan.price) {
+  //         total += Number(userPlan.price);
+  //       }
+  //     });
+
+  // return total;
+  // };
+
+    const calculateTotalRevenue = () => {
+  if (!plans.length || !users.length) return 0;
+
+  // Only count revenue from subscribers, not admin users
+  const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
+
+  let total = 0;
+
+  subscriberUsers.forEach((user: any) => {
+    const userPlan = plans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId);
+    if (userPlan && userPlan.price) {
+      if (user.billingCycle === 'yearly') {
+          const yearlyPrice = Number(userPlan.price) * 12;
+          const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
+          total += (yearlyPrice - discountAmount);
+      } else {
           total += Number(userPlan.price);
-        }
-      });
+      }
+    }
+  });
 
   return total;
-  };
+};
+
   const totalRevenueGenerated=calculateTotalRevenue();
    const totalSubscribers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId).length;
 

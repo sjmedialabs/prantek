@@ -93,6 +93,7 @@ export default function SalesDashboardPage() {
   const [rawAllUsers, setRawAllUsers] = useState<any[]>([])
   const [rawAdminUsers, setRawAdminUsers] = useState<any[]>([])
   const [rawPlans, setRawPlans] = useState<any[]>([])
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
 
   // Derived (filtered) data that drives charts and metrics
   const [salesMetrics, setSalesMetrics] = useState<SalesMetric[]>([])
@@ -141,6 +142,16 @@ export default function SalesDashboardPage() {
         const allUsers = await api.users.getAll()
         const adminUsers = allUsers.filter((u: any) => u.userType === "subscriber" && u.role !== "super-admin")
         const plans = await api.subscriptionPlans.getAll()
+
+        try {
+          const settingsResponse = await fetch('/api/system-settings');
+          const settingsData = await settingsResponse.json();
+          if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+            setYearlyDiscount(settingsData.data.yearlyDiscountPercentage);
+          }
+        } catch (error) {
+          console.error("Failed to load system settings:", error);
+        }
 
         if (!mounted) return
         setRawAllUsers(allUsers)
@@ -200,17 +211,24 @@ export default function SalesDashboardPage() {
     const churnedUsers = filteredAdminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
     const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
 
-    // Calculate total MRR from active/trial subscriptions from filteredAdminUsers (only users created in period)
-    let totalMRR = 0
+    // Calculate total Revenue from active/trial subscriptions from filteredAdminUsers (only users created within period)
+    let totalRevenue = 0
     filteredAdminUsers.forEach((user) => {
       if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial") {
         const plan = rawPlans.find((p) => (p._id || p.id) === user.subscriptionPlanId)
         if (plan) {
-          totalMRR += plan.price || 0
+          const planPrice = Number(plan.price || 0);
+          if (user.billingCycle === 'yearly') {
+             const yearlyPrice = planPrice * 12;
+             const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
+             totalRevenue += (yearlyPrice - discountAmount);
+          } else {
+             totalRevenue += planPrice;
+          }
         }
       }
     })
-    const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalMRR / activeSubscriptions) : 0
+    const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalRevenue / activeSubscriptions) : 0
 
     const metrics: SalesMetric[] = [
       {
@@ -221,9 +239,9 @@ export default function SalesDashboardPage() {
         icon: Building2,
       },
       {
-        name: "Monthly Recurring Revenue",
-        value: `₹${totalMRR.toLocaleString()}`,
-        change: totalMRR > 0 ? "+100%" : "0%",
+        name: "Total Revenue",
+        value: `₹${totalRevenue.toLocaleString()}`,
+        change: totalRevenue > 0 ? "+100%" : "0%",
         trend: "up",
         icon: DollarSign,
       },
@@ -336,9 +354,18 @@ export default function SalesDashboardPage() {
           if (!u.subscriptionStartDate) return false
           const s = new Date(u.subscriptionStartDate)
           return s >= monthStart && s < monthEnd && (u.subscriptionPlanId === (plan._id || plan.id))
-        }).length
+        })
 
-        const planRevenue = usersWithPlanInMonth * (plan.price || 0)
+        const planRevenue = usersWithPlanInMonth.reduce((acc, user) => {
+          const planPrice = Number(plan.price || 0);
+          if (user.billingCycle === 'yearly') {
+             const yearlyPrice = planPrice * 12;
+             const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
+             return acc + (yearlyPrice - discountAmount);
+          }
+          return acc + planPrice;
+        }, 0);
+
         result[planKey] = planRevenue
         result.total += planRevenue
       })
@@ -349,19 +376,29 @@ export default function SalesDashboardPage() {
     // Plan distribution (counts & revenue) from filteredAdminUsers
     const colors = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444"]
     const distribution = rawPlans.map((plan, index) => {
-      const subscriberCount = filteredAdminUsers.filter(
+      const subscribers = filteredAdminUsers.filter(
         (u) => (u.subscriptionPlanId === plan._id || u.subscriptionPlanId === plan.id)
-      ).length
+      )
+
+      const revenue = subscribers.reduce((acc, user) => {
+        const planPrice = Number(plan.price || 0);
+        if (user.billingCycle === 'yearly') {
+           const yearlyPrice = planPrice * 12;
+           const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
+           return acc + (yearlyPrice - discountAmount);
+        }
+        return acc + planPrice;
+      }, 0);
 
       return {
         name: plan.name,
-        value: subscriberCount,
-        revenue: subscriberCount * (plan.price || 0),
+        value: subscribers.length,
+        revenue: revenue,
         color: colors[index % colors.length],
       }
     })
     setPlanDistribution(distribution.filter((d) => d.value > 0))
-  }, [rawAllUsers, rawAdminUsers, rawPlans, selectedPeriod])
+  }, [rawAllUsers, rawAdminUsers, rawPlans, selectedPeriod, yearlyDiscount])
 
   // Small helpers for UI
   const getTrendIcon = (trend: "up" | "down" | "neutral") => {
@@ -458,10 +495,10 @@ export default function SalesDashboardPage() {
                     {getTrendIcon(metric.trend)}
                   <span className="ml-1">{metric.change} from last month</span>
                   </div>
-                   {metric.name==="Total Clients Onboarded" && (<div>
+                   {/* {metric.name==="Total Clients Onboarded" && (<div>
                   <p className="text-[12px] font-bold">Active: {activeClients}</p>
                   <p className="text-[12px] font-bold">InActive: {parseInt(metric.value)-activeClients}</p>
-                </div>)}
+                </div>)} */}
                 </div>
               </CardContent>
             </Card>
