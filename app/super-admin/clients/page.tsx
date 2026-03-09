@@ -48,7 +48,7 @@ interface ClientAccount {
   phone: string
   address: string
   plan: "standard" | "premium" | "enterprise"
-  status: "active" | "suspended" | "trial" | "cancelled"
+  status: "active" | "suspended" | "trial" | "cancelled" | "expired"
   userCount: number
   monthlyRevenue: number
   totalRevenue: number
@@ -94,8 +94,39 @@ export default function ClientAccountsPage() {
         console.error("Failed to load system settings:", error);
       }
 
+      // Check for expired subscriptions/trials and update status
+      const now = new Date();
+      const processedUsers = await Promise.all(users.map(async (user: any) => {
+        if (user.userType === "subscriber" && user.role !== "super-admin") {
+          let newStatus = null;
+          
+          // Check Trial Expiry
+          if (user.subscriptionStatus === 'trial' && user.trialEndsAt) {
+            if (new Date(user.trialEndsAt) < now) {
+              newStatus = 'expired';
+            }
+          } 
+          // Check Subscription Expiry
+          else if ((user.subscriptionStatus === 'active' || user.subscriptionStatus === 'cancelled') && user.subscriptionEndDate) {
+            if (new Date(user.subscriptionEndDate) < now) {
+              newStatus = 'expired';
+            }
+          }
+
+          if (newStatus) {
+            try {
+              await api.users.update(user._id || user.id, { subscriptionStatus: newStatus });
+              return { ...user, subscriptionStatus: newStatus };
+            } catch (e) {
+              console.error("Failed to update user status", e);
+            }
+          }
+        }
+        return user;
+      }));
+
       // Map users to client accounts format
-      const clientAccounts = users
+      const clientAccounts = processedUsers
         .filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin") // Only subscriber users are clients
         .map((user: any) => {
           const plan = plans.find((p: any) => (p._id || p.id) === user.subscriptionPlanId)
@@ -147,7 +178,7 @@ export default function ClientAccountsPage() {
     const status = client.status?.toLowerCase() || "inactive"
 
     const matchesStatus =
-      statusFilter === "all" ? true : status === statusFilter
+      statusFilter === "all" ? true : statusFilter === "suspended" ? (status === "suspended" || status === "expired") : status === statusFilter
 
     const matchesSearch =
       client.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,6 +193,7 @@ export default function ClientAccountsPage() {
   const activeClients = clients.filter((c) => c.status === "active").length
   const suspendedClients = clients.filter((c) => c.status === "suspended").length
   const trialClients = clients.filter((c) => c.status === "trial").length
+  const expiredClients = clients.filter((c) => c.status === "expired").length
   const totalMRR = clients.filter((c) => c.status === "active").reduce((sum, c) => sum + c.monthlyRevenue, 0)
   const [formData, setFormData] = useState({
     name: "",
@@ -203,6 +235,13 @@ export default function ClientAccountsPage() {
           <Badge variant="secondary">
             <XCircle className="h-3 w-3 mr-1" />
             Cancelled
+          </Badge>
+        )
+      case "expired":
+        return (
+          <Badge className="bg-gray-100 text-gray-800">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Expired
           </Badge>
         )
       default:
@@ -430,14 +469,15 @@ export default function ClientAccountsPage() {
           </CardContent>
         </Card>
 
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Suspended</CardTitle>
-            <Pause className="h-4 w-4 text-red-600" />
+            <CardTitle className="text-sm font-medium text-gray-700">Expired</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{suspendedClients}</div>
-            <p className="text-xs text-gray-600 mt-1">Require attention</p>
+            <div className="text-2xl font-bold text-gray-900">{expiredClients}</div>
+            <p className="text-xs text-gray-600 mt-1">Subscription ended</p>
           </CardContent>
         </Card>
 
@@ -462,7 +502,7 @@ export default function ClientAccountsPage() {
             Active
           </TabsTrigger>
           <TabsTrigger value="suspended" onClick={() => setStatusFilter("suspended")}>
-            Suspended
+            Expired
           </TabsTrigger>
           <TabsTrigger value="trial" onClick={() => setStatusFilter("trial")}>
             Trial

@@ -521,14 +521,14 @@ export default function SalesDashboardPage() {
                 <CardTitle>Revenue by Plan Type</CardTitle>
                 <CardDescription>Monthly recurring revenue breakdown</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                 <ChartContainer
                   config={{
                     standard: { label: "Standard", color: "#3b82f6" },
                     premium: { label: "Premium", color: "#8b5cf6" },
                     enterprise: { label: "Enterprise", color: "#f59e0b" },
                   }}
-                  className="h-[300px]"
+                 className="items-center justify-center h-full w-full relative"
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={revenueData}>
@@ -570,12 +570,12 @@ export default function SalesDashboardPage() {
                 <CardTitle>Plan Distribution</CardTitle>
                 <CardDescription>Current subscriber distribution by plan</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                 <ChartContainer
                   config={{
                     value: { label: "Subscribers" },
                   }}
-                  className="h-[300px]"
+                  className="items-center justify-center h-full w-full relative"
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -605,13 +605,13 @@ export default function SalesDashboardPage() {
               <CardTitle>Client Growth Trend</CardTitle>
               <CardDescription>New client acquisitions and total client base growth</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
               <ChartContainer
                 config={{
                   newClients: { label: "New Clients", color: "#10b981" },
                   totalClients: { label: "Total Clients", color: "#3b82f6" },
                 }}
-                className="h-[300px]"
+               className="items-center justify-center h-full w-full relative"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={clientOnboardingData}>
@@ -652,12 +652,12 @@ export default function SalesDashboardPage() {
               <CardTitle>Revenue Growth Analysis</CardTitle>
               <CardDescription>Detailed revenue breakdown by subscription plan</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
               <ChartContainer
                 config={{
                   total: { label: "Total Revenue", color: "#1f2937" },
                 }}
-                className="h-[400px]"
+                className="items-center justify-center h-full w-full relative"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={revenueData}>
@@ -682,12 +682,12 @@ export default function SalesDashboardPage() {
                 <CardTitle>Client Onboarding Metrics</CardTitle>
                 <CardDescription>New client acquisitions over time</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                 <ChartContainer
                   config={{
                     newClients: { label: "New Clients", color: "#10b981" },
                   }}
-                  className="h-[300px]"
+                  className="items-center justify-center h-full w-full relative"
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={clientOnboardingData}>
@@ -706,12 +706,12 @@ export default function SalesDashboardPage() {
                 <CardTitle>Churn Rate Tracking</CardTitle>
                 <CardDescription>Monthly customer churn percentage</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-0 h-64 lg:h-80 flex justify-center items-center">
                 <ChartContainer
                   config={{
                     churnRate: { label: "Churn Rate (%)", color: "#ef4444" },
                   }}
-                  className="h-[300px]"
+                  className="items-center justify-center h-full w-full relative"
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={clientOnboardingData}>
