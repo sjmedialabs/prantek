@@ -56,6 +56,7 @@ interface ClientAccount {
   lastActivity: string
   paymentStatus: "current" | "overdue" | "failed"
   trialEndsAt?: string
+  billingCycle?: string
 }
 const Label = ({ text }: { text: string }) => (
   <label className="text-sm font-medium">
@@ -69,6 +70,7 @@ export default function ClientAccountsPage() {
   const [selectedClient, setSelectedClient] = useState<ClientAccount | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
 
   useEffect(() => {
     loadClients()
@@ -79,6 +81,18 @@ export default function ClientAccountsPage() {
       const users = await api.users.getAll()
       const adminUserCounts = await api.adminUsers.getCount()
       const plans = await api.subscriptionPlans.getAll()
+      
+      let currentDiscount = 17;
+      try {
+        const settingsResponse = await fetch('/api/system-settings');
+        const settingsData = await settingsResponse.json();
+        if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+          currentDiscount = settingsData.data.yearlyDiscountPercentage;
+          setYearlyDiscount(currentDiscount);
+        }
+      } catch (error) {
+        console.error("Failed to load system settings:", error);
+      }
 
       // Map users to client accounts format
       const clientAccounts = users
@@ -86,6 +100,17 @@ export default function ClientAccountsPage() {
         .map((user: any) => {
           const plan = plans.find((p: any) => (p._id || p.id) === user.subscriptionPlanId)
           const userId = user._id || user.id
+          
+          const planPrice = Number(plan?.price || 0);
+          const billingCycle = user.billingCycle || "monthly";
+          let revenue = planPrice;
+          
+          if (billingCycle === 'yearly') {
+             const yearlyPrice = planPrice * 12;
+             const discountAmount = Math.round(yearlyPrice * (currentDiscount / 100));
+             revenue = yearlyPrice - discountAmount;
+          }
+
           return {
             id: user._id || user.id,
             companyName: user.name || user.email.split('@')[0],
@@ -96,8 +121,9 @@ export default function ClientAccountsPage() {
             plan: plan?.name?.toLowerCase() || "standard",
             status: user.subscriptionStatus || "inactive",
             userCount: adminUserCounts[userId] || 0,
-            monthlyRevenue: plan?.price || 0,
-            totalRevenue: plan?.price || 0,
+            monthlyRevenue: billingCycle === 'yearly' ? Math.round(revenue / 12) : revenue,
+            totalRevenue: revenue,
+            billingCycle: billingCycle,
             joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             lastActivity: user.updatedAt ? new Date(user.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             paymentStatus: user.subscriptionStatus === "active" ? "current" : "overdue",
@@ -490,8 +516,10 @@ export default function ClientAccountsPage() {
                       <TableCell>{getStatusBadge(client.status)}</TableCell>
                       <TableCell>{client.userCount}</TableCell>
                       <TableCell>
-                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
-                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                        <div className="font-medium">₹{client.totalRevenue.toLocaleString()}/{client.billingCycle === 'yearly' ? 'yr' : 'mo'}</div>
+                        {client.billingCycle === 'yearly' && (
+                           <div className="text-xs text-gray-500">₹{client.monthlyRevenue.toLocaleString()}/mo eq.</div>
+                        )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
@@ -589,8 +617,10 @@ export default function ClientAccountsPage() {
                       <TableCell>{getStatusBadge(client.status)}</TableCell>
                       <TableCell>{client.userCount}</TableCell>
                       <TableCell>
-                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
-                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                        <div className="font-medium">₹{client.totalRevenue.toLocaleString()}/{client.billingCycle === 'yearly' ? 'yr' : 'mo'}</div>
+                        {client.billingCycle === 'yearly' && (
+                           <div className="text-xs text-gray-500">₹{client.monthlyRevenue.toLocaleString()}/mo eq.</div>
+                        )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
@@ -688,8 +718,10 @@ export default function ClientAccountsPage() {
                       <TableCell>{getStatusBadge(client.status)}</TableCell>
                       <TableCell>{client.userCount}</TableCell>
                       <TableCell>
-                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
-                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                        <div className="font-medium">₹{client.totalRevenue.toLocaleString()}/{client.billingCycle === 'yearly' ? 'yr' : 'mo'}</div>
+                        {client.billingCycle === 'yearly' && (
+                           <div className="text-xs text-gray-500">₹{client.monthlyRevenue.toLocaleString()}/mo eq.</div>
+                        )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
@@ -787,8 +819,10 @@ export default function ClientAccountsPage() {
                       <TableCell>{getStatusBadge(client.status)}</TableCell>
                       <TableCell>{client.userCount}</TableCell>
                       <TableCell>
-                        <div className="font-medium">₹{client.monthlyRevenue}/mo</div>
-                        <div className="text-sm text-gray-500">₹{client.totalRevenue} total</div>
+                        <div className="font-medium">₹{client.totalRevenue.toLocaleString()}/{client.billingCycle === 'yearly' ? 'yr' : 'mo'}</div>
+                        {client.billingCycle === 'yearly' && (
+                           <div className="text-xs text-gray-500">₹{client.monthlyRevenue.toLocaleString()}/mo eq.</div>
+                        )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>

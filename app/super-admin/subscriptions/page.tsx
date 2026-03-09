@@ -42,7 +42,7 @@ export default function SubscriptionPlansPage() {
   const [newPlan, setNewPlan] = useState({
     name: "",
     price: 0,
-    billingCycle: "monthly",
+    billingCycle: ["monthly", "yearly"],
     maxUsers: 0,
     maxStorage: "",
     features: [] as string[],
@@ -167,7 +167,7 @@ export default function SubscriptionPlansPage() {
     setNewPlan({
       name: plan.name,
       price: plan.price,
-      billingCycle: plan.billingCycle,
+      billingCycle: ["monthly", "yearly"],
       maxUsers: plan.maxUsers,
       maxStorage: plan.maxStorage,
       features: plan.features || [],
@@ -204,7 +204,7 @@ export default function SubscriptionPlansPage() {
     setNewPlan({
       name: "",
       price: 0,
-      billingCycle: "monthly",
+      billingCycle: ["monthly", "yearly"],
       maxUsers: 0,
       maxStorage: "",
       features: [],
