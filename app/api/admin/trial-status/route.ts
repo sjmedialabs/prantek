@@ -8,25 +8,48 @@ export const GET = withSuperAdmin(async (req: NextRequest) => {
   const db = await connectDB()
 
   const { searchParams } = new URL(req.url)
-  const daysParam = searchParams.get("days") || "7"
-  const days = Number.parseInt(daysParam, 10) || 7
-
-  const now = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - 1) // include yesterday for recently-missed charges
-  const end = new Date()
-  end.setDate(end.getDate() + days)
+  const daysParam = searchParams.get("days") || "30"
+  const days = Number.parseInt(daysParam, 10) || 30
+  const showAll = searchParams.get("showAll") === "true"
 
   const usersCol = db.collection(Collections.USERS)
 
-  const cursor = usersCol
-    .find({
-      trialEndDate: { $gte: start, $lte: end },
-    })
-    .sort({ trialEndDate: 1 })
-    .limit(200)
+  let users: any[]
 
-  const users = await cursor.toArray()
+  if (showAll) {
+    // Show all users who have a subscription plan (trial or active) for broader visibility
+    users = await usersCol
+      .find({
+        subscriptionPlanId: { $exists: true, $ne: "", $ne: null },
+        role: { $ne: "super-admin" },
+      })
+      .sort({ trialEndDate: -1, trialEndsAt: -1, subscriptionEndDate: -1, createdAt: -1 })
+      .limit(200)
+      .toArray()
+  } else {
+    const start = new Date()
+    start.setDate(start.getDate() - 1) // include yesterday
+    const end = new Date()
+    end.setDate(end.getDate() + days)
+
+    // Include users where trialEndDate OR trialEndsAt is in range (many DBs only have trialEndsAt)
+    users = await usersCol
+      .find({
+        $and: [
+          { subscriptionPlanId: { $exists: true, $ne: "", $ne: null } },
+          {
+            $or: [
+              { trialEndDate: { $gte: start, $lte: end } },
+              { trialEndsAt: { $gte: start, $lte: end } },
+              { subscriptionEndDate: { $gte: start, $lte: end } },
+            ],
+          },
+        ],
+      })
+      .sort({ trialEndDate: 1, trialEndsAt: 1, subscriptionEndDate: 1 })
+      .limit(200)
+      .toArray()
+  }
 
   const result = users.map((u: any) => ({
     id: u._id?.toString(),
