@@ -11,12 +11,13 @@ export async function POST(request: NextRequest) {
   try {
     const db = await connectDB()
     const data = await request.json()
+    console.log("[API/REGISTER] Received registration data:", data);
     
     // Validate required fields
     if (!data.email || !data.password || !data.name) {
       return NextResponse.json({ 
         success: false, 
-        error: "Email, password, and name are required" 
+        error: "Email, password, and name are required." 
       }, { status: 400 })
     }
     
@@ -64,6 +65,10 @@ export async function POST(request: NextRequest) {
       phone: data.phone || "",
       address: data.address || "",
       subscriptionPlanId: data.subscriptionPlanId || "",
+      billingCycle: data.billingCycle || "monthly",
+      subscriptionPrice: data.subscriptionPrice || 0,
+      paidAmount: data.paidAmount || 0,
+      discountPercentage: data.discountPercentage || 0,
       subscriptionStatus,
       trialEndsAt:data.trialEndDate || null,
       subscriptionStartDate,

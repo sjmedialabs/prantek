@@ -42,7 +42,12 @@ export default function ProfilePage() {
   const [showPlanDialog, setShowPlanDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
+  const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+ const [currentUser, setCurrentUser] = useState<any>(null);
+  const loginedUserLocalStorage = loginedUserLocalStorageString
+    ? JSON.parse(loginedUserLocalStorageString)
+    : null;
   useEffect(() => {
     loadPlans()
     // Update profile data when user changes
@@ -64,7 +69,8 @@ export default function ProfilePage() {
       const plans = await api.subscriptionPlans.getAll()
       console.log("[Profile] Available plans:", plans)
       setAvailablePlans(plans || [])
-
+ const activeUser = await api.users.getById(loginedUserLocalStorage.id);
+ setCurrentUser(activeUser);
       if (user?.subscriptionPlanId) {
         console.log("[Profile] User has subscription plan ID:", user.subscriptionPlanId, user.id)
         const plan = await api.subscriptionPlans.getById(user.subscriptionPlanId)
@@ -73,6 +79,14 @@ export default function ProfilePage() {
       } else {
         console.log("[Profile] User has no subscription plan")
       }
+
+      // Fetch system settings for discount
+      const settingsResponse = await fetch('/api/system-settings');
+      const settingsData = await settingsResponse.json();
+      if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+        setYearlyDiscount(settingsData.data.yearlyDiscountPercentage);
+      }
+
     } catch (error) {
       console.error("[Profile] Error loading plans:", error)
       toast({ title: "Error", description: "Failed to load subscription plans", variant: "destructive" })
@@ -409,10 +423,40 @@ export default function ProfilePage() {
                     <Badge variant="default">{user?.subscriptionStatus}</Badge>
                   </div>
                   <p className="text-sm text-gray-600">{currentPlan.description}</p>
-                  <div className="flex items-baseline space-x-1">
-                    <span className="text-2xl font-bold text-gray-900">₹{currentPlan.price.toLocaleString()}</span>
-                    <span className="text-gray-600">/{currentPlan.billingCycle}</span>
-                  </div>
+                  {(() => {
+                    if (!currentPlan) return null
+
+                    const userCycle = currentUser?.billingCycle || "monthly";
+                    const isYearly = userCycle === "yearly";
+                    // Use stored values if available, else calculate based on current plan and cycle
+                    const price = user?.subscriptionPrice ?? (isYearly ? currentPlan.price * 12 : currentPlan.price);
+                    const paid = user?.paidAmount ?? (isYearly ? Math.round(price * (1 - yearlyDiscount / 100)) : price);
+                    const discount = user?.discountPercentage ?? (isYearly ? yearlyDiscount : 0);
+
+                    return (
+                      <>
+                        {isYearly ? (
+                          <div>
+                            <div className="mb-1">
+                              <span className="text-sm line-through text-gray-400">
+                                ₹{price.toLocaleString()}
+                              </span>
+                              {discount > 0 && <span className="ml-2 text-xs text-green-600">({discount}% off)</span>}
+                            </div>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-2xl font-bold text-gray-900">₹{paid.toLocaleString()}</span>
+                              <span className="text-gray-600">/year</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-bold text-gray-900">₹{paid.toLocaleString()}</span>
+                            <span className="text-gray-600">/month</span>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
 

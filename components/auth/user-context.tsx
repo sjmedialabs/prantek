@@ -22,6 +22,7 @@ interface User {
   subscriptionStartDate?: string
   subscriptionEndDate?: string
   trialEndsAt?: string
+  billingCycle?: string
 }
 
 interface UserContextType {

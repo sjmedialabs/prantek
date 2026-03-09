@@ -136,6 +136,7 @@ export default function PaymentPage() {
         subscriptionEndDate: tempdate
       }
       console.log("[v0] Found pending signup data, creating account...")
+      console.log("[v0] Updated signup data:", updatedSignupData)
 
       // Create account directly via register API
       const registerResponse = await fetch("/api/auth/register", {
@@ -243,7 +244,7 @@ export default function PaymentPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <span className="text-sm font-semibold text-gray-700">Plan Amount</span>
-                  <p className="text-xs text-gray-500">Auto-debit after trial ends</p>
+                  <p className="text-xs text-gray-500">Auto-debit(with 18% GST) after trial ends</p>
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold text-gray-900">{selectedPlan.displayActualPrice}</span>

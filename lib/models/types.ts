@@ -48,6 +48,10 @@ export interface User extends BaseDocument {
   trialEndsAt?: Date
   stripeCustomerId?: string
   isActive: boolean
+  billingCycle?: "monthly" | "yearly"
+  subscriptionPrice?: number
+  paidAmount?: number
+  discountPercentage?: number
 }
 
 // Employee - no dashboard access, only designation/role

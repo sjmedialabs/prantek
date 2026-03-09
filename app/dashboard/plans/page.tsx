@@ -9,9 +9,8 @@ import { Check, ArrowLeft, Crown, TrendingUp } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { useUser } from "@/components/auth/user-context"
 import Link from "next/link"
-import { json } from "node:stream/consumers"
 import { SubscriptionPlan } from "@/lib/models/types"
-
+import { json } from "node:stream/consumers"
 
   // Convert planFeatures to displayable feature list
   const getPlanFeatures = (plan: SubscriptionPlan): string[] => {
@@ -46,74 +45,96 @@ import { SubscriptionPlan } from "@/lib/models/types"
 
 export default function PlansPage() {
   const router = useRouter()
-  const { user } = useUser()
+const [currentUser, setCurrentUser] = useState<any>(null);
+const { user } = useUser();
+
+// useEffect(() => {
+//   if (user) {
+   
+//   }
+// }, [user]);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
-
+ 
   const loginedUserLocalStorage = loginedUserLocalStorageString
     ? JSON.parse(loginedUserLocalStorageString)
     : null;
-
-
-
-
   useEffect(() => {
-    const loadPlans = async () => {
+    const loadData = async () => {
       try {
         const plans = await api.subscriptionPlans.getAll()
-
+        const activeUser = await api.users.getById(loginedUserLocalStorage.id);
+ setCurrentUser(activeUser);
         const activePlans = plans.filter((p: any) => p.isActive)
-
-        const currentPlan = plans.find((eachItem: any) =>
+                const currentPlan = plans.find((eachItem: any) =>
           eachItem._id.toString() === loginedUserLocalStorage.subscriptionPlanId
         )
-
         setPlans(activePlans)
-        setCurrentPlan(currentPlan) // This is now the single plan object
+                setCurrentPlan(currentPlan) // This is now the single plan object
+        // // Set user's billing cycle for the toggle if it exists
+        // if (user?.billingCycle) {
+        //   setBillingCycle(user.billingCycle as "monthly" | "yearly");
+        // }
 
-        // Only fetch current plan if user has a subscription
+        // Determine and set the current plan
         console.log("[PLANS] User subscriptionPlanId:", user?.subscriptionPlanId)
         if (user?.subscriptionPlanId) {
           try {
-            const plan = await api.subscriptionPlans.getById(loginedUserLocalStorage.subscriptionPlanId)
-            console.log("[PLANS] Fetched plan from API:", plan)
-            console.log("[PLANS] Current plan details:", { id: plan?.id, _id: plan?._id, name: plan?.name, price: plan?.price })
+            // First, try to find the plan in the list of active plans
+            let plan = activePlans.find(p => (p.id || p._id?.toString()) === user.subscriptionPlanId);
+            
+            // If not found (e.g., user is on an inactive plan), fetch it directly
+            if (!plan) {
+              console.log("[PLANS] Current plan not in active list, fetching by ID:", user.subscriptionPlanId);
+              plan = await api.subscriptionPlans.getById(user.subscriptionPlanId);
+            }
+
             if (plan && plan.price !== undefined) {
-              setCurrentPlan(plan)
+              setCurrentPlan(plan);
+              console.log("[PLANS] Current plan set:", plan.name);
             } else {
-              console.error("[PLANS] Invalid plan data:", plan)
-              const freePlan = activePlans.find(p => p.price === 0)
-              setCurrentPlan(freePlan || null)
+              console.error("[PLANS] Invalid plan data for ID:", user.subscriptionPlanId, plan);
+              // Fallback to free plan if current plan is invalid
+              const freePlan = activePlans.find(p => p.price === 0);
+              setCurrentPlan(freePlan || null);
             }
           } catch (err) {
-            console.error("[PLANS] Error fetching plan:", err)
-            const freePlan = activePlans.find(p => p.price === 0)
-            setCurrentPlan(freePlan || null)
+            console.error("[PLANS] Error fetching current plan:", err);
+            const freePlan = activePlans.find(p => p.price === 0);
+            setCurrentPlan(freePlan || null);
           }
         } else {
           // User has no subscription - find and set the free plan as current
-          console.log("[PLANS] No subscriptionPlanId, using free plan")
-          const freePlan = activePlans.find(p => p.price === 0)
-          if (freePlan) {
-            console.log("[PLANS] Current plan set:", freePlan ? `${freePlan.name} (${freePlan._id || freePlan.id})` : "none")
-            setCurrentPlan(freePlan)
-          }
+          const freePlan = activePlans.find(p => p.price === 0);
+          setCurrentPlan(freePlan || null);
+          console.log("[PLANS] No subscription, using free plan.");
         }
+
+        // Fetch system settings for discount
+        const settingsResponse = await fetch('/api/system-settings');
+        const settingsData = await settingsResponse.json();
+        if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
+          setYearlyDiscount(settingsData.data.yearlyDiscountPercentage);
+        }
+
       } catch (error) {
         console.error("Failed to load plans:", error)
       } finally {
         setLoading(false)
       }
     }
-    loadPlans()
+    loadData()
   }, [user])
 
   const handleSelectPlan = (planId: string) => {
     // Store selected plan and redirect to payment
     if (typeof window !== "undefined") {
       localStorage.setItem("selected_plan_id", planId)
+      localStorage.setItem("selected_billing_cycle", billingCycle)
       router.push("/dashboard/checkout")
     }
   }
@@ -202,10 +223,39 @@ export default function PlansPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-gray-900">₹{currentPlan.price.toLocaleString()}</span>
-                <span className="text-gray-600">/{currentPlan.billingCycle}</span>
-              </div>
+              {(() => {
+                const userCycle = currentUser?.billingCycle || "monthly";
+                const isYearly = userCycle === "yearly";
+                // Use stored values if available, else calculate based on current plan and cycle
+                const price = user?.subscriptionPrice ?? (isYearly ? currentPlan.price * 12 : currentPlan.price);
+                const paid = user?.paidAmount ?? (isYearly ? Math.round(price * (1 - yearlyDiscount / 100)) : price);
+                const discount = user?.discountPercentage ?? (isYearly ? yearlyDiscount : 0);
+
+                return (
+                  <div>
+                    {isYearly ? (
+                      <div>
+                        <div className="mb-1">
+                          <span className="text-sm line-through text-gray-400">
+                            ₹{price.toLocaleString()}
+                          </span>
+                          {discount > 0 && <span className="ml-2 text-xs text-green-600">({discount}% off)</span>}
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold text-gray-900">₹{paid.toLocaleString()}</span>
+                          <span className="text-gray-600">/yearly</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-gray-900">₹{paid.toLocaleString()}</span>
+                        <span className="text-gray-600">/monthly</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               {user?.subscriptionStatus === 'trial' && user?.trialEndsAt ? (
                 <p className="text-sm text-amber-700 mt-2 font-medium">
                   Trial expires on {new Date(user.trialEndsAt).toLocaleDateString()}
@@ -219,11 +269,44 @@ export default function PlansPage() {
           </Card>
         )}
 
+        {/* Billing Cycle Toggle */}
+        <div className="flex items-center justify-center gap-2 bg-gray-100 rounded-xl p-1 w-fit mx-auto mb-8">
+          <button
+            type="button"
+            onClick={() => setBillingCycle("monthly")}
+            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingCycle === "monthly"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+              }`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle("yearly")}
+            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all relative ${billingCycle === "yearly"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+              }`}
+          >
+            Yearly
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+              Save {yearlyDiscount}%
+            </span>
+          </button>
+        </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan)
             const isUpgrade = isPlanUpgrade(plan)
             const isDowngrade = isPlanDowngrade(plan)
+            const isSamePlanDifferentCycle = isCurrent && user?.billingCycle !== billingCycle;
+
+            const monthlyPrice = plan.price;
+            const yearlyPrice = monthlyPrice * 12;
+            const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
+            const discountedYearlyPrice = yearlyPrice - discountAmount;
+
             console.log("[PLANS] Plan card:", plan.name, "- isCurrent:", isCurrent, "- isUpgrade:", isUpgrade, "- isDowngrade:", isDowngrade)
 
             return (
@@ -250,10 +333,27 @@ export default function PlansPage() {
                 </div>
                 <CardHeader className="pb-3 pt-6">
                   <CardTitle className="text-xl mb-2">{plan.name}</CardTitle>
-                  <div className="mt-3">
-                    <span className="text-3xl font-bold text-gray-900">₹{plan.price.toLocaleString()}</span>
-                    <span className="text-gray-500 text-sm">/{plan.billingCycle}</span>
-                  </div>
+                  {billingCycle === 'yearly' ? (
+                    <div className="mt-3">
+                      <div className="mb-1">
+                        <span className="text-sm line-through text-gray-400">
+                          ₹{yearlyPrice.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-gray-900">₹{discountedYearlyPrice.toLocaleString()}</span>
+                        <span className="text-gray-500 text-sm">/yearly</span>
+                      </div>
+                      <p className="text-sm text-green-600 font-semibold mt-1">
+                        ₹{Math.round(discountedYearlyPrice / 12)}/month equivalent
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3">
+                      <span className="text-3xl font-bold text-gray-900">₹{monthlyPrice.toLocaleString()}</span>
+                      <span className="text-gray-500 text-sm">/monthly</span>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3 pt-0">
                   <ul className="space-y-2">
@@ -265,7 +365,7 @@ export default function PlansPage() {
                     ))}
                   </ul>
                   <div className="pt-2">
-                    {isCurrent ? (
+                    {isCurrent && !isSamePlanDifferentCycle ? (
                       <Button disabled className="w-full bg-gray-400 text-white" size="default">
                         Current Plan
                       </Button>
@@ -277,6 +377,14 @@ export default function PlansPage() {
                         size="default"
                       >
                         Downgrade to {plan.name}
+                      </Button>
+                    ) : isSamePlanDifferentCycle ? (
+                      <Button
+                        onClick={() => handleSelectPlan(plan.id || plan._id?.toString())}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors"
+                        size="default"
+                      >
+                        Switch to {billingCycle}
                       </Button>
                     ) : (
                       <Button

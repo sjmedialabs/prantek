@@ -284,9 +284,9 @@ export default function DashboardSidebar() {
       'Clients': 'clients',
       'Vendors': 'vendors',
       'Quotation': 'quotations',
-      'Sales Invoice': 'salesInvoice',
+      'Sales Invoices': 'salesInvoice',
       'Receipts': 'receipts',
-      'Purchase Invoice': 'purchaseInvoice',
+      'Purchase Invoices': 'purchaseInvoice',
       'Payments': 'payments',
       'Reconciliation': 'reconciliation',
       'Assets': 'assets',
@@ -297,7 +297,7 @@ export default function DashboardSidebar() {
     
     const featureKey = featureMap[featureName];
     if (!featureKey) return true; // If not in map, allow access
-    
+    // console.log("Checking feature:", featureName, "->", featureKey, planFeatures[featureKey]);
     return planFeatures[featureKey] === true;
   };
   const isChildActive = (item: NavItem): boolean => {
