@@ -42,7 +42,7 @@ function Input({ className, min, type, onKeyDown, onWheel, ...props }: React.Com
         if (isNumber && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
           e.preventDefault() // prevent arrow key change
         }
-          if (["e", "E", "+", "-"].includes(e.key)) {
+          if (["+", "-"].includes(e.key)) {
       e.preventDefault()
     }
         onKeyDown?.(e)
