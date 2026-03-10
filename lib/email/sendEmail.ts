@@ -41,13 +41,9 @@ export interface SendEmailParams {
   text?: string
 }
 
-export interface SendEmailResult {
-  success: true
-  messageId?: string
-} | {
-  success: false
-  error: string
-}
+export type SendEmailResult =
+  | { success: true; messageId?: string }
+  | { success: false; error: string }
 
 /**
  * Send an email via Amazon SES.
