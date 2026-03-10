@@ -299,7 +299,7 @@ export default function ReconciliationPage() {
       t.referenceNumber || "-",
       t.type === "receipt" ? t.amount.toFixed(2) : "0.00",
       t.type === "payment" ? t.amount.toFixed(2) : "0.00",
-      t.status === "pending" ? "Pending" : "Cleared",
+      t.status === "pending" ? "Pending" : "cleared",
     ])
 
     const csv = [headers, ...rows].map((row) => row.join(",")).join("\n")

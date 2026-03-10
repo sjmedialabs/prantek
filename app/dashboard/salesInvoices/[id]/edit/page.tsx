@@ -155,7 +155,7 @@ export default function EditSalesInvoicePage() {
       setClientEmail(data.clientEmail ?? "")
       setDescription(data.description ?? "")
       setCreatedBy(data.createdBy ?? "")
-      setItems(data.items || [])
+      
       if (data.bankDetails) {
         setSelectedBankAccount(data.bankDetails)
       }
@@ -169,7 +169,7 @@ export default function EditSalesInvoicePage() {
         return {
           id: String(Date.now() + idx),
           type: i.type || "product",
-          itemName: i.name || i.itemName,
+          itemName: i.itemId,
           description: i.description ?? "",
           quantity: Number(i.quantity || 1),
           price: Number(i.price || 0),
@@ -199,7 +199,7 @@ export default function EditSalesInvoicePage() {
         }
       })
 
-
+setItems(rawItems || [])
       const recalculated = rawItems.map((item: any) => {
         const taxRate = item?.taxRate || item.cgst + item.sgst + item.igst
         item.taxName = taxRate > 0 ? `Tax (%)` : ""

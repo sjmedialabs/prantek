@@ -553,22 +553,23 @@ export default function ReceiptsPage() {
         }),
       })
        console.log("api salesinvoice update was done")
-      await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
-        method: "PUT", // or PATCH depending on your API
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          balanceAmount: (selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount) - advanceApplyAmount,
-        }),
-      })
+      // await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
+      //   method: "PUT", // or PATCH depending on your API
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({
+         
+      //   }),
+      // })
  console.log("api receipt advance done update was done")
       if (selectedAdvanceReceipt) {
         await fetch(`/api/receipts/${selectedAdvanceReceipt._id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            parentReceiptNumber: result.data.receiptNumber
+            parentReceiptNumber: result.data.receiptNumber,
+             balanceAmount: (selectedAdvanceReceipt.balanceAmount ?? selectedAdvanceReceipt.ReceiptAmount) - advanceApplyAmount,
           })
         })
       }

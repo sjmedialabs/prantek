@@ -36,8 +36,7 @@ export default function NewPaymentPage() {
 
   const [paymentData, setPaymentData] = useState({
     purchaseInvoiceId: "",
-    purchaseInvoiceNumber: "",
-    paymentNumber: `PAY-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, "0")}`,
+    purchaseInvoiceNumber: "auto-generated",
     date: new Date().toISOString().split("T")[0],
     recipientType: "" as "client" | "vendor" | "team" | "",
     recipientId: "",
@@ -434,7 +433,7 @@ const handleRecipientChange = (recipientId: string) => {
       await api.payments.create({
         // purchaseInvoiceId: creationMode === "invoiced" ? paymentData.purchaseInvoiceId : undefined,
         userId: user?.id || "",
-        paymentNumber: paymentData.paymentNumber,
+        // paymentNumber: paymentData.paymentNumber,
         recipientType: paymentData.recipientType as "client" | "vendor" | "team",
         recipientId: paymentData.recipientId,
         recipientName: paymentData.recipientName,

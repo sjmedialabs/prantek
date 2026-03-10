@@ -1,5 +1,6 @@
 import { TermsModel } from "./models/terms.model"
 import { BaseModel } from "./models/base.model"
+import { getDb } from "./mongodb"
 import { UserModel } from "./models/user.model"
 import { counterModel } from "./models/counter.model"
 import { COLLECTIONS } from "./db-config"
@@ -185,40 +186,70 @@ export async function logActivity(
  * This function uses atomic operations to ensure no duplicates across all users.
  * 
  * @param collection - The collection type ('receipts', 'payments', 'quotations')
- * @param prefix - The prefix for the number ('RC', 'PAY', 'QT')
- * @param userId - User ID (not used in global counter but kept for backward compatibility)
+ * @param prefix - The prefix for the number (e.g., 'RC', 'SI', 'QT')
+ * @param userId - The ID of the user/company for whom the number is generated.
  * @returns Promise<string> - The generated number (e.g., 'RC000001')
  */
-export async function generateNextNumber(collection: string, prefix: string): Promise<string> {
+export async function generateNextNumber(collection: string, prefix: string, userId: string): Promise<string> {
   try {
+    const db = await getDb()
+    const counters = db.collection(COLLECTIONS.COUNTERS)
+
+    const getFinancialYear = () => {
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = now.getMonth() + 1 // Jan = 1
+      return month >= 4 ? year + 1 : year
+    }
+    const financialYear = getFinancialYear()
+
     // Map collection name to counter type
-    const counterType = collection === 'receipts' ? 'receipt' : 
-                       collection === 'quotations' ? 'quotation' : 
-                       collection === 'salesInvoice' ? 'salesInvoice' :
-                       collection === 'payments' ? 'payment' : collection
-    
-    // Use the counter model to get the next globally unique sequence
-const nextNumber = await counterModel.getNextSequence(counterType, prefix)
-    
-    console.log(`[Counter] Generated ${counterType} number: ${nextNumber}`)
-    
-    return nextNumber
+    const counterType =
+      collection === "receipts"
+        ? "receipt"
+        : collection === "quotations"
+        ? "quotation"
+        : collection === "salesInvoice"
+        ? "salesInvoice"
+        : collection === "payments"
+        ? "payment"
+        : collection
+
+    const counterId = `${counterType}_${userId}_${financialYear}`
+
+    const result = await counters.findOneAndUpdate(
+      { _id: counterId },
+      {
+        $inc: { sequence: 1 },
+        $setOnInsert: { prefix, userId, financialYear, counterType },
+      },
+      { upsert: true, returnDocument: "after" },
+    )
+
+    const sequence = result?.sequence || 1
+    const sequenceString = String(sequence).padStart(3, "0")
+
+    const newNumber = `${prefix}-${financialYear}-${sequenceString}`
+    console.log(`[Counter] Generated ${counterType} number for user ${userId}: ${newNumber}`)
+    return newNumber
   } catch (error) {
     console.error(`[Counter] Error generating number for ${collection}:`, error)
     throw new Error(`Failed to generate unique number for ${collection}`)
   }
 }
 
-
 /**
  * Get the next number without incrementing (for display purposes)
  * 
  * @param collection - The collection type
  * @param prefix - The prefix for the number
- * @param clientName - Optional client name for generating the code
+ * @param userId - The ID of the user/company to get the next number for.
  * @returns Promise<string> - The next number that will be generated
  */
-export async function peekNextNumber(collection: string, prefix: string) {
+export async function peekNextNumber(collection: string, prefix: string, userId: string) {
+  const db = await getDb()
+  const counters = db.collection(COLLECTIONS.COUNTERS)
+
   const counterType =
     collection === "receipts"
       ? "receipt"
@@ -230,14 +261,14 @@ export async function peekNextNumber(collection: string, prefix: string) {
       ? "payment"
       : collection
 
-  const counter = await counterModel.getCounter(counterType)
-
   const now = new Date()
   const fy = now.getMonth() + 1 >= 4 ? now.getFullYear() + 1 : now.getFullYear()
 
-  if (!counter || counter.financialYear !== fy) {
-    return `${prefix}-${fy}-001`
-  }
+  const counterId = `${counterType}_${userId}_${fy}`
+  const counter = await counters.findOne({ _id: counterId })
 
-  return `${prefix}-${fy}-${String(counter.sequence + 1).padStart(3, "0")}`
+  const sequence = (counter?.sequence || 0) + 1
+  const sequenceString = String(sequence).padStart(3, "0")
+
+  return `${prefix}-${fy}-${sequenceString}`
 }
