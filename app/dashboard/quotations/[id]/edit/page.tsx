@@ -128,7 +128,7 @@ export default function EditQuotationPage() {
       const rawItems = (data.items || []).map((i: any, idx: number) => ({
         id: String(Date.now() + idx),
         type: i.type ?? "product",
-        itemName: i.itemName,
+        itemName: i.itemId,
         description: i.description ?? "",
         quantity: i.quantity,
         price: i.price,
