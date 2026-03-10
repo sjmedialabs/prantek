@@ -82,6 +82,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-toastify": "latest",
     "recharts": "latest",
+    "resend": "^6.9.3",
     "snappy": "latest",
     "socks": "latest",
     "sonner": "latest",

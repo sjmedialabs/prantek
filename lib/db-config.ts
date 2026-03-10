@@ -33,7 +33,9 @@ export const COLLECTIONS = {
   WEBSITE_CONTENT: "website_content",
   ASSETS: "assets",
   COUNTERS: "counters", // New collection for global sequences
-  NOTIFICATIONSETTINGS:"notification_settings"
+  NOTIFICATIONSETTINGS:"notification_settings",
+  OTP_VERIFICATIONS: "otp_verifications", // Legacy signup OTP
+  OTPS: "otps", // Email OTP (USE_EMAIL_SERVICE toggle); TTL index on expiresAt recommended
 } as const
 
 export const INDEXES = {
@@ -131,6 +133,10 @@ export const INDEXES = {
   WEBSITE_CONTENT: [{ key: { key: 1 }, unique: true }],
   ASSETS: [{ key: { userId: 1 }, unique: true }],
   COUNTERS: [{ key: { _id: 1 }, unique: true }], // Index for counters collection
+  OTPS: [
+    { key: { email: 1 } },
+    { key: { createdAt: -1 } },
+  ],
 }
 
 // Alias for backward compatibility

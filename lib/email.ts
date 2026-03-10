@@ -183,6 +183,61 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<boolea
 }
 
 /**
+ * Send signup OTP email (6-digit code for verification).
+ * Returns { sent: true } or { sent: false, reason: string } for clearer errors.
+ */
+export async function sendSignupOtpEmail(
+  to: string,
+  otp: string
+): Promise<{ sent: true } | { sent: false; reason: string }> {
+  try {
+    const transporter = createTransporter()
+    if (!transporter) {
+      console.warn("[EMAIL] OTP not sent: set SMTP_USER and SMTP_PASS in .env.local")
+      return {
+        sent: false,
+        reason: "SMTP not configured. Add SMTP_USER and SMTP_PASS to .env.local (use Gmail App Password if using Gmail).",
+      }
+    }
+    const mailOptions = {
+      from: `"${APP_NAME}" <${FROM_EMAIL}>`,
+      to,
+      subject: `Your ${APP_NAME} verification code`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">${APP_NAME}</h1>
+          </div>
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-top: 0;">Verification code</h2>
+            <p>Use this code to verify your account:</p>
+            <p style="font-size: 32px; letter-spacing: 8px; font-weight: bold; color: #667eea; margin: 24px 0;">${otp}</p>
+            <p style="color: #666; font-size: 14px;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Your ${APP_NAME} verification code is: ${otp}. It expires in 10 minutes.`,
+    }
+    await transporter.sendMail(mailOptions)
+    console.log("[EMAIL] Signup OTP email sent:", to)
+    return { sent: true }
+  } catch (error: any) {
+    const msg = error?.message || String(error)
+    console.error("[EMAIL] Failed to send signup OTP:", msg)
+    if (error?.code) console.error("[EMAIL] SMTP error code:", error.code)
+    return {
+      sent: false,
+      reason: msg.includes("Invalid login") || msg.includes("authentication")
+        ? "SMTP login failed. For Gmail, use an App Password (not your normal password). See https://support.google.com/accounts/answer/185833"
+        : msg || "Email server error. Check SMTP settings and try again.",
+    }
+  }
+}
+
+/**
  * Send employee login credentials
  */
 export async function sendEmployeeCredentials(

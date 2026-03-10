@@ -7,6 +7,7 @@ import { notifySuperAdminsNewRegistration } from "@/lib/notification-utils"
 import { calculateTrialEndDate } from "@/lib/trial-helper"
 import { ObjectId } from "mongodb"
 import { getPaymentDetails } from "@/lib/razorpay"
+import { verifyEmailVerificationToken } from "@/lib/jwt"
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,33 @@ export async function POST(request: NextRequest) {
     
     // Normalize email to lowercase
     const normalizedEmail = data.email.toLowerCase()
-    
+
+    // If OTP verification token is provided, validate it (JWT from verify-email-otp or legacy token)
+    const verificationToken = data.verificationToken
+    if (verificationToken) {
+      const jwtPayload = await verifyEmailVerificationToken(verificationToken)
+      if (jwtPayload && jwtPayload.email.toLowerCase() === normalizedEmail) {
+        // Valid JWT from verify-email-otp; allow registration
+      } else {
+        const otpCol = db.collection(Collections.OTP_VERIFICATIONS)
+        const otpDoc = await otpCol.findOne({
+          verificationToken,
+          email: normalizedEmail,
+          tokenExpiresAt: { $gt: new Date() },
+        })
+        if (!otpDoc) {
+          return NextResponse.json(
+            { success: false, error: "Invalid or expired verification. Please verify your email again." },
+            { status: 400 }
+          )
+        }
+        await otpCol.updateOne(
+          { _id: otpDoc._id },
+          { $unset: { verificationToken: "", tokenExpiresAt: "" } }
+        )
+      }
+    }
+
     // Check if user already exists (case-insensitive)
     const existingUser = await db.collection(Collections.USERS).findOne({ 
       email: { $regex: new RegExp(`^${data.email}$`, 'i') }
