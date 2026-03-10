@@ -45,7 +45,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const recipientName = body.recipientName || "Unknown"
 
     if (!body.paymentNumber) {
-      body.paymentNumber = await generateNextNumber("payments", "PAY", filterUserId, recipientName)
+      body.paymentNumber = await generateNextNumber("payments", "PAY", filterUserId)
     }
 
     const payment = await mongoStore.create("payments", { ...body, userId: filterUserId })

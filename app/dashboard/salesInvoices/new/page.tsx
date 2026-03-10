@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Trash2, Plus, Minus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
-import { Client, Item, Quotation, TaxRate } from "@/lib/models/types"
+import { Client, Item, Quotation, TaxRate, SalesInvoice } from "@/lib/models/types"
 import { Textarea } from "@/components/ui/textarea"
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
@@ -209,8 +209,9 @@ export default function NewSalesInvoicePage() {
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split("T")[0])
   const [dueDate, setDueDate] = useState("")
   const [loadingClients, setLoadingClients] = useState(false);
+  const [salesInvoices, setSalesInvoices] = useState<SalesInvoice[]>([])
   useEffect(() => {
-    loadData()
+     loadData()
     if (editId) {
       loadInvoiceForEdit(editId)
     }
@@ -231,13 +232,14 @@ export default function NewSalesInvoicePage() {
 
   const loadData = async () => {
     try {
-      const [clientsData, itemsData, quotationsData, taxRatesData, bankAccountsData, companyData] = await Promise.all([
+      const [clientsData, itemsData, quotationsData, taxRatesData, bankAccountsData, companyData, salesInvoicesData] = await Promise.all([
         api.clients.getAll(),
         api.items.getAll(),
         api.quotations.getAll(),
         api.taxRates.getAll(),
         api.bankAccounts.getAll(),
         fetch("/api/company").then((res) => res.json()),
+        api.salesInvoice.getAll(),
       ])
 
       setClients(clientsData.filter((c: any) => c.status === "active"))
@@ -245,6 +247,7 @@ export default function NewSalesInvoicePage() {
       setQuotations(quotationsData.filter((q: any) => q.isActive === "active" && q.status === "accepted"))
       setTaxRates(taxRatesData || [])
       setBankAccounts(bankAccountsData.filter((eachItem: any) => (eachItem.isActive === true)))
+      setSalesInvoices(salesInvoicesData || [])
       if (companyData?.company) {
         // setCompanyName(companyData.company.companyName || companyData.company.name || "")
         setSellerState(companyData.company.state || "")
@@ -691,11 +694,36 @@ export default function NewSalesInvoicePage() {
     setLoading(true)
     console.log("quotationDetails", quotationDetails)
     try {
+      const prefix = "SI";
+
+      const getFinancialYear = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1; // Jan = 1
+        return month >= 4 ? year + 1 : year;
+      };
+
+      const financialYear = getFinancialYear();
+
+      const currentFYInvoices = salesInvoices?.filter((inv: any) => {
+        if (!inv.salesInvoiceNumber) return false;
+
+        const parts = inv.salesInvoiceNumber.split("-");
+        if (parts.length < 3) return false;
+        const fy = Number(parts[1]);
+
+        return fy === financialYear;
+      }) || [];
+
+      const count = currentFYInvoices.length + 1;
+      const sequence = String(count).padStart(3, "0");
+      const newSalesInvoiceNumber = `${prefix}-${financialYear}-${sequence}`;
       const payload = {
         // 👇 SALES INVOICE fields ONLY
 
         invoiceType: "quotation",
         quotationNumber: quotationDetails.quotationNumber,
+        salesInvoiceNumber: newSalesInvoiceNumber,
         clientId: quotationDetails.clientId,
         clientName: quotationDetails.clientName,
         clientAddress: quotationDetails.clientAddress,
@@ -826,11 +854,36 @@ export default function NewSalesInvoicePage() {
     setLoading(true)
 
     try {
+      const prefix = "SI";
+
+      const getFinancialYear = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1; // Jan = 1
+        return month >= 4 ? year + 1 : year;
+      };
+
+      const financialYear = getFinancialYear();
+
+      const currentFYInvoices = salesInvoices?.filter((inv: any) => {
+        if (!inv.salesInvoiceNumber) return false;
+
+        const parts = inv.salesInvoiceNumber.split("-");
+        if (parts.length < 3) return false;
+        const fy = Number(parts[1]);
+
+        return fy === financialYear;
+      }) || [];
+
+      const count = currentFYInvoices.length + 1;
+      const sequence = String(count).padStart(3, "0");
+      const newSalesInvoiceNumber = `${prefix}-${financialYear}-${sequence}`;
       const client = clients.find(c => c._id === selectedClientId)
       const directTotals = calculateTotals(invoiceItems)
 
       const payload = {
         invoiceType: "direct",
+        salesInvoiceNumber: newSalesInvoiceNumber,
 
         // ❌ no quotation fields
         quotationId: undefined,

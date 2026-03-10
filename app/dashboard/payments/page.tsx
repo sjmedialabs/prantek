@@ -270,7 +270,7 @@ const exportToCSV = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          {hasPermission("manage_payments") && (
+          {hasPermission("add_payments") && (
             <Link href="/dashboard/payments/new">
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -582,13 +582,15 @@ const exportToCSV = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">₹{payment.amount ? payment.amount.toLocaleString() : "0"}</TableCell>
-                  {hasPermission("manage_payments") && (
+               
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <Link href={`/dashboard/payments/${payment._id?.toString()}`}>
                           <Button variant="ghost" size="sm"title="View Payment details"><Eye className="h-4 w-4" />
                           </Button>
                         </Link>
+                           {hasPermission("edit_payments") && (
+                            <>
                           {!(payment.status === "completed" || payment.status === "cleared" || payment.status === "cancelled") && (
                                                 <Link href={`/dashboard/payments/${payment._id}/edit`}>
                                                   <Button size="icon" variant="ghost" title="Edit Payment"><Edit className="h-4 w-4" /></Button>
@@ -597,9 +599,10 @@ const exportToCSV = () => {
                           {!(payment.status === "completed" || payment.status === "cleared" || payment.status === "cancelled") && (
                             <Button size="icon" variant="ghost" title="Cancel Payment" onClick={() => handleCancelPayment(payment)} className="text-red-600 hover:text-red-700 hover:bg-red-100"><X className="h-4 w-4" /></Button>
                           )}
+                              </> )}
                       </div>
                     </TableCell>
-                  )}
+             
                 </TableRow>
               ))}
             </TableBody>
