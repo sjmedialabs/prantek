@@ -23,6 +23,7 @@ import { Plus, Search, Edit, Eye, Store } from "lucide-react"
 import { api } from "@/lib/api-client"
 import type { Vendor } from "@/lib/models/types"
 import { toast } from "@/lib/toast"
+import { Switch } from "@/components/ui/switch"
 
 export default function VendorsPage() {
   const { hasPermission, loading } = useUser()
@@ -165,7 +166,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   if (!isValid) return
 
   try {
-    const payload = {
+    const payload: any = {
       ...formData,
       userId: parsed?.id,
     }
@@ -174,6 +175,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       await api.vendors.update(editingVendor._id, payload)
       toast.success("Vendor Updated", "Vendor updated successfully")
     } else {
+      payload.status = "active"
       await api.vendors.create(payload)
       toast.success("Vendor Added", "New vendor added successfully")
     }
@@ -512,15 +514,15 @@ const handleSubmit = async (e: React.FormEvent) => {
 
                         {(hasPermission("add_vendors") || hasPermission("edit_vendors")) && (
                           <TableCell>
-                            <div className="flex space-x-2">
+                            <div className="flex space-x-2 items-center">
                               <Link href={`/dashboard/vendor/${vendor._id}`}>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" title="View vendor">
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </Link>
                               {
                                 (hasPermission("edit_vendors"))&&(
-                                   <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor)}>
+                                   <Button variant="ghost" size="sm" onClick={() => handleEdit(vendor)} title="Edit details">
                                 <Edit className="h-4 w-4" />
                               </Button>
                                 )
@@ -533,7 +535,22 @@ const handleSubmit = async (e: React.FormEvent) => {
                               >
                                 Delete
                               </Button> */}
+                                                                                           <Switch
+                                                          checked={vendor.status !== "inactive"}
+                                                          title="Handle the status"
+                                                          onCheckedChange={async (checked) => {
+                                                            try {
+                                                              const newStatus = checked ? "active" : "inactive"
+                                                              await api.vendors.updateStatus(vendor._id, newStatus)
+                                                              toast.success("Status Updated", `${vendor?.name} is now ${newStatus}`)
+                                                              await loadVendors()
+                                                            } catch (err) {
+                                                              toast.error("Error", "Failed to update status")
+                                                            }
+                                                          }}
+                                                        />
                             </div>
+                                                     
                           </TableCell>
                         )}
                       </TableRow>

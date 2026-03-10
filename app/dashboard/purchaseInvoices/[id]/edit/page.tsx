@@ -59,7 +59,8 @@ export default function EditPurchaseInvoicePage() {
         }
 
         setClients(clientsData.filter((c: any) => c.status === "active" || c.isActive === true))
-        setVendors(vendorsData)
+            const activeVendors = vendorsData.filter((v: any) => v.status !== "inactive")
+        setVendors(activeVendors)
         setTeamMembers(teamData.filter((t: any) => t.isActive === true))
         setPaymentCategories(paymentCategoriesData.filter((t: any) => t.isEnabled))
 
