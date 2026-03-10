@@ -2,13 +2,9 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { generateOTP, getExpiry } from "@/lib/otp"
-import { Resend } from "resend"
+import { sendSignupOtpEmail } from "@/lib/email"
 
 const OTP_EXPIRY_MINUTES = 5
-const USE_EMAIL_SERVICE = process.env.USE_EMAIL_SERVICE === "true"
-const RESEND_API_KEY = process.env.RESEND_API_KEY
-const EMAIL_FROM = process.env.EMAIL_FROM || "noreply@yourdomain.com"
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek"
 
 export async function POST(req: Request) {
   try {
@@ -31,33 +27,18 @@ export async function POST(req: Request) {
       createdAt: new Date(),
     })
 
-    // Fallback mode: return devOtp (only when email service is off)
-    if (!USE_EMAIL_SERVICE) {
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[DEV] OTP for", normalizedEmail, ":", otp)
-      }
+    // Development fallback: if SES is not configured, return devOtp so signup flow still works
+    const sesConfigured = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY)
+    if (!sesConfigured && process.env.NODE_ENV !== "production") {
+      console.log("[send-email-otp] SES not configured. Returning devOtp for", normalizedEmail)
       return NextResponse.json({ success: true, devOtp: otp })
     }
 
-    // Send via Resend
-    if (!RESEND_API_KEY) {
-      console.warn("[send-email-otp] USE_EMAIL_SERVICE=true but RESEND_API_KEY not set")
+    const result = await sendSignupOtpEmail(normalizedEmail, otp)
+    if (!result.sent) {
+      console.error("[send-email-otp] SES send failed:", result.reason)
       return NextResponse.json(
-        { success: false, error: "Email service is enabled but RESEND_API_KEY is not configured." },
-        { status: 503 }
-      )
-    }
-    const resend = new Resend(RESEND_API_KEY)
-    const { error } = await resend.emails.send({
-      from: EMAIL_FROM,
-      to: normalizedEmail,
-      subject: `Your ${APP_NAME} verification code`,
-      html: `<h2>Your verification code</h2><p>Use this code to verify your email:</p><p style="font-size:24px;letter-spacing:4px;font-weight:bold;">${otp}</p><p>It expires in ${OTP_EXPIRY_MINUTES} minutes.</p>`,
-    })
-    if (error) {
-      console.error("[send-email-otp] Resend error:", error)
-      return NextResponse.json(
-        { success: false, error: error.message || "Failed to send email" },
+        { success: false, error: result.reason || "Failed to send verification email." },
         { status: 503 }
       )
     }

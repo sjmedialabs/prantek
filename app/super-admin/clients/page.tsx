@@ -152,6 +152,10 @@ export default function ClientAccountsPage() {
           const nextPayment = user.nextPaymentDate
             ? (typeof user.nextPaymentDate === "string" ? user.nextPaymentDate : new Date(user.nextPaymentDate).toISOString().split("T")[0])
             : null
+          // For trial users without a nextPaymentDate, show trial end as the next payment date
+          const trialNextPayment = user.trialEndsAt
+            ? (typeof user.trialEndsAt === "string" ? user.trialEndsAt : new Date(user.trialEndsAt).toISOString().split("T")[0])
+            : null
           return {
             id: user._id || user.id,
             companyName: user.name || user.email.split('@')[0],
@@ -172,8 +176,14 @@ export default function ClientAccountsPage() {
             subscriptionId: user.razorpaySubscriptionId || null,
             autoDebit: !!(user.razorpayCustomerId && user.razorpayTokenId),
             lastPayment: lastPayment || null,
-            nextPayment: nextPayment || null,
+            nextPayment: nextPayment || trialNextPayment || null,
           }
+        })
+        // Show latest records on top (newest createdAt first)
+        .sort((a: any, b: any) => {
+          const aDate = new Date(a.joinDate)
+          const bDate = new Date(b.joinDate)
+          return bDate.getTime() - aDate.getTime()
         })
 
       setClients(clientAccounts)

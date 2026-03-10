@@ -53,20 +53,31 @@ function hasActiveSubscription(user: any): boolean {
 
   // If trial, check if it's still valid
   if (status === "trial") {
-    if (!user.trialEndsAt) {
-      return false
+    // Support both trialEndsAt and legacy trialEndDate; if missing, be lenient
+    const rawTrialEnd = user.trialEndsAt || user.trialEndDate
+    if (!rawTrialEnd) {
+      return true
     }
-    const trialEndDate = new Date(user.trialEndsAt)
+    const trialEndDate = new Date(rawTrialEnd)
     return now <= trialEndDate
   }
 
-  // For active or cancelled, check the subscription end date
+  // For active or cancelled, check the subscription end date (with grace for missing dates)
   if (status === "active" || status === "cancelled") {
     if (!user.subscriptionEndDate) {
-      return false // No end date means it's not a valid subscription
+      // If we don't have an end date but status is active/cancelled, be lenient and allow access
+      return true
     }
     const endDate = new Date(user.subscriptionEndDate)
     return now <= endDate
+  }
+
+  // Grace period: if status is expired but subscriptionEndDate is within the last 7 days, still allow access
+  if (status === "expired" && user.subscriptionEndDate) {
+    const endDate = new Date(user.subscriptionEndDate)
+    const graceEnd = new Date(endDate)
+    graceEnd.setDate(graceEnd.getDate() + 7)
+    return now <= graceEnd
   }
 
   // Any other status (inactive, expired, payment_failed, etc.) means no access
