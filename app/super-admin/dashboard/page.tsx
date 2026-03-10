@@ -53,16 +53,15 @@ export default function SuperAdminDashboard() {
       // Fetch subscription plans to calculate revenue and subscriptions
       const loadedplans = await api.subscriptionPlans.getAll()
       setPlans(loadedplans)
-      const totalSubscriptions = loadedplans.filter(
-        (eachItem: any) => eachItem.isActive === true
-      ).length;
 
-      const totalRevenue = loadedplans.reduce((sum: number, plan: any) => sum + (plan.revenue || 0), 0)
+      const subscribersWithPlan = subscriberUsers.filter(
+        (u: any) => u.subscriptionPlanId && u.subscriptionPlanId !== ""
+      ).length
 
       setStats({
-        totalRevenue,
+        totalRevenue: 0,
         activeClients,
-        subscriptions: totalSubscriptions,
+        subscriptions: subscribersWithPlan,
         systemHealth: "99.9%",
       })
       setLoading(false)
@@ -159,7 +158,7 @@ export default function SuperAdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-900">{stats.activeClients}</div>
-              <p className="text-xs text-slate-500 mt-1">Currently subscribed</p>
+              <p className="text-xs text-slate-500 mt-1">Subscriber accounts</p>
             </CardContent>
           </Card>
         </Link>
@@ -171,8 +170,8 @@ export default function SuperAdminDashboard() {
               <CreditCard className="h-5 w-5 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">{stats.subscriptions}</div>
-              <p className="text-xs text-slate-500 mt-1">Total active plans</p>
+              <div className="text-2xl font-bold text-slate-900">{totalSubscribers}</div>
+              <p className="text-xs text-slate-500 mt-1">Subscribers with a plan</p>
             </CardContent>
           </Card>
         </Link>

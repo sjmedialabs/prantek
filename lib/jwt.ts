@@ -153,3 +153,37 @@ export function hasAllPermissions(user: JWTPayload, permissions: string[]): bool
   // Check if user has all of the specified permissions
   return permissions.every(permission => user.permissions?.includes(permission))
 }
+
+/** Payload for email-verification JWT (signup OTP) */
+export interface EmailVerificationPayload {
+  email: string
+  purpose: "email_verify"
+  iat?: number
+  exp?: number
+}
+
+/**
+ * Sign an email verification token (after OTP verified). Expires in 7 days.
+ */
+export async function signEmailVerificationToken(email: string): Promise<string> {
+  const token = await new SignJWT({ email, purpose: "email_verify" } as EmailVerificationPayload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(secret)
+  return token
+}
+
+/**
+ * Verify email verification token; returns { email } or null.
+ */
+export async function verifyEmailVerificationToken(token: string): Promise<{ email: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret)
+    const p = payload as EmailVerificationPayload
+    if (p?.purpose !== "email_verify" || !p?.email) return null
+    return { email: p.email }
+  } catch {
+    return null
+  }
+}

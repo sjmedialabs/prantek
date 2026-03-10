@@ -71,11 +71,29 @@ export default function PaymentPage() {
     setError("")
 
     try {
-      // Charge only ₹1 for trial period
+      // Create Razorpay customer + order so Checkout shows "Save card" and returns token for auto-debit
+      const checkoutRes = await fetch("/api/razorpay/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: 1, // ₹1 for trial
+          currency: "INR",
+          name: companyName || "Customer",
+          email: email || "",
+        }),
+      })
+      const checkoutData = await checkoutRes.json()
+
+      if (!checkoutData.success || !checkoutData.orderId || !checkoutData.customerId) {
+        setError(checkoutData.error || "Could not start checkout. Please try again.")
+        setLoading(false)
+        return
+      }
+
       const options = {
-        key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
-        amount: selectedPlan.trialPrice, // ₹1 in paise (100 paise)
-        currency: "INR",
+        key: checkoutData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RVhlVFbaKUJJDH",
+        order_id: checkoutData.orderId,
+        customer_id: checkoutData.customerId,
         name: "Prantek Academy",
         description: `${selectedPlan.name} - ${trialDays} Day Trial (₹1)`,
         image: "https://31.97.224.169:9080/images/prantek-logo.png",
@@ -88,12 +106,10 @@ export default function PaymentPage() {
         },
         handler: (response: any) => {
           console.log("[v0] Payment successful:", response)
-          // Payment successful
           handlePaymentSuccess(response)
         },
         modal: {
           ondismiss: () => {
-            console.log("[v0] Payment modal closed")
             setLoading(false)
           },
         },

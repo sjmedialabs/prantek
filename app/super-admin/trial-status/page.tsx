@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { RefreshCw } from "lucide-react"
 
 type TrialUser = {
   id: string
@@ -27,18 +29,21 @@ type TrialUser = {
 export default function TrialStatusPage() {
   const [users, setUsers] = useState<TrialUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [days, setDays] = useState("7")
+  const [days, setDays] = useState("30")
   const [statusFilter, setStatusFilter] = useState<"all" | "trial" | "active" | "payment_failed">("all")
+  const [showAll, setShowAll] = useState(true)
 
   useEffect(() => {
     void loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [showAll])
 
   async function loadData(customDays?: string) {
     try {
       setLoading(true)
-      const res = await fetch(`/api/admin/trial-status?days=${customDays ?? days}`, {
+      const params = new URLSearchParams({ days: customDays ?? days })
+      if (showAll) params.set("showAll", "true")
+      const res = await fetch(`/api/admin/trial-status?${params}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -58,7 +63,7 @@ export default function TrialStatusPage() {
     }
   }
 
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = users.filter((u: TrialUser) => {
     if (statusFilter === "all") return true
     if (!u.subscriptionStatus) return false
     return u.subscriptionStatus === statusFilter
@@ -101,7 +106,19 @@ export default function TrialStatusPage() {
                 value={days}
                 onChange={(e) => setDays(e.target.value)}
                 onBlur={() => void loadData(days)}
+                disabled={showAll}
               />
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showAll}
+                  onChange={(e) => setShowAll(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                <span className="text-sm">Show all subscribers</span>
+              </label>
             </div>
             <div className="space-y-1">
               <Label>Status</Label>
@@ -120,6 +137,10 @@ export default function TrialStatusPage() {
                 </SelectContent>
               </Select>
             </div>
+            <Button variant="outline" size="sm" onClick={() => loadData()} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
           </div>
 
           <div className="border rounded-md overflow-hidden">
@@ -160,9 +181,11 @@ export default function TrialStatusPage() {
                       <TableCell>{formatStatus(u)}</TableCell>
                       <TableCell>
                         {u.razorpayCustomerId && u.razorpayTokenId ? (
-                          <Badge variant="outline">Token Ready</Badge>
+                          <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200">
+                            Ready
+                          </Badge>
                         ) : (
-                          <Badge variant="destructive">No Token</Badge>
+                          <Badge variant="secondary">Not set up</Badge>
                         )}
                       </TableCell>
                       <TableCell>

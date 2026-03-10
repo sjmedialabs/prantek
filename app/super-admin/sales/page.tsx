@@ -837,53 +837,78 @@ export default function SalesDashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Conversion Optimization</CardTitle>
-                <CardDescription>Areas for improvement in the sales funnel</CardDescription>
+                <CardDescription>Conversion rates from your sales funnel (real data)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Visitor to Signup</div>
-                      <div className="text-sm text-gray-500">Landing page optimization needed</div>
-                    </div>
-                    <Badge variant="destructive">15%</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Trial to Paid</div>
-                      <div className="text-sm text-gray-500">Onboarding experience</div>
-                    </div>
-                    <Badge className="bg-yellow-100 text-yellow-800">17%</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">Overall Conversion</div>
-                      <div className="text-sm text-gray-500">End-to-end funnel</div>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800">1.02%</Badge>
-                  </div>
+                  {conversionFunnel.length >= 2 && (
+                    <>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium">Visitor to Signup</div>
+                          <div className="text-sm text-gray-500">Signups vs all users in period</div>
+                        </div>
+                        <Badge variant={Number(conversionFunnel[1]?.percentage) >= 20 ? "default" : "secondary"}>
+                          {typeof conversionFunnel[1]?.percentage === "number"
+                            ? conversionFunnel[1].percentage.toFixed(1)
+                            : conversionFunnel[1]?.percentage ?? 0}%
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium">Signup to Trial</div>
+                          <div className="text-sm text-gray-500">Trials vs signups</div>
+                        </div>
+                        <Badge className="bg-yellow-100 text-yellow-800">
+                          {typeof conversionFunnel[2]?.percentage === "number"
+                            ? conversionFunnel[2].percentage.toFixed(1)
+                            : conversionFunnel[2]?.percentage ?? 0}%
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium">Signup to Paid</div>
+                          <div className="text-sm text-gray-500">Paid vs signups</div>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">
+                          {typeof conversionFunnel[3]?.percentage === "number"
+                            ? conversionFunnel[3].percentage.toFixed(1)
+                            : conversionFunnel[3]?.percentage ?? 0}%
+                        </Badge>
+                      </div>
+                    </>
+                  )}
+                  {conversionFunnel.length < 2 && (
+                    <p className="text-sm text-gray-500 py-4">No conversion data in selected period.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Revenue Impact</CardTitle>
-                <CardDescription>Potential revenue from funnel improvements</CardDescription>
+                <CardTitle>Revenue Summary</CardTitle>
+                <CardDescription>Revenue from current period (real data)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="p-3 border rounded-lg">
-                    <div className="text-sm text-gray-600">If signup rate improved to 20%:</div>
-                    <div className="text-xl font-bold text-green-600">+₹8,200 monthly</div>
+                    <div className="text-sm text-gray-600">Total revenue (selected period)</div>
+                    <div className="text-xl font-bold text-green-600">
+                      ₹{salesMetrics.find((m) => m.name === "Total Revenue")?.value ?? "0"}
+                    </div>
                   </div>
                   <div className="p-3 border rounded-lg">
-                    <div className="text-sm text-gray-600">If trial conversion improved to 25%:</div>
-                    <div className="text-xl font-bold text-green-600">+₹12,400 monthly</div>
+                    <div className="text-sm text-gray-600">Active subscriptions</div>
+                    <div className="text-xl font-bold text-blue-600">
+                      {salesMetrics.find((m) => m.name === "Active Subscriptions")?.value ?? 0}
+                    </div>
                   </div>
                   <div className="p-3 border rounded-lg">
-                    <div className="text-sm text-gray-600">Combined optimization potential:</div>
-                    <div className="text-xl font-bold text-purple-600">+₹20,600 monthly</div>
+                    <div className="text-sm text-gray-600">Avg revenue per user</div>
+                    <div className="text-xl font-bold text-purple-600">
+                      {salesMetrics.find((m) => m.name === "Average Revenue Per User")?.value ?? "₹0"}
+                    </div>
                   </div>
                 </div>
               </CardContent>

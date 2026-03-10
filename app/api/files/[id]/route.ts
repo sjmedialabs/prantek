@@ -3,10 +3,10 @@ import { downloadFromGridFS } from "@/lib/gridfs-storage"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     if (!id) {
       console.error("[Files] No file ID provided")

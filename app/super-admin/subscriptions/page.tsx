@@ -76,25 +76,14 @@ export default function SubscriptionPlansPage() {
       console.error("Failed to load system settings:", error);
     }
     
-    // Enrich plans with subscriber count and revenue
+    // Enrich plans with subscriber count and revenue (MRR = monthly price × subscribers)
     const enrichedPlans = data.map((plan: any) => {
-      // Count subscribers for this plan (only subscriber-type users)
       const subscribers = loadusers.filter(
         (user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId === (plan._id || plan.id)
       )
-      
       const subscriberCount = subscribers.length
-      
-      const revenue = subscribers.reduce((acc: number, curr: any) => {
-        const planPrice = Number(plan.price || 0);
-        if (curr.billingCycle === 'yearly') {
-           const yearlyPrice = planPrice * 12;
-           const discountAmount = Math.round(yearlyPrice * (currentDiscount / 100));
-           return acc + (yearlyPrice - discountAmount);
-        }
-        return acc + planPrice;
-      }, 0);
-      
+      const monthlyPrice = Number(plan.price || 0)
+      const revenue = monthlyPrice * subscriberCount
       return {
         ...plan,
         subscriberCount,

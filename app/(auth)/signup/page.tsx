@@ -33,9 +33,16 @@ import { SubscriptionPlan } from "@/lib/data-store";
 import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod";
 import { FeaturesSidebar } from "@/components/auth/features-sidebar";
 import { tokenStorage } from "@/lib/token-storage";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 export default function SignUpPage() {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpSent, setOtpSent] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -111,11 +118,19 @@ export default function SignUpPage() {
         if (state.formData) setFormData(state.formData);
         if (state.selectedPlan) setSelectedPlan(state.selectedPlan);
         if (state.billingCycle) setBillingCycle(state.billingCycle);
+        if (state.verificationToken) setVerificationToken(state.verificationToken);
       } catch (err) {
         console.error("Failed to restore signup state:", err);
       }
     }
   }, []);
+
+  // Resend OTP cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -368,7 +383,24 @@ export default function SignUpPage() {
         return;
       }
 
-      // Save state to sessionStorage before moving to step 2
+      // Send OTP (send-email-otp: fallback mode returns devOtp when USE_EMAIL_SERVICE=false)
+      const otpRes = await fetch("/api/auth/send-email-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email.trim() }),
+      });
+      const otpData = await otpRes.json();
+      if (!otpData.success) {
+        setError(otpData.error || "Failed to send verification code. Please try again.");
+        return;
+      }
+      setOtpSent(true);
+      setResendCooldown(60);
+      setEmailOtp("");
+      setPhoneOtp("");
+      setError("");
+      setDevOtp(otpData.devOtp ?? null);
+
       sessionStorage.setItem(
         "signup_state",
         JSON.stringify({
@@ -378,9 +410,70 @@ export default function SignUpPage() {
           billingCycle,
         })
       );
-
-      // Move to step 2
       setStep(2);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/send-email-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email.trim() }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "Failed to resend code.");
+        return;
+      }
+      setResendCooldown(60);
+      setEmailOtp("");
+      setPhoneOtp("");
+      setDevOtp(data.devOtp ?? null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailOtp.length !== 6) {
+      setError("Please enter the 6-digit code from your email.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/verify-email-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          otp: emailOtp.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "Verification failed. Please try again.");
+        return;
+      }
+      setVerificationToken(data.token);
+      sessionStorage.setItem(
+        "signup_state",
+        JSON.stringify({
+          step: 3,
+          formData,
+          selectedPlan,
+          billingCycle,
+          verificationToken: data.token,
+        })
+      );
+      setStep(3);
     } finally {
       setLoading(false);
     }
@@ -404,7 +497,7 @@ export default function SignUpPage() {
         return;
       }
 
-      // Store signup data in localStorage for use after payment
+      // Store signup data in localStorage for use after payment (include OTP verification token)
       const signupData = {
         email: formData.email,
         password: formData.password,
@@ -413,6 +506,7 @@ export default function SignUpPage() {
         address: formData.address || "",
         subscriptionPlanId: selectedPlan,
         billingCycle: billingCycle,
+        verificationToken: verificationToken || undefined,
       };
       localStorage.setItem("pending_signup", JSON.stringify(signupData));
       console.log("Pending signup data:", signupData);
@@ -427,10 +521,11 @@ export default function SignUpPage() {
       sessionStorage.setItem(
         "signup_state",
         JSON.stringify({
-          step: 2,
+          step: 3,
           formData,
           selectedPlan,
           billingCycle,
+          verificationToken: verificationToken || undefined,
         })
       );
 
@@ -620,7 +715,7 @@ export default function SignUpPage() {
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-xs">
-                    Step 1 of 2
+                    Step 1 of 3
                   </Badge>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-1">
@@ -924,8 +1019,78 @@ export default function SignUpPage() {
     );
   }
 
-  // Step 2: Plan Selection
-  // Find the selected plan details
+  // Step 2: OTP Verification
+  if (step === 2) {
+    return (
+      <div className="min-h-screen flex">
+        <FeaturesSidebar selectedPlan={null} />
+        <div className="w-full lg:w-1/2 lg:ml-[50%] overflow-y-auto bg-gray-50 flex items-center justify-center p-6">
+          <div className="w-full max-w-md">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="text-blue-600 hover:text-blue-700 font-medium mb-4 flex items-center gap-2"
+            >
+              ← Back
+            </button>
+            <div className="flex items-center gap-2 mb-4">
+              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                Step 2 of 3
+              </Badge>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Verify your email</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              We sent a 6-digit code to <strong>{formData.email}</strong>. Enter it below.
+            </p>
+            {devOtp && (
+              <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-900">
+                <AlertDescription>
+                  <span className="font-medium">Fallback mode (email not sent).</span> Use this code: <strong className="text-lg tracking-widest">{devOtp}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <form onSubmit={handleVerifyOtp} className="space-y-6">
+              <div className="space-y-2">
+                <Label>Verification code</Label>
+                <InputOTP
+                  maxLength={6}
+                  value={emailOtp}
+                  onChange={(v) => setEmailOtp(v)}
+                  containerClassName="justify-center"
+                >
+                  <InputOTPGroup className="gap-2">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <InputOTPSlot key={i} index={i} className="h-12 w-12 text-center text-lg border rounded-md" />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button type="submit" className="flex-1" disabled={loading || emailOtp.length !== 6}>
+                  {loading ? "Verifying..." : "Verify & Continue"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResendOtp}
+                  disabled={resendCooldown > 0 || loading}
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 3: Plan Selection
   const currentSelectedPlan = availablePlans.find(
     (p) => (p._id || p.id) === selectedPlan
   );
@@ -951,14 +1116,15 @@ export default function SignUpPage() {
           <div className="max-w-4xl mx-auto">
             <div className="mb-8">
               <button
-                onClick={() => setStep(1)}
+                type="button"
+                onClick={() => setStep(2)}
                 className="text-blue-600 hover:text-blue-700 font-medium mb-4 flex items-center gap-2"
               >
                 ← Back
               </button>
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                  Step 2 of 2
+                  Step 3 of 3
                 </Badge>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">

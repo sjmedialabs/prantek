@@ -85,6 +85,9 @@ export default function DashboardPage() {
     monthlyRevenue: 0,
     assetsManaged: 0,
     growthRate: 0,
+    receiptGrowthPct: 0,
+    paymentGrowthPct: 0,
+    cashInHandGrowthPct: 0,
     quotations: 0,
     pendingQuotations: 0,
     pendingReceipt:0,
@@ -252,6 +255,31 @@ const clearedPayments = filteredPayments.filter(
           ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
       }
 
+      // Previous period (same length as dateRange, immediately before) for real % change
+      const periodMs = dateRange.to.getTime() - dateRange.from.getTime();
+      const toPrev = new Date(dateRange.from.getTime() - 1);
+      const fromPrev = new Date(toPrev.getTime() - periodMs);
+      const prevReceipts = receipts.filter((r: any) =>
+        isBetweenRange(getEntityDate(r), { from: fromPrev, to: toPrev })
+      );
+      const prevPayments = payments.filter((p: any) =>
+        isBetweenRange(getEntityDate(p), { from: fromPrev, to: toPrev })
+      );
+      const prevClearedReceipts = prevReceipts.filter((r: any) => r.status === "cleared");
+      const prevClearedPayments = prevPayments.filter((p: any) => p.status === "cleared");
+      const prevTotalReceipts = prevClearedReceipts.reduce((sum: number, r: any) => sum + (r.ReceiptAmount || 0), 0);
+      const prevTotalPayments = prevClearedPayments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      const prevCashInHand = prevTotalReceipts - prevTotalPayments;
+      const receiptGrowthPct = prevTotalReceipts !== 0
+        ? ((totalReceipts - prevTotalReceipts) / prevTotalReceipts) * 100
+        : (totalReceipts > 0 ? 100 : 0);
+      const paymentGrowthPct = prevTotalPayments !== 0
+        ? ((totalPayments - prevTotalPayments) / prevTotalPayments) * 100
+        : (totalPayments > 0 ? 100 : 0);
+      const cashInHandGrowthPct = prevCashInHand !== 0
+        ? ((cashInHand - prevCashInHand) / Math.abs(prevCashInHand)) * 100
+        : (cashInHand !== 0 ? 100 : 0);
+
       // Business metrics (lifetime data)
       const pendingQuotations = quotations.filter(
         (q: any) => q.status === "created" || q.status === "sent"
@@ -277,6 +305,9 @@ const clearedPayments = filteredPayments.filter(
         Assets: assets.length,
         assetsManaged: assetsManaged.length,
         growthRate: Number(growthRate.toFixed(2)),
+        receiptGrowthPct: Number(receiptGrowthPct.toFixed(1)),
+        paymentGrowthPct: Number(paymentGrowthPct.toFixed(1)),
+        cashInHandGrowthPct: Number(cashInHandGrowthPct.toFixed(1)),
         quotations: quotations.length,
         pendingQuotations: pendingQuotations.length,
         pendingReceipt: unClearReceipts.length,
@@ -340,29 +371,21 @@ const clearedPayments = filteredPayments.filter(
     {
       title: "Receipts",
       value: formatCurrency(stats.totalReceipts),
-      change: `${stats.totalReceipts >= 0 ? "+" : ""}${(
-        (stats.totalReceipts / 1000) *
-        10
-      ).toFixed(1)}% from last month`, // TEMP placeholder
+      change: `${stats.receiptGrowthPct >= 0 ? "+" : ""}${stats.receiptGrowthPct}% vs previous period`,
       icon: Wallet,
       color: "text-green-600",
     },
     {
       title: "Payments",
       value: formatCurrency(stats.totalPayments),
-      change: `${stats.totalPayments >= 0 ? "+" : ""}${(
-        (stats.totalPayments / 1000) *
-        10
-      ).toFixed(1)}% from last month`, // TEMP placeholder
+      change: `${stats.paymentGrowthPct >= 0 ? "+" : ""}${stats.paymentGrowthPct}% vs previous period`,
       icon: Wallet,
       color: "text-green-600",
     },
    {
   title: "Net Profit/Loss",
   value: formatCurrency(stats.cashInHand),
-  change: `${stats.cashInHand >= 0 ? "+" : ""}${(
-    (stats.cashInHand / 1000) * 10
-  ).toFixed(1)}% from last month`,
+  change: `${stats.cashInHandGrowthPct >= 0 ? "+" : ""}${stats.cashInHandGrowthPct}% vs previous period`,
   icon: Wallet,
   color: stats.cashInHand >= 0 ? "text-green-600" : "text-red-600",
 },
@@ -428,7 +451,7 @@ const clearedPayments = filteredPayments.filter(
     {
       title: "Active Users",
       value: stats.activeUsers?.toString(),
-      change: `+${stats.activeUsers > 1 ? "2" : "1"} this month`, // TEMP
+      change: `${stats.activeUsers} team member${stats.activeUsers !== 1 ? "s" : ""} in account`,
       icon: Users,
       color: "text-purple-600",
     },
@@ -803,12 +826,16 @@ const clearedPayments = filteredPayments.filter(
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Monthly Target</span>
+                <span className="text-sm text-gray-700">Revenue vs last month</span>
                 <Badge
                   variant="secondary"
-                  className="bg-blue-100 text-blue-800"
+                  className={
+                    stats.growthRate >= 0
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }
                 >
-                  78% achieved
+                  {stats.growthRate >= 0 ? "+" : ""}{stats.growthRate}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between">

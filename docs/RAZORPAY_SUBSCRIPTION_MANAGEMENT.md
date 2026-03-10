@@ -63,12 +63,20 @@ CRON_SECRET=xxx
 2. Select events: `subscription.activated`, `invoice.paid`, `invoice.payment_failed`, `subscription.cancelled`, `subscription.completed`.
 3. Copy the signing secret into `RAZORPAY_WEBHOOK_SECRET`.
 
-## 7. Registration Flow
+## 7. Auto-Debit (Saved Card) in Real Payments
+
+For auto-debit to work after the first payment:
+
+1. **Tokenisation on Razorpay**: Request Razorpay Support to enable **Saved Cards / Tokenisation** on your account (and enable **Flash Checkout** in Dashboard if needed). Without this, payments may not return `token_id`/`customer_id`.
+2. **Checkout with customer + order**: The signup payment page calls `POST /api/razorpay/create-checkout` with `amount`, `name`, `email` to create a Razorpay customer and order, then opens Checkout with `order_id` and `customer_id`. That lets the customer choose “Save card securely for future payments”; the payment then includes `token_id` and `customer_id`, which the backend stores for trial-end auto-debit.
+3. **Backend**: `register` and `verify-and-create-account` already fetch payment details and store `razorpayCustomerId` and `razorpayTokenId` when present.
+
+## 8. Registration Flow
 
 - **Existing flow**: One-time payment → register with `paymentId` → backend stores `razorpayCustomerId` and `razorpayTokenId`; optional `razorpaySubscriptionId` and subscription record.
 - **Subscription flow**: Call `POST /api/razorpay/create-subscription` with `planId`, `name`, `email` (and optional `userId`); use returned `subscriptionId` or `shortUrl` to open Razorpay Subscription Checkout. After payment, register (or verify-and-create-account) with `razorpaySubscriptionId` in the body; backend creates a subscription document with status `created`. Webhook `subscription.activated` sets status to `active` and updates user.
 
-## 8. Testing (Razorpay Test Mode)
+## 9. Testing (Razorpay Test Mode)
 
 1. Register a new user (with or without subscription flow).
 2. If using subscription flow: create subscription via API, complete authorization payment in Checkout.
@@ -77,6 +85,6 @@ CRON_SECRET=xxx
 5. Trigger `invoice.paid` (e.g. next cycle or test trigger); confirm next billing date and payment history update.
 6. Super admin: open Subscription Management, run “Sync with Razorpay”, cancel a test subscription.
 
-## 9. Cron (Optional)
+## 10. Cron (Optional)
 
 Schedule `GET /api/cron/sync-subscriptions` with header `Authorization: Bearer YOUR_CRON_SECRET` (e.g. daily) to reconcile DB with Razorpay and handle missed webhooks.

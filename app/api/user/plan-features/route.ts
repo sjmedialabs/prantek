@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api-auth"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
+import { PLAN_FEATURE_KEYS } from "@/lib/models/types"
 
 /**
  * GET /api/user/plan-features
@@ -73,7 +74,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       return NextResponse.json({
         success: true,
         planFeatures: {
-          dashboard:true,
+          dashboard: true,
           cashBook: true,
           clients: false,
           vendors: false,
@@ -85,28 +86,33 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
           reconciliation: false,
           assets: false,
           reports: false,
-          settings: false
+          settings: false,
+          hrSettings: false
         },
         hasActiveSubscription: false
       })
     }
 
-    // Return the plan features
-    const planFeatures = plan.planFeatures || {
-      dashboard: true,
-      cashBook: true,
-      clients: false,
-      vendors: false,
-      quotations: false,
-      salesInvoice: false,
-      receipts: false,
-      purchaseInvoice: false,
-      payments: false,
-      reconciliation: false,
-      assets: false,
-      reports: false,
-      settings: false,
-      hrSettings: false
+    // When plan has granular planFeatures (set in super-admin), only enabled features show in sidebar.
+    // When plan has no planFeatures (legacy), grant full access so new users see all features.
+    const hasGranularFeatures =
+      plan.planFeatures &&
+      typeof plan.planFeatures === "object" &&
+      Object.keys(plan.planFeatures).length > 0
+
+    const planFeatures: Record<string, boolean> = {
+      dashboard: true, // always show dashboard when user has a plan
+    }
+    if (hasGranularFeatures) {
+      const pf = plan.planFeatures as Record<string, boolean>
+      for (const key of PLAN_FEATURE_KEYS) {
+        planFeatures[key] = pf[key] === true
+      }
+    } else {
+      // Legacy plan: no planFeatures object — grant full access
+      for (const key of PLAN_FEATURE_KEYS) {
+        planFeatures[key] = true
+      }
     }
 
     return NextResponse.json({
