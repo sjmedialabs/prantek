@@ -60,11 +60,26 @@ export async function POST(request: NextRequest) {
     })
 
     const result = await sendSignupOtpEmail(normalizedEmail, emailOtp)
+    const allowFallbackOtp = process.env.ALLOW_SIGNUP_FALLBACK_OTP === "true"
+
     if (!result.sent) {
+      if (allowFallbackOtp) {
+        // Fallback: allow frontend to show OTP directly when email cannot be sent.
+        return NextResponse.json({
+          success: true,
+          message: "Verification code generated (fallback).",
+          emailSent: false,
+          fallbackOtp: emailOtp,
+          ...(normalizedPhone ? { phoneOtpSent: false, messagePhone: "SMS not configured. Use email OTP only." } : {}),
+        })
+      }
+
       return NextResponse.json(
         {
           success: false,
-          error: result.reason || "Verification code could not be sent. Please check your email configuration or try again later.",
+          error:
+            result.reason ||
+            "Verification code could not be sent. Please check your email configuration or try again later.",
           emailSent: false,
         },
         { status: 503 }
