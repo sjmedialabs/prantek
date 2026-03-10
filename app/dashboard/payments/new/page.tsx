@@ -105,7 +105,7 @@ export default function NewPaymentPage() {
         setClients(uniqueClients);
 
         // ⬅️ 2. ACTIVE vendors only + dedupe by _id
-        const activeVendors = vendorsData
+           const activeVendors = vendorsData.filter((v: any) => v.status !== "inactive")
 
         const uniqueVendors = Array.from(new Map(activeVendors.map((v: any) => [v._id, v])).values());
 

@@ -122,6 +122,13 @@ export const api = {
       })
       return data.data
     },
+    updateStatus: async (id: string, status: "active" | "inactive") => {
+      const data = await fetchAPI(`/api/vendors/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      })
+      return data.data
+    },
     delete: async (id: string) => {
       await fetchAPI(`/api/vendors/${id}`, {
         method: "DELETE",

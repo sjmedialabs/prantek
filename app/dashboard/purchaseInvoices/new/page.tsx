@@ -110,9 +110,9 @@ export default function NewPurchaseInvoicePage() {
         setClients(uniqueClients);
 
         // ⬅️ 2. ACTIVE vendors only + dedupe by _id
-        const activeVendors = vendorsData
+        const activeVendors = vendorsData.filter((v: any) => v.status !== "inactive")
 
-        const uniqueVendors = Array.from(new Map(activeVendors.map((v: any) => [v._id, v])).values());
+        const uniqueVendors = Array.from(new Map(activeVendors.map((v: any) => [v._id || v.id, v])).values());
 
         setVendors(uniqueVendors);
 
