@@ -282,7 +282,7 @@ const clearedPayments = filteredPayments.filter(
 
       // Business metrics (lifetime data)
       const pendingQuotations = quotations.filter(
-        (q: any) => q.status === "pending" || q.status === "sent"
+        (q: any) => q.status === "created" || q.status === "sent"
       );
       const activeClients = clients.filter((p: any) => p.status === "active");
       const activeItems = items.filter((p: any) => p.isActive === true);
