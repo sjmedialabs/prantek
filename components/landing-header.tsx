@@ -20,6 +20,7 @@ export function LandingHeader() {
     { href: "#features", label: "Features" },
     { href: "#industries", label: "Industries" },
     { href: "#pricing", label: "Pricing" },
+    { href: "/videos", label: "Videos" },
     { href: "#testimonials", label: "Testimonials" },
     { href: "#faq", label: "FAQ" },
   ]

@@ -57,6 +57,10 @@ interface ClientAccount {
   paymentStatus: "current" | "overdue" | "failed"
   trialEndsAt?: string
   billingCycle?: string
+  subscriptionId?: string | null
+  autoDebit: boolean
+  lastPayment?: string | null
+  nextPayment?: string | null
 }
 const Label = ({ text }: { text: string }) => (
   <label className="text-sm font-medium">
@@ -142,6 +146,12 @@ export default function ClientAccountsPage() {
              revenue = yearlyPrice - discountAmount;
           }
 
+          const lastPayment = user.lastPaymentDate
+            ? (typeof user.lastPaymentDate === "string" ? user.lastPaymentDate : new Date(user.lastPaymentDate).toISOString().split("T")[0])
+            : null
+          const nextPayment = user.nextPaymentDate
+            ? (typeof user.nextPaymentDate === "string" ? user.nextPaymentDate : new Date(user.nextPaymentDate).toISOString().split("T")[0])
+            : null
           return {
             id: user._id || user.id,
             companyName: user.name || user.email.split('@')[0],
@@ -159,6 +169,10 @@ export default function ClientAccountsPage() {
             lastActivity: user.updatedAt ? new Date(user.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             paymentStatus: user.subscriptionStatus === "active" ? "current" : "overdue",
             trialEndsAt: user.trialEndsAt,
+            subscriptionId: user.razorpaySubscriptionId || null,
+            autoDebit: !!(user.razorpayCustomerId && user.razorpayTokenId),
+            lastPayment: lastPayment || null,
+            nextPayment: nextPayment || null,
           }
         })
 
@@ -207,6 +221,12 @@ export default function ClientAccountsPage() {
   const [plans, setPlans] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false)
+  const formatPaymentDates = (last?: string | null, next?: string | null) => {
+    const l = last ? new Date(last).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"
+    const n = next ? new Date(next).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"
+    return `${l} / ${n}`
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -538,6 +558,9 @@ export default function ClientAccountsPage() {
                     <TableHead>Users</TableHead>
                     <TableHead>Revenue</TableHead>
                     <TableHead>Payment</TableHead>
+                    <TableHead>Subscription ID</TableHead>
+                    <TableHead>Auto-Debit</TableHead>
+                    <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
                     {/* <TableHead className="text-right">Actions</TableHead> */}
                   </TableRow>
@@ -562,6 +585,9 @@ export default function ClientAccountsPage() {
                         )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
+                      <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       {/* <TableCell className="text-right">
                         <DropdownMenu>
@@ -639,6 +665,9 @@ export default function ClientAccountsPage() {
                     <TableHead>Users</TableHead>
                     <TableHead>Revenue</TableHead>
                     <TableHead>Payment</TableHead>
+                    <TableHead>Subscription ID</TableHead>
+                    <TableHead>Auto-Debit</TableHead>
+                    <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
                     {/* <TableHead className="text-right">Actions</TableHead> */}
                   </TableRow>
@@ -663,6 +692,9 @@ export default function ClientAccountsPage() {
                         )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
+                      <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       {/* <TableCell className="text-right">
                         <DropdownMenu>
@@ -740,6 +772,9 @@ export default function ClientAccountsPage() {
                     <TableHead>Users</TableHead>
                     <TableHead>Revenue</TableHead>
                     <TableHead>Payment</TableHead>
+                    <TableHead>Subscription ID</TableHead>
+                    <TableHead>Auto-Debit</TableHead>
+                    <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
                     {/* <TableHead className="text-right">Actions</TableHead> */}
                   </TableRow>
@@ -764,6 +799,9 @@ export default function ClientAccountsPage() {
                         )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
+                      <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       {/* <TableCell className="text-right">
                         <DropdownMenu>
@@ -841,6 +879,9 @@ export default function ClientAccountsPage() {
                     <TableHead>Users</TableHead>
                     <TableHead>Revenue</TableHead>
                     <TableHead>Payment</TableHead>
+                    <TableHead>Subscription ID</TableHead>
+                    <TableHead>Auto-Debit</TableHead>
+                    <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
                     {/* <TableHead className="text-right">Actions</TableHead> */}
                   </TableRow>
@@ -865,6 +906,9 @@ export default function ClientAccountsPage() {
                         )}
                       </TableCell>
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
+                      <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
+                      <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       {/* <TableCell className="text-right">
                         <DropdownMenu>

@@ -36,6 +36,8 @@ export const COLLECTIONS = {
   NOTIFICATIONSETTINGS:"notification_settings",
   OTP_VERIFICATIONS: "otp_verifications", // Legacy signup OTP
   OTPS: "otps", // Email OTP (USE_EMAIL_SERVICE toggle); TTL index on expiresAt recommended
+  VIDEO_CATEGORIES: "video_categories", // Left menu items on /videos page
+  VIDEOS: "videos", // title, description, youtubeUrl, categoryId, tab, order
 } as const
 
 export const INDEXES = {
@@ -137,6 +139,8 @@ export const INDEXES = {
     { key: { email: 1 } },
     { key: { createdAt: -1 } },
   ],
+  VIDEO_CATEGORIES: [{ key: { order: 1 } }],
+  VIDEOS: [{ key: { categoryId: 1 } }, { key: { categoryId: 1, tab: 1, order: 1 } }],
 }
 
 // Alias for backward compatibility
