@@ -421,15 +421,6 @@ const handleRecipientChange = (recipientId: string) => {
             newPaymentStatus = "Partial";
             newInvoiceStatus = "Partial";
           }
-
-          await api.purchaseInvoice.update(paymentData.purchaseInvoiceId, {
-            balanceAmount: newBalance,
-            paymentStatus: newPaymentStatus,
-            invoiceStatus: newInvoiceStatus,
-            paidAmount: newPaidAmount
-          });
-        }
-      }
       await api.payments.create({
         // purchaseInvoiceId: creationMode === "invoiced" ? paymentData.purchaseInvoiceId : undefined,
         userId: user?.id || "",
@@ -460,6 +451,14 @@ const handleRecipientChange = (recipientId: string) => {
         // paymentType: paymentData.paymentType,
       })
 
+          await api.purchaseInvoice.update(paymentData.purchaseInvoiceId, {
+            balanceAmount: newBalance,
+            paymentStatus: newPaymentStatus,
+            invoiceStatus: newInvoiceStatus,
+            paidAmount: newPaidAmount
+          });
+        }
+      }
       toast({
         title: "Payment Created",
         description: `Payment ${paymentData.paymentNumber} has been created successfully.`,

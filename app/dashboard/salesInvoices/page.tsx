@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table" 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Search, FileText, Filter, X, Eye, Ban, ShieldOff } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -67,17 +67,17 @@ export default function SalesInvoicesPage() {
         // Check for overdue invoices
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        
+
         data.forEach(async (inv: SalesInvoice) => {
           if (inv.status === 'Not Cleared' && inv.dueDate) {
             const due = new Date(inv.dueDate)
             due.setHours(0, 0, 0, 0)
             if (due < today) {
-               await fetch(`/api/salesInvoice/${inv._id}`, {
-                 method: 'PUT',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ status: 'overdue' })
-               })
+              await fetch(`/api/salesInvoice/${inv._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'overdue' })
+              })
             }
           }
         })
@@ -297,17 +297,20 @@ export default function SalesInvoicesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₹{invoices.reduce((sum, i) => sum + (i.grandTotal || 0), 0).toLocaleString()}
+              ₹{invoices
+                .filter((i) => i.status !== "cancelled")
+                .reduce((sum, i) => sum + (i.grandTotal || 0), 0)
+                .toLocaleString()}
             </div>
           </CardContent>
         </Card>
         <Card>
-           <CardHeader className="pb-3">
+          <CardHeader className="pb-3">
             <CardDescription>Unclear Payment</CardDescription>
           </CardHeader>
           <CardContent>
-             <div className="text-2xl font-bold text-orange-600">
-              {invoices.filter(i => i.status === 'Not Cleared').length}
+            <div className="text-2xl font-bold text-orange-600">
+              {invoices.filter(i => i.status === 'not collected').length}
             </div>
           </CardContent>
         </Card>
@@ -361,25 +364,25 @@ export default function SalesInvoicesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                              <div>
-                <label className="text-sm font-medium">Date From</label>
-                <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Date From</label>
+                  <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Date To</label>
-                <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Date To</label>
+                  <Input type="date" value={dateToFilter} min={dateFromFilter} onChange={(e) => setDateToFilter(e.target.value)} />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Min Amount</label>
-                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Min Amount</label>
+                  <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+                </div>
 
-              <div>
-                <label className="text-sm font-medium">Max Amount</label>
-                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
-              </div>
+                <div>
+                  <label className="text-sm font-medium">Max Amount</label>
+                  <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+                </div>
               </div>
             )}
           </div>
@@ -400,14 +403,14 @@ export default function SalesInvoicesPage() {
               </TableHeader>
               <TableBody>
                 {paginatedInvoices.length === 0 ? (
-                    <TableRow>
-                        <TableCell colSpan={8} className="text-center py-4">No invoices found</TableCell>
-                    </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-4">No invoices found</TableCell>
+                  </TableRow>
                 ) : (
-                    paginatedInvoices.map((invoice, index) => {
+                  paginatedInvoices.map((invoice, index) => {
                     const serial = (currentPage - 1) * itemsPerPage + (index + 1)
                     return (
-                        <TableRow key={invoice._id}>
+                      <TableRow key={invoice._id}>
                         <TableCell>{serial}</TableCell>
                         <TableCell>{new Date(invoice.date || invoice.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">{invoice.salesInvoiceNumber}</TableCell>
@@ -415,55 +418,55 @@ export default function SalesInvoicesPage() {
                         <TableCell>{invoice.quotationNumber || invoice.quotationId || '-'}</TableCell>
                         <TableCell className="font-semibold">₹{(invoice.balanceAmount || 0).toLocaleString()}</TableCell>
                         <TableCell>
-                            <Badge className={`${getStatusBadgeClass(invoice.status)} capitalize`}>
-                              {invoice.status}
-                            </Badge>
+                          <Badge className={`${getStatusBadgeClass(invoice.status)} capitalize`}>
+                            {invoice.status}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                           <div className="flex space-x-2 items-center justify-center">
-                                <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
-                                <Button variant="ghost" size="sm"title="View in detail"><Eye className="h-4 w-4" /></Button>
-                                </Link>
-                                {hasPermission("edit_sales_invoices") && ["not collected", "overdue"].includes(invoice.status) && (
-                                  <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
-                                    <Button variant="ghost" size="sm" title="Edit Details">
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </Link>
-                                )}
-                                {hasPermission("edit_sales_invoice") && ["not collected", "overdue"].includes(invoice.status) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="Cancel Invoice"
-                                    className="text-red-600 hover:text-red-800 hover:bg-red-100"
-                                    onClick={() => handleCancelInvoice(invoice._id)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {hasPermission("edit_sales_invoice") && invoice.status === "partially collected" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="Mark as Bad Debt"
-                                    className="text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100"
-                                    onClick={() => handleOpenBadDebtDialog(invoice)}
-                                  >
-                                    <ShieldOff className="h-4 w-4" />
-                                  </Button>
-                                )}
-                           
-                         {/* {hasPermission("edit_sales_invoice") &&( <Switch
+                          <div className="flex space-x-2 items-center justify-center">
+                            <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
+                              <Button variant="ghost" size="sm" title="View in detail"><Eye className="h-4 w-4" /></Button>
+                            </Link>
+                            {hasPermission("edit_sales_invoices") && ["not collected", "overdue"].includes(invoice.status) && (
+                              <Link href={`/dashboard/salesInvoices/${invoice._id}/edit`}>
+                                <Button variant="ghost" size="sm" title="Edit Details">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            )}
+                            {hasPermission("edit_sales_invoice") && ["not collected", "overdue"].includes(invoice.status) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Cancel Invoice"
+                                className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                                onClick={() => handleCancelInvoice(invoice._id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {hasPermission("edit_sales_invoice") && invoice.status === "partially collected" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Mark as Bad Debt"
+                                className="text-yellow-600 hover:text-yellow-800 hover:bg-yellow-100"
+                                onClick={() => handleOpenBadDebtDialog(invoice)}
+                              >
+                                <ShieldOff className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* {hasPermission("edit_sales_invoice") &&( <Switch
                             checked={invoice.isActive !== "deactive"}
                             onCheckedChange={() => handleStatusToggle(invoice._id, invoice.isActive !== "deactive")}
                             title="Change Status(Active/Inactive)"
                           />)} */}
-                           </div>
+                          </div>
                         </TableCell>
-                        </TableRow>
+                      </TableRow>
                     )
-                    })
+                  })
                 )}
               </TableBody>
             </Table>
@@ -497,45 +500,45 @@ export default function SalesInvoicesPage() {
 
       <Dialog open={isBadDebtDialogOpen} onOpenChange={setIsBadDebtDialogOpen}>
         <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Record Bad Debt</DialogTitle>
-                <DialogDescription>
-                    Write off a portion of the balance for invoice {selectedInvoiceForBadDebt?.salesInvoiceNumber}.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label htmlFor="badDebtAmount">Bad Debt Amount</Label>
-                    <Input
-                        id="badDebtAmount"
-                        type="number"
-                        value={badDebtAmount}
-                        onChange={(e) => setBadDebtAmount(Number(e.target.value))}
-                        max={selectedInvoiceForBadDebt?.balanceAmount || 0}
-                    />
-                    <p className="text-xs text-gray-500">
-                        Current balance: ₹{(selectedInvoiceForBadDebt?.balanceAmount || 0).toLocaleString()}
-                    </p>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="badDebtReason">Reason</Label>
-                    <Textarea
-                        id="badDebtReason"
-                        value={badDebtReason}
-                        onChange={(e) => setBadDebtReason(e.target.value)}
-                        placeholder="Enter reason for writing off this amount..."
-                    />
-                </div>
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                    <p>New Balance after this action will be: 
-                        <span className="font-bold"> ₹{((selectedInvoiceForBadDebt?.balanceAmount || 0) - badDebtAmount).toLocaleString()}</span>
-                    </p>
-                </div>
+          <DialogHeader>
+            <DialogTitle>Record Bad Debt</DialogTitle>
+            <DialogDescription>
+              Write off a portion of the balance for invoice {selectedInvoiceForBadDebt?.salesInvoiceNumber}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="badDebtAmount">Bad Debt Amount</Label>
+              <Input
+                id="badDebtAmount"
+                type="number"
+                value={badDebtAmount}
+                onChange={(e) => setBadDebtAmount(Number(e.target.value))}
+                max={selectedInvoiceForBadDebt?.balanceAmount || 0}
+              />
+              <p className="text-xs text-gray-500">
+                Current balance: ₹{(selectedInvoiceForBadDebt?.balanceAmount || 0).toLocaleString()}
+              </p>
             </div>
-            <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsBadDebtDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleBadDebtSubmit}>Confirm</Button>
+            <div className="space-y-2">
+              <Label htmlFor="badDebtReason">Reason</Label>
+              <Textarea
+                id="badDebtReason"
+                value={badDebtReason}
+                onChange={(e) => setBadDebtReason(e.target.value)}
+                placeholder="Enter reason for writing off this amount..."
+              />
             </div>
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+              <p>New Balance after this action will be:
+                <span className="font-bold"> ₹{((selectedInvoiceForBadDebt?.balanceAmount || 0) - badDebtAmount).toLocaleString()}</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsBadDebtDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleBadDebtSubmit}>Confirm</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
