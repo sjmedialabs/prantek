@@ -161,6 +161,45 @@ export default function EditSalesInvoicePage() {
       }
 
       console.log("items from db ", data.items)
+      const getted = (data.items || []).map((i: any, idx: number) => {
+        const cgst = Number(i.cgst || 0)
+        const sgst = Number(i.sgst || 0)
+        const igst = Number(i.igst || 0)
+
+        return {
+          id: String(Date.now() + idx),
+          type: i.type || "product",
+          itemName: i.itemId,
+          description: i.description ?? "",
+          quantity: Number(i.quantity || 1),
+          price: Number(i.price || 0),
+          discount: Number(i.discount || 0),
+
+          cgst,
+          sgst,
+          igst,
+
+          taxRate: cgst + sgst + igst,
+          taxName:
+            cgst || sgst || igst
+              ? [
+                cgst ? `CGST (${cgst}%)` : "",
+                sgst ? `SGST (${sgst}%)` : "",
+                igst ? `IGST (${igst}%)` : "",
+              ]
+                .filter(Boolean)
+                .join(" + ")
+              : "",
+
+          itemId: i.itemId ?? "",
+
+          amount: i.amount || 0,
+          taxAmount: i.taxAmount || 0,
+          total: i.total || 0,
+        }
+      })
+
+setItems(getted || [])
       const rawItems = (data.items || []).map((i: any, idx: number) => {
         const cgst = Number(i.cgst || 0)
         const sgst = Number(i.sgst || 0)
@@ -198,8 +237,6 @@ export default function EditSalesInvoicePage() {
           total: 0,
         }
       })
-
-setItems(rawItems || [])
       const recalculated = rawItems.map((item: any) => {
         const taxRate = item?.taxRate || item.cgst + item.sgst + item.igst
         item.taxName = taxRate > 0 ? `Tax (%)` : ""

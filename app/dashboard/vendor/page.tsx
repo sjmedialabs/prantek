@@ -512,7 +512,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <TableCell>{vendor.phone}</TableCell>
                         <TableCell>{new Date(vendor.createdAt).toLocaleDateString()}</TableCell>
 
-                        {(hasPermission("add_vendors") || hasPermission("edit_vendors")) && (
+                 
                           <TableCell>
                             <div className="flex space-x-2 items-center">
                               <Link href={`/dashboard/vendor/${vendor._id}`}>
@@ -552,7 +552,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                             </div>
                                                      
                           </TableCell>
-                        )}
+                
                       </TableRow>
                     ))
                 )}

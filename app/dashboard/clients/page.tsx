@@ -643,7 +643,7 @@ export default function ClientsPage() {
                       <TableCell>{client.phone}</TableCell>
                       <TableCell>{client.email}</TableCell>
                       <TableCell>{new Date(client.createdAt).toLocaleDateString()}</TableCell>
-                      {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
+                
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <Link href={`/dashboard/clients/${client._id}`}>
@@ -677,7 +677,7 @@ export default function ClientsPage() {
                             }
                           </div>
                         </TableCell>
-                      )}
+            
                     </TableRow>
                   ))
                 )}
