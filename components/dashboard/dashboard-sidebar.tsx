@@ -7,6 +7,7 @@ import { useUser } from "@/components/auth/user-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
+import { tokenStorage } from "@/lib/token-storage";
 import {
   LayoutDashboard,
   Users,
@@ -281,20 +282,34 @@ export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebar
     }));
   };
 
-  // Fetch user's plan features
+  // Fetch user's plan features (with auth token so 401 doesn't break menu open)
   useEffect(() => {
     const fetchPlanFeatures = async () => {
       try {
-        const response = await fetch('/api/user/plan-features');
-        const data = await response.json();
-        if (data.success) {
-          setPlanFeatures(data.planFeatures);
+        const token = tokenStorage.getAccessToken();
+        if (!token) {
+          setPlanFeatures({});
+          return;
         }
-      } catch (error) {
-        console.error('Error fetching plan features:', error);
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          setPlanFeatures({});
+          return;
+        }
+        const data = await response.json();
+        if (data.success && data.planFeatures != null) {
+          setPlanFeatures(data.planFeatures);
+        } else {
+          setPlanFeatures({});
+        }
+      } catch {
+        setPlanFeatures({});
       }
     };
-    
+
     if (user) {
       fetchPlanFeatures();
     }

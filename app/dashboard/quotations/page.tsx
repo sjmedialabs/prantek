@@ -15,10 +15,8 @@ import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Quotation } from "@/lib/models/types"
-import dynamic from "next/dynamic"
 import { Check, Repeat } from "lucide-react"
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 import {
   Table,
   TableBody,
@@ -664,7 +662,7 @@ export default function QuotationsPage() {
                     <label className="text-sm font-medium">Terms & Conditions</label>
 
                     <div className="[&_.ql-editor]:min-h-[150px]">
-                      <ReactQuill
+                      <SafeReactQuill
                         theme="snow"
                         value={availableTerms}
                         onChange={setAvailableTerms}

@@ -4,12 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 import { useState, useEffect } from "react"
 import { Term } from "./terms-manager"
-import dynamic from "next/dynamic"
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
 
 export default function TermDialog({
   open,
@@ -70,7 +67,7 @@ export default function TermDialog({
           />
 
           <div className="[&_.ql-editor]:min-h-[200px]">
-            <ReactQuill
+            <SafeReactQuill
               theme="snow"
               value={content}
               onChange={setContent}

@@ -28,7 +28,7 @@ interface Notification {
 export default function SuperAdminHeader() {
   const router = useRouter()
   const { user, logout } = useUser()
-  const { toggleMobile } = useSidebar()
+  const { isSidebarOpen, openSidebar } = useSidebar()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -117,8 +117,20 @@ export default function SuperAdminHeader() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-end space-x-4">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shrink-0">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-4 min-h-[56px]">
+        <div className="flex items-center gap-2 min-w-0 lg:hidden">
+          <button
+            type="button"
+            onClick={() => openSidebar()}
+            className="min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation inline-flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+            aria-label="Open menu"
+            aria-expanded={isSidebarOpen}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="flex items-center justify-end space-x-4 flex-1">
         {/* Notifications */}
         <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
@@ -184,6 +196,7 @@ export default function SuperAdminHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   )

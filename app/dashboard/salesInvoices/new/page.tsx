@@ -1,7 +1,6 @@
 "use client"
 
 import { useUser } from "@/components/auth/user-context"
-import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
