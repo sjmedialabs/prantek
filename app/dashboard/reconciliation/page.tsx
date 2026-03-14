@@ -23,7 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { format, startOfDay } from "date-fns"
-import { Check, Download, Eye, RefreshCw, Search, X, GitCompare } from "lucide-react"
+import { Check, Download, Eye, RefreshCw, Search, X, GitCompare, Wallet } from "lucide-react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -144,7 +144,7 @@ export default function ReconciliationPage() {
 
     // Status filter
     if (statusFilter === "uncleared") {
-      filtered = filtered.filter((t) => t.status === "pending")
+      filtered = filtered.filter((t) => t.status !== "cleared")
     } else if (statusFilter === "cleared") {
       filtered = filtered.filter((t) => t.status === "cleared")
     }
@@ -321,7 +321,10 @@ export default function ReconciliationPage() {
 
   const stats = calculateStats(statsView)
   const paymentMethods = Array.from(new Set(transactions.map((t) => t.paymentMethod).filter(m => m && m.trim() !== ""))).sort()
-
+    const unclearRecAmount = transactions.filter((t)=> t.type === "receipt" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearRec = transactions.filter((t)=> t.type === "receipt" && t.status === "pending").length
+    const unclearPayAmount = transactions.filter((t)=> t.type === "payment" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearPay = transactions.filter((t)=> t.type === "payment" && t.status === "pending").length
   if (!hasPermission("view_reconciliation")) {
     return (
       <div className="container mx-auto py-8">
@@ -393,26 +396,30 @@ export default function ReconciliationPage() {
         </CardContent>
       </Card> */}
       <div className="grid grid-cols-2 gap-4">
-       {/* <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Cancelled Receipt</CardDescription>
+       <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Uncleared Receipt</CardTitle>
+             <Wallet className={`h-4 w-4`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {calculateStats.unclearRecAmount}
+            <div className="text-2xl font-bold">
+              ₹{unclearRecAmount}
             </div>
-          </CardContent>
+            <p className="text-xs text-gray-600 mt-1">{unclearRec} Unclear Receipts</p>
+          </CardContent>  
         </Card>
          <Card>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Cancelled Receipt</CardDescription>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-700">Uncleared Payment</CardTitle>
+                     <Wallet className={`h-4 w-4`} />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {calculateStats.unclearPayAmount}
+                    <div className="text-2xl font-bold">
+              ₹{unclearPayAmount}
                     </div>
+                    <p className="text-xs text-gray-600 mt-1">{unclearPay} Unclear Payments</p>
                   </CardContent>
-                </Card> */}
+                </Card>
 </div>
       {/* Filters */}
       <Card>
@@ -472,23 +479,36 @@ export default function ReconciliationPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {paymentMethod.map((method) => (
-                    <SelectItem key={method._id} value={method.name}>
-                      {method.name.toUpperCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              
+                                      <SelectItem value="cash">
+                                        Cash
+                                      </SelectItem>
+                                      <SelectItem value="upi">
+                                        UPI
+                                      </SelectItem>
+                                      <SelectItem value="card">
+                                       Card
+                                      </SelectItem>
+                                      <SelectItem value="cheque">
+                                        Cheque
+                                      </SelectItem>
+                                      <SelectItem value="bankTransfer">
+                                        Bank Transfer
+                                      </SelectItem>
+                                       <SelectItem value="all">
+                                     All
+                                      </SelectItem>
+                                    </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label>&nbsp;</Label>
               <Button onClick={exportToCSV} variant="outline" className="w-full">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
               </Button>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -532,7 +552,7 @@ export default function ReconciliationPage() {
                 <TableBody>
                   {paginatedTransactions.map((transaction, index) => {
                     const serial = (currentPage - 1) * itemsPerPage + (index + 1)
-                    const isCleared = transaction.status === "cleared" || transaction.status === "completed"
+                    const isCleared = transaction.status === "cleared"
 
                     return (
                       <Fragment key={transaction._id}>

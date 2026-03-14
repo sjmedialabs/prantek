@@ -88,6 +88,8 @@ export default function DashboardPage() {
     receiptGrowthPct: 0,
     paymentGrowthPct: 0,
     cashInHandGrowthPct: 0,
+    unclearAmountPay: 0,
+    unclearAmountRec: 0,
     quotations: 0,
     pendingQuotations: 0,
     pendingReceipt:0,
@@ -289,7 +291,10 @@ const clearedPayments = filteredPayments.filter(
       const assetsManaged = assets.filter((a: any) => a.status === "available");
       const pendingInvoices = salesInvoice.filter((r: any) => r.status !== "Cleared");
       const unClearReceipts = filteredReceipts.filter((r: any) => r.status === "received");
-      const unClearPaymentsList = filteredPayments.filter((p: any) => p.status !== "completed");
+      const unClearPaymentsList = filteredPayments.filter((p: any) => p.status !== "cleared");
+      const unclearAmountPay = unClearPaymentsList.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      const unclearAmountRec = unClearReceipts.reduce((sum: number, r: any) => sum + (r.ReceiptAmount || 0), 0);
+
 
       setStats({
         totalReceipts,
@@ -299,6 +304,8 @@ const clearedPayments = filteredPayments.filter(
         cashInHand,
         receivables,
         payables,
+        unclearAmountPay: unclearAmountPay,
+        unclearAmountRec: unclearAmountRec,
         activeUsers: employees.length,
         monthlyRevenue,
         salesInvoices: salesInvoice.length,
@@ -405,15 +412,15 @@ const clearedPayments = filteredPayments.filter(
     },
         {
       title: "Unclear Receipts",
-      value: stats.pendingReceipt?.toString(),
-      change: `${stats.receipts} total receipts`,
+      value: formatCurrency(stats.unclearAmountRec),
+      change: `${stats.pendingReceipt} unclear receipts`,
       icon: FileText,
       color: "text-cyan-600",
     },
     {
       title: "Unclear Payments",
-      value: stats.unClearPayments?.toString(),
-      change: `${stats.payments} total payments`,
+      value: formatCurrency(stats.unclearAmountPay),
+      change: `${stats.unClearPayments} unclear payments`,
       icon: FileText,
       color: "text-cyan-600",
     },

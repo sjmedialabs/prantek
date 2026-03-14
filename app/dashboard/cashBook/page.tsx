@@ -7,17 +7,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Filter, X, Download, Receipt, Plus, CreditCard, Eye, FileText } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
+import { dataStore } from '@/lib/data-store'
 import Link from "next/link";
 import { generatePDF } from "@/lib/pdf-utils"
+import { Download, Eye, FileText, Filter, Search, X } from "lucide-react"
 interface CashEntry {
   id: string
   entryType: "receipt" | "payment"
   date: string
   partyType: "client" | "vendor" | "team"
   partyName: string
+    paymentMethod: string
   receiptNumber?: string
   paymentNumber?: string
   category: string
@@ -26,10 +28,12 @@ interface CashEntry {
   referenceNumber?: string
   createdBy: string
   balance?: number
+  accountDetails?: string
 }
 
 export default function CashbookPage() {
   const { hasPermission } = useUser()
+  const[companyDetails,setCompanyDetails]=useState<any>();
 
   const [entries, setEntries] = useState<CashEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,14 +47,29 @@ export default function CashbookPage() {
   const [dateFromFilter, setDateFromFilter] = useState("")
   const [dateToFilter, setDateToFilter] = useState("")
   const [minAmountFilter, setMinAmountFilter] = useState("")
+  const[paymentMethods,setPaymentMethods] = useState<any>([])
+  const [bankAccounts, setBankAccounts] = useState<any>([])
+  const[selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>("all")
   const [maxAmountFilter, setMaxAmountFilter] = useState("")
   const [currentPage, setCurrentPage] = useState(1);
   const[totlaRecieptsValue,setTotalRecieptsValue]=useState<any>();
   const[netBalanceValue,setNetBalanceValue]=useState<any>()
   const itemsPerPage = 10; // choose how many entries per page
+const [selectedBankAccount, setSelectedBankAccount] = useState("all")
 
   useEffect(() => {
     loadCashbookData()
+    const loadData = async () => {
+    
+      const activepaymentMethods = await api.paymentMethods.getAll();
+      setPaymentMethods(activepaymentMethods);
+    }
+
+    const loadCompanyDetails = async () => {
+        setCompanyDetails(await api.company.get())
+      setBankAccounts(await api.bankAccounts.getAll())
+    }
+     loadData();loadCompanyDetails()
   }, [])
 
   const loadCashbookData = async () => {
@@ -70,6 +89,8 @@ export default function CashbookPage() {
       description: r.notes,
       amount: r.ReceiptAmount,
       referenceNumber: r.referenceNumber,
+      paymentMethod: r.paymentMethod || "",
+      accountDetails: r?.bankDetails?._id || ""
       //   createdBy: r.createdBy
     }))
     console.log("formattedReceipts", formattedReceipts)
@@ -86,6 +107,8 @@ export default function CashbookPage() {
       description: p.description || "",
       amount: p.amount || 0,
       referenceNumber: p.referenceNumber || "",
+      paymentMethod: p.paymentMethod || "",
+      accountDetails: p?.bankAccount || ""
       //   createdBy: p.createdBy
     }))
     console.log("formattedPayments", formattedPayments)
@@ -103,7 +126,7 @@ export default function CashbookPage() {
       (entry.date || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.receiptNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (entry.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (entry.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) 
 
     const matchesType = typeFilter === "all" || entry.entryType === typeFilter
     const matchesPartyType = partyTypeFilter === "all" || entry.partyType === partyTypeFilter
@@ -112,6 +135,12 @@ export default function CashbookPage() {
     const matchesDateFrom = !dateFromFilter || new Date(entry.date) >= new Date(dateFromFilter)
     const matchesDateTo = !dateToFilter || new Date(entry.date) <= new Date(dateToFilter)
 
+    
+const matchesBankAccount =
+  selectedBankAccount === "all" || entry.accountDetails === selectedBankAccount
+
+const matchesPaymentMethods =
+  selectedPaymentMethod === "all" || entry.paymentMethod === selectedPaymentMethod
     const matchesMinAmount = !minAmountFilter || entry.amount >= Number(minAmountFilter)
     const matchesMaxAmount = !maxAmountFilter || entry.amount <= Number(maxAmountFilter)
 
@@ -122,7 +151,9 @@ export default function CashbookPage() {
       matchesCategory &&
       matchesDateFrom &&
       matchesDateTo &&
-      matchesMinAmount &&
+       matchesBankAccount &&
+          matchesPaymentMethods &&
+          matchesMinAmount &&
       matchesMaxAmount
     )
   })
@@ -162,10 +193,20 @@ console.log("entriesWithBalanceAsc",entriesWithBalanceAsc, currentRunningBalance
   const entriesWithBalance = entriesWithBalanceAsc
 
   const totalPages = Math.ceil(entriesWithBalance.length / itemsPerPage)
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, typeFilter, partyTypeFilter, categoryFilter, dateFromFilter, dateToFilter, minAmountFilter, maxAmountFilter]);
-
+useEffect(() => {
+  setCurrentPage(1);
+}, [
+  searchTerm,
+  typeFilter,
+  partyTypeFilter,
+  categoryFilter,
+  dateFromFilter,
+  dateToFilter,
+  minAmountFilter,
+  maxAmountFilter,
+  selectedBankAccount,
+  selectedPaymentMethod
+])
   const paginatedEntries = entriesWithBalance.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -178,11 +219,11 @@ console.log("entriesWithBalanceAsc",entriesWithBalanceAsc, currentRunningBalance
   // Summary values
  const totalReceipts = filteredEntries
   .filter((e) => e.entryType === "receipt")
-  .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  .reduce((s, e) => s + (parseFloat(e?.amount) || 0), 0);
 
 const totalPayments = filteredEntries
   .filter((e) => e.entryType === "payment")
-  .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  .reduce((s, e) => s + (parseFloat(e?.amount) || 0), 0);
   const netBalance = totalReceipts - totalPayments
 
   console.log("filtered entries :::::::::::::", totalReceipts,netBalance)
@@ -195,6 +236,8 @@ const totalPayments = filteredEntries
     setMinAmountFilter("")
     setMaxAmountFilter("")
     setSearchTerm("")
+    setSelectedBankAccount("all")
+setSelectedPaymentMethod("all")
   }
 
   const exportCSV = () => {
@@ -218,7 +261,7 @@ const totalPayments = filteredEntries
 
     const rows = entriesWithBalance.map((e) => [
       e.date,
-      e.receiptNumber,
+     e.entryType === "receipt" ? e.receiptNumber : e.paymentNumber,
       e.entryType,
       e.partyName || "",
       e.partyType || "",
@@ -244,7 +287,7 @@ const totalPayments = filteredEntries
 
   const handleExportPDF = async () => {
     await generatePDF("cashbook-print-content", "Cashbook.pdf")
-  }
+    }
 
 
   if (loading) {
@@ -438,7 +481,50 @@ const totalPayments = filteredEntries
                   </SelectContent>
                 </Select>
               </div>
+<div>
+  <label className="text-sm font-medium">Bank Account</label>
 
+  <Select
+    value={selectedBankAccount}
+    onValueChange={setSelectedBankAccount}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="All Accounts" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="all">All</SelectItem>
+
+      {bankAccounts.map((acc: any) => (
+        <SelectItem key={acc._id} value={acc._id}>
+          {acc.accountName} ({acc.accountNumber})
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+<div>
+  <label className="text-sm font-medium">Payment Method</label>
+
+  <Select
+    value={selectedPaymentMethod}
+    onValueChange={setSelectedPaymentMethod}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="All Methods" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="all">All</SelectItem>
+
+      {paymentMethods.map((method: any) => (
+        <SelectItem key={method._id} value={method.name}>
+          {method.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
               <div>
                 <label className="text-sm font-medium">Ledger</label>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -599,6 +685,25 @@ const totalPayments = filteredEntries
       {/* Hidden Print Content */}
       <div id="cashbook-print-content" className="hidden">
         <div className="p-8">
+          <div className="flex items-start space-x-4">
+          {companyDetails?.logo && (
+            <img
+              src={companyDetails.logo || "/placeholder.svg"}
+              alt="Company Logo"
+              className="w-20 h-20 object-contain"
+            />
+          )}
+          <div className="flex flex-col gap-2 py-0">
+            <h1 className="text-2xl font-bold text-gray-900">{companyDetails?.companyName || "Company Name"}</h1>
+            <div className="flex flex-col gap-4">
+            <p className="text-sm text-gray-600 py-0">{companyDetails?.address}</p>
+            <p className="text-sm text-gray-600 py-0">
+              Phone: {companyDetails?.phone} | Email: {companyDetails?.email}
+            </p>
+            </div>
+            {companyDetails?.website && <p className="text-sm text-gray-600 py-0 mb-1">Website: {companyDetails.website}</p>}
+          </div>
+        </div>
           <h1 className="text-2xl font-bold mb-4 text-center">Cashbook Report</h1>
           <table className="w-full text-sm border-collapse border">
             <thead>

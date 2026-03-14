@@ -385,16 +385,7 @@ export default function ItemsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <ProductImageUpload
-                        onSelect={(imgFile, folder, newFolder) => {
-                          setFormData(prev => ({
-                            ...prev,
-                            imageFile: imgFile,
-                            folder,
-                            newFolder
-                          }))
-                        }}
-                      />
+                      
 
                     </div>
                   )}

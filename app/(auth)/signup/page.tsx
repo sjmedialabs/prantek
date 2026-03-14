@@ -383,7 +383,7 @@ export default function SignUpPage() {
         return;
       }
 
-      // Send OTP (send-email-otp: fallback mode returns devOtp when USE_EMAIL_SERVICE=false)
+      // Send OTP (send-email-otp: returns fallbackOtp/devOtp when email service is disabled)
       const otpRes = await fetch("/api/auth/send-email-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -399,7 +399,8 @@ export default function SignUpPage() {
       setEmailOtp("");
       setPhoneOtp("");
       setError("");
-      setDevOtp(otpData.devOtp ?? null);
+      // Support both legacy devOtp and new fallbackOtp keys
+      setDevOtp(otpData.fallbackOtp ?? otpData.devOtp ?? null);
 
       sessionStorage.setItem(
         "signup_state",
@@ -434,7 +435,8 @@ export default function SignUpPage() {
       setResendCooldown(60);
       setEmailOtp("");
       setPhoneOtp("");
-      setDevOtp(data.devOtp ?? null);
+      // Support both legacy devOtp and new fallbackOtp keys
+      setDevOtp(data.fallbackOtp ?? data.devOtp ?? null);
     } finally {
       setLoading(false);
     }

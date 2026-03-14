@@ -608,8 +608,7 @@ quotations: {
     // Bank Accounts
     bankAccounts: {
       getAll: async () => {
-        const data = await fetchAPI("/api/bank-accounts")
-        console.log("Bank accounts from api :", data)
+          const data = await fetchAPI("/api/bank-accounts")
         return data || data.data || data.bankAccounts || []
       },
       create: async (accountData: any) => {
