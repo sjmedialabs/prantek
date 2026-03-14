@@ -11,6 +11,7 @@ import { api } from "@/lib/api-client"
 import type { Vendor } from "@/lib/models/types"
 import { ArrowLeft, Edit, Store } from "lucide-react"
 import { toast } from "@/lib/toast"
+import { Input } from "@/components/ui/input"
 import { useUser } from "@/components/auth/user-context"
 import Link from "next/link"
 
@@ -35,6 +36,7 @@ export default function VendorDetailsPage() {
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [loading, setLoading] = useState(true)
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactionQuery, setTransactionQuery] = useState("")
 
   useEffect(() => {
     if (vendorId) loadVendor()
@@ -52,16 +54,23 @@ export default function VendorDetailsPage() {
       if (data) {
         const vendorPurchaseInvoices = (allPurchaseInvoices || [])
           .filter((pi: any) => pi.recipientId === vendorId)
-          .map((pi: any) => ({
-            id: pi._id,
-            type: "purchaseInvoice" as const,
-            number: pi.purchaseInvoiceNumber,
-            date: pi.date,
-            amount: pi.invoiceTotalAmount || 0,
-            paidAmount: pi.paidAmount || 0,
-            balanceAmount: (pi.invoiceTotalAmount || 0) - (pi.paidAmount || 0),
-            status: pi.paymentStatus,
-          }))
+          .map((pi: any) => {
+            const total = Number(pi.invoiceTotalAmount || 0)
+            const balance = Number(pi.balanceAmount ?? 0)
+            const expenseAdj = Number(pi.expenseAdjustmentAmount || pi.expenseAdjustment || 0)
+            const paid = total - balance - expenseAdj
+
+            return {
+              id: pi._id,
+              type: "purchaseInvoice" as const,
+              number: pi.purchaseInvoiceNumber,
+              date: pi.date,
+              amount: total,
+              paidAmount: paid < 0 ? 0 : paid,
+              balanceAmount: balance,
+              status: pi.paymentStatus,
+            }
+          })
             console.log("vendor PI", vendorPurchaseInvoices, allPurchaseInvoices)
         const vendorPayments = (allPayments || [])
           .filter((p: any) => p.recipientId === vendorId && p.recipientType === "vendor")
@@ -114,6 +123,18 @@ export default function VendorDetailsPage() {
     .reduce((sum, t) => sum + t.balanceAmount, 0)
 
   const totalPaid = totalBilled - balanceDue
+
+  const filteredTransactions = transactions.filter((t) => {
+    const q = transactionQuery.trim().toLowerCase()
+    if (!q) return true
+
+    const numberMatch = (t.number || "").toLowerCase().includes(q)
+    const statusMatch = (t.status || "").toLowerCase().includes(q)
+    const dateStr = new Date(t.date).toLocaleDateString().toLowerCase()
+    const dateMatch = dateStr.includes(q)
+
+    return numberMatch || statusMatch || dateMatch
+  })
 
   const getStatusBadgeClass = (status?: string) => {
     if (!status) return "bg-gray-100 text-gray-800"
@@ -210,49 +231,59 @@ export default function VendorDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Vendor Info Card */}
         <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-xl">{vendor.name}</CardTitle>
-            <CardDescription>Vendor / Supplier Information</CardDescription>
-          </CardHeader>
+          {(() => {
+            const infoItems: Array<{ label: string; value: string | JSX.Element }> = []
+            const pushIf = (label: string, value?: string | null) => {
+              if (value && value.toString().trim()) {
+                infoItems.push({ label, value: value.toString().trim() })
+              }
+            }
 
-          <CardContent className="grid grid-cols-1 gap-4">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">Email</p>
-              <p className="font-semibold">{vendor.email}</p>
-            </div>
+            pushIf("Email", vendor.email)
+            pushIf("Phone", vendor.phone)
 
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">Phone</p>
-              <p className="font-semibold">{vendor.phone || "—"}</p>
-            </div>
+            const addressParts = [vendor.address, vendor.city, vendor.state, vendor.pincode]
+              .filter(Boolean)
+              .join(", ")
+            if (addressParts.trim()) {
+              infoItems.push({ label: "Address", value: addressParts })
+            }
 
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">Address</p>
-              <p className="font-semibold">
-                {vendor.address}, {vendor.city}, {vendor.state} - {vendor.pincode}
-              </p>
-            </div>
+            pushIf("GSTIN", vendor.gstin)
+            pushIf("PAN", vendor.pan)
+            pushIf("Notes", vendor.notes)
+            if (vendor.createdAt) {
+              infoItems.push({
+                label: "Created On",
+                value: new Date(vendor.createdAt).toLocaleDateString(),
+              })
+            }
 
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">GSTIN</p>
-              <p className="font-semibold">{vendor.gstin || "—"}</p>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">PAN</p>
-              <p className="font-semibold">{vendor.pan || "—"}</p>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">Notes</p>
-              <p className="font-semibold whitespace-pre-line">{vendor.notes || "No notes added."}</p>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-600">Created On</p>
-              <p className="font-semibold">{new Date(vendor.createdAt).toLocaleDateString()}</p>
-            </div>
-          </CardContent>
+            return (
+              <>
+                {infoItems.length > 0 && (
+                  <CardHeader>
+                    <CardTitle className="text-xl">{vendor.name}</CardTitle>
+                    <CardDescription>Vendor / Supplier Information</CardDescription>
+                  </CardHeader>
+                )}
+                <CardContent className="grid grid-cols-1 gap-4">
+                  {infoItems.length === 0 ? (
+                    <div className="text-sm text-gray-500 text-center py-6">
+                      No vendor information available.
+                    </div>
+                  ) : (
+                    infoItems.map((item) => (
+                      <div key={item.label} className="space-y-1">
+                        <p className="text-sm font-medium text-gray-600">{item.label}</p>
+                        <div className="font-semibold whitespace-pre-line">{item.value}</div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </>
+            )
+          })()}
         </Card>
 
         <div className="lg:col-span-2 space-y-6">
@@ -289,24 +320,28 @@ export default function VendorDetailsPage() {
               <CardDescription>All purchase invoices and payments for this vendor</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Input
+                  placeholder="Search by transaction number, date, or status..."
+                  value={transactionQuery}
+                  onChange={(e) => setTransactionQuery(e.target.value)}
+                />
+              </div>
+
               <Tabs defaultValue="all" className="w-full">
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="pending">Pending</TabsTrigger>
-                  <TabsTrigger value="completed">Completed</TabsTrigger>
+                  <TabsTrigger value="purchaseInvoice">Purchase Invoice</TabsTrigger>
+                  <TabsTrigger value="payment">Payment</TabsTrigger>
                 </TabsList>
                 <TabsContent value="all" className="mt-4">
-                  {renderTransactionTable(transactions)}
+                  {renderTransactionTable(filteredTransactions)}
                 </TabsContent>
-                <TabsContent value="pending" className="mt-4">
-                  {renderTransactionTable(
-                    transactions.filter((t) => ["unpaid", "partial", "pending", "open"].includes(t.status.toLowerCase()))
-                  )}
+                <TabsContent value="purchaseInvoice" className="mt-4">
+                  {renderTransactionTable(filteredTransactions.filter((t) => t.type === "purchaseInvoice"))}
                 </TabsContent>
-                <TabsContent value="completed" className="mt-4">
-                  {renderTransactionTable(
-                    transactions.filter((t) => ["paid", "completed", "cleared", "closed"].includes(t.status.toLowerCase()))
-                  )}
+                <TabsContent value="payment" className="mt-4">
+                  {renderTransactionTable(filteredTransactions.filter((t) => t.type === "payment"))}
                 </TabsContent>
               </Tabs>
             </CardContent>

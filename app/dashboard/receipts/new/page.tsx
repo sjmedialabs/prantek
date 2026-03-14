@@ -177,6 +177,7 @@ export default function ReceiptsPage() {
   const [advanceReceipts, setAdvanceReceipts] = useState<any[]>([])
   const [selectedAdvanceReceipt, setSelectedAdvanceReceipt] = useState<any>(null)
   const [advanceApplyAmount, setAdvanceApplyAmount] = useState(0)
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0])
 
   // Scenario 2: With Items state
   const [scenario2Client, setScenario2Client] = useState("")
@@ -529,8 +530,8 @@ export default function ReceiptsPage() {
         createdBy: companyName,
         userId: invoiceDetails.userId,
         notes: notes,
-        terms: terms,
-        date: new Date().toISOString()
+        terms: terms, 
+        date: new Date(date).toISOString()
       }
 
       const res = await fetch("/api/receipts", {
@@ -843,7 +844,7 @@ export default function ReceiptsPage() {
         bankDetails: selectedAccount,
         parentReceiptNumber: selectedAdvanceReceipt?.receiptNumber || null,
         advanceAppliedAmount: advanceApplyAmount || 0,
-        date: new Date().toISOString(),
+        date: new Date(date).toISOString(),
         status: `${scenario2PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
         terms: terms,
@@ -928,8 +929,8 @@ export default function ReceiptsPage() {
         paymentMethod: scenario3PaymentMethod,
         bankDetails: selectedAccount,
         screenshotUrl: scenario3ScreenshotUrl,
-        referenceNumber: scenario3ReferenceNumber,
-        date: new Date().toISOString(),
+        referenceNumber: scenario3ReferenceNumber, 
+        date: new Date(date).toISOString(),
         status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
         terms: terms,
@@ -1003,8 +1004,8 @@ export default function ReceiptsPage() {
         paymentMethod: scenario3PaymentMethod,
         bankDetails: selectedAccount,
         screenshotUrl: scenario3ScreenshotUrl,
-        referenceNumber: scenario3ReferenceNumber,
-        date: new Date().toISOString(),
+        referenceNumber: scenario3ReferenceNumber, 
+        date: new Date(date).toISOString(),
         status: `${scenario3PaymentMethod.trim().toLowerCase() === "cash" ? "cleared" : "received"}`,
         notes: notes,
         terms: terms,
@@ -1081,7 +1082,7 @@ export default function ReceiptsPage() {
             {/* Scenario 1: From SalesInvoice */}
             <TabsContent value="invoice" className="space-y-4">
               <div className="space-y-4">
-                <div className="flex flex-row gap-2">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="w-full">
                     <Label>Select SalesInvoice</Label>
                     {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
@@ -1104,6 +1105,10 @@ export default function ReceiptsPage() {
                       placeholder="Search by Sales Invoice No. no, client, email, or phone..."
                       emptyText="No invoice found"
                     />
+                  </div>
+                  <div className="w-full">
+                    <Label>Receipt Date</Label>
+                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
                   <div className="w-full">
                     <Label>Created By</Label>
@@ -1257,7 +1262,7 @@ export default function ReceiptsPage() {
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
                               <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}
+                                {method.bankName}, {method.accountName} ,{method.accountNumber}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1337,7 +1342,7 @@ export default function ReceiptsPage() {
             {/* Scenario 2: With Items */}
             <TabsContent value="nonInvoiced" className="space-y-4">
               <div className="space-y-4">
-                <div className="flex flex-row gap-2 iems-center">
+                <div className="grid grid-cols-3 gap-4 items-center">
                   {/* Client Selector */}
                   <div className="w-full">
                     <Label>Client *</Label>
@@ -1412,6 +1417,10 @@ export default function ReceiptsPage() {
                       </Dialog>
                     </div>
 
+                  </div>
+                  <div className="w-full">
+                    <Label>Receipt Date</Label>
+                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
                   <div className="w-full">
                     <Label>Created By</Label>
@@ -1824,7 +1833,7 @@ export default function ReceiptsPage() {
                             <SelectContent>
                               {bankAccounts.map((method: any) => (
                                 <SelectItem key={method._id} value={method._id}>
-                                  {method.bankName}
+                                  {method.bankName}, {method.accountName}, {method.accountNumber}
                                 </SelectItem>
 
                               ))}
@@ -1899,7 +1908,7 @@ export default function ReceiptsPage() {
             {/* Scenario 3: Quick Receipt */}
             <TabsContent value="quick" className="space-y-4">
               <div className="space-y-4">
-                <div className="flex flex-row items-center gap-2">
+                <div className="grid grid-cols-3 gap-4 items-center">
                   {/* Client Selector */}
                   <div className="w-full">
                     <Label>Client *</Label>
@@ -1973,6 +1982,10 @@ export default function ReceiptsPage() {
 
                     </div>
 
+                  </div>
+                  <div>
+                   <Label>Receipt Date</Label>
+                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
                   {/* created by */}
                   <div className="w-full">
@@ -2123,7 +2136,7 @@ export default function ReceiptsPage() {
                             <SelectContent>
                               {bankAccounts.map((method: any) => (
                                 <SelectItem key={method._id} value={method._id}>
-                                  {method.bankName}
+                                  {method.bankName}, {method.accountName}, {method.accountNumber}
                                 </SelectItem>
 
                               ))}
@@ -2200,7 +2213,7 @@ export default function ReceiptsPage() {
             {/* Scenario 4: Advance Receipt */}
             <TabsContent value="advance" className="space-y-4">
               <div className="space-y-4">
-                <div className="flex flex-row items-center gap-2">
+                <div className="grid grid-cols-3 gap-4 items-center">
                   {/* Client Selector */}
                   <div className="w-full">
                     <Label>Client *</Label>
@@ -2274,6 +2287,10 @@ export default function ReceiptsPage() {
 
                     </div>
 
+                  </div>
+                  <div>
+                   <Label>Receipt Date</Label>
+                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                   </div>
                   {/* created by */}
                   <div className="w-full">
@@ -2423,7 +2440,7 @@ export default function ReceiptsPage() {
                             <SelectContent>
                               {bankAccounts.map((method: any) => (
                                 <SelectItem key={method._id} value={method._id}>
-                                  {method.bankName}
+                                  {method.bankName}, {method.accountName}, {method.accountNumber}
                                 </SelectItem>
 
                               ))}

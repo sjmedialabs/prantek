@@ -26,6 +26,45 @@ import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
 import { BulkUploadDialogClient } from "@/components/admin/bulk-upload-clients"
 
+const indianStates = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
 export default function ClientsPage() {
   const { hasPermission, loading } = useUser()
   const [clients, setClients] = useState<Client[]>([])
@@ -147,17 +186,9 @@ export default function ClientsPage() {
       newErrors.state = "State is required"
       isValid = false
     }
-    if (!formData.city.trim()) {
-      newErrors.city = "City is required"
-      isValid = false
-    }
     const pincodeRegex = /^\d{6}$/
-    if (!pincodeRegex.test(formData.pincode)) {
+    if (formData.pincode && !pincodeRegex.test(formData.pincode)) {
       newErrors.pincode = "Enter a valid 6-digit pincode"
-      isValid = false
-    }
-    if (!formData.address.trim()) {
-      newErrors.address = "Address is required"
       isValid = false
     }
 
@@ -475,7 +506,7 @@ export default function ClientsPage() {
                       {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="email" required>Email </Label>
+                      <Label htmlFor="email">Email </Label>
                       <Input
                         id="email"
                         type="email"
@@ -488,7 +519,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor="address" required>Address </Label>
+                    <Label htmlFor="address">Address </Label>
                     <Textarea
                       id="address"
                       value={formData.address}
@@ -502,16 +533,25 @@ export default function ClientsPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="state" required>State </Label>
-                      <Input
-                        id="state"
+                      <Select
                         value={formData.state}
-                        placeholder="Enter state"
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      />
+                        onValueChange={(value) => setFormData({ ...formData, state: value })}
+                      >
+                        <SelectTrigger id="state">
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {indianStates.map((stateName) => (
+                            <SelectItem key={stateName} value={stateName}>
+                              {stateName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="city" required>City </Label>
+                      <Label htmlFor="city">City </Label>
                       <Input
                         id="city"
                         value={formData.city}
@@ -521,7 +561,7 @@ export default function ClientsPage() {
                       {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor="pincode" required>Pincode </Label>
+                      <Label htmlFor="pincode">Pincode </Label>
                       <Input
                         id="pincode"
                         value={formData.pincode}

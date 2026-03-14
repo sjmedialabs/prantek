@@ -162,7 +162,7 @@ export default function ReceiptsPage() {
       const cancelReceiptRes = await fetch(`/api/receipts/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled' })
+        body: JSON.stringify({ status: 'cancelled', ReceiptAmount: 0})
       });
 
       const data = await cancelReceiptRes.json();
@@ -237,42 +237,24 @@ export default function ReceiptsPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Total Receipts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{receipts.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Amount</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{receipts.reduce((sum, r) => sum + (r.ReceiptAmount || 0), 0).toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        {/* <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Received</CardDescription>
+            <CardDescription>Received Receipt</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {receipts.filter((r) => r.status === "pending").length}
+              {receipts.filter((r) => r.status === "received").length}
             </div>
           </CardContent>
-        </Card> */}
+        </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Cleared</CardDescription>
+            <CardDescription>Cancelled Receipt</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {receipts.filter((r) => r.status === "cleared").length}
+            <div className="text-2xl font-bold text-red-600">
+              {receipts.filter((r) => r.status === "cancelled").length}
             </div>
           </CardContent>
         </Card>
@@ -463,7 +445,7 @@ export default function ReceiptsPage() {
                               </Button>
                             </Link>
                            {
-                            (hasPermission("edit_receipts")) && receipt.status !== "cleared" &&(
+                            (hasPermission("edit_receipts")) && !["cleared", "cancelled"].includes(receipt.status) &&(
                                <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
                               <Button variant="ghost" size="sm" title="Edit Receipt">
                                 <Edit className="h-4 w-4" />

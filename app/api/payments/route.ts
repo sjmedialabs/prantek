@@ -40,25 +40,25 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     // For admin users, use companyId (parent account)
     // For regular users, use userId (their own account)
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
-
-    // Use recipient name for client code (payments are made to vendors/recipients)
-    const recipientName = body.recipientName || "Unknown"
-
-    if (!body.paymentNumber) {
-      body.paymentNumber = await generateNextNumber("payments", "PAY", filterUserId)
+    const userIdStr = String(filterUserId ?? "").trim()
+    if (!userIdStr) {
+      return NextResponse.json({ success: false, error: "User context required to create payment" }, { status: 400 })
     }
 
-    const payment = await mongoStore.create("payments", { ...body, userId: filterUserId })
+    // Generate unique payment number per user (PAY-YYYY-NNN) via atomic counter
+    if (!body.paymentNumber || typeof body.paymentNumber !== "string" || !body.paymentNumber.trim()) {
+      body.paymentNumber = await generateNextNumber("payments", "PAY", userIdStr)
+    }
 
-    await logActivity(filterUserId, "create", "payment", payment._id?.toString(), { paymentNumber: body.paymentNumber })
+    const payment = await mongoStore.create("payments", { ...body, userId: userIdStr })
 
     // Notify admins about new payment
     try {
       const db = await connectDB()
-      const quotationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).findOne({userId:filterUserId})
+      const quotationSettings = await db.collection(Collections.NOTIFICATIONSETTINGS).findOne({ userId: userIdStr })
       if(quotationSettings?.paymentNotifications){
          await createNotification({
-        userId: filterUserId,
+        userId: userIdStr,
         type: "payment",
         title: "New Payment Created",
         message: "A new payment has been created: " + body.paymentNumber,
@@ -71,7 +71,9 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
 
     return NextResponse.json({ success: true, data: payment })
-  } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to create payment" }, { status: 500 })
+  } catch (error: any) {
+    const message = error?.message || "Failed to create payment"
+    console.error("[Payments POST]", message, error)
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 })

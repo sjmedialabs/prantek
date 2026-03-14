@@ -35,6 +35,7 @@ export default function NewPaymentPage() {
   const { toast } = useToast()
 
   const [paymentData, setPaymentData] = useState({
+    paymentNumber: "Auto-generated",
     purchaseInvoiceId: "",
     purchaseInvoiceNumber: "auto-generated",
     date: new Date().toISOString().split("T")[0],
@@ -74,11 +75,12 @@ export default function NewPaymentPage() {
   const [purchaseInvoices, setPurchaseInvoices] = useState<any[]>([])
   const [creationMode, setCreationMode] = useState("non-invoiced")
   const [companyName, setCompanyName] = useState("")
+  const [paymentsDB, setPaymentsDB] = useState<any[]>([])
   useEffect(() => {
 
     const loadData = async () => {
       try {
-        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, invoicesData, companyData] = await Promise.all([
+        const [clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, invoicesData, companyData, paymentDetails] = await Promise.all([
           api.clients.getAll(),
           api.vendors.getAll(),
           api.employees.getAll(),
@@ -88,12 +90,14 @@ export default function NewPaymentPage() {
           api.bankAccounts.getAll(),
           api.purchaseInvoice.getAll(),
           api.company.get(),
+          api.payments.getAll(),
         ]);
 
         console.log("Loaded data:", clientsData, vendorsData, teamData, recipientTypesData, paymentCategories, paymentMethods, bankAccounts, invoicesData);
 
         // 🧹 Filter → Dedupe → Set
-
+        const payments = paymentDetails || [];
+        setPaymentsDB(payments)
         // ⬅️ 1. ACTIVE clients only + dedupe by _id
         const activeClients = clientsData
           .filter((c: any) => c.status === "active" || c.isActive === true)
@@ -401,30 +405,9 @@ const handleRecipientChange = (recipientId: string) => {
     }
 
     try {
-      // If payment is for an invoice, update the invoice first
-      if (creationMode === "invoiced" && paymentData.purchaseInvoiceId) {
-        const originalInvoice = purchaseInvoices.find(i => i._id === paymentData.purchaseInvoiceId);
-        if (originalInvoice) {
-          const paymentAmount = Number.parseFloat(paymentData.amount);
-          const originalBalance = Number(originalInvoice.balanceAmount);
-          const newBalance = originalBalance - paymentAmount;
-          const originalPaidAmount = Number(originalInvoice.paidAmount || 0);
-          const newPaidAmount = originalPaidAmount + paymentAmount;
-
-          let newPaymentStatus: string;
-          let newInvoiceStatus: string;
-
-          if (newBalance <= 0) {
-            newPaymentStatus = "Paid";
-            newInvoiceStatus = "Closed";
-          } else {
-            newPaymentStatus = "Partial";
-            newInvoiceStatus = "Partial";
-          }
-      await api.payments.create({
-        // purchaseInvoiceId: creationMode === "invoiced" ? paymentData.purchaseInvoiceId : undefined,
-        userId: user?.id || "",
-        // paymentNumber: paymentData.paymentNumber,
+      // Build payload — do not send paymentNumber; API generates unique number per user
+      const payload = {
+        purchaseInvoiceId: creationMode === "invoiced" ? paymentData.purchaseInvoiceId : undefined,
         recipientType: paymentData.recipientType as "client" | "vendor" | "team",
         recipientId: paymentData.recipientId,
         recipientName: paymentData.recipientName,
@@ -435,7 +418,6 @@ const handleRecipientChange = (recipientId: string) => {
         payAbleAmount: paymentData.payAbleAmount,
         amountInWords: amountInWords,
         purchaseInvoiceNumber: paymentData.purchaseInvoiceNumber || undefined,
-        purchaseInvoiceId: paymentData.purchaseInvoiceId,
         date: paymentData.date,
         amount: Number.parseFloat(paymentData.amount),
         paymentMethod: paymentData.paymentMethod as any,
@@ -448,27 +430,52 @@ const handleRecipientChange = (recipientId: string) => {
         bankAccount: paymentData.bankAccount,
         referenceNumber: paymentData.referenceNumber,
         createdBy: companyName || "",
-        // paymentType: paymentData.paymentType,
-      })
+      }
+
+      // API adds userId and generates paymentNumber per user
+      const createdPayment = await api.payments.create(payload as any)
+
+      // If payment is for an invoice, update the invoice after creating payment
+      if (creationMode === "invoiced" && paymentData.purchaseInvoiceId) {
+        const originalInvoice = purchaseInvoices.find(i => i._id === paymentData.purchaseInvoiceId)
+        if (originalInvoice) {
+          const paymentAmount = Number.parseFloat(paymentData.amount)
+          const originalBalance = Number(originalInvoice.balanceAmount)
+          const newBalance = originalBalance - paymentAmount
+          const originalPaidAmount = Number(originalInvoice.paidAmount || 0)
+          const newPaidAmount = originalPaidAmount + paymentAmount
+
+          let newPaymentStatus: string
+          let newInvoiceStatus: string
+
+          if (newBalance <= 0) {
+            newPaymentStatus = "Paid"
+            newInvoiceStatus = "Closed"
+          } else {
+            newPaymentStatus = "Partial"
+            newInvoiceStatus = "Partial"
+          }
 
           await api.purchaseInvoice.update(paymentData.purchaseInvoiceId, {
             balanceAmount: newBalance,
-            paymentStatus: newPaymentStatus,
-            invoiceStatus: newInvoiceStatus,
-            paidAmount: newPaidAmount
-          });
+            paymentStatus: newPaymentStatus as "Paid" | "Unpaid",
+            invoiceStatus: newInvoiceStatus as "Closed" | "Open",
+            paidAmount: newPaidAmount,
+          } as any)
         }
       }
+
+      const displayNumber = createdPayment?.paymentNumber ?? "Payment"
       toast({
         title: "Payment Created",
-        description: `Payment ${paymentData.paymentNumber} has been created successfully.`,
+        description: `${displayNumber} has been created successfully.`,
       })
 
       router.push("/dashboard/payments")
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to create payment. Please try again.",
+        description: error?.message ?? "Failed to create payment. Please try again.",
         variant: "destructive",
       })
     }

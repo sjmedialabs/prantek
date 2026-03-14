@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
+import { ImageUpload } from "@/components/ui/image-upload"
 import { Plus, Search, Package, Laptop, Car, Building, Wrench, TrendingDown, AlertTriangle, UserPlus, UserX, UserCheck, Edit } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { toast } from "@/lib/toast"
@@ -59,6 +60,8 @@ interface Asset {
   submittedDate?: string
   assignmentHistory?: AssignmentHistory[]
   isActive?: boolean
+  notes?: string
+  imageUrl?: string
 }
 
 const COLORS = ["#8b5cf6", "#06b6d4", "##10b981", "#f59e0b", "#ef4444"]
@@ -88,7 +91,9 @@ export default function AssetsPage() {
     condition: "excellent" as const,
     location: "",
     serialNumber: "",
+    notes: "",
     warranty: "",
+    imageUrl: ""
   })
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
@@ -179,6 +184,8 @@ const categoryData = categories
         serialNumber: newAsset.serialNumber,
         warranty: newAsset.warranty,
         status: "available",
+        notes: newAsset.notes,
+        imageUrl: newAsset.imageUrl,
         assignmentHistory: [],
         isActive: true,
       }
@@ -305,7 +312,10 @@ const categoryData = categories
         location: newAsset.location,
         serialNumber: newAsset.serialNumber,
         warranty: newAsset.warranty,
+        notes: newAsset.notes,
+        imageUrl: newAsset.imageUrl,
       };
+
 
       await api.assets.update(editingAssetId, payload)
 
@@ -335,8 +345,10 @@ const categoryData = categories
       purchaseDate: asset.purchaseDate || new Date().toISOString().split("T")[0],
       condition: asset.condition || "excellent",
       location: asset.location || "",
-      serialNumber: asset.serialNumber || "",
-      warranty: asset.warranty || ""
+            serialNumber: asset.serialNumber || "",
+            notes: asset.notes || "",
+      warranty: asset.warranty || "",
+      imageUrl: asset.imageUrl || "",
     })
 
     setIsAddAssetOpen(true)
@@ -420,6 +432,8 @@ const categoryData = categories
                   location: "",
                   serialNumber: "",
                   warranty: "",
+                  notes: "",
+                  imageUrl: ""
                 })
               }}
             >
@@ -431,7 +445,7 @@ const categoryData = categories
             
           </DialogTrigger>
 
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Asset</DialogTitle>
               <DialogDescription>Register a new asset in your inventory (all fields optional)</DialogDescription>
@@ -532,6 +546,23 @@ const categoryData = categories
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Input
+                    id="notes"
+                    placeholder="Asset notes (optional)"
+                    value={newAsset.notes}
+                    onChange={(e) => setNewAsset({ ...newAsset, notes: e.target.value })}
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <ImageUpload label="Asset Image" value={newAsset.imageUrl} onChange={(url) => setNewAsset({ ...newAsset, imageUrl: url })} />
+                </div> 
+                <div>
+                  {
+                              newAsset.imageUrl && ( <img src={newAsset.imageUrl} alt={newAsset.name} className="w-[50px] h-[50px] rounded-lg" /> )
+                            }
+                </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsAddAssetOpen(false)}>
                   Cancel
@@ -773,6 +804,7 @@ const categoryData = categories
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Switch
+
                             checked={asset.isActive === true}
                             onCheckedChange={() => handleStatusToggle(asset._id, asset.isActive === true)}
                             title={asset.isActive === true ? "Deactivate Asset" : "Activate Asset"}

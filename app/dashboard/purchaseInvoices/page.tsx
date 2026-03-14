@@ -142,6 +142,7 @@ export default function PurchaseInvoiceList() {
   const totalAmount = filtered.reduce((s, i) => s + (i.invoiceTotalAmount || 0), 0)
   const paidAmount = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
   const unpaidAmount = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
+  const unpaidInvoice = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "unpaid" && i?.invoiceStatus === "Open")
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage)
 
@@ -209,9 +210,9 @@ export default function PurchaseInvoiceList() {
         </div>
 
         <div className="space-x-2">
-          <Button variant="outline" onClick={exportCSV}>
+          {/* <Button variant="outline" onClick={exportCSV}>
             <Download className="h-4 w-4 mr-2" /> Export
-          </Button>
+          </Button> */}
 
           {hasPermission("add_purchase_invoice")&&(<Link href="/dashboard/purchaseInvoices/new">
             <Button title="Add New Invoice but Please ensure Payment Settings completed">
@@ -223,7 +224,7 @@ export default function PurchaseInvoiceList() {
 
       {/* Summary */}
       <div className="grid md:grid-cols-3 gap-4">
-        <Card>
+        {/* <Card>
           <CardHeader className="pb-2"><CardDescription>Total Amount</CardDescription></CardHeader>
           <CardContent><div className="text-2xl font-bold">₹{totalAmount.toLocaleString()} </div></CardContent>
         </Card>
@@ -231,11 +232,11 @@ export default function PurchaseInvoiceList() {
         <Card>
           <CardHeader className="pb-2"><CardDescription>Paid</CardDescription></CardHeader>
           <CardContent className="text-green-600"><div className="text-2xl font-bold">₹{paidAmount.toLocaleString()}</div></CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
-          <CardHeader className="pb-2"><CardDescription>Unpaid</CardDescription></CardHeader>
-          <CardContent className="text-red-600"><div className="text-2xl font-bold">₹{unpaidAmount.toLocaleString()}</div></CardContent>
+          <CardHeader className="pb-2"><CardDescription>Unpaid Invoice</CardDescription></CardHeader>
+          <CardContent className="text-red-600"><div className="text-2xl font-bold">₹{unpaidInvoice.length}</div></CardContent>
         </Card>
       </div>
 

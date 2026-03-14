@@ -196,7 +196,7 @@ const exportToCSV = () => {
       const res = await fetch(`/api/payments/${payment._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
+        body: JSON.stringify({ status: "cancelled", amount:0 }),
       })
 
       if (!res.ok) throw new Error("Failed to cancel payment")
@@ -266,10 +266,10 @@ const exportToCSV = () => {
           <p className="text-gray-600">Manage all payment transactions</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={exportToCSV}>
+          {/* <Button variant="outline" onClick={exportToCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export
-          </Button>
+          </Button> */}
           {hasPermission("add_payments") && (
             <Link href="/dashboard/payments/new">
               <Button>
