@@ -1,7 +1,6 @@
 "use client"
 
 import { useUser } from "@/components/auth/user-context"
-import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,8 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { Client, Item, Quotation, TaxRate, SalesInvoice } from "@/lib/models/types"
 import { Textarea } from "@/components/ui/textarea"
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 
 function numberToIndianCurrencyWords(amount: number): string {
@@ -1139,7 +1137,7 @@ export default function NewSalesInvoicePage() {
                     </SelectContent>
                   </Select> */}
                   <div className="[&_.ql-editor]:min-h-[150px]">
-                    <ReactQuill
+                    <SafeReactQuill
                       theme="snow"
                       value={terms}
                       onChange={setTerms}
@@ -1676,7 +1674,7 @@ export default function NewSalesInvoicePage() {
                   </Select> */}
 
                   <div className="[&_.ql-editor]:min-h-[150px]">
-                    <ReactQuill
+                    <SafeReactQuill
                       theme="snow"
                       value={terms}
                       onChange={setTerms}

@@ -16,9 +16,7 @@ import { Client, Item, Quotation, Receipt, TaxRate } from "@/lib/models/types"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import FileUpload from "@/components/file-upload"
-import dynamic from "next/dynamic"
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 
 function numberToIndianCurrencyWords(amount: number): string {
   if (isNaN(amount)) return "";
@@ -1321,7 +1319,7 @@ export default function ReceiptsPage() {
                 <div>
                   <Label>Terms & Conditions</Label>
                   <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
-                    <ReactQuill
+                    <SafeReactQuill
                       theme="snow"
                       value={terms}
                       onChange={setTerms}
@@ -1887,7 +1885,7 @@ export default function ReceiptsPage() {
                 <div>
                   <Label>Terms & Conditions</Label>
                   <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
-                    <ReactQuill
+                    <SafeReactQuill
                       theme="snow"
                       value={terms}
                       onChange={setTerms}
@@ -2193,7 +2191,7 @@ export default function ReceiptsPage() {
                 <div>
                   <Label>Terms & Conditions</Label>
                   <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
-                    <ReactQuill
+                    <SafeReactQuill
                       theme="snow"
                       value={terms}
                       onChange={setTerms}
@@ -2492,7 +2490,7 @@ export default function ReceiptsPage() {
                 <div>
                   <Label>Terms & Conditions</Label>
                   <div className="mt-2 [&_.ql-editor]:min-h-[100px]">
-                    <ReactQuill
+                    <SafeReactQuill
                       theme="snow"
                       value={terms}
                       onChange={setTerms}

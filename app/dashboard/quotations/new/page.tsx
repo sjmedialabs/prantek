@@ -26,11 +26,8 @@ import { SearchableSelect } from "@/components/searchable-select"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import { useUser } from "@/components/auth/user-context"
 import { hasPermission } from "@/lib/jwt"
-import dynamic from "next/dynamic"
 import { TaxRate } from "@/lib/models/types"
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 interface QuotationItem {
   id: string
   type: "product" | "service"
@@ -1392,7 +1389,7 @@ updatedItem.total =
                   <div>
                     <Label>Terms & Conditions</Label>
                     <div className="mt-2 [&_.ql-editor]:min-h-[200px]">
-                      <ReactQuill
+                      <SafeReactQuill
                         theme="snow"
                         value={terms}
                         onChange={setTerms}

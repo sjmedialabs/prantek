@@ -30,11 +30,8 @@ import Link from "next/link"
 import { toast } from "@/lib/toast"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
-import dynamic from "next/dynamic"
 import { TaxRate } from "@/lib/models/types"
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 
 export default function EditQuotationPage() {
   const router = useRouter()
@@ -788,7 +785,7 @@ async function handleSave() {
                   <div>
                     <Label>Terms & Conditions</Label>
                     <div className="mt-2 [&_.ql-editor]:min-h-[200px]">
-                      <ReactQuill
+                      <SafeReactQuill
                         theme="snow"
                         value={terms}
                         onChange={setTerms}

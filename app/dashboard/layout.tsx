@@ -20,19 +20,20 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   const handleOpenChange = (open: boolean) => {
     if (open) openSidebar()
+    else closeSidebar()
   }
 
   const preventCloseOutside = (e: Event) => e.preventDefault()
 
   return (
     <>
-      {/* Mobile drawer: opens on hamburger, closes only via X or nav link */}
+      {/* Mobile drawer: single state isSidebarOpen; hamburger opens, X closes; high z-index so it appears above header */}
       <Sheet open={isSidebarOpen} onOpenChange={handleOpenChange}>
         <SheetContent
           side="left"
           hideCloseButton
           title="Navigation menu"
-          className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col"
+          className="z-[100] w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col"
           onPointerDownOutside={preventCloseOutside}
           onInteractOutside={preventCloseOutside}
         >

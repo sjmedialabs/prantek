@@ -30,11 +30,8 @@ import { ArrowLeft, Plus, Minus, Send, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
-import dynamic from "next/dynamic"
 import { TaxRate, QuotationItem, SalesInvoice } from "@/lib/models/types"
-
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
+import { SafeReactQuill } from "@/components/ui/safe-react-quill"
 
 export default function EditSalesInvoicePage() {
   const router = useRouter()
@@ -1021,7 +1018,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
                   <div>
                     <Label>Terms & Conditions</Label>
                     <div className="mt-2 [&_.ql-editor]:min-h-[200px]">
-                      <ReactQuill
+                      <SafeReactQuill
                         theme="snow"
                         value={terms}
                         onChange={setTerms}
