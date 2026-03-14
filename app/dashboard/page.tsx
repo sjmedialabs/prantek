@@ -548,10 +548,10 @@ const clearedPayments = filteredPayments.filter(
         </div>
 
         {/* Content */}
-        <div className="relative p-6 text-gray-900">
-          <div className="flex items-start justify-between gap-6">
+        <div className="relative p-4 sm:p-6 text-gray-900">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6">
             {/* Left Side - Welcome Text */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-bold mb-2">
                 Welcome back, {user?.name}!
               </h1>
@@ -582,7 +582,7 @@ const clearedPayments = filteredPayments.filter(
 
             {/* Right Side - Setup Progress (Compact) */}
             {!user?.isAdminUser && (
-              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 min-w-[280px]">
+              <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-200 w-full lg:min-w-[280px] lg:max-w-[320px] shrink-0">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-gray-900">Setup Progress</h3>
                   <span className="text-2xl font-bold text-amber-600">{getCompletionPercentage()}%</span>
@@ -686,7 +686,7 @@ const clearedPayments = filteredPayments.filter(
       </div> */}
 
       {/* Date Filter */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 className="text-lg font-semibold text-gray-900">
           Financial Overview
         </h2>

@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useRef } from "react"
 
 import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
@@ -11,29 +12,71 @@ import { useSessionTimeout } from "@/hooks/use-session-timeout"
 import { OnboardingProvider } from "@/components/onboarding/onboarding-context"
 import { WelcomeModal } from "@/components/onboarding/welcome-modal"
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
+import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
+
+const OPEN_DEBOUNCE_MS = 400
+
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
+  useSessionTimeout({ enabled: true, isSuperAdmin: false })
+  const { mobileOpen, closeMobile, openMobile } = useSidebar()
+  const openedAtRef = useRef<number>(0)
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      openedAtRef.current = Date.now()
+      openMobile()
+    } else {
+      // Ignore close from overlay/outside for a short time after open so the same tap doesn't close the sheet (mobile flicker fix)
+      if (Date.now() - openedAtRef.current < OPEN_DEBOUNCE_MS) return
+      closeMobile()
+    }
+  }
+
+  return (
+    <>
+      {/* Mobile drawer: outside flex so portal/state are not affected by layout */}
+      <Sheet open={mobileOpen} onOpenChange={handleOpenChange}>
+        <SheetContent side="left" hideCloseButton title="Navigation menu" className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col">
+          <div className="flex flex-col h-full overflow-hidden">
+            <DashboardSidebar isMobile onClose={closeMobile} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <div className="flex min-h-screen flex-row bg-gray-50">
+        {/* Desktop sidebar: fixed left, hidden on mobile */}
+        <aside className="hidden lg:flex lg:flex-col lg:shrink-0 lg:border-r lg:bg-background lg:sticky lg:top-0 lg:h-screen lg:z-10">
+          <DashboardSidebar />
+        </aside>
+
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <DashboardHeader />
+          <main className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-6 min-h-0 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+      <Toaster />
+      <WelcomeModal />
+      <OnboardingWizard />
+    </>
+  )
+}
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // Enable 30-minute idle session timeout
-  useSessionTimeout({ enabled: true, isSuperAdmin: false })
-
   return (
     <UserProvider>
       <OnboardingProvider>
         <ProtectedRoute>
-          <div className="flex min-h-screen flex-row bg-gray-50">
-            <DashboardSidebar />
-            <div className="flex-1 flex flex-col">
-              <DashboardHeader />
-              <main className="flex-1 p-6">{children}</main>
-            </div>
-          </div>
-          <Toaster />
-          <WelcomeModal />
-          <OnboardingWizard />
+          <SidebarProvider>
+            <DashboardLayoutInner>{children}</DashboardLayoutInner>
+          </SidebarProvider>
         </ProtectedRoute>
       </OnboardingProvider>
     </UserProvider>
