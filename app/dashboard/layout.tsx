@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useEffect } from "react"
 
 import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
@@ -12,36 +13,50 @@ import { OnboardingProvider } from "@/components/onboarding/onboarding-context"
 import { WelcomeModal } from "@/components/onboarding/welcome-modal"
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   useSessionTimeout({ enabled: true, isSuperAdmin: false })
-  const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar()
+  const { isSidebarOpen, closeSidebar } = useSidebar()
 
-  const handleOpenChange = (open: boolean) => {
-    if (open) openSidebar()
-    else closeSidebar()
-  }
-
-  const preventCloseOutside = (e: Event) => e.preventDefault()
+  useEffect(() => {
+    if (isSidebarOpen) document.body.style.overflow = "hidden"
+    else document.body.style.overflow = ""
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isSidebarOpen])
 
   return (
     <>
-      {/* Mobile drawer: single state isSidebarOpen; hamburger opens, X closes; high z-index so it appears above header */}
-      <Sheet open={isSidebarOpen} onOpenChange={handleOpenChange}>
-        <SheetContent
-          side="left"
-          hideCloseButton
-          title="Navigation menu"
-          className="z-[100] w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col"
-          onPointerDownOutside={preventCloseOutside}
-          onInteractOutside={preventCloseOutside}
+      {/* Custom mobile drawer (no Radix): overlay + sliding panel, controlled only by isSidebarOpen */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[100] ${isSidebarOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!isSidebarOpen}
+      >
+        {/* Backdrop: tap to close */}
+        <button
+          type="button"
+          onClick={closeSidebar}
+          className={`absolute inset-0 bg-black/50 transition-opacity duration-300 touch-manipulation ${
+            isSidebarOpen ? "opacity-100" : "opacity-0"
+          } ${isSidebarOpen ? "" : "invisible"}`}
+          aria-label="Close menu"
+          tabIndex={isSidebarOpen ? 0 : -1}
+        />
+        {/* Slide-in panel */}
+        <div
+          className={`absolute inset-y-0 left-0 w-[min(100vw-4rem,20rem)] max-w-[20rem] bg-background shadow-xl flex flex-col transition-[transform] duration-300 ease-out ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
         >
           <div className="flex flex-col h-full overflow-hidden">
             <DashboardSidebar isMobile onClose={closeSidebar} />
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </div>
 
       <div className="flex min-h-screen flex-row bg-gray-50">
         {/* Desktop sidebar: fixed left, hidden on mobile */}

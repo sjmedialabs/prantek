@@ -27,41 +27,43 @@ export default function DashboardHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationOpen, setNotificationOpen] = useState(false);
- const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
-
-  const loginedUserLocalStorage = loginedUserLocalStorageString
-    ? JSON.parse(loginedUserLocalStorageString)
-    : null;
+  const loginedUserLocalStorage = (() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const s = localStorage.getItem("loginedUser");
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  })();
   const handleLogout = () => {
     logout();
   };
 
-  // Fetch notifications
+  // Fetch notifications (fail silently so menu/header always work when API is down)
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const token = tokenStorage.getAccessToken();
         const response = await fetch("/api/notifications", {
           credentials: "include",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
           const data = await response.json();
-          const filteredData = data.filter((eachItem:any)=>eachItem.isRead===false);
+          const filteredData = data.filter((eachItem: any) => eachItem.isRead === false);
           setNotifications(filteredData);
           setUnreadCount(data.filter((n: Notification) => !n.isRead).length);
         }
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
+      } catch {
+        setNotifications([]);
+        setUnreadCount(0);
       }
     };
 
     if (user) {
-      fetchNotifications();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000);
+      fetchNotifications().catch(() => {});
+      const interval = setInterval(() => fetchNotifications().catch(() => {}), 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -165,7 +167,16 @@ const handleClearAllNotifications = async () => {
         <div className="flex items-center gap-2 min-w-0 relative z-10">
           <button
             type="button"
-            onClick={() => openSidebar()}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              openSidebar()
+            }}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              openSidebar()
+            }}
             className="lg:hidden min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation inline-flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
             aria-label="Open menu"
             aria-expanded={isSidebarOpen}
