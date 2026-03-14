@@ -22,7 +22,7 @@ const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek";
 
 export default function DashboardHeader() {
   const { user, logout } = useUser();
-  const { openMobile } = useSidebar();
+  const { isSidebarOpen, openSidebar } = useSidebar();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -165,10 +165,10 @@ const handleClearAllNotifications = async () => {
         <div className="flex items-center gap-2 min-w-0 relative z-10">
           <button
             type="button"
-            onClick={() => openMobile()}
+            onClick={() => openSidebar()}
             className="lg:hidden min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation inline-flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
             aria-label="Open menu"
-            aria-expanded={false}
+            aria-expanded={isSidebarOpen}
           >
             <Menu className="h-5 w-5" />
           </button>

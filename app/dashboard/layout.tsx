@@ -16,19 +16,18 @@ import { Sheet, SheetContent } from "@/components/ui/sheet"
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   useSessionTimeout({ enabled: true, isSuperAdmin: false })
-  const { mobileOpen, closeMobile, openMobile } = useSidebar()
+  const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar()
 
   const handleOpenChange = (open: boolean) => {
-    if (open) openMobile()
-    else closeMobile()
+    if (open) openSidebar()
   }
 
   const preventCloseOutside = (e: Event) => e.preventDefault()
 
   return (
     <>
-      {/* Mobile drawer: close only via close button or nav link, not overlay tap */}
-      <Sheet open={mobileOpen} onOpenChange={handleOpenChange}>
+      {/* Mobile drawer: opens on hamburger, closes only via X or nav link */}
+      <Sheet open={isSidebarOpen} onOpenChange={handleOpenChange}>
         <SheetContent
           side="left"
           hideCloseButton
@@ -38,7 +37,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           onInteractOutside={preventCloseOutside}
         >
           <div className="flex flex-col h-full overflow-hidden">
-            <DashboardSidebar isMobile onClose={closeMobile} />
+            <DashboardSidebar isMobile onClose={closeSidebar} />
           </div>
         </SheetContent>
       </Sheet>

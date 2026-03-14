@@ -13,11 +13,10 @@ import { Sheet, SheetContent } from "@/components/ui/sheet"
 
 function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   useSessionTimeout({ enabled: true, isSuperAdmin: true })
-  const { mobileOpen, closeMobile, openMobile } = useSidebar()
+  const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar()
 
   const handleOpenChange = (open: boolean) => {
-    if (open) openMobile()
-    else closeMobile()
+    if (open) openSidebar()
   }
 
   const preventCloseOutside = (e: Event) => e.preventDefault()
@@ -29,8 +28,8 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         <SuperAdminSidebar />
       </aside>
 
-      {/* Mobile drawer: close only via close button or nav link, not overlay tap */}
-      <Sheet open={mobileOpen} onOpenChange={handleOpenChange}>
+      {/* Mobile drawer: opens on hamburger, closes only via X or nav link */}
+      <Sheet open={isSidebarOpen} onOpenChange={handleOpenChange}>
         <SheetContent
           side="left"
           hideCloseButton
@@ -39,7 +38,7 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
           onPointerDownOutside={preventCloseOutside}
           onInteractOutside={preventCloseOutside}
         >
-          <SuperAdminSidebar isMobile onClose={closeMobile} />
+          <SuperAdminSidebar isMobile onClose={closeSidebar} />
         </SheetContent>
       </Sheet>
 
