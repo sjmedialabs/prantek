@@ -624,7 +624,7 @@ export default function QuotationsPage() {
                       <SelectContent className="z-9999">
                         {bankAccounts.length !== 0 ? (bankAccounts.map((acc: any) => (
                           <SelectItem key={acc._id} value={acc._id}>
-                            {acc.bankName}
+                            {acc.bankName}, {acc.accountName}, {acc.accountNumber}
                           </SelectItem>
 
                         ))) : (
@@ -669,6 +669,7 @@ export default function QuotationsPage() {
                         value={availableTerms}
                         onChange={setAvailableTerms}
                         placeholder="Enter terms and conditions..."
+                        readOnly={true}
                       />
                     </div>
                   </div>

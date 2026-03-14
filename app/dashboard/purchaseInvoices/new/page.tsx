@@ -294,24 +294,24 @@ export default function NewPurchaseInvoicePage() {
     if (invoiceData.recipientType === "client") {
       recipient = clients.find((c) => c._id === recipientId)
       if (recipient) {
-        details = `${recipient.address}\n${recipient.phone}\n${recipient.email}`
+        details = `${recipient.address}\n${recipient.phone}\n${recipient?.email}`
       }
     } else if (invoiceData.recipientType === "vendor") {
       recipient = vendors.find((v) => v._id === recipientId)
       if (recipient) {
-        details = `${recipient.category}\n${recipient.address}\n${recipient.phone}\n${recipient.email}`
+        details = `${recipient.category}\n${recipient.address}\n${recipient.phone}\n${recipient?.email}`
       }
     } else if (invoiceData.recipientType === "team") {
       recipient = teamMembers.find((t) => t._id === recipientId)
       if (recipient) {
-        details = `${recipient.role}\n${recipient.department || "N/A"}\n${recipient.phone}\n${recipient.email}`
+        details = `${recipient.role}\n${recipient.department || "N/A"}\n${recipient.phone}\n${recipient?.email}`
       }
     }
 
     if (recipient) {
-      const email = recipient.email || ""
+      const email = recipient?.email || ""
       const phone = recipient.phone || recipient.contactNumber || ""
-      const address = recipient.address || ""
+      const address = recipient?.address || ""
 
       setInvoiceData({
         ...invoiceData,
@@ -466,7 +466,7 @@ export default function NewPurchaseInvoicePage() {
       (c) => c.email.toLowerCase() === newClient.email.trim().toLowerCase()
     );
 
-    if (emailExists) {
+    if (emailExists && !newClient.email) {
       toast2.error("Email already registered");
       return;
     }
@@ -545,20 +545,20 @@ export default function NewPurchaseInvoicePage() {
       isValid = false;
     }
 
-    if (!newClient.address.trim()) {
-      newErrors.address = "Address is required";
-      isValid = false;
-    }
+    // if (!newClient.address.trim()) {
+    //   newErrors.address = "Address is required";
+    //   isValid = false;
+    // }
 
     if (!newClient.state.trim()) {
       newErrors.state = "State is required";
       isValid = false;
     }
 
-    if (!newClient.city.trim()) {
-      newErrors.city = "City is required";
-      isValid = false;
-    }
+    // if (!newClient.city.trim()) {
+    //   newErrors.city = "City is required";
+    //   isValid = false;
+    // }
 
     if (!pincodeRegex.test(newClient.pincode)) {
       newErrors.pincode = "Enter a valid 6-digit pincode";

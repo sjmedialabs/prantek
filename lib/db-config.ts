@@ -98,7 +98,7 @@ export const INDEXES = {
   PAYMENTS: [
     { key: { userId: 1 } },
     { key: { recipientId: 1 } },
-    { key: { paymentNumber: 1 }, unique: true },
+    { key: { userId: 1, paymentNumber: 1 }, unique: true }, // unique per user (each user has own sequence)
     { key: { status: 1 } },
     { key: { date: -1 } },
     { key: { createdAt: -1 } },

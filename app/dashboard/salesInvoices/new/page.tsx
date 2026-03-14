@@ -723,7 +723,7 @@ export default function NewSalesInvoicePage() {
 
         invoiceType: "quotation",
         quotationNumber: quotationDetails.quotationNumber,
-        salesInvoiceNumber: newSalesInvoiceNumber,
+        // salesInvoiceNumber: newSalesInvoiceNumber,
         clientId: quotationDetails.clientId,
         clientName: quotationDetails.clientName,
         clientAddress: quotationDetails.clientAddress,
@@ -883,7 +883,7 @@ export default function NewSalesInvoicePage() {
 
       const payload = {
         invoiceType: "direct",
-        salesInvoiceNumber: newSalesInvoiceNumber,
+        // salesInvoiceNumber: newSalesInvoiceNumber,
 
         // ❌ no quotation fields
         quotationId: undefined,
@@ -1080,7 +1080,7 @@ export default function NewSalesInvoicePage() {
                     <SelectContent>
                       {bankAccounts.map((method: any) => (
                         <SelectItem key={method._id} value={method._id}>
-                          {method.bankName}
+                          {method.bankName}, {method.accountName}, {method.accountNumber}
                         </SelectItem>
 
                       ))}
@@ -1614,7 +1614,7 @@ export default function NewSalesInvoicePage() {
                     <SelectContent>
                       {bankAccounts.map((method: any) => (
                         <SelectItem key={method._id} value={method._id}>
-                          {method.bankName}
+                          {method.bankName}, {method.accountName}, {method.accountNumber}
                         </SelectItem>
 
                       ))}

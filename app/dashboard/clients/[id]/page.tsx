@@ -28,7 +28,7 @@ import { Plus, Building2, User } from "lucide-react"
 
 interface Transaction {
   id: string
-  type: "quotation" | "receipt" | "payment" | "salesInvoice"
+  type: "quotation" | "receipt" | "payment" | "salesInvoice" | "purchaseInvoice"
   number: string
   date: string
   items: string[]
@@ -70,10 +70,12 @@ export default function ClientDetailsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-
+  const [transactionNumberQuery, setTransactionNumberQuery] = useState("")
   // Client Type
   const [clientType, setClientType] = useState<"individual" | "company">("individual")
-
+  const [transactionStatusFilter, setTransactionStatusFilter] = useState<
+    "all" | "pending" | "partial" | "completed" | "cancelled" | "overdue"
+  >("all")
   // Form Data
   const [formData, setFormData] = useState({
     email: "",
@@ -108,12 +110,13 @@ export default function ClientDetailsPage() {
     const loadClientData = async () => {
       if (params.id) {
         try {
-          const [loadedClient, allQuotations, allReceipts, allPayments, allSalesInvoices] = await Promise.all([
+          const [loadedClient, allQuotations, allReceipts, allPayments, allSalesInvoices, allPurchaseInvoices] = await Promise.all([
             api.clients.getById(params.id as string),
             api.quotations.getAll(),
             api.receipts.getAll(),
             api.payments.getAll(),
             api.salesInvoice.getAll(),
+            api.purchaseInvoice.getAll(),
           ]);
 
           if (!loadedClient) {
@@ -178,7 +181,27 @@ export default function ClientDetailsPage() {
               status: s.status,
             }));
 
-          const combinedTransactions = [...clientQuotations, ...clientReceipts, ...clientPayments, ...clientSalesInvoices].sort(
+            const clientPurchaseInvoices = (allPurchaseInvoices || [])
+            .filter((p: any) => p.clientId === params.id || p.recipientId === params.id)
+            .map((p: any) => ({
+              id: p._id,
+              type: "purchaseInvoice" as const,
+              number: p.purchaseInvoiceNumber,
+              date: p.date,
+              items: p.items?.map((item: any) => item.itemName || item.name) || [],
+              amount: p.invoiceTotalAmount || p.total || 0,
+              paidAmount: p.invoiceTotalAmount - p.balanceAmount - p.expenseAdjustmentAmount || 0,
+              balanceAmount: p.balanceAmount || 0,
+              status: p.invoiceStatus,
+            }));
+
+          const combinedTransactions = [
+            ...clientQuotations,
+            ...clientReceipts,
+            ...clientPayments,
+            ...clientSalesInvoices,
+            ...clientPurchaseInvoices,
+          ].sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
           );
 
@@ -231,6 +254,13 @@ export default function ClientDetailsPage() {
     )
   }
 
+  const filteredTransactions = transactions.filter((t) => {
+    const q = transactionNumberQuery.trim().toLowerCase()
+    if (!q) return true
+    const matchesNumber = (t.number || "").toLowerCase().includes(q)
+    const matchesStatus = (t.status || "").toLowerCase().includes(q)
+    return matchesNumber || matchesStatus
+  })
   const handleEdit = (client: Client) => {
     setEditingClient(client)
     setClientType((client.type as "individual" | "company") || "individual")
@@ -388,14 +418,21 @@ export default function ClientDetailsPage() {
   }
 
 
-  const renderTransactionTable = (data: Transaction[]) => (
+ 
+    const renderTransactionTable = (
+      data: Transaction[],
+      options?: {
+        descriptionHeaderLabel?: string
+        descriptionCellClassName?: string
+      },
+    ) => (
     <div className="border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Transaction</TableHead>
             <TableHead>Date</TableHead>
-            <TableHead>Items</TableHead>
+            <TableHead>{options?.descriptionHeaderLabel ?? "Items"}</TableHead>
             <TableHead>Amount</TableHead>
             <TableHead>Paid</TableHead>
             <TableHead>Balance</TableHead>
@@ -423,7 +460,12 @@ export default function ClientDetailsPage() {
                 case "receipt":
                   viewLink = `/dashboard/receipts/${transaction.id}`
                   break
-                // No link for 'payment'
+                case "purchaseInvoice":
+                  viewLink = `/dashboard/purchaseInvoices/${transaction.id}`
+                  break
+                case "payment":
+                  viewLink = `/dashboard/payments/${transaction.id}`
+                  break
               }
 
               return (
@@ -431,7 +473,8 @@ export default function ClientDetailsPage() {
                   <TableCell className="font-medium">{transaction.number}</TableCell>
                   <TableCell>{new Date(transaction.date).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    <div className="text-sm">
+                  <div className={`text-sm ${options?.descriptionCellClassName ?? ""}`}>
+                  {transaction.items.slice(0, 2).join(", ")}
                       {transaction.items.slice(0, 2).join(", ")}
                       {transaction.items.length > 2 && ` +${transaction.items.length - 2} more`}
                     </div>
@@ -472,77 +515,64 @@ export default function ClientDetailsPage() {
             <Download className="h-4 w-4 mr-2" />
             Export Transactions
           </Button>
-          <Button size="sm" onClick={() => handleEdit(client)}>
+          {/* <Button size="sm" onClick={() => handleEdit(client)}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Client
-          </Button>
+          </Button> */}
         </div>
       </div>
 
       {/* === Client Info & Transactions UI (unchanged) === */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Client Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {client.companyName && (
-              <div>
-              <p className="text-sm text-gray-600">Company Name</p>
-              <p className="font-medium">{client.companyName}</p>
-            </div>
-            )}
-            <div>
-              <p className="text-sm text-gray-600">Client Name</p>
-              <p className="font-medium">{client.name || client.companyName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Email</p>
-              <p className="font-medium">{client.email}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Phone</p>
-              <p className="font-medium">{client.phone}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Address</p>
-              <p className="font-medium">{client.address}</p>
-            </div>
-            {client.pan && (
-              <div>
-              <p className="text-sm text-gray-600">Pan Number</p>
-              <p className="font-medium">{client.pan}</p>
-            </div>
-            )}
-            {client.gst && (
-              <div>
-              <p className="text-sm text-gray-600">GST</p>
-              <p className="font-medium">{client.gst}</p>
-            </div>
-            )}
-            {client.bankAccount && (
-              <div>
-                <p className="text-sm text-gray-600">Bank Account</p>
-                <p className="font-medium">{client.bankAccount}</p>
-              </div>
-            )}
-            {client.upiId && (
-              <div>
-                <p className="text-sm text-gray-600">UPI ID</p>
-                <p className="font-medium">{client.upiId}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-sm text-gray-600">Status</p>
-              <Badge variant={client.status === "active" ? "default" : "secondary"}>{client.status}</Badge>
-            </div>
-             {client.note && (
-              <div>
-                <p className="text-sm text-gray-600">Note</p>
-                <p className="font-medium">{client.note}</p>
-              </div>
-            )}
-          </CardContent>
+        {(() => {
+            const infoItems: Array<{ label: string; value: string | JSX.Element }> = []
+            const pushIf = (label: string, value?: string) => {
+              if (value && value.trim()) infoItems.push({ label, value: value.trim() })
+            }
+
+            pushIf("Company Name", client.companyName)
+            pushIf("Client Name", client.name || client.companyName || client.clientName)
+            pushIf("Email", client.email)
+            pushIf("Phone", client.phone)
+            pushIf("Address", client.address)
+            pushIf("State", client.state)
+            pushIf("City", client.city)
+            pushIf("Pincode", client.pincode)
+            pushIf("PAN Number", client.pan)
+            pushIf("GST", client.gst)
+            pushIf("Bank Account", client.bankAccount)
+            pushIf("UPI ID", client.upiId)
+            if (client.status && client.status.trim()) {
+              infoItems.push({
+                label: "Status",
+                value: <Badge variant={client.status === "active" ? "default" : "secondary"}>{client.status}</Badge>,
+              })
+            }
+            pushIf("Note", client.note)
+
+            return (
+              <>
+                {infoItems.length > 0 && (
+                  <CardHeader>
+                    <CardTitle>Client Information</CardTitle>
+                  </CardHeader>
+                )}
+                <CardContent className="space-y-4">
+                  {infoItems.length === 0 ? (
+                    <div className="text-sm text-gray-500 text-center py-6">No client information available.</div>
+                  ) : (
+                    infoItems.map((item) => (
+                      <div key={item.label}>
+                        <p className="text-sm text-gray-600">{item.label}</p>
+                        <div className="font-medium">{item.value}</div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </>
+            )
+          })()}
         </Card>
 
         <div className="lg:col-span-2 space-y-6">
@@ -579,20 +609,48 @@ export default function ClientDetailsPage() {
               <CardDescription>All transactions for this client</CardDescription>
             </CardHeader>
             <CardContent>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search by transaction number, date, or staus....."
+                    value={transactionNumberQuery}
+                    onChange={(e) => setTransactionNumberQuery(e.target.value)}
+                  />
+                </div>
+              </div>
               <Tabs defaultValue="all" className="w-full">
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="pending">Pending</TabsTrigger>
-                  <TabsTrigger value="completed">Completed</TabsTrigger>
+                  <TabsTrigger value="receipt">Receipt</TabsTrigger>
+                  <TabsTrigger value="salesInvoice">Sales Invoice</TabsTrigger>
+                  <TabsTrigger value="purchaseInvoice">Purchase Invoice</TabsTrigger>
+                  <TabsTrigger value="payment">Payment</TabsTrigger>
+                  <TabsTrigger value="quotation">Quotation</TabsTrigger>
+                 
                 </TabsList>
                 <TabsContent value="all" className="mt-4">
-                  {renderTransactionTable(transactions)}
+                {renderTransactionTable(filteredTransactions)}
                 </TabsContent>
-                <TabsContent value="pending" className="mt-4">
-                  {renderTransactionTable(transactions.filter((t) => t.status === "pending" || t.status === "partial"))}
+                <TabsContent value="receipt" className="mt-4">
+                {renderTransactionTable(filteredTransactions.filter((t) => t.type === "receipt"))}
                 </TabsContent>
-                <TabsContent value="completed" className="mt-4">
-                  {renderTransactionTable(transactions.filter((t) => t.status === "completed"))}
+                <TabsContent value="salesInvoice" className="mt-4">
+                  {renderTransactionTable(filteredTransactions.filter((t) => t.type === "salesInvoice"))}
+                </TabsContent>
+                <TabsContent value="purchaseInvoice" className="mt-4">
+                {renderTransactionTable(filteredTransactions.filter((t) => t.type === "purchaseInvoice"), {
+                    descriptionHeaderLabel: "Description",
+                    descriptionCellClassName: "truncate whitespace-nowrap max-w-[280px] sm:max-w-[420px]",
+                  })}
+                </TabsContent>
+                <TabsContent value="payment" className="mt-4">
+                {renderTransactionTable(filteredTransactions.filter((t) => t.type === "payment"), {
+                    descriptionHeaderLabel: "Description",
+                    descriptionCellClassName: "truncate whitespace-nowrap max-w-[280px] sm:max-w-[420px]",
+                  })}
+                </TabsContent>
+                <TabsContent value="quotation" className="mt-4">
+                  {renderTransactionTable(filteredTransactions.filter((t) => t.type === "quotation"))}
                 </TabsContent>
               </Tabs>
             </CardContent>

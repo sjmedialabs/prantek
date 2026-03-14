@@ -10,6 +10,17 @@ export async function initializeDatabase() {
       const collectionName = COLLECTIONS[collectionKey as keyof typeof COLLECTIONS]
       const collection = db.collection(collectionName)
 
+      // Allow same payment number for different users: drop legacy global unique on paymentNumber
+      if (collectionKey === "PAYMENTS") {
+        try {
+          await collection.dropIndex("paymentNumber_1")
+        } catch (e: any) {
+          if (e?.code !== 27 && e?.codeName !== "IndexNotFound") {
+            console.warn("Payments index cleanup (optional):", e?.message || e)
+          }
+        }
+      }
+
       for (const index of indexes) {
         try {
           await collection.createIndex(index.key, {

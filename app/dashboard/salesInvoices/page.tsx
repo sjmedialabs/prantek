@@ -119,6 +119,10 @@ export default function SalesInvoicesPage() {
   const clearFilters = () => {
     setStatusFilter("all")
     setSearchTerm("")
+    setDateFromFilter("")
+    setDateToFilter("")
+    setMinAmountFilter("")
+    setMaxAmountFilter("")
   }
 
   const handleStatusToggle = async (id: string, currentStatus: boolean) => {
@@ -285,32 +289,31 @@ export default function SalesInvoicesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Total Invoices</CardDescription>
+            <CardDescription>Not Collected</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{invoices.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Amount</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{invoices
-                .filter((i) => i.status !== "cancelled")
-                .reduce((sum, i) => sum + (i.grandTotal || 0), 0)
-                .toLocaleString()}
+            <div className="text-2xl font-bold text-blue-600">
+              {invoices.filter(i => i.status === 'not collected').length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardDescription>Unclear Payment</CardDescription>
+            <CardDescription>Overdue Invoices</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {invoices.filter(i => i.status === 'not collected').length}
+              {invoices.filter(i => i.status === 'overdue').length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Cancelled</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {invoices.filter(i => i.status === 'cancelled').length}
             </div>
           </CardContent>
         </Card>
@@ -339,7 +342,12 @@ export default function SalesInvoicesPage() {
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
               </Button>
-              {(statusFilter !== "all" || searchTerm) && (
+              {(statusFilter !== "all" ||
+                searchTerm ||
+                dateFromFilter ||
+                dateToFilter ||
+                minAmountFilter ||
+                maxAmountFilter) && (
                 <Button variant="outline" onClick={clearFilters}>
                   <X className="h-4 w-4 mr-2" />
                   Clear
@@ -361,6 +369,7 @@ export default function SalesInvoicesPage() {
                       <SelectItem value="collected">Collected</SelectItem>
                       <SelectItem value="overdue">Overdue</SelectItem>
                       <SelectItem value="partially collected">Partial Collected</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

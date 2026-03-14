@@ -440,22 +440,47 @@ export interface PurchaseInvoice extends BaseDocument {
 }
 
 export interface Payment extends BaseDocument {
-  recipientName: string
   userId: string
+
+  // recipient
+  recipientName: string
   recipientId: string
   recipientType: string
+  recipientEmail?: string
+  recipientPhone?: string
+  recipientAddress?: string
+
+  // payment details
   paymentNumber: string
+  paymentType?: "full" | "partial"
   date: string
+  invoiceDate?: string
+
+  // invoice relation
+  purchaseInvoiceId?: string
+  purchaseInvoiceNumber?: string
+
+  // amounts
   amount: number
+  payAbleAmount?: number
+  amountInWords?: string
+
+  // payment method
   paymentMethod: string
+  bankAccount?: string
+  referenceNumber?: string
+
+  // files
   screenshotFile?: string
   billFile?: string
-  bankAccount?: string
+
+  // metadata
   createdBy: string
   category?: string
-  status: "pending" | "completed" | "failed" | "cancelled"
   description?: string
-  referenceNumber?: string
+
+  // status
+  status: "pending" | "completed" | "failed" | "cancelled" | "cleared"
 }
 
 // Plan-specific feature flags for granular access control

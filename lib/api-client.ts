@@ -316,7 +316,7 @@ quotations: {
           method: "POST",
           body: JSON.stringify(paymentData),
         })
-        return data.payment
+        return data.data ?? data.payment
       },
       update: async (id: string, paymentData: Partial<Payment>) => {
         const data = await fetchAPI(`/api/payments/${id}`, {

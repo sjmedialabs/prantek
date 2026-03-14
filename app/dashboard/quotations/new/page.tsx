@@ -506,10 +506,10 @@ updatedItem.total =
       return
     }
     // Validity date is now optional
-    if (!clientEmail.trim()) {
-      toast.error("Please enter the clientEmail.")
-      return
-    }
+    // if (!clientEmail.trim()) {
+    //   toast.error("Please enter the clientEmail.")
+    //   return
+    // }
     try {
       const quotationData = {
         date,

@@ -25,6 +25,45 @@ import type { Vendor } from "@/lib/models/types"
 import { toast } from "@/lib/toast"
 import { Switch } from "@/components/ui/switch"
 
+const indianStates = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
 export default function VendorsPage() {
   const { hasPermission, loading } = useUser()
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -111,7 +150,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   // --------- Email ---------
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(formData.email)) {
+  if (formData.email && !emailRegex.test(formData.email)) {
     newErrors.email = "Enter a valid email address"
     isValid = false
   }
@@ -124,16 +163,10 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   // --------- Address ---------
-  if (!formData.address.trim()) {
-    newErrors.address = "Address is required"
-    isValid = false
-  }
+  // Optional: only validate if provided
 
   // --------- City ---------
-  if (!formData.city.trim()) {
-    newErrors.city = "City is required"
-    isValid = false
-  }
+  // Optional: only validate if provided
 
   // --------- State ---------
   if (!formData.state.trim()) {
@@ -143,7 +176,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   // --------- Pincode ---------
   const pincodeRegex = /^\d{6}$/
-  if (!pincodeRegex.test(formData.pincode)) {
+  if (formData.pincode && !pincodeRegex.test(formData.pincode)) {
     newErrors.pincode = "Enter a valid 6-digit pincode"
     isValid = false
   }
@@ -172,7 +205,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     if (editingVendor) {
-      await api.vendors.update(editingVendor._id, payload)
+      if (!editingVendor._id) throw new Error("Vendor id not found")
+      await api.vendors.update(String(editingVendor._id), payload)
       toast.success("Vendor Updated", "Vendor updated successfully")
     } else {
       payload.status = "active"
@@ -208,7 +242,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   const handleDelete = async (id: string) => {
-    const vendor = vendors.find((v) => v._id === id)
+    const vendor = vendors.find((v) => String(v._id) === id)
     if (confirm("Are you sure you want to delete this vendor?")) {
       try {
         await api.vendors.delete(id)
@@ -313,7 +347,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     </div>
 
                     <div>
-                      <Label required>Email</Label>
+                      <Label>Email</Label>
                       <Input
                         type="email"
                         value={formData.email}
@@ -373,7 +407,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   </div>
 
                   <div>
-                    <Label required>Address</Label>
+                    <Label>Address</Label>
                     <Textarea
                       rows={2}
                       value={formData.address}
@@ -386,16 +420,26 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label required>State</Label>
-                      <Input
+                      <Select
                         value={formData.state}
-                        placeholder="Vendor State"
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      />
+                        onValueChange={(value) => setFormData({ ...formData, state: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a state" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {indianStates.map((stateName) => (
+                            <SelectItem key={stateName} value={stateName}>
+                              {stateName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                     </div>
 
                     <div>
-                      <Label required>City</Label>
+                      <Label>City</Label>
                       <Input
                         value={formData.city}
                         placeholder="Vendor City"
@@ -405,7 +449,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     </div>
 
                     <div>
-                      <Label required>Pincode</Label>
+                      <Label>Pincode</Label>
                       <Input
                         value={formData.pincode}
                         placeholder="Vendor Pincode"
@@ -503,7 +547,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   filteredVendors
                     .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                     .map((vendor, index) => (
-                      <TableRow key={vendor._id}>
+                      <TableRow key={String(vendor._id)}>
                           <TableCell>
     {(currentPage - 1) * itemsPerPage + (index + 1)}
   </TableCell>
@@ -515,7 +559,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                  
                           <TableCell>
                             <div className="flex space-x-2 items-center">
-                              <Link href={`/dashboard/vendor/${vendor._id}`}>
+                              <Link href={`/dashboard/vendor/${String(vendor._id)}`}>
                                 <Button variant="ghost" size="sm" title="View vendor">
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -536,12 +580,12 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 Delete
                               </Button> */}
                                                                                            <Switch
-                                                          checked={vendor.status !== "inactive"}
+                                                          checked={true}
                                                           title="Handle the status"
                                                           onCheckedChange={async (checked) => {
                                                             try {
                                                               const newStatus = checked ? "active" : "inactive"
-                                                              await api.vendors.updateStatus(vendor._id, newStatus)
+                                                              await api.vendors.updateStatus(String(vendor._id), newStatus)
                                                               toast.success("Status Updated", `${vendor?.name} is now ${newStatus}`)
                                                               await loadVendors()
                                                             } catch (err) {

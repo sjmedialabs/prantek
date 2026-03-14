@@ -63,9 +63,10 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
 
 
                 // Validate
-                if (!emailRegex.test(email)) throw new Error("Invalid email")
+                if (email && !emailRegex.test(email)) throw new Error("Invalid email")
                 if (!phoneRegex.test(phone)) throw new Error("Invalid phone")
-                if (!state || !city || !pincode) throw new Error("State/City/Pincode required")
+                if (!state) throw new Error("State is required")
+                if (pincode && !/^\d{6}$/.test(pincode)) throw new Error("Enter a valid 6-digit pincode")
 
                 if (type === "individual") {
                     if (!name) throw new Error("Name required for individual")
@@ -79,9 +80,13 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
                 }
 
                 // Unique under user
+                const or_conditions = [{ phone }];
+                if (email) {
+                  or_conditions.push({ email });
+                }
                 const exists = await mongoStore.findOne("clients", {
                     userId: String(filterUserId),
-                    $or: [{ email }, { phone }],
+                    $or: or_conditions,
                 })
 
                 if (exists) {
