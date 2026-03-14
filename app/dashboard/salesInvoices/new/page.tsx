@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { Client, Item, Quotation, TaxRate, SalesInvoice } from "@/lib/models/types"
 import { Textarea } from "@/components/ui/textarea"
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 
