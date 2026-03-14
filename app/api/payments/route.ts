@@ -50,7 +50,40 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       body.paymentNumber = await generateNextNumber("payments", "PAY", userIdStr)
     }
 
-    const payment = await mongoStore.create("payments", { ...body, userId: userIdStr })
+    let payment
+    try {
+      payment = await mongoStore.create("payments", { ...body, userId: userIdStr })
+    } catch (createError: any) {
+      // Self-heal: if DB still has legacy unique index on paymentNumber only, drop it and ensure compound index
+      const isDuplicateKey = createError?.code === 11000 || createError?.codeName === "DuplicateKey"
+      const msg = String(createError?.message ?? createError?.errmsg ?? "")
+      const isPaymentNumberIndex =
+        isDuplicateKey &&
+        (createError?.keyPattern?.paymentNumber === 1 ||
+          "paymentNumber" in (createError?.keyValue || {}) ||
+          /paymentNumber_1|dup key.*paymentNumber/i.test(msg))
+      if (isPaymentNumberIndex) {
+        const db = await connectDB()
+        const paymentsCol = db.collection(Collections.PAYMENTS)
+        try {
+          await paymentsCol.dropIndex("paymentNumber_1")
+        } catch (e: any) {
+          if (e?.code !== 27 && e?.codeName !== "IndexNotFound") {
+            console.warn("[Payments] Drop legacy index:", e?.message || e)
+          }
+        }
+        try {
+          await paymentsCol.createIndex({ userId: 1, paymentNumber: 1 }, { unique: true, background: true })
+        } catch (e: any) {
+          if (e?.code !== 85 && e?.codeName !== "IndexOptionsConflict") {
+            console.warn("[Payments] Create compound index:", e?.message || e)
+          }
+        }
+        payment = await mongoStore.create("payments", { ...body, userId: userIdStr })
+      } else {
+        throw createError
+      }
+    }
 
     // Notify admins about new payment
     try {
