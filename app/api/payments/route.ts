@@ -47,10 +47,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     // Generate unique payment number per user (PAY-YYYY-NNN) via atomic counter
     if (!body.paymentNumber || typeof body.paymentNumber !== "string" || !body.paymentNumber.trim()) {
-      body.paymentNumber = await generateNextNumber("payments", "PAY", userIdStr)
+      body.paymentNumber = await generateNextNumber("payments", "PAY", filterUserId)
     }
 
-    const payment = await mongoStore.create("payments", { ...body, userId: userIdStr })
+    const payment = await mongoStore.create("payments", { ...body, userId: filterUserId })
 
     // Notify admins about new payment
     try {

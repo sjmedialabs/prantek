@@ -316,7 +316,7 @@ quotations: {
           method: "POST",
           body: JSON.stringify(paymentData),
         })
-        return data.data ?? data.payment
+        return data.payment
       },
       update: async (id: string, paymentData: Partial<Payment>) => {
         const data = await fetchAPI(`/api/payments/${id}`, {
@@ -368,7 +368,9 @@ quotations: {
       getAll: async () => {
         const data = await fetchAPI("/api/reconciliation")
         return data || []
+
       },
+
       updateStatus: async (id: string, type: "receipt" | "payment", cleared: boolean) => {
         const data = await fetchAPI("/api/reconciliation", {
           method: "PUT",

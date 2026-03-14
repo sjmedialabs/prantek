@@ -311,7 +311,7 @@ const totalPayments = filteredEntries
         </Card>
       </div>
       {/* Quick Action Cards */}
-      <div>
+      {/*<div>
         {
         (hasPermission("add_receipts") || hasPermission("add_payments")) && (
            <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -371,7 +371,7 @@ const totalPayments = filteredEntries
           }
         </div>
       </div>
-
+*/}
       {/* Table */}
       <Card>
         <CardHeader>

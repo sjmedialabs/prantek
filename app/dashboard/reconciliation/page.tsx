@@ -146,7 +146,7 @@ export default function ReconciliationPage() {
     if (statusFilter === "uncleared") {
       filtered = filtered.filter((t) => t.status === "pending")
     } else if (statusFilter === "cleared") {
-      filtered = filtered.filter((t) => t.status === "cleared" || t.status === "completed")
+      filtered = filtered.filter((t) => t.status === "cleared")
     }
 
     // Type filter
@@ -199,7 +199,7 @@ export default function ReconciliationPage() {
     }
 
     try {
-      const isCurrentlyCleared = transaction.status === "cleared" || transaction.status === "completed"
+      const isCurrentlyCleared = transaction.status === "cleared"
 
       // Add to animating set
       setAnimatingIds((prev) => new Set(prev).add(transaction._id))
@@ -208,7 +208,7 @@ export default function ReconciliationPage() {
       setTransactions((prevTransactions) =>
         prevTransactions.map((t) =>
           t._id === transaction._id
-            ? { ...t, status: isCurrentlyCleared ? "pending" : t.type === "receipt" ? "cleared" : "completed" }
+            ? { ...t, status: isCurrentlyCleared ? "pending" : t.type === "receipt" ? "cleared" : "cleared" }
             : t,
         ),
       )
@@ -263,8 +263,11 @@ export default function ReconciliationPage() {
     }
 
     const pending = data.filter((t) => t.status === "pending")
-    const cleared = data.filter((t) => t.status === "cleared" || t.status === "completed")
-
+    const cleared = data.filter((t) => t.status === "cleared")
+    const unclearRecAmount = data.filter((t)=> t.type === "receipt" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearRec = data.filter((t)=> t.type === "receipt" && t.status === "pending").length
+    const unclearPayAmount = data.filter((t)=> t.type === "payment" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearPay = data.filter((t)=> t.type === "payment" && t.status === "pending").length
     return {
       pendingCount: pending.length,
       pendingAmount: pending.reduce((sum, t) => sum + t.amount, 0),
@@ -272,6 +275,10 @@ export default function ReconciliationPage() {
       clearedAmount: cleared.reduce((sum, t) => sum + t.amount, 0),
       totalCount: data.length,
       totalAmount: data.reduce((sum, t) => sum + t.amount, 0),
+      unclearRecAmount,
+      unclearRec,
+      unclearPayAmount,
+      unclearPay
     }
   }
 
@@ -335,14 +342,14 @@ export default function ReconciliationPage() {
           <h1 className="text-3xl font-bold">Clearing</h1>
           <p className="text-muted-foreground">Verify receipts and payments with your bank account</p>
         </div>
-        <Button onClick={loadTransactions} variant="outline" size="sm">
+        {/* <Button onClick={loadTransactions} variant="outline" size="sm">
           <RefreshCw className="mr-2 h-4 w-4" />
           Refresh
-        </Button>
+        </Button> */}
       </div>
 
       {/* Statistics */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Statistics</CardTitle>
@@ -384,8 +391,29 @@ export default function ReconciliationPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
-
+      </Card> */}
+      <div className="grid grid-cols-2 gap-4">
+       {/* <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Cancelled Receipt</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {calculateStats.unclearRecAmount}
+            </div>
+          </CardContent>
+        </Card>
+         <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Cancelled Receipt</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {calculateStats.unclearPayAmount}
+                    </div>
+                  </CardContent>
+                </Card> */}
+</div>
       {/* Filters */}
       <Card>
         <CardHeader>
