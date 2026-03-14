@@ -184,7 +184,6 @@ export default function SuperAdminHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        </div>
       </div>
     </header>
   )

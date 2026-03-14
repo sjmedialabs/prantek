@@ -1,1 +1,1 @@
-import ReactQuill from "react-quill-new";
+import ReactQuill from "react-quill";
