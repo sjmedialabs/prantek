@@ -17,7 +17,7 @@ import { api } from "@/lib/api-client"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 import FileUpload from "@/components/file-upload"
 import dynamic from "next/dynamic"
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
 
 function numberToIndianCurrencyWords(amount: number): string {

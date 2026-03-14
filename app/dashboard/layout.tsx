@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { useRef } from "react"
 
 import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
@@ -15,29 +14,29 @@ import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard"
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 
-const OPEN_DEBOUNCE_MS = 400
-
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   useSessionTimeout({ enabled: true, isSuperAdmin: false })
   const { mobileOpen, closeMobile, openMobile } = useSidebar()
-  const openedAtRef = useRef<number>(0)
 
   const handleOpenChange = (open: boolean) => {
-    if (open) {
-      openedAtRef.current = Date.now()
-      openMobile()
-    } else {
-      // Ignore close from overlay/outside for a short time after open so the same tap doesn't close the sheet (mobile flicker fix)
-      if (Date.now() - openedAtRef.current < OPEN_DEBOUNCE_MS) return
-      closeMobile()
-    }
+    if (open) openMobile()
+    else closeMobile()
   }
+
+  const preventCloseOutside = (e: Event) => e.preventDefault()
 
   return (
     <>
-      {/* Mobile drawer: outside flex so portal/state are not affected by layout */}
+      {/* Mobile drawer: close only via close button or nav link, not overlay tap */}
       <Sheet open={mobileOpen} onOpenChange={handleOpenChange}>
-        <SheetContent side="left" hideCloseButton title="Navigation menu" className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col">
+        <SheetContent
+          side="left"
+          hideCloseButton
+          title="Navigation menu"
+          className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col"
+          onPointerDownOutside={preventCloseOutside}
+          onInteractOutside={preventCloseOutside}
+        >
           <div className="flex flex-col h-full overflow-hidden">
             <DashboardSidebar isMobile onClose={closeMobile} />
           </div>

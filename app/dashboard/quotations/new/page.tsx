@@ -29,7 +29,7 @@ import { hasPermission } from "@/lib/jwt"
 import dynamic from "next/dynamic"
 import { TaxRate } from "@/lib/models/types"
 
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
 interface QuotationItem {
   id: string

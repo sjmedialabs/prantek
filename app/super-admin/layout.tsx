@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { useRef } from "react"
 
 import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
@@ -12,22 +11,16 @@ import { useSessionTimeout } from "@/hooks/use-session-timeout"
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 
-const OPEN_DEBOUNCE_MS = 400
-
 function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
   useSessionTimeout({ enabled: true, isSuperAdmin: true })
   const { mobileOpen, closeMobile, openMobile } = useSidebar()
-  const openedAtRef = useRef<number>(0)
 
   const handleOpenChange = (open: boolean) => {
-    if (open) {
-      openedAtRef.current = Date.now()
-      openMobile()
-    } else {
-      if (Date.now() - openedAtRef.current < OPEN_DEBOUNCE_MS) return
-      closeMobile()
-    }
+    if (open) openMobile()
+    else closeMobile()
   }
+
+  const preventCloseOutside = (e: Event) => e.preventDefault()
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -36,9 +29,16 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
         <SuperAdminSidebar />
       </aside>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer: close only via close button or nav link, not overlay tap */}
       <Sheet open={mobileOpen} onOpenChange={handleOpenChange}>
-        <SheetContent side="left" hideCloseButton title="Admin navigation" className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0">
+        <SheetContent
+          side="left"
+          hideCloseButton
+          title="Admin navigation"
+          className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0"
+          onPointerDownOutside={preventCloseOutside}
+          onInteractOutside={preventCloseOutside}
+        >
           <SuperAdminSidebar isMobile onClose={closeMobile} />
         </SheetContent>
       </Sheet>
