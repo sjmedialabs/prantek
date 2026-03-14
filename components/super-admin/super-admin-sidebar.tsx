@@ -16,6 +16,7 @@ import {
   Globe,
   Activity,
   Video,
+  X,
 } from "lucide-react"
 
 const navigationItems = [
@@ -34,84 +35,91 @@ const navigationItems = [
   { name: "Platform Settings", href: "/super-admin/settings", icon: Settings, permission: "platform_management" },
 ]
 
-export function SuperAdminSidebar() {
+type SuperAdminSidebarProps = {
+  isMobile?: boolean
+  onClose?: () => void
+}
+
+export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps = {}) {
   const [collapsed, setCollapsed] = useState(false)
   const [brandLogo, setBrandLogo] = useState<string | null>(null)
   const [brandName, setBrandName] = useState("Admin Panel")
   const pathname = usePathname()
 
   useEffect(() => {
-    // Load brand settings from localStorage or API
     const savedLogo = localStorage.getItem("brandLogo")
     const savedName = localStorage.getItem("brandName")
-    
     if (savedLogo) setBrandLogo(savedLogo)
     if (savedName) setBrandName(savedName)
   }, [])
 
+  useEffect(() => {
+    if (isMobile && onClose) onClose()
+  }, [pathname, isMobile, onClose])
+
+  const effectiveCollapsed = isMobile ? false : collapsed
   const filteredNavigation = navigationItems
 
+  const wrapperClass = isMobile
+    ? "flex flex-col h-full w-full bg-white"
+    : `${effectiveCollapsed ? "w-20" : "w-64"} fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`
+
   return (
-    <div
-      className={`${
-        collapsed ? "w-20" : "w-64"
-      } fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`}
-    >
-      {/* Header with Brand Logo */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        {!collapsed && (
-          <div className="flex items-center space-x-3">
+    <div className={wrapperClass}>
+      <div className="p-3 sm:p-4 border-b border-gray-200 flex items-center justify-between shrink-0">
+        {(isMobile || !effectiveCollapsed) && (
+          <div className="flex items-center space-x-3 min-w-0">
             {brandLogo ? (
-              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-gray-100">
-                <Image 
-                  src={brandLogo} 
-                  alt="Brand Logo" 
-                  fill
-                  className="object-contain"
-                />
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                <Image src={brandLogo} alt="Brand Logo" fill className="object-contain" />
               </div>
             ) : (
-              <div className="bg-purple-600 p-2 rounded-lg h-10 w-10 flex items-center justify-center">
+              <div className="bg-purple-600 p-2 rounded-lg h-10 w-10 flex items-center justify-center shrink-0">
                 <span className="text-white font-bold text-lg">{brandName.charAt(0)}</span>
               </div>
             )}
-            <div>
-              <h2 className="font-bold text-gray-900">{brandName}</h2>
+            <div className="min-w-0">
+              <h2 className="font-bold text-gray-900 truncate">{brandName}</h2>
               <p className="text-xs text-gray-500">Admin Panel</p>
             </div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
+        {isMobile ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCollapsed(!collapsed)}
+            className="min-h-[44px] min-w-[44px] shrink-0 p-2 rounded-lg"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 min-h-0">
         {filteredNavigation.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
-
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors ${ isActive
-                  ? "bg-purple-50 text-purple-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-50"
+              className={`flex items-center space-x-3 px-3 py-2.5 min-h-[48px] sm:min-h-0 rounded-lg transition-colors touch-manipulation ${
+                isActive ? "bg-purple-50 text-purple-700 font-medium" : "text-gray-700 hover:bg-gray-50"
               }`}
             >
-              <Icon className={`h-5 w-5 ${isActive ? "text-purple-700" : "text-gray-500"}`} />
-              {!collapsed && <span className="text-sm">{item.name}</span>}
+              <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-purple-700" : "text-gray-500"}`} />
+              {!effectiveCollapsed && <span className="text-sm truncate">{item.name}</span>}
             </Link>
           )
         })}

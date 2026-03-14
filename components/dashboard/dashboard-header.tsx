@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/components/auth/user-context";
+import { useSidebar } from "@/components/layout/sidebar-context";
 import { Button } from "@/components/ui/button";
 import { tokenStorage } from "@/lib/token-storage";
 import {
@@ -12,13 +13,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, User, LogOut, UserCircle } from "lucide-react";
+import { Bell, User, LogOut, UserCircle, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Notification } from "@/lib/models/types";
+import Link from "next/link";
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek";
 
 export default function DashboardHeader() {
-  const { user, logout, hasPermission } = useUser();
-  
+  const { user, logout } = useUser();
+  const { openMobile } = useSidebar();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -156,11 +160,25 @@ const handleClearAllNotifications = async () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-2">
-      <div className="flex items-center justify-end">
-        <div className="flex items-center space-x-4">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shrink-0">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-2 min-h-[56px]">
+        <div className="flex items-center gap-2 min-w-0 relative z-10">
+          <button
+            type="button"
+            onClick={() => openMobile()}
+            className="lg:hidden min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation inline-flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
+            aria-label="Open menu"
+            aria-expanded={false}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <Link href="/dashboard" className="hidden sm:block text-lg font-semibold text-foreground truncate hover:opacity-90">
+            {APP_NAME}
+          </Link>
+        </div>
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {
-            !loginedUserLocalStorage.isAdminUser && (
+            !loginedUserLocalStorage?.isAdminUser && (
               <DropdownMenu
             open={notificationOpen}
             onOpenChange={setNotificationOpen}
@@ -242,8 +260,8 @@ const handleClearAllNotifications = async () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+              <button className="flex items-center space-x-2 min-h-[48px] px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer touch-manipulation">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden shrink-0">
                   {user?.avatar ? (
                     <img
                       src={user.avatar}
@@ -254,7 +272,7 @@ const handleClearAllNotifications = async () => {
                     <User className="h-4 w-4 text-primary" />
                   )}
                 </div>
-                <span className="text-sm font-medium">{user?.name}</span>
+                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-[180px]">{user?.name}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">

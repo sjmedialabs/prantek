@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/components/auth/user-context"
+import { useSidebar } from "@/components/layout/sidebar-context"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Bell, Settings, LogOut } from "lucide-react"
+import { Bell, Settings, LogOut, Menu } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ interface Notification {
 export default function SuperAdminHeader() {
   const router = useRouter()
   const { user, logout } = useUser()
+  const { toggleMobile } = useSidebar()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -159,16 +161,15 @@ export default function SuperAdminHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" className="flex items-center space-x-2 min-h-[48px] px-2 sm:px-3 rounded-lg touch-manipulation">
+              <Avatar className="h-8 w-8 shrink-0">
                 <AvatarFallback className="bg-purple-600 text-white">
                   {user?.name?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">{user?.name}</span>
+              <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-[180px]">{user?.name}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

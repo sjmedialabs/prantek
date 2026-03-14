@@ -140,6 +140,19 @@
   [data-slot="button"]:not(:disabled) {
     @apply cursor-pointer;
   }
+
+  /* Mobile-friendly: minimum touch target 48px (optional utility) */
+  .touch-target {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Responsive: prevent horizontal scroll on small viewports */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
 }
 
 .custom-dialog {

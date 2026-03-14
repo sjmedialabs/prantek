@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Quotation } from "@/lib/models/types"
 import dynamic from "next/dynamic"
 import { Check, Repeat } from "lucide-react"
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
 import "react-quill/dist/quill.snow.css"
 import {
   Table,

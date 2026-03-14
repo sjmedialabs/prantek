@@ -10,7 +10,6 @@ import { api } from "@/lib/api-client";
 import {
   LayoutDashboard,
   Users,
-  UserCog,
   FileText,
   Receipt,
   CreditCard,
@@ -25,6 +24,7 @@ import {
   ChevronUp,
   ClipboardList,
   ShoppingCart,
+  X,
 } from "lucide-react";
 
 interface NavItem {
@@ -255,12 +255,24 @@ const navigationItems: NavItem[] = [
   },
 ];
 
-export default function DashboardSidebar() {
+type DashboardSidebarProps = {
+  isMobile?: boolean
+  onClose?: () => void
+}
+
+export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebarProps = {}) {
   const pathname = usePathname();
   const { user, hasPermission, loading } = useUser();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [planFeatures, setPlanFeatures] = useState<any>(null);
+
+  // Close mobile drawer when route changes
+  useEffect(() => {
+    if (isMobile && onClose) onClose();
+  }, [pathname, isMobile, onClose]);
+
+  const effectiveCollapsed = isMobile ? false : collapsed;
 
   const toggleMenu = (menuName: string) => {
     setExpandedMenus((prev) => ({
@@ -363,15 +375,15 @@ const isExpanded =
         <div key={menuKey} className={level > 0 ? "ml-2" : ""}>
           <button
             onClick={() => toggleMenu(menuKey)}
-            className={`flex items-center justify-between w-full px-3 py-2 text-sm rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors ${
+            className={`flex items-center justify-between w-full px-3 py-2 min-h-[48px] sm:min-h-0 text-sm rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors touch-manipulation ${
               isActive ? "bg-accent text-accent-foreground" : ""
             }`}
           >
             <div className="flex items-center gap-2">
-              {item.icon && <item.icon className="h-4 w-4" />}
-              {!collapsed && <span>{item.name}</span>}
+              {item.icon && <item.icon className="h-4 w-4 shrink-0" />}
+              {!effectiveCollapsed && <span>{item.name}</span>}
             </div>
-            {!collapsed && (
+            {!effectiveCollapsed && (
               <span>
                 {isExpanded ? (
                   <ChevronUp className="h-4 w-4" />
@@ -381,7 +393,7 @@ const isExpanded =
               </span>
             )}
           </button>
-          {!collapsed && isExpanded && (
+          {!effectiveCollapsed && isExpanded && (
             <div className="mt-1 space-y-1">
               {(item.submenu || []).map((subItem) => renderNavItem(subItem, level + 1, menuKey))}
             </div>
@@ -394,12 +406,12 @@ const isExpanded =
       <Link
         key={menuKey}
         href={item.href || "#"}
-        className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors ${
+        className={`flex items-center gap-2 px-3 py-2 min-h-[48px] sm:min-h-0 text-sm rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors touch-manipulation ${
           isActive ? "bg-accent text-accent-foreground" : ""
         } ${level > 0 ? "ml-2" : ""}`}
       >
         {item.icon && <item.icon className="h-4 w-4" />}
-        {!collapsed && <span>{item.name}</span>}
+        {!effectiveCollapsed && <span>{item.name}</span>}
       </Link>
     );
   };
@@ -416,19 +428,26 @@ const isExpanded =
     );
   }
 
-  return (
-    <div
-      className={`flex flex-col border-r bg-background transition-all duration-300 h-screen z-200 sticky top-0 ${
-        collapsed ? "w-16" : "w-64"
-      }`}
-    >
-      <div className="flex items-center justify-between p-4 border-b">
-        {!collapsed && <h2 className="text-lg font-semibold">Dashboard</h2>}
+  const header = (
+    <div className="flex items-center justify-between border-b bg-background p-3 sm:p-4 shrink-0">
+      {(isMobile || !effectiveCollapsed) && <h2 className="text-lg font-semibold truncate">Dashboard</h2>}
+      {isMobile ? (
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
+          onClick={onClose}
+          className="min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation"
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 p-0"
+          className="min-h-[44px] min-w-[44px] shrink-0 p-0 rounded-lg"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -436,9 +455,20 @@ const isExpanded =
             <ChevronLeft className="h-4 w-4" />
           )}
         </Button>
-      </div>
+      )}
+    </div>
+  );
 
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+  return (
+    <div
+      className={
+        isMobile
+          ? "flex flex-col h-full bg-background w-full"
+          : `flex flex-col border-r bg-background transition-all duration-300 h-screen sticky top-0 ${effectiveCollapsed ? "w-16" : "w-64"}`
+      }
+    >
+      {header}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-1 min-h-0">
         {navigationItems.map((item) => renderNavItem(item))}
       </nav>
     </div>
