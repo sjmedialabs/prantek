@@ -42,49 +42,69 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const body = await request.json()
 
-    // For admin users, use companyId (parent account)
-    // For regular users, use userId (their own account)
-    const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+    const filterUserId =
+      user.isAdminUser && user.companyId ? user.companyId : user.userId
+
     const userId = String(filterUserId)
 
-    // ✅ Check if client with same email or name exists under same user
+    // Build duplicate check conditions
+    const duplicateConditions: any[] = [
+      { name: body.name },
+      { phone: body.phone }
+    ]
+
+    // ✅ Only check email if provided
+    if (body.email && body.email.trim() !== "") {
+      duplicateConditions.push({ email: body.email })
+    }
+
     const existingClient = await mongoStore.findOne("clients", {
       userId,
-      $or: [
-        { name: body.name },
-        { email: body.email },
-        {phone:body.phone}
-      ]
+      $or: duplicateConditions
     })
 
     if (existingClient) {
-      return NextResponse.json({
-        success: false,
-        message: "Client name or email or mobile number already exists. Please use a different one."
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Client name or email or mobile number already exists. Please use a different one."
+        },
+        { status: 400 }
+      )
     }
 
-    // ✅ Create new client
-    const client = await mongoStore.create("clients", { 
-      ...body, 
-      userId 
+    // Create client
+    const client = await mongoStore.create("clients", {
+      ...body,
+      userId
     })
 
-    await logActivity(userId, "create", "client", client._id?.toString(), { name: body.name })
-    try{
-        await createNotification({
+    await logActivity(
+      userId,
+      "create",
+      "client",
+      client._id?.toString(),
+      { name: body.name }
+    )
+
+    try {
+      await createNotification({
         userId: filterUserId,
         type: "client",
         title: "New Client Created",
         message: "A new client has been created: " + body.name,
         link: `/dashboard/clients/${client._id?.toString()}`
-        })
-    }catch(err){
+      })
+    } catch (err) {
       console.error("Error logging activity for client creation:", err)
     }
 
     return NextResponse.json({ success: true, data: client })
   } catch (error) {
-    return NextResponse.json({ success: false, error: "Failed to create client" }, { status: 500 })
+    return NextResponse.json(
+      { success: false, error: "Failed to create client" },
+      { status: 500 }
+    )
   }
 })
