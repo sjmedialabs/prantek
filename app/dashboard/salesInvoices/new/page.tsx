@@ -15,8 +15,6 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api-client"
 import { Client, Item, Quotation, TaxRate, SalesInvoice } from "@/lib/models/types"
 import { Textarea } from "@/components/ui/textarea"
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false })
-import "react-quill/dist/quill.snow.css"
 import { OwnSearchableSelect } from "@/components/searchableSelect"
 
 function numberToIndianCurrencyWords(amount: number): string {
@@ -1138,15 +1136,15 @@ export default function NewSalesInvoicePage() {
                       ))}
                     </SelectContent>
                   </Select> */}
-                  <div className="[&_.ql-editor]:min-h-[150px]">
-                    <ReactQuill
-                      theme="snow"
-                      value={terms}
-                      onChange={setTerms}
-                      placeholder="No Terms and conditions Found"
-                      readOnly={true}
-                    />
-                  </div>
+                  <div
+        className="prose max-w-400 text-sm text-gray-600 
+                   break-words break-all whitespace-pre-wrap leading-relaxed
+                   [&_p]:mb-2 
+                   [&_ul]:list-disc [&_ul]:pl-5 
+                   [&_ol]:list-decimal [&_ol]:pl-5 
+                   [&_strong]:font-semibold"
+        dangerouslySetInnerHTML={{ __html: terms }}
+      />
 
                 </div>
 
@@ -1675,15 +1673,15 @@ export default function NewSalesInvoicePage() {
                     </SelectContent>
                   </Select> */}
 
-                  <div className="[&_.ql-editor]:min-h-[150px]">
-                    <ReactQuill
-                      theme="snow"
-                      value={terms}
-                      onChange={setTerms}
-                      placeholder="No terms and conditions Found..."
-                      readOnly={true}
-                    />
-                  </div>
+                   <div
+        className="prose max-w-400 text-sm text-gray-600 
+                   break-words break-all whitespace-pre-wrap leading-relaxed
+                   [&_p]:mb-2 
+                   [&_ul]:list-disc [&_ul]:pl-5 
+                   [&_ol]:list-decimal [&_ol]:pl-5 
+                   [&_strong]:font-semibold"
+        dangerouslySetInnerHTML={{ __html: terms }}
+      />
 
                 </div>
 

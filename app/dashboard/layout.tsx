@@ -34,8 +34,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           hideCloseButton
           title="Navigation menu"
           className="w-[min(100vw-4rem,20rem)] max-w-[20rem] p-0 gap-0 flex flex-col"
-          onPointerDownOutside={preventCloseOutside}
-          onInteractOutside={preventCloseOutside}
+           onInteractOutside={(e) => e.preventDefault()}
         >
           <div className="flex flex-col h-full overflow-hidden">
             <DashboardSidebar isMobile onClose={closeMobile} />

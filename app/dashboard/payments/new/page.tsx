@@ -28,6 +28,46 @@ import { useToast } from "@/hooks/use-toast"
 import { ClientSelectSimple } from "@/components/client-select-simple"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { toast as toast2 } from "@/lib/toast"
+import { errorTypeRegistries } from "@aws-sdk/client-ses"
+
+const indianStates = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
 
 export default function NewPaymentPage() {
   const router = useRouter()
@@ -108,7 +148,7 @@ export default function NewPaymentPage() {
         setClients(uniqueClients);
 
         // ⬅️ 2. ACTIVE vendors only + dedupe by _id
-           const activeVendors = vendorsData.filter((v: any) => v.status !== "inactive")
+        const activeVendors = vendorsData.filter((v: any) => v.status !== "inactive")
 
         const uniqueVendors = Array.from(new Map(activeVendors.map((v: any) => [v._id, v])).values());
 
@@ -120,17 +160,17 @@ export default function NewPaymentPage() {
         const uniqueTeams = Array.from(new Map(activeEmployees.map((t: any) => [t._id, t])).values());
 
         setTeamMembers(uniqueTeams);
-const activeRecipientTypes = recipientTypesData.filter((t : any) => t.isEnabled);
+        const activeRecipientTypes = recipientTypesData.filter((t: any) => t.isEnabled);
 
-const uniqueRecipientTypes = Array.from(
-  new Map(
-    activeRecipientTypes
-      .filter((t:any) => t.value)  // remove items missing value
-      .map((t: any) => [t.value.toLowerCase(), t])
-  ).values()
-);
+        const uniqueRecipientTypes = Array.from(
+          new Map(
+            activeRecipientTypes
+              .filter((t: any) => t.value)  // remove items missing value
+              .map((t: any) => [t.value.toLowerCase(), t])
+          ).values()
+        );
 
-setRecipientTypes(uniqueRecipientTypes);
+        setRecipientTypes(uniqueRecipientTypes);
 
 
         const activePaymentCategories = paymentCategories.filter((t: any) => t.isEnabled);
@@ -148,17 +188,17 @@ setRecipientTypes(uniqueRecipientTypes);
         setBankAccounts(activeBankAccounts);
 
         // Filter Open Purchase Invoices with Balance > 0
-        const openInvoices = (invoicesData || []).filter((inv: any) => 
-          (inv.invoiceStatus === "Open" || inv.invoiceStatus === "Partial" || inv.invoiceStatus === "overdue") && 
+        const openInvoices = (invoicesData || []).filter((inv: any) =>
+          (inv.invoiceStatus === "Open" || inv.invoiceStatus === "Partial" || inv.invoiceStatus === "overdue") &&
           (Number(inv.balanceAmount) > 0)
         );
         setPurchaseInvoices(openInvoices);
-      
+
       } catch (error) {
         console.error("Failed to load data:", error);
       }
     };
-  setCompanyName(user?.email)
+    setCompanyName(user?.email)
     loadData();
   }, [user]);
 
@@ -188,6 +228,9 @@ setRecipientTypes(uniqueRecipientTypes);
       }
       if (!paymentData.recipientId) {
         errors.recipientId = "Recipient must be selected"
+      }
+      if(!paymentData.category){
+        errors.category = "Category is required"
       }
     }
 
@@ -267,77 +310,77 @@ setRecipientTypes(uniqueRecipientTypes);
   // const paymentMethods = ["Cash", "Bank Transfer", "UPI", "Check"]
   // const bankAccounts = ["HDFC Bank - ****1234", "ICICI Bank - ****5678", "SBI - ****9012"]
 
-const handleRecipientChange = (recipientId: string) => {
-  let recipient: any = null
+  const handleRecipientChange = (recipientId: string) => {
+    let recipient: any = null
 
-  let recipientName = ""
-  let recipientEmail = ""
-  let recipientPhone = ""
-  let recipientAddress = ""
-  let recipientDetails = ""
+    let recipientName = ""
+    let recipientEmail = ""
+    let recipientPhone = ""
+    let recipientAddress = ""
+    let recipientDetails = ""
 
-  if (paymentData.recipientType === "client") {
-    recipient = clients.find((c) => c._id === recipientId)
+    if (paymentData.recipientType === "client") {
+      recipient = clients.find((c) => c._id === recipientId)
 
-    if (recipient) {
-      recipientName = recipient.name || ""
-      recipientEmail = recipient.email || ""
-      recipientPhone = recipient.phone || ""
-      recipientAddress = recipient.address || ""
+      if (recipient) {
+        recipientName = recipient.name || ""
+        recipientEmail = recipient.email || ""
+        recipientPhone = recipient.phone || ""
+        recipientAddress = recipient.address || ""
 
-      recipientDetails = `${recipientAddress}\n${recipientPhone}\n${recipientEmail}`
+        recipientDetails = `${recipientAddress}\n${recipientPhone}\n${recipientEmail}`
+      }
+    }
+
+    else if (paymentData.recipientType === "vendor") {
+      recipient = vendors.find((v) => v._id === recipientId)
+
+      if (recipient) {
+        recipientName = recipient.name || ""
+        recipientEmail = recipient.email || ""
+        recipientPhone = recipient.phone || ""
+        recipientAddress = recipient.address || ""
+
+        recipientDetails = `${recipient.category}\n${recipientAddress}\n${recipientPhone}\n${recipientEmail}`
+      }
+    }
+
+    else if (paymentData.recipientType === "team") {
+      recipient = teamMembers.find((t) => t._id === recipientId)
+
+      if (recipient) {
+        recipientName = `${recipient.employeeName ?? ""} ${recipient.surname ?? ""}`.trim()
+        recipientEmail = recipient.email || ""
+        recipientPhone = recipient.phone || ""
+        recipientAddress = recipient.department || ""
+
+        recipientDetails = `${recipient.role}\n${recipient.department || "N/A"}\n${recipientPhone}\n${recipientEmail}`
+      }
+    }
+
+    if (!recipient) return
+
+    setPaymentData({
+      ...paymentData,
+      recipientId,
+      recipientName,
+      recipientEmail,
+      recipientPhone,
+      recipientAddress,
+    })
+
+    // Clear validation error
+    if (validationErrors.recipientId) {
+      setValidationErrors({ ...validationErrors, recipientId: "" })
     }
   }
-
-  else if (paymentData.recipientType === "vendor") {
-    recipient = vendors.find((v) => v._id === recipientId)
-
-    if (recipient) {
-      recipientName = recipient.name || ""
-      recipientEmail = recipient.email || ""
-      recipientPhone = recipient.phone || ""
-      recipientAddress = recipient.address || ""
-
-      recipientDetails = `${recipient.category}\n${recipientAddress}\n${recipientPhone}\n${recipientEmail}`
-    }
-  }
-
-  else if (paymentData.recipientType === "team") {
-    recipient = teamMembers.find((t) => t._id === recipientId)
-
-    if (recipient) {
-      recipientName = `${recipient.employeeName ?? ""} ${recipient.surname ?? ""}`.trim()
-      recipientEmail = recipient.email || ""
-      recipientPhone = recipient.phone || ""
-      recipientAddress = recipient.department || ""
-
-      recipientDetails = `${recipient.role}\n${recipient.department || "N/A"}\n${recipientPhone}\n${recipientEmail}`
-    }
-  }
-
-  if (!recipient) return
-
-  setPaymentData({
-    ...paymentData,
-    recipientId,
-    recipientName,
-    recipientEmail,
-    recipientPhone,
-    recipientAddress,
-  })
-
-  // Clear validation error
-  if (validationErrors.recipientId) {
-    setValidationErrors({ ...validationErrors, recipientId: "" })
-  }
-}
 
 
   const handleInvoiceSelect = (invoiceId: string) => {
     const invoice = purchaseInvoices.find(i => i._id === invoiceId)
     if (invoice) {
       const balance = Number(invoice.balanceAmount || 0)
-      
+
       setPaymentData({
         ...paymentData,
         purchaseInvoiceId: invoiceId,
@@ -357,9 +400,9 @@ const handleRecipientChange = (recipientId: string) => {
         createdBy: invoice.createdBy,
         billFile: invoice.billUpload || null
       })
-      
+
       setAmountInWords(`${balance.toLocaleString()} rupees only`)
-      
+
       if (validationErrors.purchaseInvoiceId) {
         setValidationErrors({ ...validationErrors, purchaseInvoiceId: "" })
       }
@@ -486,7 +529,7 @@ const handleRecipientChange = (recipientId: string) => {
 
   const [isCreateClientOpen, setIsCreateClientOpen] = useState(false)
   const [isCreateVendorOpen, setIsCreateVendorOpen] = useState(false)
-   const [errors, setErrors] = useState({
+  const [errors, setErrors] = useState({
     name: "",
     email: "",
     phone: "",
@@ -518,204 +561,204 @@ const handleRecipientChange = (recipientId: string) => {
     pan: "",
   });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-   const handleCreateClient = async () => {
-      const localStored = localStorage.getItem("loginedUser");
-      const parsed = localStored ? JSON.parse(localStored) : null;
-  
-      // ---------- DUPLICATE CHECKS ----------
-      const emailExists = clients.some(
-        (c) => c.email.toLowerCase() === newClient.email.trim().toLowerCase()
+  const handleCreateClient = async () => {
+    const localStored = localStorage.getItem("loginedUser");
+    const parsed = localStored ? JSON.parse(localStored) : null;
+
+    // ---------- DUPLICATE CHECKS ----------
+    const emailExists = newClient.email && clients.some(
+      (c) => c.email.toLowerCase() === newClient.email.trim().toLowerCase()
+    );
+
+    if (emailExists && !newClient.email) {
+      toast2.error("Email already registered");
+      return;
+    }
+
+    const phoneExists = clients.some(
+      (c) => c.phone.trim() === newClient.phone.trim()
+    );
+
+    if (phoneExists) {
+      toast2.error("Phone number already registered");
+      return;
+    }
+
+    // Name logic differs for individual/company
+    let nameExists = false;
+
+    if (newClient.type === "individual") {
+      nameExists = clients.some(
+        (c) =>
+          c.type === "individual" &&
+          (c.name || "").trim().toLowerCase() ===
+          newClient.name.trim().toLowerCase()
       );
-  
-      if (emailExists) {
-        toast2.error("Email already registered");
-        return;
-      }
-  
-      const phoneExists = clients.some(
-        (c) => c.phone.trim() === newClient.phone.trim()
+    } else {
+      // company: companyName + contactName (mapped to name)
+      nameExists = clients.some(
+        (c) =>
+          c.type === "company" &&
+          (c.companyName || "").trim().toLowerCase() ===
+          newClient.companyName.trim().toLowerCase() &&
+          (c.name || "").trim().toLowerCase() ===
+          newClient.contactName.trim().toLowerCase()
       );
-  
-      if (phoneExists) {
-        toast2.error("Phone number already registered");
-        return;
+    }
+
+    if (nameExists) {
+      toast2.error("Client already exists");
+      return;
+    }
+
+    // ---------------------------------------
+    // -------- VALIDATION START -------------
+    // ---------------------------------------
+
+    let newErrors = {
+      name: "",
+      companyName: "",
+      contactName: "",
+      email: "",
+      phone: "",
+      address: "",
+      state: "",
+      city: "",
+      pincode: "",
+      gst: "",
+      pan: "",
+    };
+
+    let isValid = true;
+
+    const phoneRegex = /^[6-9]\d{9}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const pincodeRegex = /^\d{6}$/;
+    const gstRegex =
+      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+    // common validations
+    if (!phoneRegex.test(newClient.phone)) {
+      newErrors.phone = "Enter valid 10-digit Indian mobile number";
+      isValid = false;
+    }
+
+    if (newClient.email && !emailRegex.test(newClient.email)) {
+      newErrors.email = "Enter a valid email";
+      isValid = false;
+    }
+
+    // if (!newClient.address.trim()) {
+    //   newErrors.address = "Address is required";
+    //   isValid = false;
+    // }
+
+    if (!newClient.state.trim()) {
+      newErrors.state = "State is required";
+      isValid = false;
+    }
+
+    // if (!newClient.city.trim()) {
+    //   newErrors.city = "City is required";
+    //   isValid = false;
+    // }
+
+    if (newClient.pincode && !pincodeRegex.test(newClient.pincode)) {
+      newErrors.pincode = "Enter a valid 6-digit pincode";
+      isValid = false;
+    }
+
+    // individual
+    if (newClient.type === "individual") {
+      if (!newClient.name.trim()) {
+        newErrors.name = "Client name is required";
+        isValid = false;
       }
-  
-      // Name logic differs for individual/company
-      let nameExists = false;
-  
+      if (newClient.pan && !panRegex.test(newClient.pan)) {
+        newErrors.pan = "Enter valid PAN number";
+        isValid = false;
+      }
+    }
+
+    // company
+    if (newClient.type === "company") {
+      if (!newClient.companyName.trim()) {
+        newErrors.companyName = "Company name is required";
+        isValid = false;
+      }
+      if (!newClient.contactName.trim()) {
+        newErrors.contactName = "Contact person name is required";
+        isValid = false;
+      }
+      if (newClient.gst && !gstRegex.test(newClient.gst)) {
+        newErrors.gst = "Enter valid GST number";
+        isValid = false;
+      }
+      if (newClient.pan && !panRegex.test(newClient.pan)) {
+        newErrors.pan = "Enter valid PAN number";
+        isValid = false;
+      }
+    }
+
+    setErrors(newErrors);
+    if (!isValid) return;
+
+    // ---------------------------------------
+    // -------- CREATE PAYLOAD --------------
+    // ---------------------------------------
+
+    try {
+      const payload: any = {
+        type: newClient.type,
+        email: newClient.email,
+        phone: newClient.phone,
+        address: newClient.address,
+        state: newClient.state,
+        city: newClient.city,
+        pincode: newClient.pincode,
+        status: "active",
+        userId: parsed?.id,
+      };
+
       if (newClient.type === "individual") {
-        nameExists = clients.some(
-          (c) =>
-            c.type === "individual" &&
-            (c.name || "").trim().toLowerCase() ===
-            newClient.name.trim().toLowerCase()
-        );
+        payload.name = newClient.name;
+        if (newClient.pan) payload.pan = newClient.pan;
       } else {
-        // company: companyName + contactName (mapped to name)
-        nameExists = clients.some(
-          (c) =>
-            c.type === "company" &&
-            (c.companyName || "").trim().toLowerCase() ===
-            newClient.companyName.trim().toLowerCase() &&
-            (c.name || "").trim().toLowerCase() ===
-            newClient.contactName.trim().toLowerCase()
-        );
+        payload.companyName = newClient.companyName;
+        payload.name = newClient.contactName;
+        if (newClient.gst) payload.gst = newClient.gst;
+        if (newClient.pan) payload.pan = newClient.pan;
       }
-  
-      if (nameExists) {
-        toast2.error("Client already exists");
-        return;
-      }
-  
-      // ---------------------------------------
-      // -------- VALIDATION START -------------
-      // ---------------------------------------
-  
-      let newErrors = {
+
+      await api.clients.create(payload);
+      toast2.success("Client Created Successfully");
+
+      // reload latest list
+      const updatedClients = await api.clients.getAll();
+      setClients(updatedClients);
+
+
+      setIsCreateDialogOpen(false);
+
+      setNewClient({
+        type: "individual",
         name: "",
         companyName: "",
         contactName: "",
-        email: "",
         phone: "",
+        email: "",
         address: "",
         state: "",
         city: "",
         pincode: "",
         gst: "",
         pan: "",
-      };
-  
-      let isValid = true;
-  
-      const phoneRegex = /^[6-9]\d{9}$/;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const pincodeRegex = /^\d{6}$/;
-      const gstRegex =
-        /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-  
-      // common validations
-      if (!phoneRegex.test(newClient.phone)) {
-        newErrors.phone = "Enter valid 10-digit Indian mobile number";
-        isValid = false;
-      }
-  
-      if (!emailRegex.test(newClient.email)) {
-        newErrors.email = "Enter a valid email";
-        isValid = false;
-      }
-  
-      if (!newClient.address.trim()) {
-        newErrors.address = "Address is required";
-        isValid = false;
-      }
-  
-      if (!newClient.state.trim()) {
-        newErrors.state = "State is required";
-        isValid = false;
-      }
-  
-      if (!newClient.city.trim()) {
-        newErrors.city = "City is required";
-        isValid = false;
-      }
-  
-      if (!pincodeRegex.test(newClient.pincode)) {
-        newErrors.pincode = "Enter a valid 6-digit pincode";
-        isValid = false;
-      }
-  
-      // individual
-      if (newClient.type === "individual") {
-        if (!newClient.name.trim()) {
-          newErrors.name = "Client name is required";
-          isValid = false;
-        }
-        if (newClient.pan && !panRegex.test(newClient.pan)) {
-          newErrors.pan = "Enter valid PAN number";
-          isValid = false;
-        }
-      }
-  
-      // company
-      if (newClient.type === "company") {
-        if (!newClient.companyName.trim()) {
-          newErrors.companyName = "Company name is required";
-          isValid = false;
-        }
-        if (!newClient.contactName.trim()) {
-          newErrors.contactName = "Contact person name is required";
-          isValid = false;
-        }
-        if (newClient.gst && !gstRegex.test(newClient.gst)) {
-          newErrors.gst = "Enter valid GST number";
-          isValid = false;
-        }
-        if (newClient.pan && !panRegex.test(newClient.pan)) {
-          newErrors.pan = "Enter valid PAN number";
-          isValid = false;
-        }
-      }
-  
-      setErrors(newErrors);
-      if (!isValid) return;
-  
-      // ---------------------------------------
-      // -------- CREATE PAYLOAD --------------
-      // ---------------------------------------
-  
-      try {
-        const payload: any = {
-          type: newClient.type,
-          email: newClient.email,
-          phone: newClient.phone,
-          address: newClient.address,
-          state: newClient.state,
-          city: newClient.city,
-          pincode: newClient.pincode,
-          status: "active",
-          userId: parsed?.id,
-        };
-  
-        if (newClient.type === "individual") {
-          payload.name = newClient.name;
-          if (newClient.pan) payload.pan = newClient.pan;
-        } else {
-          payload.companyName = newClient.companyName;
-          payload.name = newClient.contactName;
-          if (newClient.gst) payload.gst = newClient.gst;
-          if (newClient.pan) payload.pan = newClient.pan;
-        }
-  
-        await api.clients.create(payload);
-        toast2.success("Client Created Successfully");
-  
-        // reload latest list
-        const updatedClients = await api.clients.getAll();
-        setClients(updatedClients);
-  
-  
-        setIsCreateDialogOpen(false);
-  
-        setNewClient({
-          type: "individual",
-          name: "",
-          companyName: "",
-          contactName: "",
-          phone: "",
-          email: "",
-          address: "",
-          state: "",
-          city: "",
-          pincode: "",
-          gst: "",
-          pan: "",
-        });
-      } catch (error) {
-        toast2.error("Failed to create client");
-      }
-    };
+      });
+    } catch (error) {
+      toast2.error("Failed to create client");
+    }
+  };
   const [newVendor, setNewVendor] = useState({
     name: "",
     email: "",
@@ -845,7 +888,7 @@ const handleRecipientChange = (recipientId: string) => {
                     <CardDescription>Enter basic payment information</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    
+
                     {creationMode === "invoiced" && (
                       <div className="space-y-2">
                         <Label>Select Invoice <span className="text-red-500">*</span></Label>
@@ -901,69 +944,69 @@ const handleRecipientChange = (recipientId: string) => {
 
                     <div className="space-y-2 flex flex-wrap gap-6">
                       {creationMode === "non-invoiced" && (
-                      <div>
-                        <Label htmlFor="category">
-                          Ledger Head <span className="text-red-500">*</span>
-                        </Label>
+                        <div>
+                          <Label htmlFor="category">
+                            Ledger Head <span className="text-red-500">*</span>
+                          </Label>
 
-                        <Select
-                          value={paymentData.category}
-                          onValueChange={(value) => {
-                            setPaymentData({ ...paymentData, category: value });
-                            if (validationErrors.category) {
-                              setValidationErrors({ ...validationErrors, category: "" });
-                            }
-                          }}
-                          required
-                        >
-                          <SelectTrigger className={validationErrors.category ? "border-red-500" : "w-36"}>
-                            <SelectValue placeholder="Select ledger head" />
-                          </SelectTrigger>
+                          <Select
+                            value={paymentData.category}
+                            onValueChange={(value) => {
+                              setPaymentData({ ...paymentData, category: value });
+                              if (validationErrors.category) {
+                                setValidationErrors({ ...validationErrors, category: "" });
+                              }
+                            }}
+                            required
+                          >
+                            <SelectTrigger className={validationErrors.category ? "border-red-500" : "w-36"}>
+                              <SelectValue placeholder="Select ledger head" />
+                            </SelectTrigger>
 
-                          <SelectContent>
-                            {paymentCategories.map((cat) => (
-                              <SelectItem key={cat._id} value={cat.name}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                            <SelectContent>
+                              {paymentCategories.map((cat) => (
+                                <SelectItem key={cat._id} value={cat.name}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
 
-                        {validationErrors.category && (
-                          <p className="text-xs text-red-500">{validationErrors.category}</p>
-                        )}
-                      </div>
+                          {validationErrors.category && (
+                            <p className="text-xs text-red-500">{validationErrors.category}</p>
+                          )}
+                        </div>
                       )}
 
 
                       {creationMode === "non-invoiced" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="recipientType">
-                          Party Type <span className="text-red-500">*</span>
-                        </Label>
-                        <Select
-                          value={paymentData.recipientType}
-                          onValueChange={(value: any) => {
-                            setPaymentData({
-                              ...paymentData,
-                              recipientType: value,
-                              recipientId: "",
-                              recipientName: "",
-                              recipientEmail: "",
-                              recipientPhone: "",
-                              recipientAddress: "",
-                            })
-                            if (validationErrors.recipientType) {
-                              setValidationErrors({ ...validationErrors, recipientType: "" })
-                            }
-                          }}
-                          required
-                        >
-                          <SelectTrigger className={validationErrors.recipientType ? "border-red-500" : "w-36"}>
-                            <SelectValue placeholder="Select party type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                         
+                        <div className="space-y-2">
+                          <Label htmlFor="recipientType">
+                            Party Type <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={paymentData.recipientType}
+                            onValueChange={(value: any) => {
+                              setPaymentData({
+                                ...paymentData,
+                                recipientType: value,
+                                recipientId: "",
+                                recipientName: "",
+                                recipientEmail: "",
+                                recipientPhone: "",
+                                recipientAddress: "",
+                              })
+                              if (validationErrors.recipientType) {
+                                setValidationErrors({ ...validationErrors, recipientType: "" })
+                              }
+                            }}
+                            required
+                          >
+                            <SelectTrigger className={validationErrors.recipientType ? "border-red-500" : "w-36"}>
+                              <SelectValue placeholder="Select party type" />
+                            </SelectTrigger>
+                            <SelectContent>
+
                               <SelectItem value="client">
                                 Client
                               </SelectItem>
@@ -973,12 +1016,12 @@ const handleRecipientChange = (recipientId: string) => {
                               <SelectItem value="team">
                                 Team
                               </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {validationErrors.recipientType && (
-                          <p className="text-xs text-red-500">{validationErrors.recipientType}</p>
-                        )}
-                      </div>
+                            </SelectContent>
+                          </Select>
+                          {validationErrors.recipientType && (
+                            <p className="text-xs text-red-500">{validationErrors.recipientType}</p>
+                          )}
+                        </div>
                       )}
 
                       {creationMode === "non-invoiced" && paymentData.recipientType === "client" && (
@@ -1003,239 +1046,254 @@ const handleRecipientChange = (recipientId: string) => {
                                 />
                               </div>
 
-                                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                        {
-                          (hasPermission("add_clients")) && (
-                            <DialogTrigger asChild>
-                          <Button type="button" variant="outline" size="icon">
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                          )
-                        }
+                              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                                {
+                                  (hasPermission("add_clients")) && (
+                                    <DialogTrigger asChild>
+                                      <Button type="button" variant="outline" size="icon">
+                                        <UserPlus className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                  )
+                                }
 
-                        <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-                          {/* HEADER */}
-                          <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
-                            <DialogHeader>
-                              <DialogTitle>Create New Client</DialogTitle>
-                              <DialogDescription>Add a new client record</DialogDescription>
-                            </DialogHeader>
-                          </div>
-
-                          {/* BODY */}
-                          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
-                            <form className="space-y-6 pb-20" id="quotation-create-client-form">
-
-                              {/* CLIENT TYPE DROPDOWN — same as ClientsPage */}
-                              <div className="pb-4">
-                                <Label className="text-sm font-medium">Client Type</Label>
-                                <Select
-                                  value={newClient.type}
-                                  onValueChange={(v) =>
-                                    setNewClient({ ...newClient, type: v as "individual" | "company" })
-                                  }
-                                >
-                                  <SelectTrigger className="mt-1">
-                                    <SelectValue placeholder="Select client type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="individual">Individual</SelectItem>
-                                    <SelectItem value="company">Company</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {/* INDIVIDUAL FIELDS */}
-                              {newClient.type === "individual" && (
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="space-y-1">
-                                    <Label required>Client Name</Label>
-                                    <Input
-                                      value={newClient.name}
-                                      placeholder="Client Name"
-                                      onChange={(e) =>
-                                        setNewClient({ ...newClient, name: e.target.value })
-                                      }
-                                    />
-                                    {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                                <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+                                  {/* HEADER */}
+                                  <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+                                    <DialogHeader>
+                                      <DialogTitle>Create New Client</DialogTitle>
+                                      <DialogDescription>Add a new client record</DialogDescription>
+                                    </DialogHeader>
                                   </div>
 
-                                  <div className="space-y-1">
-                                    <Label>PAN</Label>
-                                    <Input
-                                      value={newClient.pan}
-                                      placeholder="Enter PAN"
-                                      onChange={(e) =>
-                                        setNewClient({ ...newClient, pan: e.target.value.toUpperCase() })
-                                      }
-                                    />
-                                    {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
-                                  </div>
-                                </div>
-                              )}
+                                  {/* BODY */}
+                                  <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
+                                    <form className="space-y-6 pb-20" id="quotation-create-client-form">
 
-                              {/* COMPANY FIELDS */}
-                              {newClient.type === "company" && (
-                                <>
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <Label required>Company Name</Label>
-                                      <Input
-                                        value={newClient.companyName}
-                                        placeholder="Company Name"
-                                        onChange={(e) =>
-                                          setNewClient({ ...newClient, companyName: e.target.value })
-                                        }
-                                      />
-                                      {errors.companyName && (
-                                        <p className="text-red-500 text-sm">{errors.companyName}</p>
+                                      {/* CLIENT TYPE DROPDOWN — same as ClientsPage */}
+                                      <div className="pb-4">
+                                        <Label className="text-sm font-medium">Client Type</Label>
+                                        <Select
+                                          value={newClient.type}
+                                          onValueChange={(v) =>
+                                            setNewClient({ ...newClient, type: v as "individual" | "company" })
+                                          }
+                                        >
+                                          <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="Select client type" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="individual">Individual</SelectItem>
+                                            <SelectItem value="company">Company</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      {/* INDIVIDUAL FIELDS */}
+                                      {newClient.type === "individual" && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-1">
+                                            <Label required>Client Name</Label>
+                                            <Input
+                                              value={newClient.name}
+                                              placeholder="Client Name"
+                                              onChange={(e) =>
+                                                setNewClient({ ...newClient, name: e.target.value })
+                                              }
+                                            />
+                                            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                                          </div>
+
+                                          <div className="space-y-1">
+                                            <Label>PAN</Label>
+                                            <Input
+                                              value={newClient.pan}
+                                              placeholder="Enter PAN"
+                                              onChange={(e) =>
+                                                setNewClient({ ...newClient, pan: e.target.value.toUpperCase() })
+                                              }
+                                            />
+                                            {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
+                                          </div>
+                                        </div>
                                       )}
-                                    </div>
 
-                                    <div className="space-y-1">
-                                      <Label>Contact Person *</Label>
-                                      <Input
-                                        value={newClient.contactName}
-                                        placeholder="Contact Person Name"
-                                        onChange={(e) =>
-                                          setNewClient({ ...newClient, contactName: e.target.value })
-                                        }
-                                      />
-                                      {errors.contactName && (
-                                        <p className="text-red-500 text-sm">{errors.contactName}</p>
+                                      {/* COMPANY FIELDS */}
+                                      {newClient.type === "company" && (
+                                        <>
+                                          <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                              <Label required>Company Name</Label>
+                                              <Input
+                                                value={newClient.companyName}
+                                                placeholder="Company Name"
+                                                onChange={(e) =>
+                                                  setNewClient({ ...newClient, companyName: e.target.value })
+                                                }
+                                              />
+                                              {errors.companyName && (
+                                                <p className="text-red-500 text-sm">{errors.companyName}</p>
+                                              )}
+                                            </div>
+
+                                            <div className="space-y-1">
+                                              <Label>Contact Person *</Label>
+                                              <Input
+                                                value={newClient.contactName}
+                                                placeholder="Contact Person Name"
+                                                onChange={(e) =>
+                                                  setNewClient({ ...newClient, contactName: e.target.value })
+                                                }
+                                              />
+                                              {errors.contactName && (
+                                                <p className="text-red-500 text-sm">{errors.contactName}</p>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                              <Label>GST</Label>
+                                              <Input
+                                                value={newClient.gst}
+                                                placeholder="Enter GST"
+                                                onChange={(e) =>
+                                                  setNewClient({ ...newClient, gst: e.target.value.toUpperCase() })
+                                                }
+                                              />
+                                              {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
+                                            </div>
+
+                                            <div className="space-y-1">
+                                              <Label>PAN</Label>
+                                              <Input
+                                                value={newClient.pan}
+                                                placeholder="Enter PAN"
+                                                onChange={(e) =>
+                                                  setNewClient({ ...newClient, pan: e.target.value.toUpperCase() })
+                                                }
+                                              />
+                                              {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
+                                            </div>
+                                          </div>
+                                        </>
                                       )}
-                                    </div>
+
+                                      {/* COMMON FIELDS */}
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                          <Label required>Phone</Label>
+                                          <Input
+                                            value={newClient.phone}
+                                            placeholder="Enter Phone"
+                                            onChange={(e) =>
+                                              setNewClient({ ...newClient, phone: e.target.value })
+                                            }
+                                          />
+                                          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+                                        </div>
+
+                                        <div className="space-y-1">
+                                          <Label>Email</Label>
+                                          <Input
+                                            type="email"
+                                            value={newClient.email}
+                                            placeholder="Enter Email"
+                                            onChange={(e) =>
+                                              setNewClient({ ...newClient, email: e.target.value })
+                                            }
+                                          />
+                                          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <Label>Address</Label>
+                                        <Textarea
+                                          rows={2}
+                                          value={newClient.address}
+                                          placeholder="Enter Address"
+                                          onChange={(e) =>
+                                            setNewClient({ ...newClient, address: e.target.value })
+                                          }
+                                        />
+                                        {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                                      </div>
+
+                                      <div className="grid grid-cols-3 gap-4">
+                                        <div className="space-y-1">
+                                          <Label required>State</Label>
+                                          {/* <Input
+                                                                  value={newClient.state}
+                                                                  placeholder="Enter State"
+                                                                  onChange={(e) =>
+                                                                    setNewClient({ ...newClient, state: e.target.value })
+                                                                  }
+                                                                /> */}
+                                          <Select
+                                            value={newClient.state}
+                                            onValueChange={(value) => setNewClient({ ...newClient, state: value })}
+                                          >
+                                            <SelectTrigger id="state">
+                                              <SelectValue placeholder="Select a state" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {indianStates.map((stateName) => (
+                                                <SelectItem key={stateName} value={stateName}>
+                                                  {stateName}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
+                                        </div>
+
+                                        <div className="space-y-1">
+                                          <Label>City</Label>
+                                          <Input
+                                            value={newClient.city}
+                                            placeholder="Enter City"
+                                            onChange={(e) =>
+                                              setNewClient({ ...newClient, city: e.target.value })
+                                            }
+                                          />
+                                          {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
+                                        </div>
+
+                                        <div className="space-y-1">
+                                          <Label>Pincode</Label>
+                                          <Input
+                                            value={newClient.pincode}
+                                            placeholder="Enter Pincode"
+                                            onChange={(e) =>
+                                              setNewClient({ ...newClient, pincode: e.target.value })
+                                            }
+                                          />
+                                          {errors.pincode && (
+                                            <p className="text-red-500 text-sm">{errors.pincode}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </form>
                                   </div>
 
-                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <Label>GST</Label>
-                                      <Input
-                                        value={newClient.gst}
-                                        placeholder="Enter GST"
-                                        onChange={(e) =>
-                                          setNewClient({ ...newClient, gst: e.target.value.toUpperCase() })
-                                        }
-                                      />
-                                      {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
-                                    </div>
+                                  {/* FOOTER */}
+                                  <div className="bg-white border-t px-6 py-4">
+                                    <div className="flex justify-end space-x-2">
+                                      <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        onClick={handleCreateClient}
+                                      >
+                                        Create Client
+                                      </Button>
 
-                                    <div className="space-y-1">
-                                      <Label>PAN</Label>
-                                      <Input
-                                        value={newClient.pan}
-                                        placeholder="Enter PAN"
-                                        onChange={(e) =>
-                                          setNewClient({ ...newClient, pan: e.target.value.toUpperCase() })
-                                        }
-                                      />
-                                      {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
                                     </div>
                                   </div>
-                                </>
-                              )}
-
-                              {/* COMMON FIELDS */}
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <Label required>Phone</Label>
-                                  <Input
-                                    value={newClient.phone}
-                                    placeholder="Enter Phone"
-                                    onChange={(e) =>
-                                      setNewClient({ ...newClient, phone: e.target.value })
-                                    }
-                                  />
-                                  {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label required>Email</Label>
-                                  <Input
-                                    type="email"
-                                    value={newClient.email}
-                                    placeholder="Enter Email"
-                                    onChange={(e) =>
-                                      setNewClient({ ...newClient, email: e.target.value })
-                                    }
-                                  />
-                                  {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label required>Address</Label>
-                                <Textarea
-                                  rows={2}
-                                  value={newClient.address}
-                                  placeholder="Enter Address"
-                                  onChange={(e) =>
-                                    setNewClient({ ...newClient, address: e.target.value })
-                                  }
-                                />
-                                {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-                              </div>
-
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="space-y-1">
-                                  <Label required>State</Label>
-                                  <Input
-                                    value={newClient.state}
-                                    placeholder="Enter State"
-                                    onChange={(e) =>
-                                      setNewClient({ ...newClient, state: e.target.value })
-                                    }
-                                  />
-                                  {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label required>City</Label>
-                                  <Input
-                                    value={newClient.city}
-                                    placeholder="Enter City"
-                                    onChange={(e) =>
-                                      setNewClient({ ...newClient, city: e.target.value })
-                                    }
-                                  />
-                                  {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label required>Pincode</Label>
-                                  <Input
-                                    value={newClient.pincode}
-                                    placeholder="Enter Pincode"
-                                    onChange={(e) =>
-                                      setNewClient({ ...newClient, pincode: e.target.value })
-                                    }
-                                  />
-                                  {errors.pincode && (
-                                    <p className="text-red-500 text-sm">{errors.pincode}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </form>
-                          </div>
-
-                          {/* FOOTER */}
-                          <div className="bg-white border-t px-6 py-4">
-                            <div className="flex justify-end space-x-2">
-                              <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={handleCreateClient}
-                              >
-                                Create Client
-                              </Button>
-
-                            </div>
-                          </div>
-                        </DialogContent>
-                                </Dialog>
+                                </DialogContent>
+                              </Dialog>
                             </div>
                             {validationErrors.recipientId && (
                               <p className="text-xs text-red-500">{validationErrors.recipientId}</p>
@@ -1268,13 +1326,13 @@ const handleRecipientChange = (recipientId: string) => {
 
                               <Dialog open={isCreateVendorOpen} onOpenChange={setIsCreateVendorOpen}>
                                 <DialogTrigger asChild>
-                                 {
-                                  (hasPermission("add_vendors")) && (
-                                     <Button type="button" variant="outline" size="icon">
-                                    <UserPlus className="h-4 w-4" />
-                                  </Button>
-                                  )
-                                 }
+                                  {
+                                    (hasPermission("add_vendors")) && (
+                                      <Button type="button" variant="outline" size="icon">
+                                        <UserPlus className="h-4 w-4" />
+                                      </Button>
+                                    )
+                                  }
                                 </DialogTrigger>
                                 <DialogContent>
                                   <DialogHeader>
@@ -1387,7 +1445,7 @@ const handleRecipientChange = (recipientId: string) => {
                       {paymentData.recipientId && creationMode === "non-invoiced" && (
                         <div className="space-y-2">
                           <Label>Recipient Details</Label>
-                          <Textarea value={paymentData.recipientName+" "+paymentData.recipientEmail+" "+paymentData.recipientPhone+" "+paymentData.recipientAddress} disabled rows={4} />
+                          <Textarea value={paymentData.recipientName + " " + paymentData.recipientEmail + " " + paymentData.recipientPhone + " " + paymentData.recipientAddress} disabled rows={4} />
                         </div>
                       )}
                     </div>
@@ -1446,7 +1504,7 @@ const handleRecipientChange = (recipientId: string) => {
                         <Label>Payment Type</Label>
                         <Select
                           value={paymentData.paymentType}
-                          onValueChange={(val: any) => setPaymentData({...paymentData, paymentType: val})}
+                          onValueChange={(val: any) => setPaymentData({ ...paymentData, paymentType: val })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -1491,158 +1549,158 @@ const handleRecipientChange = (recipientId: string) => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex flex-row gap-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="paymentMethod">
-                        Payment Method <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={paymentData.paymentMethod}
-                        onValueChange={(value) => {
-                          setPaymentData({ ...paymentData, paymentMethod: value })
-                          if (validationErrors.paymentMethod) {
-                            setValidationErrors({ ...validationErrors, paymentMethod: "" })
-                          }
-                        }}
-                        required
-                      >
-                        <SelectTrigger className={validationErrors.paymentMethod ? "border-red-500 w-full" : "w-full"}>
-                          <SelectValue placeholder="Select payment method" />
-                        </SelectTrigger>
-                        <SelectContent>
-
-                        <SelectItem value="cash">
-                          Cash
-                        </SelectItem>
-                        <SelectItem value="upi">
-                          UPI
-                        </SelectItem>
-                        <SelectItem value="card">
-                         Card
-                        </SelectItem>
-                        <SelectItem value="cheque">
-                          Cheque
-                        </SelectItem>
-                        <SelectItem value="bankTransfer">
-                          Bank Transfer
-                        </SelectItem>
-                         <SelectItem value="other">
-                        Other
-                        </SelectItem>
-                      </SelectContent>
-                      </Select>
-                      {validationErrors.paymentMethod && (
-                        <p className="text-xs text-red-500">{validationErrors.paymentMethod}</p>
-                      )}
-                    </div>
-
-                    {paymentData.paymentMethod.trim().toLowerCase()!=="cash" && (
                       <div className="space-y-2">
-                        <Label htmlFor="bankAccount">
-                          Bank Account <span className="text-red-500">*</span>
+                        <Label htmlFor="paymentMethod">
+                          Payment Method <span className="text-red-500">*</span>
                         </Label>
                         <Select
-                          value={paymentData.bankAccount}
+                          value={paymentData.paymentMethod}
                           onValueChange={(value) => {
-                            setPaymentData({ ...paymentData, bankAccount: value })
-                            if (validationErrors.bankAccount) {
-                              setValidationErrors({ ...validationErrors, bankAccount: "" })
+                            setPaymentData({ ...paymentData, paymentMethod: value })
+                            if (validationErrors.paymentMethod) {
+                              setValidationErrors({ ...validationErrors, paymentMethod: "" })
                             }
                           }}
                           required
                         >
-                          <SelectTrigger className={validationErrors.bankAccount ? "border-red-500 w-full" : "w-full"}>
-                            <SelectValue placeholder="Select bank account" />
+                          <SelectTrigger className={validationErrors.paymentMethod ? "border-red-500 w-full" : "w-full"}>
+                            <SelectValue placeholder="Select payment method" />
                           </SelectTrigger>
                           <SelectContent>
-                            {bankAccounts.map((account) => (
-                              <SelectItem key={account._id} value={account.bankName}>
-                               {account.bankName}, {account.branchName}
-                              </SelectItem>
-                            ))}
+
+                            <SelectItem value="cash">
+                              Cash
+                            </SelectItem>
+                            <SelectItem value="upi">
+                              UPI
+                            </SelectItem>
+                            <SelectItem value="card">
+                              Card
+                            </SelectItem>
+                            <SelectItem value="cheque">
+                              Cheque
+                            </SelectItem>
+                            <SelectItem value="bankTransfer">
+                              Bank Transfer
+                            </SelectItem>
+                            <SelectItem value="other">
+                              Other
+                            </SelectItem>
                           </SelectContent>
                         </Select>
-                        {validationErrors.bankAccount && (
-                          <p className="text-xs text-red-500">{validationErrors.bankAccount}</p>
+                        {validationErrors.paymentMethod && (
+                          <p className="text-xs text-red-500">{validationErrors.paymentMethod}</p>
                         )}
                       </div>
-                    )}
 
-                    {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="referenceNumber">
-                          Reference Number <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="referenceNumber"
-                          value={paymentData.referenceNumber}
-                          onChange={(e) => {
-                            setPaymentData({ ...paymentData, referenceNumber: e.target.value })
-                            if (validationErrors.referenceNumber) {
-                              setValidationErrors({ ...validationErrors, referenceNumber: "" })
-                            }
-                          }}
-                          placeholder="Enter transaction reference number"
-                          className={validationErrors.referenceNumber ? "border-red-500" : ""}
-                          required
-                        />
-                        {validationErrors.referenceNumber && (
-                          <p className="text-xs text-red-500">{validationErrors.referenceNumber}</p>
-                        )}
-                      </div>
-                    )}
+                      {paymentData.paymentMethod.trim().toLowerCase() !== "cash" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="bankAccount">
+                            Bank Account <span className="text-red-500">*</span>
+                          </Label>
+                          <Select
+                            value={paymentData.bankAccount}
+                            onValueChange={(value) => {
+                              setPaymentData({ ...paymentData, bankAccount: value })
+                              if (validationErrors.bankAccount) {
+                                setValidationErrors({ ...validationErrors, bankAccount: "" })
+                              }
+                            }}
+                            required
+                          >
+                            <SelectTrigger className={validationErrors.bankAccount ? "border-red-500 w-full" : "w-full"}>
+                              <SelectValue placeholder="Select bank account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map((account) => (
+                                <SelectItem key={account._id} value={account.bankName}>
+                                  {account.bankName}, {account.branchName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {validationErrors.bankAccount && (
+                            <p className="text-xs text-red-500">{validationErrors.bankAccount}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {paymentData.paymentMethod.trim().toLowerCase() != "cash" && (
+                        <div className="space-y-2">
+                          <Label htmlFor="referenceNumber">
+                            Reference Number <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="referenceNumber"
+                            value={paymentData.referenceNumber}
+                            onChange={(e) => {
+                              setPaymentData({ ...paymentData, referenceNumber: e.target.value })
+                              if (validationErrors.referenceNumber) {
+                                setValidationErrors({ ...validationErrors, referenceNumber: "" })
+                              }
+                            }}
+                            placeholder="Enter transaction reference number"
+                            className={validationErrors.referenceNumber ? "border-red-500" : ""}
+                            required
+                          />
+                          {validationErrors.referenceNumber && (
+                            <p className="text-xs text-red-500">{validationErrors.referenceNumber}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {/* BILL UPLOAD */}
- {( <div className="mb-2">
-    <Label>Bill Upload</Label>
+                    {(<div className="mb-2">
+                      <Label>Bill Upload</Label>
 
-    <ImageUpload
-      label="Bill File"
-      value={paymentData.billFile}
-      onChange={(value) => {
-        setPaymentData({ ...paymentData, billFile: value })
-        if (validationErrors.billFile) {
-          setValidationErrors({ ...validationErrors, billFile: "" })
-        }
-      }}
-      previewClassName="w-32 h-32 rounded-lg"
-      allowedTypes={["image/*", "application/pdf"]}
-      maxSizeMB={10}
-    />
+                      <ImageUpload
+                        label="Bill File"
+                        value={paymentData.billFile}
+                        onChange={(value) => {
+                          setPaymentData({ ...paymentData, billFile: value })
+                          if (validationErrors.billFile) {
+                            setValidationErrors({ ...validationErrors, billFile: "" })
+                          }
+                        }}
+                        previewClassName="w-32 h-32 rounded-lg"
+                        allowedTypes={["image/*", "application/pdf"]}
+                        maxSizeMB={10}
+                      />
 
-    {validationErrors.billFile && (
-      <p className="text-xs text-red-500">{validationErrors.billFile}</p>
-    )}
-  </div>)}
+                      {validationErrors.billFile && (
+                        <p className="text-xs text-red-500">{validationErrors.billFile}</p>
+                      )}
+                    </div>)}
 
-                    {paymentData.paymentMethod.trim().toLowerCase()!="cash" && (
-<div className="mt-5 mb-5">
+                    {paymentData.paymentMethod.trim().toLowerCase() != "cash" && (
+                      <div className="mt-5 mb-5">
 
-  
 
-  {/* SCREENSHOT UPLOAD */}
-  <div>
-    <Label>Screenshot Upload</Label>
 
-    <ImageUpload
-      label="Screenshot File"
-      value={paymentData.screenshotFile}
-      onChange={(value) => {
-        setPaymentData({ ...paymentData, screenshotFile: value })
-        if (validationErrors.screenshotFile) {
-          setValidationErrors({ ...validationErrors, screenshotFile: "" })
-        }
-      }}
-      previewClassName="w-32 h-32 rounded-lg"
-      allowedTypes={["image/*", "application/pdf"]}
-      maxSizeMB={10}
-    />
+                        {/* SCREENSHOT UPLOAD */}
+                        <div>
+                          <Label>Screenshot Upload</Label>
 
-    {validationErrors.screenshotFile && (
-      <p className="text-xs text-red-500">{validationErrors.screenshotFile}</p>
-    )}
-  </div>
+                          <ImageUpload
+                            label="Screenshot File"
+                            value={paymentData.screenshotFile}
+                            onChange={(value) => {
+                              setPaymentData({ ...paymentData, screenshotFile: value })
+                              if (validationErrors.screenshotFile) {
+                                setValidationErrors({ ...validationErrors, screenshotFile: "" })
+                              }
+                            }}
+                            previewClassName="w-32 h-32 rounded-lg"
+                            allowedTypes={["image/*", "application/pdf"]}
+                            maxSizeMB={10}
+                          />
 
-</div>
+                          {validationErrors.screenshotFile && (
+                            <p className="text-xs text-red-500">{validationErrors.screenshotFile}</p>
+                          )}
+                        </div>
+
+                      </div>
 
                     )}
 
