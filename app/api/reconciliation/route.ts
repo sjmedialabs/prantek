@@ -8,7 +8,9 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
   const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
   const db = await connectDB()
 
-  const receipts = await db.collection(Collections.RECEIPTS).find({ userId: filterUserId }).toArray()
+  const receipts = await db.collection(Collections.RECEIPTS).find({ userId: filterUserId }
+  ).toArray()
+
   const payments = await db.collection(Collections.PAYMENTS).find({ userId: filterUserId }).toArray()
 
   const reconciliation = [
@@ -24,7 +26,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       paymentMethod: r.paymentMethod,
       referenceNumber: r.referenceNumber,
       amount: r.ReceiptAmount || r.amountPaid || r.total || 0,
-      status: r.status || "pending",
+      status: r.status || "received",
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
     })),
@@ -39,7 +41,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       paymentMethod: p.paymentMethod,
       referenceNumber: p.referenceNumber,
       amount: p.amount || 0,
-      status: p.status || "pending",
+            status: p.status || "Paid",
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     })),
@@ -54,16 +56,16 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const { id, type, cleared } = await req.json()
 
   const collection = type === "receipt" ? Collections.RECEIPTS : Collections.PAYMENTS
-  
+
   // For receipts, set status to "cleared" or "pending"
   // For payments, set status to "completed" or "pending"
-  const newStatus = cleared 
-    ? (type === "receipt" ? "cleared" : "completed")
-    : "pending"
-
+  const newStatus = cleared
+    ? (type === "receipt" ? "cleared" : "cleared")
+    : (type === "receipt" ? "received" : "Paid");
+console.log("newStatus :::",newStatus)
   const result = await db
     .collection(collection)
-    .findOneAndUpdate(
+    .updateOne(
       { _id: new ObjectId(id), userId: filterUserId },
       { $set: { status: newStatus, updatedAt: new Date() } },
       { returnDocument: "after" },

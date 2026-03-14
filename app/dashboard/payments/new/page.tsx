@@ -37,7 +37,7 @@ export default function NewPaymentPage() {
   const [paymentData, setPaymentData] = useState({
     paymentNumber: "Auto-generated",
     purchaseInvoiceId: "",
-    purchaseInvoiceNumber: "auto-generated",
+    purchaseInvoiceNumber: "",
     date: new Date().toISOString().split("T")[0],
     recipientType: "" as "client" | "vendor" | "team" | "",
     recipientId: "",

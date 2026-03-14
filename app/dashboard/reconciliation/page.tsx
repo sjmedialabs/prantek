@@ -23,7 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { format, startOfDay } from "date-fns"
-import { Check, Download, Eye, RefreshCw, Search, X, GitCompare } from "lucide-react"
+import { Check, Download, Eye, RefreshCw, Search, X, GitCompare, Wallet } from "lucide-react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -144,9 +144,9 @@ export default function ReconciliationPage() {
 
     // Status filter
     if (statusFilter === "uncleared") {
-      filtered = filtered.filter((t) => t.status === "pending")
+      filtered = filtered.filter((t) => t.status !== "cleared")
     } else if (statusFilter === "cleared") {
-      filtered = filtered.filter((t) => t.status === "cleared" || t.status === "completed")
+      filtered = filtered.filter((t) => t.status === "cleared")
     }
 
     // Type filter
@@ -199,7 +199,7 @@ export default function ReconciliationPage() {
     }
 
     try {
-      const isCurrentlyCleared = transaction.status === "cleared" || transaction.status === "completed"
+      const isCurrentlyCleared = transaction.status === "cleared"
 
       // Add to animating set
       setAnimatingIds((prev) => new Set(prev).add(transaction._id))
@@ -208,7 +208,7 @@ export default function ReconciliationPage() {
       setTransactions((prevTransactions) =>
         prevTransactions.map((t) =>
           t._id === transaction._id
-            ? { ...t, status: isCurrentlyCleared ? "pending" : t.type === "receipt" ? "cleared" : "completed" }
+            ? { ...t, status: isCurrentlyCleared ? "pending" : t.type === "receipt" ? "cleared" : "cleared" }
             : t,
         ),
       )
@@ -263,8 +263,11 @@ export default function ReconciliationPage() {
     }
 
     const pending = data.filter((t) => t.status === "pending")
-    const cleared = data.filter((t) => t.status === "cleared" || t.status === "completed")
-
+    const cleared = data.filter((t) => t.status === "cleared")
+    const unclearRecAmount = data.filter((t)=> t.type === "receipt" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearRec = data.filter((t)=> t.type === "receipt" && t.status === "pending").length
+    const unclearPayAmount = data.filter((t)=> t.type === "payment" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearPay = data.filter((t)=> t.type === "payment" && t.status === "pending").length
     return {
       pendingCount: pending.length,
       pendingAmount: pending.reduce((sum, t) => sum + t.amount, 0),
@@ -272,6 +275,10 @@ export default function ReconciliationPage() {
       clearedAmount: cleared.reduce((sum, t) => sum + t.amount, 0),
       totalCount: data.length,
       totalAmount: data.reduce((sum, t) => sum + t.amount, 0),
+      unclearRecAmount,
+      unclearRec,
+      unclearPayAmount,
+      unclearPay
     }
   }
 
@@ -314,7 +321,10 @@ export default function ReconciliationPage() {
 
   const stats = calculateStats(statsView)
   const paymentMethods = Array.from(new Set(transactions.map((t) => t.paymentMethod).filter(m => m && m.trim() !== ""))).sort()
-
+    const unclearRecAmount = transactions.filter((t)=> t.type === "receipt" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearRec = transactions.filter((t)=> t.type === "receipt" && t.status === "pending").length
+    const unclearPayAmount = transactions.filter((t)=> t.type === "payment" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
+    const unclearPay = transactions.filter((t)=> t.type === "payment" && t.status === "pending").length
   if (!hasPermission("view_reconciliation")) {
     return (
       <div className="container mx-auto py-8">
@@ -335,14 +345,14 @@ export default function ReconciliationPage() {
           <h1 className="text-3xl font-bold">Clearing</h1>
           <p className="text-muted-foreground">Verify receipts and payments with your bank account</p>
         </div>
-        <Button onClick={loadTransactions} variant="outline" size="sm">
+        {/* <Button onClick={loadTransactions} variant="outline" size="sm">
           <RefreshCw className="mr-2 h-4 w-4" />
           Refresh
-        </Button>
+        </Button> */}
       </div>
 
       {/* Statistics */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Statistics</CardTitle>
@@ -384,8 +394,33 @@ export default function ReconciliationPage() {
             </div>
           </div>
         </CardContent>
-      </Card>
-
+      </Card> */}
+      <div className="grid grid-cols-2 gap-4">
+       <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Uncleared Receipt</CardTitle>
+             <Wallet className={`h-4 w-4`} />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{unclearRecAmount}
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{unclearRec} Unclear Receipts</p>
+          </CardContent>  
+        </Card>
+         <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-700">Uncleared Payment</CardTitle>
+                     <Wallet className={`h-4 w-4`} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+              ₹{unclearPayAmount}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">{unclearPay} Unclear Payments</p>
+                  </CardContent>
+                </Card>
+</div>
       {/* Filters */}
       <Card>
         <CardHeader>
@@ -444,23 +479,36 @@ export default function ReconciliationPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {paymentMethod.map((method) => (
-                    <SelectItem key={method._id} value={method.name}>
-                      {method.name.toUpperCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              
+                                      <SelectItem value="cash">
+                                        Cash
+                                      </SelectItem>
+                                      <SelectItem value="upi">
+                                        UPI
+                                      </SelectItem>
+                                      <SelectItem value="card">
+                                       Card
+                                      </SelectItem>
+                                      <SelectItem value="cheque">
+                                        Cheque
+                                      </SelectItem>
+                                      <SelectItem value="bankTransfer">
+                                        Bank Transfer
+                                      </SelectItem>
+                                       <SelectItem value="all">
+                                     All
+                                      </SelectItem>
+                                    </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label>&nbsp;</Label>
               <Button onClick={exportToCSV} variant="outline" className="w-full">
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
               </Button>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -504,7 +552,7 @@ export default function ReconciliationPage() {
                 <TableBody>
                   {paginatedTransactions.map((transaction, index) => {
                     const serial = (currentPage - 1) * itemsPerPage + (index + 1)
-                    const isCleared = transaction.status === "cleared" || transaction.status === "completed"
+                    const isCleared = transaction.status === "cleared"
 
                     return (
                       <Fragment key={transaction._id}>
