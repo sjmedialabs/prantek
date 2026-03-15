@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, FileText, Filter, X, Eye, Ban, ShieldOff } from "lucide-react"
+import { Plus, Search, FileText, Filter, X, Eye, Ban, ShieldOff, Upload } from "lucide-react"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -277,12 +277,20 @@ export default function SalesInvoicesPage() {
           <p className="text-gray-600">Manage sales invoices</p>
         </div>
         {hasPermission("add_sales_invoice") && (
-          <Link href="/dashboard/salesInvoices/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Invoice
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/salesInvoices/bulk">
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Upload Invoice
+              </Button>
+            </Link>
+            <Link href="/dashboard/salesInvoices/new">
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                New Invoice
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
 

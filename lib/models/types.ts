@@ -312,12 +312,13 @@ export interface Receipt extends BaseDocument {
   total: number // Total amount from quotation also the invoice total amount 
   ReceiptAmount: number // Amount paid in this receipt
   balanceAmount: number // Remaining balance after this payment else invoice balace amount
+  refundedAmount?: number // Total amount refunded from this receipt (advance receipts)
   paymentType: "full" | "partial" | "advance"
   paymentMethod: "cash" | "card" | "upi" | "bank-transfer" | "cheque"
   bankDetails?: BankDetail
   referenceNumber?: string
   screenshot?: string
-  status: "pending" | "cleared" // Lowercase to match reconciliation
+  status: "pending" | "cleared" | "refunded" | "partially_refunded" // Lowercase to match reconciliation
   notes?: string
   createdBy: string
 }
@@ -452,13 +453,14 @@ export interface Payment extends BaseDocument {
 
   // payment details
   paymentNumber: string
-  paymentType?: "full" | "partial"
+  paymentType?: "full" | "partial" | "refund"
   date: string
   invoiceDate?: string
 
-  // invoice relation
+  // invoice / receipt relation
   purchaseInvoiceId?: string
   purchaseInvoiceNumber?: string
+  referenceReceiptId?: string // For refunds: source receipt _id
 
   // amounts
   amount: number

@@ -73,7 +73,15 @@ export default function ReconciliationPage() {
   const itemsPerPage = 10 // Show 10 rows per page
   const [paymentMethod, setpaymentMethod] = useState<any[]>([])
   const [compareRowId, setCompareRowId] = useState<string | null>(null)
-  const [compareData, setCompareData] = useState({ ref: "", date: "", amount: "" })
+  const [compareData, setCompareData] = useState({
+    bank_statement_date: "",
+    reference_no: "",
+    amount: "",
+  })
+  const [compareEntryId, setCompareEntryId] = useState<string | null>(null)
+  const [compareTransactionType, setCompareTransactionType] = useState<"receipt" | "payment">("receipt")
+  const [compareSaving, setCompareSaving] = useState(false)
+  const [compareErrors, setCompareErrors] = useState<{ bank_statement_date?: string; amount?: string }>({})
   const [openingBalance, setOpeningBalance] = useState(0)
   const [closingBalance, setClosingBalance] = useState(0)
 
@@ -280,6 +288,103 @@ export default function ReconciliationPage() {
       unclearPayAmount,
       unclearPay
     }
+  }
+
+  const openCompare = async (transaction: Transaction) => {
+    const id = transaction._id
+    if (compareRowId === id) {
+      setCompareRowId(null)
+      setCompareData({ bank_statement_date: "", reference_no: "", amount: "" })
+      setCompareEntryId(null)
+      setCompareErrors({})
+      return
+    }
+    setCompareRowId(id)
+    setCompareTransactionType(transaction.type)
+    setCompareData({ bank_statement_date: "", reference_no: "", amount: "" })
+    setCompareEntryId(null)
+    setCompareErrors({})
+    try {
+      const entry = await api.reconciliation.getEntry(id)
+      if (entry?.bank_statement_date != null || entry?.reference_no != null || entry?.amount != null) {
+        setCompareData({
+          bank_statement_date:
+            typeof entry.bank_statement_date === "string"
+              ? entry.bank_statement_date
+              : entry.bank_statement_date
+                ? new Date(entry.bank_statement_date).toISOString().split("T")[0]
+                : "",
+          reference_no: entry.reference_no ?? "",
+          amount: entry.amount != null ? String(entry.amount) : "",
+        })
+        if (entry._id) setCompareEntryId(String(entry._id))
+      }
+    } catch {
+      // keep empty form
+    }
+  }
+
+  const validateCompareForm = (): boolean => {
+    const err: { bank_statement_date?: string; amount?: string } = {}
+    if (!compareData.bank_statement_date?.trim()) err.bank_statement_date = "Bank statement date is required"
+    const amt = Number(compareData.amount)
+    if (compareData.amount === "" || compareData.amount == null || isNaN(amt) || amt <= 0) {
+      err.amount = "Amount is required and must be greater than 0"
+    }
+    setCompareErrors(err)
+    return Object.keys(err).length === 0
+  }
+
+  const handleCompareSave = async () => {
+    if (!compareRowId || !validateCompareForm()) return
+    setCompareSaving(true)
+    setCompareErrors({})
+    try {
+      const payload = {
+        bank_statement_date: compareData.bank_statement_date!.trim(),
+        reference_no: compareData.reference_no?.trim() ?? "",
+        amount: Number(compareData.amount),
+      }
+      if (compareEntryId) {
+        await api.reconciliation.updateEntry({
+          id: compareEntryId,
+          ...payload,
+        })
+      } else {
+        await api.reconciliation.saveEntry({
+          transaction_id: compareRowId,
+          transaction_type: compareTransactionType,
+          ...payload,
+        })
+      }
+      toast.success("Reconciliation details saved successfully")
+      const entry = await api.reconciliation.getEntry(compareRowId)
+      if (entry?._id) setCompareEntryId(String(entry._id))
+      if (entry?.bank_statement_date != null || entry?.reference_no != null || entry?.amount != null) {
+        setCompareData({
+          bank_statement_date:
+            typeof entry.bank_statement_date === "string"
+              ? entry.bank_statement_date
+              : entry.bank_statement_date
+                ? new Date(entry.bank_statement_date).toISOString().split("T")[0]
+                : "",
+          reference_no: entry.reference_no ?? "",
+          amount: entry.amount != null ? String(entry.amount) : "",
+        })
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save reconciliation details")
+      setCompareErrors({ amount: e?.message })
+    } finally {
+      setCompareSaving(false)
+    }
+  }
+
+  const handleCompareCancel = () => {
+    setCompareRowId(null)
+    setCompareData({ bank_statement_date: "", reference_no: "", amount: "" })
+    setCompareEntryId(null)
+    setCompareErrors({})
   }
 
   const exportToCSV = () => {
@@ -601,9 +706,7 @@ export default function ReconciliationPage() {
                                 variant="ghost"
                                 size="icon"
                                 title="Compare"
-                                onClick={() =>
-                                  setCompareRowId(compareRowId === transaction._id ? null : transaction._id)
-                                }
+                                onClick={() => openCompare(transaction)}
                               >
                                 <GitCompare className="h-4 w-4" />
                               </Button>
@@ -636,11 +739,62 @@ export default function ReconciliationPage() {
                         {compareRowId === transaction._id && (
                           <TableRow className="bg-gray-50 dark:bg-gray-800">
                             <TableCell colSpan={12}>
-                              <div className="p-2 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                <h4 className="font-semibold text-sm md:col-span-1">Compare with Bank Statement:</h4>
-                                <Input placeholder="Reference No." onChange={(e) => setCompareData({...compareData, ref: e.target.value})} />
-                                <Input type="date" onChange={(e) => setCompareData({...compareData, date: e.target.value})} />
-                                <Input type="number" placeholder="Amount" onChange={(e) => setCompareData({...compareData, amount: e.target.value})} />
+                              <div className="p-4 space-y-4">
+                                <h4 className="font-semibold text-sm">Compare with Bank Statement</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="compare-date">Bank Statement Date</Label>
+                                    <Input
+                                      id="compare-date"
+                                      type="date"
+                                      value={compareData.bank_statement_date}
+                                      onChange={(e) =>
+                                        setCompareData((prev) => ({ ...prev, bank_statement_date: e.target.value }))
+                                      }
+                                      className={compareErrors.bank_statement_date ? "border-destructive" : ""}
+                                    />
+                                    {compareErrors.bank_statement_date && (
+                                      <p className="text-sm text-destructive">{compareErrors.bank_statement_date}</p>
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="compare-ref">Reference Number</Label>
+                                    <Input
+                                      id="compare-ref"
+                                      placeholder="Reference Number"
+                                      value={compareData.reference_no}
+                                      onChange={(e) =>
+                                        setCompareData((prev) => ({ ...prev, reference_no: e.target.value }))
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="compare-amount">Amount</Label>
+                                    <Input
+                                      id="compare-amount"
+                                      type="number"
+                                      min={0}
+                                      step="0.01"
+                                      placeholder="Amount"
+                                      value={compareData.amount}
+                                      onChange={(e) =>
+                                        setCompareData((prev) => ({ ...prev, amount: e.target.value }))
+                                      }
+                                      className={compareErrors.amount ? "border-destructive" : ""}
+                                    />
+                                    {compareErrors.amount && (
+                                      <p className="text-sm text-destructive">{compareErrors.amount}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button onClick={handleCompareSave} disabled={compareSaving}>
+                                      {compareSaving ? "Saving…" : "Save"}
+                                    </Button>
+                                    <Button variant="outline" onClick={handleCompareCancel} disabled={compareSaving}>
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
                               </div>
                             </TableCell>
                           </TableRow>

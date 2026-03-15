@@ -60,7 +60,7 @@ export function SearchableSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("h-12 w-full justify-between", className)}
+          className={cn("h-10 max-h-10 w-full justify-between", className)}
         >
           <span className="truncate text-left">
             {selectedOption ? selectedOption.label : placeholder}
@@ -79,7 +79,7 @@ export function SearchableSelect({
             placeholder={searchPlaceholder}
             value={searchQuery}
             onValueChange={setSearchQuery}
-            className="h-9"
+            className="h-10 max-h-10"
           />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
