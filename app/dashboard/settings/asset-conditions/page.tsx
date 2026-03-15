@@ -163,7 +163,7 @@ export default function AssetConditionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Asset Conditions</h1>
           <p className="text-gray-600">Manage condition statuses for asset tracking</p>
@@ -181,13 +181,13 @@ export default function AssetConditionsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle>Condition List ({filteredConditions.length})</CardTitle>
               <CardDescription>Create and manage asset condition statuses</CardDescription>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -195,7 +195,7 @@ export default function AssetConditionsPage() {
                   placeholder="Search conditions..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-72"
+                  className="pl-10 w-full md:w-72"
                 />
               </div>
 

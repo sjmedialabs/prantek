@@ -672,7 +672,7 @@ console.log("payment amount is ", paymentAmount)
           </div>
 
           {/* Method + Payment Type */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <Label required>Payment Method</Label>
               <Select disabled={isCleared} value={paymentMethod} onValueChange={setPaymentMethod}>

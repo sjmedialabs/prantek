@@ -341,7 +341,7 @@ export default function QuotationsPage() {
   return (
     <div className="space-y-6">
       {/* ---------------- HEADER ---------------- */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Quotations / Agreements</h1>
           <p className="text-gray-600">Manage your quotations & proposals</p>

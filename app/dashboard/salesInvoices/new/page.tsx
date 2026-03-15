@@ -993,7 +993,7 @@ export default function NewSalesInvoicePage() {
             {/* FROM QUOTATION TAB */}
             <TabsContent value="quotation" className="space-y-4 mt-4">
               <div className="space-y-4">
-                <div className="flex flex-row gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                   <div className="w-full">
                     <Label required>Select Quotation</Label>
                     {/* <Select value={selectedQuotationId} onValueChange={handleQuotationSelect}>
@@ -1026,25 +1026,23 @@ export default function NewSalesInvoicePage() {
   </p>
 )}
                   </div>
-                  <div className="flex flex-row gap-4 w-full">
-                    <div>
-                      <Label required>Invoice Date</Label>
-                      <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-                      {errors.invoiceDate && (
-                        <p className="text-red-500 text-xs mt-1">{errors.invoiceDate}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label required>Due Date</Label>
-                      <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                      {errors.dueDate && (
-                        <p className="text-red-500 text-xs mt-1">{errors.dueDate}</p>
-                      )}
-                    </div>
-                    <div className="w-full">
-                      <Label>Created By</Label>
-                      <Input value={companyName} readOnly className="bg-gray-100" />
-                    </div>
+                  <div>
+                    <Label required>Invoice Date</Label>
+                    <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                    {errors.invoiceDate && (
+                      <p className="text-red-500 text-xs mt-1">{errors.invoiceDate}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label required>Due Date</Label>
+                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                    {errors.dueDate && (
+                      <p className="text-red-500 text-xs mt-1">{errors.dueDate}</p>
+                    )}
+                  </div>
+                  <div className="w-full">
+                    <Label>Created By</Label>
+                    <Input value={companyName} readOnly className="bg-gray-100" />
                   </div>
                 </div>
                 {quotationDetails && (
@@ -1160,7 +1158,7 @@ export default function NewSalesInvoicePage() {
             {/* DIRECT INVOICE TAB */}
             <TabsContent value="direct" className="space-y-4 mt-4">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 items-center">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4 items-center">
                   <div>
 
                     <Label required>Client</Label>
@@ -1188,29 +1186,27 @@ export default function NewSalesInvoicePage() {
                       <p className="text-red-500 text-xs mt-1">{errors.client}</p>
                     )}
                   </div>
-                  <div className="flex flex-row gap-4">
-                    <div>
-                      <Label required>Invoice Date</Label>
-                      <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-                      {errors.invoiceDate && (
+                  <div>
+                    <Label required>Invoice Date</Label>
+                    <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                    {errors.invoiceDate && (
   <p className="text-red-500 text-xs mt-1">
     {errors.invoiceDate}
   </p>
 )}
-                    </div>
-                    <div>
-                      <Label required>Due Date</Label>
-                      <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-                      {errors.dueDate && (
+                  </div>
+                  <div>
+                    <Label required>Due Date</Label>
+                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                    {errors.dueDate && (
   <p className="text-red-500 text-xs mt-1">
     {errors.dueDate}
   </p>
 )}
-                    </div>
-                    <div>
-                      <Label>Created By</Label>
-                      <Input value={companyName} readOnly className="bg-gray-100" />
-                    </div>
+                  </div>
+                  <div>
+                    <Label>Created By</Label>
+                    <Input value={companyName} readOnly className="bg-gray-100" />
                   </div>
                 </div>
 
@@ -1305,7 +1301,7 @@ export default function NewSalesInvoicePage() {
                                 disabled
                               />
                             </div>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
                               {item.type === "product" && (
                                 <div>
                                   <Label required>Quantity</Label>
@@ -1344,9 +1340,6 @@ export default function NewSalesInvoicePage() {
                                   className="bg-white"
                                 />
                               </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3">
                               <div>
                                 <Label>CGST (%)</Label>
                                 <Select

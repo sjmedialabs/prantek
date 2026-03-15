@@ -355,13 +355,13 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
           <p className="text-gray-600">Manage customers and vendors</p>
         </div>
         {(hasPermission("add_clients") || hasPermission("edit_clients")) && (
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
           {
             (hasPermission("add_clients")) && (
                <BulkUploadDialogClient onSuccess={loadClients} />
@@ -530,7 +530,7 @@ export default function ClientsPage() {
                     {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-1">
                       <Label htmlFor="state" required>State </Label>
                       <Select

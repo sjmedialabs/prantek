@@ -215,7 +215,7 @@ export default function VendorDetailsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
@@ -228,7 +228,7 @@ export default function VendorDetailsPage() {
 
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {/* Vendor Info Card */}
         <Card className="lg:col-span-1">
           {(() => {
@@ -287,7 +287,7 @@ export default function VendorDetailsPage() {
         </Card>
 
         <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Billed</CardTitle>

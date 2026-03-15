@@ -537,7 +537,7 @@ export default function ReconciliationPage() {
 
   return (
     <div className="container py-8 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Clearing</h1>
           <p className="text-muted-foreground">Verify receipts and payments with your bank account</p>

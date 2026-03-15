@@ -443,11 +443,13 @@ async function handleSave() {
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="client">Client Details</TabsTrigger>
-              <TabsTrigger value="items">Items/Services</TabsTrigger>
-              <TabsTrigger value="quotation">Quotation/Agreement Details</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="grid w-full min-w-max grid-cols-3 whitespace-nowrap">
+                <TabsTrigger value="client">Client Details</TabsTrigger>
+                <TabsTrigger value="items">Items/Services</TabsTrigger>
+                <TabsTrigger value="quotation">Quotation/Agreement Details</TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* ---------------- CLIENT TAB ---------------- */}
             <TabsContent value="client" className="mt-6">
@@ -589,7 +591,7 @@ async function handleSave() {
                                 }
                               />
                             </div>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                               {item.type === "product" && (
                                 <div>
                                   <Label required>Quantity</Label>
@@ -644,7 +646,7 @@ async function handleSave() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                               <div>
                                 <Label>CGST (%)</Label>
                                 <Select
@@ -736,7 +738,7 @@ async function handleSave() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* QUOTATION NUMBER */}
                     <div>
                       <Label>Quotation/Agreement Number *</Label>

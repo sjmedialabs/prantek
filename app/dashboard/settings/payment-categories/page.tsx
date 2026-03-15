@@ -169,7 +169,7 @@ const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ledger Heads</h1>
           <p className="text-gray-600">Manage Ledger for payment classification</p>
@@ -196,10 +196,10 @@ const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <CardTitle>Ledger Heads List ({filteredCategories.length})</CardTitle>
-              <CardDescription>Manage Ledger Heads used inside the application</CardDescription>
+              <CardDescription className="break-words">Manage Ledger Heads used inside the application</CardDescription>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -207,7 +207,7 @@ const totalPages = Math.ceil(filteredCategories.length / itemsPerPage)
                   placeholder="Search by Ledger Head..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-72"
+                  className="pl-10 w-full md:w-72"
                 />
               </div>
 

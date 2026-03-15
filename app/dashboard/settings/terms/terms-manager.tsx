@@ -30,14 +30,16 @@ export default function TermsManager() {
   return (
     <>
       <Tabs value={type} onValueChange={(v) => setType(v as any)}>
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="quotation">Quotation T&C</TabsTrigger>
-            <TabsTrigger value="invoice">Invoice T&C</TabsTrigger>
-            <TabsTrigger value="receipt">Receipt T&C</TabsTrigger>
-          </TabsList>
+        <div className="flex flex-col gap-4 mb-4 md:flex-row md:justify-between md:items-center">
+          <div className="overflow-x-auto">
+            <TabsList className="whitespace-nowrap">
+              <TabsTrigger value="quotation">Quotation T&C</TabsTrigger>
+              <TabsTrigger value="invoice">Invoice T&C</TabsTrigger>
+              <TabsTrigger value="receipt">Receipt T&C</TabsTrigger>
+            </TabsList>
+          </div>
 
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={() => setOpen(true)} className="shrink-0">
             <Plus className="mr-2" size={16} />
             Add Term
           </Button>

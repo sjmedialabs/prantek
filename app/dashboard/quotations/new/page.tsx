@@ -850,7 +850,7 @@ if (emailExists) {
   const isClientSelected = !!selectedClientId
   return (
     <div className="space-y-6 pb-24">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">New Quotation/Agreement</h1>
           <p className="text-gray-600">Create a new quotation/agreement for your client</p>
@@ -870,11 +870,13 @@ if (emailExists) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="client">Client Details</TabsTrigger>
-              <TabsTrigger value="items">Items/Services</TabsTrigger>
-              <TabsTrigger value="quotation">Quotation/Agreement Details</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="grid w-full min-w-max grid-cols-3 whitespace-nowrap">
+                <TabsTrigger value="client">Client Details</TabsTrigger>
+                <TabsTrigger value="items">Items/Services</TabsTrigger>
+                <TabsTrigger value="quotation">Quotation/Agreement Details</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="client" className="mt-6">
               <Card>
@@ -1269,7 +1271,7 @@ if (emailExists) {
                                 }
                               />
                             </div>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                               {item.type === "product" && (
                                 <div>
                                   <Label required>Quantity</Label>
@@ -1324,7 +1326,7 @@ if (emailExists) {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                               <div>
                                 <Label>CGST (%)</Label>
                                 <Select
@@ -1414,7 +1416,7 @@ if (emailExists) {
                   <CardTitle>Quotation/Agreement Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <Label htmlFor="quotationNumber" required>Quotation/Agreement Number</Label>
                       <Input id="quotationNumber" value={quotationNumber} disabled className="bg-gray-50" />
