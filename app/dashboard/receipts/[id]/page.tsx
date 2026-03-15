@@ -5,7 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Download, Printer, ReceiptIcon } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, Download, Printer, ReceiptIcon, RotateCcw } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
@@ -13,6 +23,8 @@ import { ReceiptPrint } from "@/components/print-templates/receipt-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
 import type { Receipt } from "@/lib/models/types"
+import { toast } from "sonner"
+import { useUser } from "@/components/auth/user-context"
 
 
 function numberToIndianCurrencyWords(amount: number): string {
@@ -93,10 +105,15 @@ function numberToIndianCurrencyWords(amount: number): string {
 export default function ReceiptDetailsPage() {
   const params = useParams()
   const router = useRouter()
+  const { hasPermission } = useUser()
   const receiptId = params.id as string
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refundModalOpen, setRefundModalOpen] = useState(false)
+  const [refundAmount, setRefundAmount] = useState("")
+  const [refundSubmitting, setRefundSubmitting] = useState(false)
+  const [refundError, setRefundError] = useState("")
 
   useEffect(() => {
     getCompanyDetails().then(setCompanyDetails)
@@ -122,6 +139,58 @@ export default function ReceiptDetailsPage() {
 
   const handlePrint = () => {
     printDocument("print-content")
+  }
+
+  const refundableBalance =
+    receipt != null
+      ? Number(
+          (receipt as any).balanceAmount ??
+            receipt.balanceAmount ??
+            receipt.ReceiptAmount ??
+            0
+        )
+      : 0
+  const isAdvanceReceipt =
+    (receipt?.receiptType === "advance" || receipt?.paymentType === "advance") ?? false
+  const isCleared = (receipt?.status || "").toLowerCase() === "cleared"
+  const showRefundButton =
+    hasPermission("add_receipts") &&
+    isAdvanceReceipt &&
+    isCleared &&
+    refundableBalance > 0
+
+  const openRefundModal = () => {
+    setRefundAmount(String(refundableBalance))
+    setRefundError("")
+    setRefundModalOpen(true)
+  }
+
+  const handleRefundSubmit = async () => {
+    if (!receiptId || !receipt) return
+    const num = Number(refundAmount)
+    if (!Number.isFinite(num) || num <= 0) {
+      setRefundError("Refund amount must be greater than 0")
+      return
+    }
+    if (num > refundableBalance) {
+      setRefundError("Refund amount cannot exceed receipt balance")
+      return
+    }
+    setRefundSubmitting(true)
+    setRefundError("")
+    try {
+      await api.receipts.refund(receiptId, { amount: num })
+      toast.success("Refund processed successfully")
+      setRefundModalOpen(false)
+      setRefundAmount("")
+      loadReceipt()
+    } catch (e: any) {
+      const msg = e?.message ?? "Refund failed"
+      setRefundError(msg)
+      toast.error(msg)
+    } finally {
+      setRefundSubmitting(false)
+    }
   }
 
   const receiptForPrint =
@@ -210,6 +279,12 @@ export default function ReceiptDetailsPage() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {showRefundButton && (
+            <Button variant="outline" onClick={openRefundModal}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Refund
+            </Button>
+          )}
           <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4 mr-2" />
             Download PDF
@@ -250,8 +325,16 @@ export default function ReceiptDetailsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Status</p>
-                  <Badge variant={receipt.status === "cleared" ? "default" : "secondary"}>
-                    {(receipt.status || "").charAt(0).toUpperCase() + receipt.status.slice(1)}
+                  <Badge
+                    variant={
+                      receipt.status === "cleared" || receipt.status === "refunded"
+                        ? "default"
+                        : "secondary"
+                    }
+                  >
+                    {(receipt.status || "")
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c) => c.toUpperCase())}
                   </Badge>
                 </div>
               </div>
@@ -449,11 +532,22 @@ export default function ReceiptDetailsPage() {
             </>)}
 
             <Separator />
-            {(receipt.invoiceBalance || receipt.balanceAmount || 0) > 0 && (
+            {(receipt as any).refundedAmount > 0 && (
+              <>
+                <div className="flex justify-between text-amber-600">
+                  <span className="font-semibold">Refunded</span>
+                  <span className="font-bold">
+                    ₹{Number((receipt as any).refundedAmount).toLocaleString()}
+                  </span>
+                </div>
+                <Separator />
+              </>
+            )}
+            {(receipt.invoiceBalance ?? receipt.balanceAmount ?? 0) > 0 && (
               <div className="flex justify-between text-orange-600">
                 <span className="font-semibold">Balance Due</span>
                 <span className="font-bold">
-                  ₹{(receipt.invoiceBalance || receipt.balanceAmount || 0).toLocaleString()}
+                  ₹{(receipt.invoiceBalance ?? receipt.balanceAmount ?? 0).toLocaleString()}
                 </span>
               </div>
             )}
@@ -529,9 +623,18 @@ export default function ReceiptDetailsPage() {
                     {receipt.status.charAt(0).toUpperCase() + receipt.status.slice(1)}
                   </Badge>
                 </div>
-                {(receipt.balanceAmount || 0) === 0 && (
+                {(receipt.balanceAmount ?? 0) === 0 &&
+                  receipt.status !== "refunded" &&
+                  receipt.status !== "partially_refunded" && (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-800 font-medium">Payment Completed</p>
+                  </div>
+                )}
+                {(receipt.status === "refunded" || receipt.status === "partially_refunded") && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800 font-medium">
+                      {receipt.status === "refunded" ? "Fully refunded" : "Partially refunded"}
+                    </p>
                   </div>
                 )}
               </div>
@@ -539,6 +642,48 @@ export default function ReceiptDetailsPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={refundModalOpen} onOpenChange={setRefundModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Refund</DialogTitle>
+            <DialogDescription>
+              Enter the refund amount. Maximum: ₹{refundableBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })} (receipt balance).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="refund-amount">Refund amount (₹)</Label>
+              <Input
+                id="refund-amount"
+                type="number"
+                min={0}
+                max={refundableBalance}
+                step="0.01"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                placeholder="0.00"
+                className={refundError ? "border-destructive" : ""}
+              />
+              {refundError && (
+                <p className="text-sm text-destructive">{refundError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRefundModalOpen(false)}
+              disabled={refundSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRefundSubmit} disabled={refundSubmitting}>
+              {refundSubmitting ? "Processing…" : "Refund"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="hidden" id="print-content">
         {receiptForPrint && (
