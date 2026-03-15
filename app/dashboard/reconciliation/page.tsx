@@ -23,11 +23,19 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { format, startOfDay } from "date-fns"
-import { Check, Download, Eye, RefreshCw, Search, X, GitCompare, Wallet } from "lucide-react"
+import { Check, Download, Eye, RefreshCw, Search, X, GitCompare, Wallet, Upload, FileUp } from "lucide-react"
 import { useUser } from "@/components/auth/user-context"
 import { api } from "@/lib/api-client"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import Link from "next/link";
+import Link from "next/link"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 interface Transaction {
   _id: string
   type: "receipt" | "payment"
@@ -84,6 +92,14 @@ export default function ReconciliationPage() {
   const [compareErrors, setCompareErrors] = useState<{ bank_statement_date?: string; amount?: string }>({})
   const [openingBalance, setOpeningBalance] = useState(0)
   const [closingBalance, setClosingBalance] = useState(0)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadBankAccountId, setUploadBankAccountId] = useState("")
+  const [uploadSubmitting, setUploadSubmitting] = useState(false)
+  const [bankAccounts, setBankAccounts] = useState<any[]>([])
+  const [bankStatements, setBankStatements] = useState<any[]>([])
+  const [loadingBankStatements, setLoadingBankStatements] = useState(false)
+  const [matchSubmitting, setMatchSubmitting] = useState<string | null>(null)
 
   useEffect(() => {
     loadTransactions()
@@ -144,6 +160,82 @@ export default function ReconciliationPage() {
       toast.error("Failed to load reconciliation data")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadBankAccounts = async () => {
+    try {
+      const list = await api.bankAccounts.getAll()
+      setBankAccounts(Array.isArray(list) ? list : [])
+    } catch {
+      setBankAccounts([])
+    }
+  }
+
+  const loadBankStatements = async () => {
+    try {
+      setLoadingBankStatements(true)
+      const data = await api.reconciliation.getBankStatements({ status: "pending" })
+      setBankStatements(Array.isArray(data) ? data : [])
+    } catch {
+      setBankStatements([])
+    } finally {
+      setLoadingBankStatements(false)
+    }
+  }
+
+  useEffect(() => {
+    loadBankAccounts()
+  }, [])
+  useEffect(() => {
+    if (hasPermission("view_reconciliation")) loadBankStatements()
+  }, [])
+
+  const handleUploadBankStatement = async () => {
+    if (!uploadFile || !uploadBankAccountId) {
+      toast.error("Select a file and bank account")
+      return
+    }
+    setUploadSubmitting(true)
+    try {
+      await api.reconciliation.uploadBankStatement(uploadFile, uploadBankAccountId)
+      toast.success("Bank statement uploaded. Review suggested matches below.")
+      setUploadModalOpen(false)
+      setUploadFile(null)
+      setUploadBankAccountId("")
+      await loadBankStatements()
+      await loadTransactions()
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed")
+    } finally {
+      setUploadSubmitting(false)
+    }
+  }
+
+  const handleMatch = async (
+    bankStatementId: string,
+    transactionIds: { id: string; type: "receipt" | "payment" }[]
+  ) => {
+    setMatchSubmitting(bankStatementId)
+    try {
+      await api.reconciliation.matchBankStatement(bankStatementId, transactionIds)
+      toast.success("Matched and cleared")
+      await loadBankStatements()
+      await loadTransactions()
+    } catch (e: any) {
+      toast.error(e?.message ?? "Match failed")
+    } finally {
+      setMatchSubmitting(null)
+    }
+  }
+
+  const handleIgnore = async (bankStatementId: string) => {
+    try {
+      await api.reconciliation.ignoreBankStatement(bankStatementId)
+      toast.success("Ignored")
+      await loadBankStatements()
+    } catch (e: any) {
+      toast.error(e?.message ?? "Ignore failed")
     }
   }
 
@@ -450,11 +542,176 @@ export default function ReconciliationPage() {
           <h1 className="text-3xl font-bold">Clearing</h1>
           <p className="text-muted-foreground">Verify receipts and payments with your bank account</p>
         </div>
-        {/* <Button onClick={loadTransactions} variant="outline" size="sm">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button> */}
+        {hasPermission("manage_reconciliation") && (
+          <Button variant="outline" onClick={() => setUploadModalOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Bank Statement
+          </Button>
+        )}
       </div>
+
+      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Bank Statement</DialogTitle>
+            <DialogDescription>
+              Upload a CSV with columns: Date, Description, Reference, Debit, Credit, Balance. Rows will be matched with system transactions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Bank Account</Label>
+              <Select value={uploadBankAccountId} onValueChange={setUploadBankAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select bank account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((b: any) => (
+                    <SelectItem key={b._id} value={b._id}>
+                      {b.accountName ?? b.bankName ?? b._id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>CSV File</Label>
+              <div className="border-2 border-dashed rounded-lg p-4">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  className="text-sm"
+                />
+                {uploadFile && <p className="text-sm text-muted-foreground mt-2">{uploadFile.name}</p>}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadModalOpen(false)} disabled={uploadSubmitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleUploadBankStatement} disabled={uploadSubmitting || !uploadFile || !uploadBankAccountId}>
+              {uploadSubmitting ? "Uploading…" : "Upload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {bankStatements.filter(
+        (r: any) =>
+          r.status === "pending" &&
+          ((r.suggestedSingle && r.suggestedSingle.length > 0) || (r.suggestedMulti && r.suggestedMulti.length > 0))
+      ).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <FileUp className="h-5 w-5 mr-2" />
+              Suggested matches
+            </CardTitle>
+            <CardDescription>Bank statement rows with possible transaction matches. Match, ignore, or use Manual Compare.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingBankStatements ? (
+              <p className="text-muted-foreground text-sm">Loading…</p>
+            ) : (
+              <div className="space-y-4">
+                {bankStatements
+                  .filter(
+                    (r: any) =>
+                      r.status === "pending" &&
+                      ((r.suggestedSingle && r.suggestedSingle.length > 0) || (r.suggestedMulti && r.suggestedMulti.length > 0))
+                  )
+                  .map((row: any) => (
+                    <div
+                      key={row._id}
+                      className="border rounded-lg p-4 space-y-3 bg-muted/30"
+                    >
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Date</span>
+                          <p className="font-medium">{row.date}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Description</span>
+                          <p className="font-medium truncate max-w-[120px]" title={row.description}>{row.description || "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Reference</span>
+                          <p className="font-medium">{row.reference || "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Debit</span>
+                          <p className="font-medium text-red-600">{(row.debit ?? 0) > 0 ? `₹${Number(row.debit).toLocaleString()}` : "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Credit</span>
+                          <p className="font-medium text-green-600">{(row.credit ?? 0) > 0 ? `₹${Number(row.credit).toLocaleString()}` : "-"}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Balance</span>
+                          <p className="font-medium">₹{Number(row.balance || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {row.suggestedSingle?.slice(0, 3).map((s: any, i: number) => {
+                          const tx = transactions.find((t) => String(t._id) === s.transactionId)
+                          const label = tx ? `${tx.transactionNumber} (₹${tx.amount})` : s.transactionId
+                          return (
+                            <div key={i} className="flex items-center gap-2 rounded border bg-background px-2 py-1 text-sm">
+                              <span>{label}</span>
+                              <span className="text-muted-foreground">Score {s.score}</span>
+                              <Button
+                                size="sm"
+                                onClick={() => handleMatch(row._id, [{ id: s.transactionId, type: s.type }])}
+                                disabled={matchSubmitting === row._id}
+                              >
+                                Match
+                              </Button>
+                            </div>
+                          )
+                        })}
+                        {row.suggestedMulti?.slice(0, 2).map((m: any, i: number) => (
+                          <div key={`m${i}`} className="flex items-center gap-2 rounded border bg-background px-2 py-1 text-sm">
+                            <span>Multiple: {m.transactionIds.map((t: any) => {
+                              const tx = transactions.find((x) => String(x._id) === t.id)
+                              return tx ? tx.transactionNumber : t.id
+                            }).join(" + ")} = ₹{Number(m.totalAmount || 0).toLocaleString()}</span>
+                            <span className="text-muted-foreground">Score {m.score}</span>
+                            <Button
+                              size="sm"
+                              onClick={() => handleMatch(row._id, m.transactionIds)}
+                              disabled={matchSubmitting === row._id}
+                            >
+                              Match
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleIgnore(row._id)}
+                          disabled={matchSubmitting === row._id}
+                        >
+                          Ignore
+                        </Button>
+                        {row.suggestedSingle?.[0] && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openCompare(transactions.find((t) => String(t._id) === row.suggestedSingle[0].transactionId) as Transaction)}
+                          >
+                            Manual Compare
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistics */}
       {/* <Card>

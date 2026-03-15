@@ -14,7 +14,11 @@ export const BULK_TEMPLATE_HEADERS = [
   "CGST",
   "SGST",
   "IGST",
-  "Bank Account",
+  "Bank Name",
+  "Account Name",
+  "Account Number",
+  "IFSC",
+  "Branch",
   "Description",
 ] as const
 
@@ -32,7 +36,13 @@ export interface BulkInvoiceRow {
   cgst: number
   sgst: number
   igst: number
+  /** Legacy single column; also used when new bank columns are empty */
   bankAccount: string
+  bankName: string
+  accountName: string
+  accountNumber: string
+  ifsc: string
+  branch: string
   description: string
 }
 
@@ -71,7 +81,10 @@ export interface InvoiceGroup {
 }
 
 function normalizeHeader(h: string): string {
-  return (h || "").trim().replace(/\s+/g, " ")
+  return (h || "")
+    .replace(/\uFEFF/g, "") // BOM
+    .trim()
+    .replace(/\s+/g, " ")
 }
 
 /**
@@ -174,17 +187,35 @@ function parseXLSX(
 
 const CANONICAL_HEADERS: Record<string, string> = {
   client: "Client",
+  "client name": "Client",
+  customer: "Client",
   "invoice date": "Invoice Date",
   "due date": "Due Date",
   "item name": "Item Name",
+  item: "Item Name",
+  product: "Item Name",
+  service: "Item Name",
   quantity: "Quantity",
+  qty: "Quantity",
   price: "Price",
   discount: "Discount",
   cgst: "CGST",
   sgst: "SGST",
   igst: "IGST",
   "bank account": "Bank Account",
+  bank: "Bank Account",
+  "bank name": "Bank Name",
+  "account name": "Account Name",
+  "account number": "Account Number",
+  ifsc: "IFSC",
+  branch: "Branch",
   description: "Description",
+  desc: "Description",
+}
+
+/** Normalize and trim a value for validation. */
+function clean(value: unknown): string {
+  return (value != null ? String(value) : "").trim()
 }
 
 function toCanonicalKey(h: string): string {
@@ -219,6 +250,11 @@ function mapRow(raw: Record<string, string>, rowIndex: number): BulkInvoiceRow |
     sgst,
     igst,
     bankAccount: get("Bank Account"),
+    bankName: clean(get("Bank Name")),
+    accountName: clean(get("Account Name")),
+    accountNumber: clean(get("Account Number")),
+    ifsc: clean(get("IFSC")),
+    branch: clean(get("Branch")),
     description: get("Description"),
   }
 }
@@ -256,51 +292,174 @@ function calculateRowTotals(row: BulkInvoiceRow): { amount: number; taxAmount: n
   return { amount, taxAmount, total, taxRate }
 }
 
+/** Normalize string for flexible matching: trim, lowercase, collapse spaces. */
+function normalizeForMatch(s: string): string {
+  return (s ?? "").trim().toLowerCase().replace(/\s+/g, " ")
+}
+
+type BankAccountRecord = {
+  _id: string
+  accountName?: string
+  bankName?: string
+  accountNumber?: string
+  ifscCode?: string
+  branchName?: string
+}
+
+/**
+ * Find bank account using multiple fields (priority: Account Number → IFSC + Account Name → Bank Name).
+ * All inputs are normalized (trim). Matching is case-insensitive where specified.
+ */
+function findBankAccountMultiField(
+  row: {
+    bankAccount?: string
+    bankName?: string
+    accountName?: string
+    accountNumber?: string
+    ifsc?: string
+    branch?: string
+  },
+  bankAccounts: BankAccountRecord[]
+): { bank: BankAccountRecord | undefined; identifierForError: string } {
+  const bn = clean(row.bankName)
+  const an = clean(row.accountName)
+  const anum = clean(row.accountNumber)
+  const ifsc = clean(row.ifsc)
+  const branch = clean(row.branch)
+  const legacy = clean(row.bankAccount)
+
+  // Priority 1 — Account Number (exact match, trimmed)
+  if (anum) {
+    const match = bankAccounts.find(
+      (b) => clean(b.accountNumber) === anum
+    )
+    if (match) return { bank: match, identifierForError: "" }
+  }
+
+  // Priority 2 — IFSC + Account Name (case-insensitive account name)
+  if (ifsc && an) {
+    const match = bankAccounts.find(
+      (b) =>
+        clean(b.ifscCode) === ifsc &&
+        normalizeForMatch(b.accountName ?? "") === normalizeForMatch(an)
+    )
+    if (match) return { bank: match, identifierForError: "" }
+  }
+
+  // Priority 3 — Bank Name (case-insensitive contains)
+  if (bn) {
+    const normBn = normalizeForMatch(bn)
+    const match = bankAccounts.find((b) => {
+      const bankNorm = normalizeForMatch(b.bankName ?? "")
+      return bankNorm && (bankNorm.includes(normBn) || normBn.includes(bankNorm))
+    })
+    if (match) return { bank: match, identifierForError: "" }
+  }
+
+  // Legacy — single "Bank Account" column: match by account name or bank name (check both)
+  if (legacy) {
+    const normalized = normalizeForMatch(legacy)
+    const exact = bankAccounts.find((b) => {
+      const an = normalizeForMatch(b.accountName ?? "")
+      const bn = normalizeForMatch(b.bankName ?? "")
+      return an === normalized || bn === normalized
+    })
+    if (exact) return { bank: exact, identifierForError: "" }
+    const partial = bankAccounts.find((b) => {
+      const an = normalizeForMatch(b.accountName ?? "")
+      const bn = normalizeForMatch(b.bankName ?? "")
+      return (an && (an.includes(normalized) || normalized.includes(an))) ||
+        (bn && (bn.includes(normalized) || normalized.includes(bn)))
+    })
+    if (partial) return { bank: partial, identifierForError: "" }
+  }
+
+  // Build identifier for error message
+  if (anum) return { bank: undefined, identifierForError: `Account Number: ${anum}` }
+  if (ifsc && an) return { bank: undefined, identifierForError: `IFSC: ${ifsc}, Account Name: ${an}` }
+  if (bn) return { bank: undefined, identifierForError: `Bank Name: ${bn}` }
+  if (legacy) return { bank: undefined, identifierForError: `Bank Account: ${legacy}` }
+  return { bank: undefined, identifierForError: "" }
+}
+
+/**
+ * Check that a tax exists in application settings by type and percentage (rate).
+ */
+function findTaxByTypeAndRate(
+  taxRates: { type: string; rate: number }[],
+  type: "CGST" | "SGST" | "IGST",
+  rate: number
+): boolean {
+  const num = Number(rate)
+  if (!Number.isFinite(num)) return false
+  return taxRates.some(
+    (t) => t.type === type && Math.abs(Number(t.rate) - num) < 0.01
+  )
+}
+
 /**
  * Validate rows: client exists, item exists, bank exists, quantity > 0, price > 0, tax valid.
- * Requires lists of clients, items, bank accounts from API.
+ * Tax must exist in application settings (Settings → Taxes). Bank matching is case-insensitive and allows partial names.
  */
 export function validateInvoiceRows(
   rows: BulkInvoiceRow[],
   clients: { _id: string; name?: string; clientName?: string; email?: string; address?: string; phone?: string; city?: string; state?: string; pincode?: string }[],
   items: { _id: string; name?: string; itemName?: string }[],
-  bankAccounts: { _id: string; accountName?: string }[]
+  bankAccounts: BankAccountRecord[],
+  taxRates: { _id?: string; type: string; rate: number }[] = []
 ): { validated: ValidatedRow[]; errors: ValidationError[] } {
   const errors: ValidationError[] = []
   const validated: ValidatedRow[] = []
 
-  const clientByName = new Map<string | undefined, (typeof clients)[0]>()
+  const clientByName = new Map<string, (typeof clients)[0]>()
   clients.forEach((c) => {
-    const n = (c.clientName ?? c.name ?? "").trim()
+    const n = normalizeForMatch(c.clientName ?? c.name ?? "")
     if (n) clientByName.set(n, c)
   })
-  const itemByName = new Map<string | undefined, (typeof items)[0]>()
+  const itemByName = new Map<string, (typeof items)[0]>()
   items.forEach((i) => {
-    const n = (i.itemName ?? i.name ?? "").trim()
+    const n = normalizeForMatch(i.itemName ?? i.name ?? "")
     if (n) itemByName.set(n, i)
-  })
-  const bankByName = new Map<string | undefined, (typeof bankAccounts)[0]>()
-  bankAccounts.forEach((b) => {
-    const n = (b.accountName ?? "").trim()
-    if (n) bankByName.set(n, b)
   })
 
   for (const row of rows) {
     const rowErrors: string[] = []
-    const client = clientByName.get(row.client)
-    const item = itemByName.get(row.itemName)
-    const bank = bankByName.get(row.bankAccount)
+    const client = row.client ? clientByName.get(normalizeForMatch(row.client)) : undefined
+    const item = row.itemName ? itemByName.get(normalizeForMatch(row.itemName)) : undefined
+    const hasBankId =
+      clean(row.bankAccount) !== "" ||
+      clean(row.accountNumber) !== "" ||
+      (clean(row.ifsc) !== "" && clean(row.accountName) !== "") ||
+      clean(row.bankName) !== ""
+    const { bank, identifierForError } = findBankAccountMultiField(
+      {
+        bankAccount: row.bankAccount,
+        bankName: row.bankName,
+        accountName: row.accountName,
+        accountNumber: row.accountNumber,
+        ifsc: row.ifsc,
+        branch: row.branch,
+      },
+      bankAccounts
+    )
 
     if (!row.client) rowErrors.push("Client is required")
     else if (!client) rowErrors.push("Client not found")
     if (!row.itemName) rowErrors.push("Item name is required")
     else if (!item) rowErrors.push("Item not found")
-    if (!row.bankAccount) rowErrors.push("Bank account is required")
-    else if (!bank) rowErrors.push("Bank account not found")
+    if (!hasBankId) rowErrors.push("Bank account is required (provide Bank Name, Account Number, or IFSC + Account Name)")
+    else if (!bank) rowErrors.push(identifierForError ? `Bank account not found (${identifierForError})` : "Bank account not found")
     if (row.quantity <= 0) rowErrors.push("Quantity must be greater than 0")
     if (row.price <= 0) rowErrors.push("Price must be greater than 0")
     const taxRate = row.cgst + row.sgst + row.igst
     if (taxRate < 0 || taxRate > 100) rowErrors.push("Tax values must be between 0 and 100")
+    if (taxRate >= 0 && taxRate <= 100 && taxRates.length > 0) {
+      const missingTax =
+        (Number(row.cgst) > 0 && !findTaxByTypeAndRate(taxRates, "CGST", row.cgst)) ||
+        (Number(row.sgst) > 0 && !findTaxByTypeAndRate(taxRates, "SGST", row.sgst)) ||
+        (Number(row.igst) > 0 && !findTaxByTypeAndRate(taxRates, "IGST", row.igst))
+      if (missingTax) rowErrors.push("Tax not found in application settings")
+    }
     if (!row.invoiceDate) rowErrors.push("Invoice date is required")
     if (row.dueDate && row.invoiceDate && new Date(row.dueDate) < new Date(row.invoiceDate)) {
       rowErrors.push("Due date cannot be before invoice date")
@@ -431,8 +590,8 @@ export function buildInvoiceGroups(
 export function getSampleTemplateCSV(): string {
   const headers = BULK_TEMPLATE_HEADERS.join(",")
   const row1 =
-    "ABC Pvt Ltd,2026-03-15,2026-03-20,Website Development,1,50000,0,9,9,0,HDFC Current Account,Development Invoice"
+    "ABC Pvt Ltd,2026-03-15,2026-03-20,Website Development,1,50000,0,9,9,0,HDFC Bank,Lovely,7896857441526385,HDFC0001234,Bandlaguda Suncity,Development Invoice"
   const row2 =
-    "ABC Pvt Ltd,2026-03-15,2026-03-20,Hosting Service,1,2000,0,9,9,0,HDFC Current Account,Hosting charges"
+    "ABC Pvt Ltd,2026-03-15,2026-03-20,Hosting Service,1,2000,0,9,9,0,HDFC Bank,Lovely,7896857441526385,HDFC0001234,Bandlaguda Suncity,Hosting charges"
   return [headers, row1, row2].join("\n")
 }
