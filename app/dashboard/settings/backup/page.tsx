@@ -123,20 +123,45 @@ const formattedData = data.map((row) => {
           <Button onClick={() => exportData("products", api.items.getAll)}>Products</Button>
 
           <Button
-            variant="outline"
+            className="bg-black text-white hover:bg-black/90"
             onClick={async () => {
               try {
-                const [entries, statements] = await Promise.all([
+                const [transactions, entries, statements] = await Promise.all([
+                  api.reconciliation.getAll(),
                   api.backup.getReconciliationEntries(),
                   api.backup.getBankStatements(),
                 ])
+                const rows = (transactions || []).map((t: any) => {
+                  const isReceipt = t.type === "receipt"
+                  const amount = Number(t.amount) || 0
+                  const bankAccount = t.bankAccount != null
+                    ? (typeof t.bankAccount === "object"
+                      ? (t.bankAccount.accountName || t.bankAccount.bankName || JSON.stringify(t.bankAccount))
+                      : String(t.bankAccount))
+                    : ""
+                  return {
+                    transaction_id: t._id != null ? String(t._id) : "",
+                    transaction_type: t.type,
+                    date: t.date || "",
+                    party_name: t.clientName || t.recipientName || "",
+                    payment_method: t.paymentMethod || "",
+                    bank_account: bankAccount,
+                    reference: t.referenceNumber || "",
+                    amount_in: isReceipt ? amount : "",
+                    amount_out: !isReceipt ? amount : "",
+                    status: t.status || "",
+                  }
+                })
+                if (rows.length > 0) {
+                  await exportData("reconciliation_transactions", () => Promise.resolve(rows))
+                }
                 if (entries.length > 0) {
                   await exportData("reconciliation_entries", () => Promise.resolve(entries))
                 }
                 if (statements.length > 0) {
                   await exportData("bank_statements", () => Promise.resolve(statements))
                 }
-                if (entries.length === 0 && statements.length === 0) {
+                if (rows.length === 0 && entries.length === 0 && statements.length === 0) {
                   toast({ title: "No data found", description: "Reconciliation backup" })
                 }
               } catch (e) {

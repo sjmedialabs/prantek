@@ -139,10 +139,10 @@ export default function PaymentsPage() {
     setCurrentPage(1)
   }, [searchTerm, statusFilter, categoryFilter, paymentMethodFilter, clientFilter, vendorFilter, teamFilter, recipientFilter])
 
-  const paidPayments = filteredPayments.filter((p) => p.status === "completed" || p.status === "cleared" || p.status === "Paid")
-  const unpaidPayments = filteredPayments.filter((p) => p.status !== "completed" && p.status !== "cleared" && p.status !== "Paid" && p.status !== "cancelled")
+  const paidPayments = filteredPayments.filter((p) => p.status === "cleared")
+  const unclearPayments = filteredPayments.filter((p) => p.status === "Paid")
   const paidAmount = paidPayments.reduce((sum, p) => sum + p.amount, 0)
-  const unpaidAmount = unpaidPayments.reduce((sum, p) => sum + p.amount, 0)
+  const unclearAmount = unclearPayments.reduce((sum, p) => sum + p.amount, 0)
 const exportToCSV = () => {
   if (filteredPayments.length === 0) {
     alert("No payments to export.");
@@ -295,11 +295,11 @@ const exportToCSV = () => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Unpaid Payments</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Unclear Payments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">₹{unpaidAmount.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">{unpaidPayments.length} payments</p>
+            <div className="text-2xl font-bold text-orange-600">₹{unclearAmount.toLocaleString()}</div>
+            <p className="text-xs text-gray-600 mt-1">{unclearPayments.length} payments</p>
           </CardContent>
         </Card>
 {/* 

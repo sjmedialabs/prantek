@@ -360,7 +360,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
     return [
       {
-        title: "Total Revenue",
+        title: "Total Income",
         value: `₹${totalIncome.toLocaleString()}`,
         change: dateRange !== 'all_time' ? `${incomeChange >= 0 ? "+" : ""}${incomeChange.toFixed(1)}%` : 'N/A',
         trend: incomeChange >= 0 ? "up" : "down",

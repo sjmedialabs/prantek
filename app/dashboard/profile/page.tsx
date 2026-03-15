@@ -481,10 +481,12 @@ export default function ProfilePage() {
                 </Button> */}
               </div>
             ) : (
-              <Button onClick={() => setShowPlanDialog(true)}>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Buy Plan
-              </Button>
+              <Link href="/dashboard/plans">
+                <Button>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Buy Plan
+                </Button>
+              </Link>
             )}
           </div>
         </CardHeader>
@@ -639,10 +641,12 @@ export default function ProfilePage() {
               <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Plan</h3>
               <p className="text-gray-600 mb-4">Subscribe to a plan to unlock premium features</p>
-              <Button onClick={() => setShowPlanDialog(true)}>
-                <CreditCard className="h-4 w-4 mr-2" />
-                Browse Plans
-              </Button>
+              <Link href="/dashboard/plans">
+                <Button>
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Browse Plans
+                </Button>
+              </Link>
             </div>
           )}
         </CardContent>
