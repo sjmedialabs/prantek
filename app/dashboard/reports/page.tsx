@@ -873,13 +873,13 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
         {/* Main Reports */}
         <Tabs value={reportType} onValueChange={setReportType} className="space-y-6 mt-6">
-          <div className="overflow-x-auto">
-            <TabsList className="grid w-full min-w-max grid-cols-2 whitespace-nowrap lg:grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="financial">Financial</TabsTrigger>
-              <TabsTrigger value="customers">Customers</TabsTrigger>
-              <TabsTrigger value="inventory">Inventory</TabsTrigger>
-              <TabsTrigger value="compliance">Compliance</TabsTrigger>
+          <div className="overflow-x-auto whitespace-nowrap">
+            <TabsList className="flex gap-2 min-w-max md:grid md:w-full md:grid-cols-2 lg:grid-cols-5">
+              <TabsTrigger value="overview" className="flex-shrink-0">Overview</TabsTrigger>
+              <TabsTrigger value="financial" className="flex-shrink-0">Financial</TabsTrigger>
+              <TabsTrigger value="customers" className="flex-shrink-0">Customers</TabsTrigger>
+              <TabsTrigger value="inventory" className="flex-shrink-0">Inventory</TabsTrigger>
+              <TabsTrigger value="compliance" className="flex-shrink-0">Compliance</TabsTrigger>
             </TabsList>
           </div>
 
