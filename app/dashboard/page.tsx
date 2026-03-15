@@ -229,8 +229,8 @@ const clearedPayments = filteredPayments.filter(
       });
       const payables = filteredPurchaseInvoices.reduce((sum: number, inv: any) => sum + (inv.balanceAmount || 0), 0)
 
-      const monthlyRevenue = filteredReceipts.reduce(
-        (sum: number, r: any) => sum + (r.amountPaid || 0),
+      const monthlyRevenue = clearedReceipts.reduce(
+        (sum: number, r: any) => sum + (r.ReceiptAmount || r.amountPaid || 0),
         0
       );
       

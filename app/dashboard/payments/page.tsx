@@ -139,10 +139,10 @@ export default function PaymentsPage() {
     setCurrentPage(1)
   }, [searchTerm, statusFilter, categoryFilter, paymentMethodFilter, clientFilter, vendorFilter, teamFilter, recipientFilter])
 
-  const totalPaid = filteredPayments.reduce((sum, p) => sum + p.amount, 0)
-  const completedAmount = filteredPayments.filter((p) => p.status === "completed").reduce((sum, p) => sum + p.amount, 0)
-  const pendingAmount = filteredPayments.filter((p) => p.status === "pending").reduce((sum, p) => sum + p.amount, 0)
-  const failedAmount = filteredPayments.filter((p) => p.status === "failed").reduce((sum, p) => sum + p.amount, 0)
+  const paidPayments = filteredPayments.filter((p) => p.status === "completed" || p.status === "cleared" || p.status === "Paid")
+  const unpaidPayments = filteredPayments.filter((p) => p.status !== "completed" && p.status !== "cleared" && p.status !== "Paid" && p.status !== "cancelled")
+  const paidAmount = paidPayments.reduce((sum, p) => sum + p.amount, 0)
+  const unpaidAmount = unpaidPayments.reduce((sum, p) => sum + p.amount, 0)
 const exportToCSV = () => {
   if (filteredPayments.length === 0) {
     alert("No payments to export.");
@@ -282,38 +282,24 @@ const exportToCSV = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Payments</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Paid Payments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">₹{totalPaid.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">{filteredPayments.length} transactions</p>
+            <div className="text-2xl font-bold text-green-600">₹{paidAmount.toLocaleString()}</div>
+            <p className="text-xs text-gray-600 mt-1">{paidPayments.length} payments</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Unpaid Payments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₹{completedAmount.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">
-              {filteredPayments.filter((p) => p.status === "completed").length} payments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Pending Clearance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">₹{pendingAmount.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">
-              {filteredPayments.filter((p) => p.status === "pending").length} payments
-            </p>
+            <div className="text-2xl font-bold text-orange-600">₹{unpaidAmount.toLocaleString()}</div>
+            <p className="text-xs text-gray-600 mt-1">{unpaidPayments.length} payments</p>
           </CardContent>
         </Card>
 {/* 

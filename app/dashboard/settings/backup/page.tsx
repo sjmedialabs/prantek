@@ -122,6 +122,30 @@ const formattedData = data.map((row) => {
           <Button onClick={() => exportData("users", api.users.getAll)}>Users</Button>
           <Button onClick={() => exportData("products", api.items.getAll)}>Products</Button>
 
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const [entries, statements] = await Promise.all([
+                  api.backup.getReconciliationEntries(),
+                  api.backup.getBankStatements(),
+                ])
+                if (entries.length > 0) {
+                  await exportData("reconciliation_entries", () => Promise.resolve(entries))
+                }
+                if (statements.length > 0) {
+                  await exportData("bank_statements", () => Promise.resolve(statements))
+                }
+                if (entries.length === 0 && statements.length === 0) {
+                  toast({ title: "No data found", description: "Reconciliation backup" })
+                }
+              } catch (e) {
+                toast({ title: "Export failed", variant: "destructive" })
+              }
+            }}
+          >
+            Reconciliation Backup
+          </Button>
         </CardContent>
       </Card>
     </div>

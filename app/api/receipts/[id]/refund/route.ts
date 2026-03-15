@@ -102,6 +102,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     recipientAddress: receipt.clientAddress,
     paymentNumber,
     paymentType: "refund",
+    category: "Refund",
     date: new Date().toISOString().split("T")[0],
     amount,
     paymentMethod: receipt.paymentMethod ?? "cash",
@@ -109,7 +110,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
     referenceNumber: receipt.referenceNumber,
     referenceReceiptId: receiptId,
     createdBy: user.email ?? user.userId ?? "",
-    status: "completed",
+    status: "Paid",
     createdAt: new Date(),
     updatedAt: new Date(),
   }

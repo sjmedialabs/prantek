@@ -55,6 +55,12 @@ export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const body = await req.json()
   const { _id, ...updateData } = body
 
+  if ((updateData.paymentMethod || "").toString().toLowerCase() === "cash") {
+    updateData.bankAccountId = null
+    updateData.bankAccount = null
+    updateData.bankDetails = null
+  }
+
   // For admin users, filter by companyId (parent account)
   // For regular users, filter by userId (their own account)
   const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
