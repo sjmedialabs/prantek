@@ -137,7 +137,7 @@ export default function ReceiptsPage() {
         // Determine new status
         let newStatus = "Partial";
         if (newBalanceAmount >= invoice.grandTotal) {
-          newStatus = "Not Cleared";
+          newStatus = "Not Collected";
         } else if (newBalanceAmount <= 0) {
           newStatus = "Cleared";
         }
@@ -457,7 +457,7 @@ export default function ReceiptsPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    title="Cancel Invoice"
+                                    title="Cancel Receipt"
                                     className="text-red-600 hover:text-red-800 hover:bg-red-100"
                                     onClick={() => handleCancelInvoice(receipt._id)}
                                   >

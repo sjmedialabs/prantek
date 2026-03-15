@@ -364,10 +364,10 @@ export default function ReconciliationPage() {
 
     const pending = data.filter((t) => t.status === "pending")
     const cleared = data.filter((t) => t.status === "cleared")
-    const unclearRecAmount = data.filter((t)=> t.type === "receipt" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
-    const unclearRec = data.filter((t)=> t.type === "receipt" && t.status === "pending").length
-    const unclearPayAmount = data.filter((t)=> t.type === "payment" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
-    const unclearPay = data.filter((t)=> t.type === "payment" && t.status === "pending").length
+    const unclearRecAmount = data.filter((t) => t.type === "receipt" && t.status !== "cleared").reduce((sum, t) => sum + t.amount, 0)
+    const unclearRec = data.filter((t) => t.type === "receipt" && t.status !== "cleared").length
+    const unclearPayAmount = data.filter((t) => t.type === "payment" && t.status !== "cleared").reduce((sum, t) => sum + t.amount, 0)
+    const unclearPay = data.filter((t) => t.type === "payment" && t.status !== "cleared").length
     return {
       pendingCount: pending.length,
       pendingAmount: pending.reduce((sum, t) => sum + t.amount, 0),
@@ -518,10 +518,10 @@ export default function ReconciliationPage() {
 
   const stats = calculateStats(statsView)
   const paymentMethods = Array.from(new Set(transactions.map((t) => t.paymentMethod).filter(m => m && m.trim() !== ""))).sort()
-    const unclearRecAmount = transactions.filter((t)=> t.type === "receipt" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
-    const unclearRec = transactions.filter((t)=> t.type === "receipt" && t.status === "pending").length
-    const unclearPayAmount = transactions.filter((t)=> t.type === "payment" && t.status === "pending").reduce((sum, t) => sum + t.amount, 0)
-    const unclearPay = transactions.filter((t)=> t.type === "payment" && t.status === "pending").length
+    const unclearRecAmount = transactions.filter((t) => t.type === "receipt" && t.status !== "cleared").reduce((sum, t) => sum + t.amount, 0)
+    const unclearRec = transactions.filter((t) => t.type === "receipt" && t.status !== "cleared").length
+    const unclearPayAmount = transactions.filter((t) => t.type === "payment" && t.status !== "cleared").reduce((sum, t) => sum + t.amount, 0)
+    const unclearPay = transactions.filter((t) => t.type === "payment" && t.status !== "cleared").length
   if (!hasPermission("view_reconciliation")) {
     return (
       <div className="container mx-auto py-8">
@@ -767,7 +767,7 @@ export default function ReconciliationPage() {
             <div className="text-2xl font-bold">
               ₹{unclearRecAmount}
             </div>
-            <p className="text-xs text-gray-600 mt-1">{unclearRec} Unclear Receipts</p>
+            <p className="text-xs text-gray-600 mt-1">{unclearRec} Receipts</p>
           </CardContent>  
         </Card>
          <Card>
@@ -779,7 +779,7 @@ export default function ReconciliationPage() {
                     <div className="text-2xl font-bold">
               ₹{unclearPayAmount}
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">{unclearPay} Unclear Payments</p>
+                    <p className="text-xs text-gray-600 mt-1">{unclearPay} Payments</p>
                   </CardContent>
                 </Card>
 </div>

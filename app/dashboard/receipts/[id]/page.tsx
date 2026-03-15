@@ -585,7 +585,7 @@ export default function ReceiptDetailsPage() {
               </div>
             </CardContent>
           </Card>
-          {(receipt?.bankDetails || receipt.bankAccount) && (
+          {(receipt?.paymentMethod?.toLowerCase() !== "cash" && (receipt?.bankDetails || receipt.bankAccount)) && (
             <div className="border rounded-lg mt-2 p-4 bg-white text-sm space-y-1">
               <h3 className="text-base font-medium py-2">Bank Details</h3>
               <p><strong>Bank:</strong> {receipt?.bankDetails?.bankName || receipt?.bankAccount?.bankName}</p>

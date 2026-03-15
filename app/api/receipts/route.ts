@@ -57,6 +57,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       body.receiptNumber = await generateNextNumber("receipts", "REC", filterUserId)
     }
 
+    if ((body.paymentMethod || "").toString().toLowerCase() === "cash") {
+      body.bankAccountId = null
+      body.bankAccount = null
+      body.bankDetails = null
+    }
+
     const receipt = await mongoStore.create("receipts", { ...body, userId: filterUserId })
 
     await logActivity(filterUserId, "create", "receipt", receipt._id?.toString(), { receiptNumber: body.receiptNumber })

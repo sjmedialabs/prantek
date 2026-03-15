@@ -1116,6 +1116,17 @@ activityLogs: {
     },
   },
 
+  backup: {
+    getReconciliationEntries: async () => {
+      const data = await fetchAPI("/api/backup/reconciliation-entries")
+      return Array.isArray(data) ? data : []
+    },
+    getBankStatements: async () => {
+      const data = await fetchAPI("/api/backup/bank-statements")
+      return Array.isArray(data) ? data : []
+    },
+  },
+
 }
 
 export default api

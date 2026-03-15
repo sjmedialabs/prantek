@@ -272,3 +272,48 @@ export async function peekNextNumber(collection: string, prefix: string, userId:
 
   return `${prefix}-${fy}-${sequenceString}`
 }
+
+/**
+ * Derive a short client code from client name for invoice number (e.g. "ABC Pvt" -> "A", "Brajesh" -> "B").
+ */
+function getClientCodeForInvoice(clientName: string | undefined, clientId: string): string {
+  const name = (clientName || "").trim()
+  if (name.length === 0) {
+    return (clientId || "X").slice(-1).toUpperCase()
+  }
+  const first = name[0].toUpperCase()
+  const secondWord = name.split(/\s+/)[1]
+  const second = secondWord ? secondWord[0].toUpperCase() : ""
+  return (first + second).replace(/[^A-Z0-9]/g, "") || "X"
+}
+
+/**
+ * Generate next sales invoice number per client (INV-{clientCode}-001).
+ * Each client has their own sequence starting from 001.
+ */
+export async function generateNextSalesInvoiceNumberForClient(
+  userId: string,
+  clientId: string,
+  clientName?: string
+): Promise<string> {
+  const db = await getDb()
+  const counters = db.collection(COLLECTIONS.COUNTERS)
+  const getFinancialYear = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth() + 1
+    return month >= 4 ? year + 1 : year
+  }
+  const financialYear = getFinancialYear()
+  const counterId = `salesInvoice_client_${userId}_${clientId}_${financialYear}`
+
+  const result = await counters.findOneAndUpdate(
+    { _id: counterId },
+    { $inc: { sequence: 1 }, $setOnInsert: { userId, clientId, financialYear } },
+    { upsert: true, returnDocument: "after" }
+  )
+  const sequence = result?.sequence || 1
+  const sequenceString = String(sequence).padStart(3, "0")
+  const clientCode = getClientCodeForInvoice(clientName, clientId)
+  return `INV-${clientCode}-${sequenceString}`
+}

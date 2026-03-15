@@ -1042,7 +1042,7 @@ if (emailExists) {
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label>Email</Label>
+                                  <Label>Email (optional)</Label>
                                   <Input
                                     type="email"
                                     value={newClient.email}
@@ -1172,7 +1172,7 @@ if (emailExists) {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="clientEmail">Email</Label>
+                      <Label htmlFor="clientEmail">Email (optional)</Label>
                       <Input
                         id="clientEmail"
                         type="email"
