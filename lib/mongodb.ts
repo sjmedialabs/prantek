@@ -32,8 +32,13 @@ if (process.env.NODE_ENV === "development") {
 }
 
 export async function getDb(): Promise<Db> {
-  const client = await clientPromise
-  return client.db("prantek")
+  const c = await clientPromise
+  return c.db("prantek")
+}
+
+/** Get the MongoClient for session/transaction support (e.g. withSession, withTransaction). */
+export async function getMongoClient(): Promise<MongoClient> {
+  return clientPromise
 }
 
 export async function connectDB(): Promise<Db> {

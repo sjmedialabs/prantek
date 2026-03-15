@@ -299,6 +299,13 @@ quotations: {
           method: "DELETE",
         })
       },
+      refund: async (id: string, payload: { amount: number }) => {
+        const data = await fetchAPI(`/api/receipts/${id}/refund`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+        return data
+      },
     },
 
     // Payments
@@ -368,13 +375,41 @@ quotations: {
       getAll: async () => {
         const data = await fetchAPI("/api/reconciliation")
         return data || []
-
       },
-
       updateStatus: async (id: string, type: "receipt" | "payment", cleared: boolean) => {
         const data = await fetchAPI("/api/reconciliation", {
           method: "PUT",
           body: JSON.stringify({ id, type, cleared }),
+        })
+        return data
+      },
+      getEntry: async (transactionId: string) => {
+        const res = await fetchAPI(`/api/reconciliation/${encodeURIComponent(transactionId)}`)
+        return res?.data ?? null
+      },
+      saveEntry: async (payload: {
+        transaction_id: string
+        transaction_type: "receipt" | "payment"
+        bank_statement_date: string
+        reference_no?: string
+        amount: number
+      }) => {
+        const data = await fetchAPI("/api/reconciliation/save", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+        return data
+      },
+      updateEntry: async (payload: {
+        id?: string
+        transaction_id?: string
+        bank_statement_date: string
+        reference_no?: string
+        amount: number
+      }) => {
+        const data = await fetchAPI("/api/reconciliation/update", {
+          method: "PUT",
+          body: JSON.stringify(payload),
         })
         return data
       },

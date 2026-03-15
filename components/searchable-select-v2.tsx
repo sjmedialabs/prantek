@@ -51,7 +51,7 @@ export function SearchableSelectV2({
           type="button"
           variant="outline"
           role="combobox"
-          className={cn("h-12 w-full justify-between", className)}
+          className={cn("h-10 max-h-10 w-full justify-between", className)}
         >
           <span className="truncate text-left">
             {selectedOption ? selectedOption.label : placeholder}
@@ -69,7 +69,7 @@ export function SearchableSelectV2({
             placeholder={searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="h-10 max-h-10 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
         <div className="max-h-[300px] overflow-y-auto p-1">

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic"
 import { useState, useEffect, type ComponentProps } from "react"
 
 const ReactQuill = dynamic(
-  () => import("react-quill").then((mod) => mod.default),
+  () => import("react-quill-new").then((mod) => mod.default),
   { ssr: false }
 )
 
@@ -25,7 +25,9 @@ export function SafeReactQuill(props: ReactQuillProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    import("react-quill/dist/quill.snow.css").catch(() => {})
+    import("react-quill-new/dist/quill.snow.css").catch(() =>
+      import("react-quill/dist/quill.snow.css").catch(() => {})
+    )
   }, [])
 
   if (!mounted) {
