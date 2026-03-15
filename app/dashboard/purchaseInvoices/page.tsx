@@ -236,7 +236,7 @@ export default function PurchaseInvoiceList() {
 
         <Card>
           <CardHeader className="pb-2"><CardDescription>Unpaid Invoice</CardDescription></CardHeader>
-          <CardContent className="text-red-600"><div className="text-2xl font-bold">₹{unpaidInvoice.length}</div></CardContent>
+          <CardContent className="text-red-600"><div className="text-2xl font-bold">{unpaidInvoice.length}</div></CardContent>
         </Card>
       </div>
 

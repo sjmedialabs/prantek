@@ -29,6 +29,45 @@ import { ClientSelectSimple } from "@/components/client-select-simple"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { toast as toast2 } from "@/lib/toast"
 
+const indianStates = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
 export default function NewPurchaseInvoicePage() {
   const router = useRouter()
   const { user, hasPermission } = useUser()
@@ -58,7 +97,7 @@ export default function NewPurchaseInvoicePage() {
     bankAccount: "",
     referenceNumber: "",
     paymentStatus: "Unpaid",
-        invoiceStatus: "Open",
+    invoiceStatus: "Open",
     billFile: null,
     screenshotFile: null,
 
@@ -462,7 +501,7 @@ export default function NewPurchaseInvoicePage() {
     const parsed = localStored ? JSON.parse(localStored) : null;
 
     // ---------- DUPLICATE CHECKS ----------
-    const emailExists = clients.some(
+    const emailExists = newClient.email && clients.some(
       (c) => c.email.toLowerCase() === newClient.email.trim().toLowerCase()
     );
 
@@ -540,7 +579,7 @@ export default function NewPurchaseInvoicePage() {
       isValid = false;
     }
 
-    if (!emailRegex.test(newClient.email)) {
+    if (newClient.email && !emailRegex.test(newClient.email)) {
       newErrors.email = "Enter a valid email";
       isValid = false;
     }
@@ -560,7 +599,7 @@ export default function NewPurchaseInvoicePage() {
     //   isValid = false;
     // }
 
-    if (!pincodeRegex.test(newClient.pincode)) {
+    if (newClient.pincode && !pincodeRegex.test(newClient.pincode)) {
       newErrors.pincode = "Enter a valid 6-digit pincode";
       isValid = false;
     }
@@ -1082,7 +1121,7 @@ export default function NewPurchaseInvoicePage() {
                                         </div>
 
                                         <div className="space-y-1">
-                                          <Label required>Email</Label>
+                                          <Label>Email</Label>
                                           <Input
                                             type="email"
                                             value={newClient.email}
@@ -1096,7 +1135,7 @@ export default function NewPurchaseInvoicePage() {
                                       </div>
 
                                       <div className="space-y-1">
-                                        <Label required>Address</Label>
+                                        <Label>Address</Label>
                                         <Textarea
                                           rows={2}
                                           value={newClient.address}
@@ -1111,18 +1150,33 @@ export default function NewPurchaseInvoicePage() {
                                       <div className="grid grid-cols-3 gap-4">
                                         <div className="space-y-1">
                                           <Label required>State</Label>
-                                          <Input
+                                          {/* <Input
                                             value={newClient.state}
                                             placeholder="Enter State"
                                             onChange={(e) =>
                                               setNewClient({ ...newClient, state: e.target.value })
                                             }
-                                          />
+                                          /> */}
+                                          <Select
+                                            value={newClient.state}
+                                            onValueChange={(value) => setNewClient({ ...newClient, state: value })}
+                                          >
+                                            <SelectTrigger id="state">
+                                              <SelectValue placeholder="Select a state" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {indianStates.map((stateName) => (
+                                                <SelectItem key={stateName} value={stateName}>
+                                                  {stateName}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
                                           {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                                         </div>
 
                                         <div className="space-y-1">
-                                          <Label required>City</Label>
+                                          <Label>City</Label>
                                           <Input
                                             value={newClient.city}
                                             placeholder="Enter City"
@@ -1134,7 +1188,7 @@ export default function NewPurchaseInvoicePage() {
                                         </div>
 
                                         <div className="space-y-1">
-                                          <Label required>Pincode</Label>
+                                          <Label>Pincode</Label>
                                           <Input
                                             value={newClient.pincode}
                                             placeholder="Enter Pincode"
