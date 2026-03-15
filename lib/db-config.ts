@@ -39,6 +39,7 @@ export const COLLECTIONS = {
   VIDEO_CATEGORIES: "video_categories", // Left menu items on /videos page
   VIDEOS: "videos", // title, description, youtubeUrl, categoryId, tab, order
   RECONCILIATION_ENTRIES: "reconciliation_entries",
+  BANK_STATEMENTS: "bank_statements",
 } as const
 
 export const INDEXES = {
@@ -145,6 +146,12 @@ export const INDEXES = {
   RECONCILIATION_ENTRIES: [
     { key: { userId: 1 } },
     { key: { transaction_id: 1, userId: 1 }, unique: true },
+    { key: { createdAt: -1 } },
+  ],
+  BANK_STATEMENTS: [
+    { key: { userId: 1 } },
+    { key: { bank_account_id: 1, date: 1 } },
+    { key: { status: 1 } },
     { key: { createdAt: -1 } },
   ],
 }

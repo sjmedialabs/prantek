@@ -22,12 +22,12 @@ export type CompanyUpdateInput = Omit<CompanySetting, "_id" | "createdAt" | "upd
 // Helper function to make authenticated API calls
 async function fetchAPI(url: string, options: RequestInit = {}) {
   const token = tokenStorage.getAccessToken()
-
+  const isFormData = options.body instanceof FormData
   const response = await fetch(url, {
     ...options,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
@@ -412,6 +412,39 @@ quotations: {
           body: JSON.stringify(payload),
         })
         return data
+      },
+      getBankStatements: async (params?: { bank_account_id?: string; status?: string }) => {
+        const q = new URLSearchParams()
+        if (params?.bank_account_id) q.set("bank_account_id", params.bank_account_id)
+        if (params?.status) q.set("status", params.status)
+        const url = q.toString() ? `/api/reconciliation/bank-statements?${q}` : "/api/reconciliation/bank-statements"
+        const res = await fetchAPI(url)
+        return res?.data ?? []
+      },
+      uploadBankStatement: async (file: File, bank_account_id: string) => {
+        const form = new FormData()
+        form.append("file", file)
+        form.append("bank_account_id", bank_account_id)
+        const res = await fetchAPI("/api/reconciliation/bank-statements", {
+          method: "POST",
+          body: form,
+        })
+        return res
+      },
+      matchBankStatement: async (
+        bankStatementId: string,
+        transactionIds: { id: string; type: "receipt" | "payment" }[]
+      ) => {
+        return fetchAPI("/api/reconciliation/bank-statements/match", {
+          method: "POST",
+          body: JSON.stringify({ bankStatementId, transactionIds }),
+        })
+      },
+      ignoreBankStatement: async (bankStatementId: string) => {
+        return fetchAPI("/api/reconciliation/bank-statements/ignore", {
+          method: "POST",
+          body: JSON.stringify({ bankStatementId }),
+        })
       },
     },
 

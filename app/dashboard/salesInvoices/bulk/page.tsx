@@ -33,6 +33,7 @@ export default function BulkUploadSalesInvoicesPage() {
   const [clients, setClients] = useState<any[]>([])
   const [items, setItems] = useState<any[]>([])
   const [bankAccounts, setBankAccounts] = useState<any[]>([])
+  const [taxRates, setTaxRates] = useState<{ _id?: string; type: string; rate: number }[]>([])
   const [loading, setLoading] = useState(false)
   const [dataLoading, setDataLoading] = useState(true)
   const [createdIds, setCreatedIds] = useState<string[]>([])
@@ -42,14 +43,16 @@ export default function BulkUploadSalesInvoicesPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [clientsRes, itemsRes, banksRes] = await Promise.all([
+      const [clientsRes, itemsRes, banksRes, taxRatesRes] = await Promise.all([
         api.clients.getAll(),
         api.items.getAll(),
         api.bankAccounts.getAll(),
+        api.taxRates.getAll(),
       ])
       setClients(Array.isArray(clientsRes) ? clientsRes : [])
       setItems(Array.isArray(itemsRes) ? itemsRes : [])
       setBankAccounts(Array.isArray(banksRes) ? banksRes : [])
+      setTaxRates(Array.isArray(taxRatesRes) ? taxRatesRes : [])
       const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("auth_user") || "{}") : {}
       const name = user?.companyName ?? user?.name ?? "Bulk Import"
       setCreatedBy(name)
@@ -79,14 +82,19 @@ export default function BulkUploadSalesInvoicesPage() {
     }
     const invoiceRows = rowsToInvoiceRows(rows)
     if (invoiceRows.length === 0) {
-      setParseErrors(["No valid data rows. Check column headers."])
+      setParseErrors([
+        "No valid data rows. Check column headers.",
+        "Expected columns: Client, Invoice Date, Due Date, Item Name, Quantity, Price, Discount, CGST, SGST, IGST, Bank Name, Account Name, Account Number, IFSC, Branch, Description",
+        "Use the Download Sample Template button and match your file to that format.",
+      ])
       return
     }
     const { validated: v, errors: ve } = validateInvoiceRows(
       invoiceRows,
       clients,
       items,
-      bankAccounts
+      bankAccounts,
+      taxRates
     )
     setValidated(v)
     setValidationErrors(ve)
@@ -234,7 +242,7 @@ export default function BulkUploadSalesInvoicesPage() {
               <label htmlFor="bulk-file" className="cursor-pointer flex flex-col items-center gap-2">
                 <FileSpreadsheet className="h-12 w-12 text-muted-foreground" />
                 <span className="font-medium">Choose CSV or XLSX</span>
-                <span className="text-sm text-muted-foreground">Client, Invoice Date, Due Date, Item Name, Quantity, Price, Discount, CGST, SGST, IGST, Bank Account, Description</span>
+                <span className="text-sm text-muted-foreground">Bank: Bank Name, Account Name, Account Number, IFSC, Branch (or legacy Bank Account)</span>
               </label>
             </div>
             {parseErrors.length > 0 && (
@@ -298,10 +306,27 @@ export default function BulkUploadSalesInvoicesPage() {
                   </TableBody>
                 </Table>
               </div>
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-4 flex-wrap">
                 <Button onClick={() => { setStep("upload"); setFile(null); setValidated([]); setValidationErrors([]); }}>
                   Cancel
                 </Button>
+                {invalidCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const header = "Row,Error\n"
+                    const body = validationErrors.map((e) => `${e.rowIndex},"${(e.reason || "").replace(/"/g, '""')}"`).join("\n")
+                    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8;" })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement("a")
+                    a.href = url
+                    a.download = "bulk-invoice-validation-errors.csv"
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    toast({ title: "Downloaded", description: "Validation error report downloaded." })
+                  }}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download validation errors CSV
+                  </Button>
+                )}
                 <Button onClick={handleImport} disabled={validCount === 0 || loading}>
                   {loading ? "Importing…" : `Import ${invoiceGroupCount} Invoice(s)`}
                 </Button>
