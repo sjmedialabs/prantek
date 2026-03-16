@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api-client"
 import type { Vendor } from "@/lib/models/types"
-import { ArrowLeft, Edit, Store } from "lucide-react"
+import { ArrowLeft, Download, Edit, Store } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { Input } from "@/components/ui/input"
 import { useUser } from "@/components/auth/user-context"
@@ -37,6 +37,7 @@ export default function VendorDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionQuery, setTransactionQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("all")
 
   useEffect(() => {
     if (vendorId) loadVendor()
@@ -151,6 +152,48 @@ export default function VendorDetailsPage() {
     return "bg-blue-100 text-blue-800"
   }
 
+  const handleExport = () => {
+    let dataToExport: Transaction[]
+    let fileName = `vendor-${vendor?.name?.replace(/\s+/g, "_") || vendorId}-transactions`
+
+    const currentData = filteredTransactions
+
+    if (activeTab === "purchaseInvoice") {
+      dataToExport = currentData.filter((t) => t.type === "purchaseInvoice")
+      fileName += "-purchase-invoices.csv"
+    } else if (activeTab === "payment") {
+      dataToExport = currentData.filter((t) => t.type === "payment")
+      fileName += "-payments.csv"
+    } else {
+      dataToExport = currentData
+      fileName += "-all.csv"
+    }
+
+    if (dataToExport.length === 0) {
+      toast.info("Info", "No transactions to export for the current filter.")
+      return
+    }
+
+    // Convert to CSV
+    const headers = ["Number", "Date", "Type", "Amount", "Paid Amount", "Balance Amount", "Status"]
+    const csvRows = [
+      headers.join(","), // header row
+      ...dataToExport.map((t) =>
+        [`"${t.number}"`, `"${new Date(t.date).toLocaleDateString()}"`, `"${t.type === "purchaseInvoice" ? "Purchase Invoice" : "Payment"}"`, t.amount, t.paidAmount, t.balanceAmount, `"${t.status}"`].join(",")
+      ),
+    ]
+
+    const csvString = csvRows.join("\n")
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", fileName)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const renderTransactionTable = (data: Transaction[]) => (
     <div className="border rounded-lg">
       <Table>
@@ -225,7 +268,12 @@ export default function VendorDetailsPage() {
             Vendor Details
           </h1>
         </div>
-
+        <div>
+          <Button onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Transactions
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -328,7 +376,7 @@ export default function VendorDetailsPage() {
                 />
               </div>
 
-              <Tabs defaultValue="all" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="purchaseInvoice">Purchase Invoice</TabsTrigger>
