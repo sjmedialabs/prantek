@@ -679,12 +679,12 @@ const categoryData = categories
         <TabsContent value="inventory" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center md:justify-between">
                 <div>
                   <CardTitle>Asset Inventory</CardTitle>
                   <CardDescription>Manage your organization's assets</CardDescription>
                 </div>
-                <div className="flex items-center space-x-2 w-full md:w-auto">
+                <div className="flex flex-wrap gap-2 items-center space-x-2 w-full md:w-auto">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input

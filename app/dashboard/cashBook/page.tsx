@@ -517,11 +517,24 @@ setSelectedPaymentMethod("all")
     <SelectContent>
       <SelectItem value="all">All</SelectItem>
 
-      {paymentMethods.map((method: any) => (
-        <SelectItem key={method._id} value={method.name}>
-          {method.name}
-        </SelectItem>
-      ))}
+       <SelectItem value="cash">
+                          Cash
+                        </SelectItem>
+                        <SelectItem value="upi">
+                          UPI
+                        </SelectItem>
+                        <SelectItem value="card">
+                          Card
+                        </SelectItem>
+                        <SelectItem value="cheque">
+                          Cheque
+                        </SelectItem>
+                        <SelectItem value="bankTransfer">
+                          Bank Transfer
+                        </SelectItem>
+                        <SelectItem value="other">
+                          Other
+                        </SelectItem>
     </SelectContent>
   </Select>
 </div>
