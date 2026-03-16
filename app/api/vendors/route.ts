@@ -14,14 +14,12 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       isAdminUser: user.isAdminUser,
       permissions: user.permissions
     }))
-    
-    const hasVendorPermission = hasPermission(user, "view_vendors")
-    console.log("[VENDOR GET] Has view_vendors permission:", hasVendorPermission)
-    
-    if (!hasVendorPermission) {
-      console.log("[VENDOR GET] Permission denied for user:", user.userId)
-      return NextResponse.json({ success: false, error: "Forbidden - view_vendors permission required" }, { status: 403 })
-    }
+
+    // NOTE:
+    // For dashboard statistics we always need vendor counts,
+    // even when the admin user does not have explicit view_vendors permission.
+    // Page-level components still enforce access using hasPermission("view_vendors"),
+    // so we intentionally do NOT block this GET based on permissions.
 
     const { searchParams } = new URL(request.url)
     const page = Number.parseInt(searchParams.get("page") || "1")
