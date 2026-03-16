@@ -25,7 +25,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
     .collection(Collections.PAYMENTS)
     .findOne({
       _id: new ObjectId(id),
-      userId: user.userId,
+      userId: filterUserId,
     })
 
   if (!payment) {

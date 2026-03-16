@@ -492,7 +492,7 @@ export default function QuotationsPage() {
 
                         <>
                           {/* CREATED → SHOW ACCEPT ICON */}
-                          {(q.status === "created" || q.status === "overdue") && (
+                          {(hasPermission("edit_quotations") && q.status === "created" || q.status === "overdue") && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -505,7 +505,7 @@ export default function QuotationsPage() {
                           )}
 
                           {/* ACCEPTED → SHOW CONVERT ICON */}
-                          {q.status === "accepted" && (
+                          {hasPermission("edit_quotations") && q.status === "accepted" && (
                             <Button
                               size="sm"
                               variant="outline"

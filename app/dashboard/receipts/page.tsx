@@ -437,7 +437,7 @@ export default function ReceiptsPage() {
                           {formatStatus(receipt.status)}
                         </Badge>
                       </TableCell>
-                      {(hasPermission("edit_receipts") || hasPermission("add_receipts")) && (
+                   
                         <TableCell>
                           <div className="flex space-x-2">
                             <Link href={`/dashboard/receipts/${receipt._id?.toString()}`}>
@@ -466,7 +466,7 @@ export default function ReceiptsPage() {
                                 )}
                           </div>
                         </TableCell>
-                      )}
+              
                     </TableRow>
                   )
                 })}

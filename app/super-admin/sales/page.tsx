@@ -83,6 +83,7 @@ export interface ConversionFunnelStage {
 
 export default function SalesDashboardPage() {
   const { hasPermission } = useUser()
+  const [users, setUsers] = useState<any[]>([])
 
   // UI state
   const [selectedPeriod, setSelectedPeriod] = useState<
@@ -152,6 +153,8 @@ export default function SalesDashboardPage() {
         } catch (error) {
           console.error("Failed to load system settings:", error);
         }
+       
+      setUsers(allUsers);
 
         if (!mounted) return
         setRawAllUsers(allUsers)
@@ -191,11 +194,7 @@ export default function SalesDashboardPage() {
       return created >= startDate
     })
 
-    const filteredAdminUsers = rawAdminUsers.filter((u) => {
-      if (!u.createdAt) return false
-      const created = new Date(u.createdAt)
-      return created >= startDate
-    })
+    const filteredAdminUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
 
     // activeClients (based on subscriptionEndDate irrespective of createdAt? 
     // Option A requested filter by createdAt — so we use filteredAdminUsers here)
@@ -211,21 +210,20 @@ export default function SalesDashboardPage() {
     const churnedUsers = filteredAdminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
     const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
 
+  // Only count revenue from subscribers, not admin users
+  const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
     // Calculate total Revenue from active/trial subscriptions from filteredAdminUsers (only users created within period)
     let totalRevenue = 0
     filteredAdminUsers.forEach((user) => {
-      if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial") {
-        const plan = rawPlans.find((p) => (p._id || p.id) === user.subscriptionPlanId)
-        if (plan) {
-          const planPrice = Number(plan.price || 0);
+       const userPlan = rawPlans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId);
+      if (userPlan && userPlan.price) {
           if (user.billingCycle === 'yearly') {
-             const yearlyPrice = planPrice * 12;
+             const yearlyPrice = Number(userPlan.price) * 12;
              const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
              totalRevenue += (yearlyPrice - discountAmount);
           } else {
-             totalRevenue += planPrice;
+             totalRevenue += Number(userPlan.price);
           }
-        }
       }
     })
     const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalRevenue / activeSubscriptions) : 0
