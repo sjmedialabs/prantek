@@ -528,37 +528,17 @@ export default function SalesDashboardPage() {
                   }}
                  className="items-center justify-center h-full w-full relative"
                 >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenueData}>
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Area
-                        type="monotone"
-                        dataKey="standard"
-                        stackId="1"
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
-                        fillOpacity={0.6}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="premium"
-                        stackId="1"
-                        stroke="#8b5cf6"
-                        fill="#8b5cf6"
-                        fillOpacity={0.6}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="enterprise"
-                        stackId="1"
-                        stroke="#f59e0b"
-                        fill="#f59e0b"
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                 <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={revenueData}>
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="total" stroke="#1f2937" strokeWidth={3} />
+                    <Line type="monotone" dataKey="standard" stroke="#3b82f6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="premium" stroke="#8b5cf6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="enterprise" stroke="#f59e0b" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -893,7 +873,7 @@ export default function SalesDashboardPage() {
                   <div className="p-3 border rounded-lg">
                     <div className="text-sm text-gray-600">Total revenue (selected period)</div>
                     <div className="text-xl font-bold text-green-600">
-                      ₹{salesMetrics.find((m) => m.name === "Total Revenue")?.value ?? "0"}
+                      {salesMetrics.find((m) => m.name === "Total Revenue")?.value ?? "0"}
                     </div>
                   </div>
                   <div className="p-3 border rounded-lg">
