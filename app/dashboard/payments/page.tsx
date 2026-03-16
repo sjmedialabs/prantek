@@ -139,10 +139,10 @@ export default function PaymentsPage() {
     setCurrentPage(1)
   }, [searchTerm, statusFilter, categoryFilter, paymentMethodFilter, clientFilter, vendorFilter, teamFilter, recipientFilter])
 
-  const paidPayments = filteredPayments.filter((p) => p.status === "completed" || p.status === "cleared" || p.status === "Paid")
-  const unpaidPayments = filteredPayments.filter((p) => p.status !== "completed" && p.status !== "cleared" && p.status !== "Paid" && p.status !== "cancelled")
+  const paidPayments = filteredPayments.filter((p) => p.status === "cleared")
+  const unclearPayments = filteredPayments.filter((p) => p.status === "Paid")
   const paidAmount = paidPayments.reduce((sum, p) => sum + p.amount, 0)
-  const unpaidAmount = unpaidPayments.reduce((sum, p) => sum + p.amount, 0)
+  const unclearAmount = unclearPayments.reduce((sum, p) => sum + p.amount, 0)
 const exportToCSV = () => {
   if (filteredPayments.length === 0) {
     alert("No payments to export.");
@@ -260,12 +260,12 @@ const exportToCSV = () => {
 
   return (
     <div className="space-y-6 overflow-x-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
           <p className="text-gray-600">Manage all payment transactions</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* <Button variant="outline" onClick={exportToCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export
@@ -295,11 +295,11 @@ const exportToCSV = () => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Unpaid Payments</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Unclear Payments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">₹{unpaidAmount.toLocaleString()}</div>
-            <p className="text-xs text-gray-600 mt-1">{unpaidPayments.length} payments</p>
+            <div className="text-2xl font-bold text-orange-600">₹{unclearAmount.toLocaleString()}</div>
+            <p className="text-xs text-gray-600 mt-1">{unclearPayments.length} payments</p>
           </CardContent>
         </Card>
 {/* 
@@ -594,7 +594,8 @@ const exportToCSV = () => {
             </TableBody>
           </Table>
           {/* Pagination Controls */}
-          <div className="flex items-center justify-between mt-6">
+          <div className="overflow-x-auto">
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-6">
 
             {/* Rows Per Page */}
             <div className="flex items-center space-x-2">
@@ -634,6 +635,7 @@ const exportToCSV = () => {
                 Next
               </Button>
             </div>
+          </div>
           </div>
         </CardContent>
       </Card>

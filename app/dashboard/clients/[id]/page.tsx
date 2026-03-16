@@ -523,7 +523,7 @@ export default function ClientDetailsPage() {
       </div>
 
       {/* === Client Info & Transactions UI (unchanged) === */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card className="lg:col-span-1">
         {(() => {
             const infoItems: Array<{ label: string; value: string | JSX.Element }> = []
@@ -619,7 +619,7 @@ export default function ClientDetailsPage() {
                 </div>
               </div>
               <Tabs defaultValue="all" className="w-full">
-                <TabsList>
+                <TabsList className="overflow-x-auto whitespace-nowrap flex-nowrap w-full md:w-auto">
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="receipt">Receipt</TabsTrigger>
                   <TabsTrigger value="salesInvoice">Sales Invoice</TabsTrigger>

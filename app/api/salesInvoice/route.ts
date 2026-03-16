@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { mongoStore, generateNextNumber, generateNextSalesInvoiceNumberForClient, logActivity } from "@/lib/mongodb-store"
+import { mongoStore, generateNextNumber, logActivity } from "@/lib/mongodb-store"
 import { withAuth } from "@/lib/api-auth"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
@@ -48,19 +48,9 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     //   return NextResponse.json({ success: false, error: "User ID required" }, { status: 400 })
     // }
 
-    // Generate invoice number if not provided (per-client sequence: INV-{clientCode}-001)
+    // Generate invoice number if not provided: SI-{financialYear}-{sequence}
     if (!body.salesInvoiceNumber) {
-      if (body.clientId) {
-        const client = await mongoStore.getById("clients", body.clientId) as { clientName?: string; name?: string } | null
-        const clientName = body.clientName ?? client?.clientName ?? client?.name
-        body.salesInvoiceNumber = await generateNextSalesInvoiceNumberForClient(
-          filterUserId,
-          body.clientId,
-          clientName
-        )
-      } else {
-        body.salesInvoiceNumber = await generateNextNumber("salesInvoice", "SI", filterUserId)
-      }
+      body.salesInvoiceNumber = await generateNextNumber("salesInvoice", "SI", filterUserId)
     }
 
     const invoice = await mongoStore.create("salesInvoice", { ...body, userId: filterUserId })

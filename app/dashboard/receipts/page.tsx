@@ -137,7 +137,7 @@ export default function ReceiptsPage() {
         // Determine new status
         let newStatus = "Partial";
         if (newBalanceAmount >= invoice.grandTotal) {
-          newStatus = "Not Collected";
+          newStatus = "not collected";
         } else if (newBalanceAmount <= 0) {
           newStatus = "Cleared";
         }

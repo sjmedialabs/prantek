@@ -295,7 +295,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Vendor Management</h1>
           <p className="text-gray-600">Manage supplier and vendor records</p>
@@ -417,7 +417,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div>
                       <Label required>State</Label>
                       <Select

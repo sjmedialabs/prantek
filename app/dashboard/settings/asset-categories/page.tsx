@@ -176,7 +176,7 @@ export default function AssetCategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Asset Categories</h1>
           <p className="text-gray-600">Manage categories for asset classification</p>
@@ -205,7 +205,7 @@ export default function AssetCategoriesPage() {
 
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -213,7 +213,7 @@ export default function AssetCategoriesPage() {
                   placeholder="Search category..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-72"
+                  className="pl-10 w-full md:w-72"
                 />
               </div>
 
@@ -221,7 +221,7 @@ export default function AssetCategoriesPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="border rounded-lg px-2  py-3 text-sm"
+                className="border rounded-lg px-2 py-3 text-sm"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>

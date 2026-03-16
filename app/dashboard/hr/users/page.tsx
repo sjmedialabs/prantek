@@ -544,7 +544,8 @@ function validatePermissions(selectedPermissions: any) {
             ))}
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="overflow-x-auto">
+            <div className="rounded-md border min-w-[800px]">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
@@ -683,6 +684,7 @@ function validatePermissions(selectedPermissions: any) {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </Card>

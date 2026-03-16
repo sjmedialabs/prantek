@@ -360,7 +360,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
     return [
       {
-        title: "Total Revenue",
+        title: "Total Income",
         value: `₹${totalIncome.toLocaleString()}`,
         change: dateRange !== 'all_time' ? `${incomeChange >= 0 ? "+" : ""}${incomeChange.toFixed(1)}%` : 'N/A',
         trend: incomeChange >= 0 ? "up" : "down",
@@ -873,13 +873,15 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
         {/* Main Reports */}
         <Tabs value={reportType} onValueChange={setReportType} className="space-y-6 mt-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="financial">Financial</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="compliance">Compliance</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto whitespace-nowrap">
+            <TabsList className="flex gap-2 min-w-max md:grid md:w-full md:grid-cols-2 lg:grid-cols-5">
+              <TabsTrigger value="overview" className="flex-shrink-0">Overview</TabsTrigger>
+              <TabsTrigger value="financial" className="flex-shrink-0">Financial</TabsTrigger>
+              <TabsTrigger value="customers" className="flex-shrink-0">Customers</TabsTrigger>
+              <TabsTrigger value="inventory" className="flex-shrink-0">Inventory</TabsTrigger>
+              <TabsTrigger value="compliance" className="flex-shrink-0">Compliance</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1098,6 +1100,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
                 </CardContent>
               </Card>
             </div>
+            <div className="hidden md:block">
             <Card>
   <CardHeader>
     <CardTitle>Client Transaction Details(This Data Is in under Process)</CardTitle>
@@ -1205,6 +1208,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 )}
 </CardContent>
 </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="inventory" className="space-y-6">

@@ -257,7 +257,7 @@ export default function EditPurchaseInvoicePage() {
                         />
                       </div>
                     </div>
-                    <div className="flex flex-row gap-2">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-2 w-full">
                       <Label>Ledger Head</Label>
                       <Select

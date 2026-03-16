@@ -1070,17 +1070,19 @@ export default function ReceiptsPage() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="invoice">From SalesInvoice</TabsTrigger>
-              <TabsTrigger value="nonInvoiced">Non Invoiced Receipt</TabsTrigger>
-              <TabsTrigger value="quick">Non Item Receipt</TabsTrigger>
-              <TabsTrigger value="advance">Advance Receipt</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="grid w-full min-w-max grid-cols-4 whitespace-nowrap">
+                <TabsTrigger value="invoice">From SalesInvoice</TabsTrigger>
+                <TabsTrigger value="nonInvoiced">Non Invoiced Receipt</TabsTrigger>
+                <TabsTrigger value="quick">Non Item Receipt</TabsTrigger>
+                <TabsTrigger value="advance">Advance Receipt</TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Scenario 1: From SalesInvoice */}
             <TabsContent value="invoice" className="space-y-4">
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid w-full grid-cols-1 gap-4">
                   <div className="w-full">
                     <Label>Select SalesInvoice</Label>
                     {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>

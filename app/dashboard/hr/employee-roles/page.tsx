@@ -206,7 +206,7 @@ const handleToggleStatus = async (role: EmployeeRole) => {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Employee Roles</h1>
           <p className="text-muted-foreground">
@@ -221,14 +221,14 @@ const handleToggleStatus = async (role: EmployeeRole) => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <CardTitle>Employee Roles</CardTitle>
               <CardDescription>
                 Designations like Executive, Manager, Director, etc.
               </CardDescription>
             </div>
-            <div className="relative w-64">
+            <div className="relative w-full md:w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search roles..."
@@ -306,7 +306,8 @@ const handleToggleStatus = async (role: EmployeeRole) => {
               )}
             </TableBody>
           </Table>
-          <div className="flex justify-between items-center mt-4">
+          <div className="overflow-x-auto">
+            <div className="flex flex-wrap justify-between items-center gap-2 mt-4">
             <div className="text-sm text-muted-foreground">
               Showing {indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredRoles.length)} of {filteredRoles.length}
             </div>
@@ -334,6 +335,7 @@ const handleToggleStatus = async (role: EmployeeRole) => {
                 Next
               </Button>
             </div>
+          </div>
           </div>
 
         </CardContent>

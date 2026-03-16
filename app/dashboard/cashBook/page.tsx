@@ -313,13 +313,13 @@ setSelectedPaymentMethod("all")
   return (
     <div className="space-y-6">
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
           <h1 className="text-2xl font-bold">Cashbook</h1>
           <p className="text-gray-600">View all receipts and payments</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={exportCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
