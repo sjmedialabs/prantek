@@ -126,7 +126,7 @@ export function HeroSection() {
             </div>
 
             {/* Right Content - Phone Mockup or Custom Image */}
-            <div className="relative lg:pl-12 lg:pr-[50px] lg:h-[calc(100vh-8rem)] lg:flex lg:items-center">
+            <div className="relative lg:pl-12 lg:pr-[50px] lg:h-[calc(100vh-8rem)] lg:flex lg:items-center ">
               {heroRightImage && heroRightImage.includes("placeholder.svg") ? (
                 <div className="relative">
                   <div className="relative mx-auto w-full max-w-sm">
@@ -231,7 +231,7 @@ export function HeroSection() {
                   </div>
                 </div>
               ) : (
-                <div className="relative w-full h-full lg:flex lg:items-center">
+                <div className="relative w-full h-auto lg:flex lg:items-center rounded-2xl">
                   <img
                     src={heroRightImage || "/placeholder.svg"}
                     alt="Hero showcase"

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { LandingHeader } from "@/components/landing-header"
 import { LandingFooter } from "@/components/landing-footer"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronDown, ChevronRight, Play } from "lucide-react"
+import { ChevronDown, ChevronRight, Play, Menu, X, ArrowLeft } from "lucide-react"
 
 type VideoItem = {
   id: string
@@ -36,6 +36,7 @@ export default function VideosPage() {
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(null)
   const [featuredVideo, setFeaturedVideo] = useState<VideoItem | null>(null)
   const [activeTab, setActiveTab] = useState("All")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -80,11 +81,18 @@ export default function VideosPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <LandingHeader />
-      <main className="flex-1 flex">
+      <main className="flex-1 flex relative">
         {/* Left sidebar - menu categories */}
-        <aside className="w-64 border-r border-gray-200 bg-white flex-shrink-0 min-h-[calc(100vh-4rem)]">
+        <aside className={`w-64 border-r border-gray-200 bg-white flex-shrink-0 min-h-[calc(100vh-4rem)] ${
+          mobileMenuOpen ? "absolute inset-y-0 left-0 z-50 shadow-xl" : "hidden"
+        } md:block md:static md:shadow-none`}>
           <div className="p-4">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Video library</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Video library</h2>
+              <button onClick={() => setMobileMenuOpen(false)} className="md:hidden p-1 text-gray-500 hover:text-gray-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             {loading ? (
               <p className="text-sm text-gray-500">Loading…</p>
             ) : categories.length === 0 ? (
@@ -113,6 +121,7 @@ export default function VideosPage() {
                             setFeaturedVideo(cat.videos[0])
                             setActiveTab((cat.videos[0].tab as string) || "All")
                           }
+                          setMobileMenuOpen(false)
                           }}
                           className={`flex-1 text-left py-2 px-2 rounded-md text-sm font-medium ${isSelected ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"}`}
                         >
@@ -130,6 +139,7 @@ export default function VideosPage() {
                                 setFeaturedVideo(cat.videos[0])
                                 setActiveTab((cat.videos[0].tab as string) || "All")
                               }
+                              setMobileMenuOpen(false)
                               }}
                               className={`text-left w-full py-1.5 px-2 rounded text-sm ${isSelected ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:bg-gray-50"}`}
                             >
@@ -148,6 +158,14 @@ export default function VideosPage() {
 
         {/* Right content - heading, tabs, featured video + list */}
         <div className="flex-1 overflow-auto bg-gray-50">
+          {/* Mobile toggle */}
+          <div className="md:hidden p-4 bg-white border-b sticky top-0 z-10">
+            <button onClick={() => setMobileMenuOpen(true)} className="flex items-center gap-2 text-gray-700 font-medium">
+              <ArrowLeft className="h-5 w-5" />
+              <span>Browse Categories</span>
+            </button>
+          </div>
+
           <div className="max-w-4xl mx-auto p-6">
             {!selectedCategory ? (
               <div className="py-12 text-center text-gray-500">
@@ -158,7 +176,7 @@ export default function VideosPage() {
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">{selectedCategory.name}</h1>
 
                 <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setFeaturedVideo(null); }} className="w-full">
-                  <TabsList className="mb-4">
+                  <TabsList className="mb-4 overflow-x-auto w-full">
                     {tabs.map((tab) => (
                       <TabsTrigger key={tab} value={tab}>
                         {tab}

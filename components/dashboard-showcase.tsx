@@ -1,7 +1,19 @@
+"use client"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import api from "@/lib/api-client"
+import { useState, useEffect } from "react"
 
 export function DashboardShowcase() {
+      const [content, setContent] = useState<any | null>(null)
+    
+      useEffect(() => {
+        api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
+        setContent(websiteContent)
+        })
+      }, [])
+    console.log(content, "website content")
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -10,25 +22,24 @@ export function DashboardShowcase() {
           <div className="space-y-6">
             <div>
               <Badge variant="secondary" className="mb-4">
-                Financial & Operations SAAS Application
+                {content?.showcaseTitle || "Financial & Operations SAAS Application"}
               </Badge>
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-balance">
-                Complete Business Management Solution
+                {content?.showcaseSubtitle || "Complete Business Management Solution"}
               </h2>
               <p className="text-lg text-gray-600 leading-relaxed text-pretty">
-                Manage every aspect of your business from financial transactions to asset tracking, with powerful
-                reporting and compliance features built for modern enterprises.
+                {content?.showcaseDescription || "Manage every aspect of your business from financial transactions to asset tracking, with powerful reporting and compliance features built for modern enterprises."}
               </p>
             </div>
 
             <div className="space-y-4">
-              {[
+              {(content?.showcaseFeatures || [
                 "Multi-tenant architecture with secure data isolation",
                 "Role-based access control with custom permissions",
                 "Real-time financial tracking and reporting",
                 "Asset management with condition monitoring",
                 "Automated compliance and audit trails",
-              ].map((feature, index) => (
+              ]).map((feature: any, index: number) => (
                 <div key={index} className="flex items-start space-x-3">
                   <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
                   <span className="text-gray-700">{feature}</span>

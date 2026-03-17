@@ -4,38 +4,47 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod"
+import { useState, useEffect } from "react"
+import api from "@/lib/api-client"
 
 export function CTASection() {
   const { trialDays } = useTrialPeriod()
-
+    const [content, setContent] = useState<any | null>(null)
+      
+        useEffect(() => {
+          api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
+          setContent(websiteContent)
+          })
+        }, [])
   return (
     <section className="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-balance">
-          Experience the Best Way to Manage Business Finances
+          {content?.ctaTitle || "Experience the Best Way to Manage Business Finances"}
         </h2>
         <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto text-pretty">
-          Join thousands of businesses already using Prantek to streamline their financial operations
+         {content?.ctaSubtitle || "Join thousands of businesses already using Prantek to streamline their financial operations"}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-          <Link href="/signin">
+          <Link href={content?.ctaPrimaryLink || "/signin"}>
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 h-12">
-              Get Started Free
+              {content?.ctaPrimaryText || "Get Started Free"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-6 justify-center text-sm text-gray-300">
-          <div className="flex items-center gap-2">
+          {content?.ctaFeatures && content?.ctaFeatures?.map((features: any, index: number)=>(
+            <div key={index} className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-400" />
-            <span>{trialDays}-day free trial</span>
-          </div>
-          <div className="flex items-center gap-2">
+            <span>{features}</span>
+          </div>))}
+          {/* <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-400" />
             <span>Cancel anytime</span>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>
