@@ -579,7 +579,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                               >
                                 Delete
                               </Button> */}
-                                                                                           <Switch
+                                                                                       { (hasPermission("edit_vendors"))&&(      <Switch
                                                           checked={true}
                                                           title="Handle the status"
                                                           onCheckedChange={async (checked) => {
@@ -592,7 +592,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                                                               toast.error("Error", "Failed to update status")
                                                             }
                                                           }}
-                                                        />
+                                                        />  )
+                              }
                             </div>
                                                      
                           </TableCell>

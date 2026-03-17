@@ -83,6 +83,7 @@ export interface ConversionFunnelStage {
 
 export default function SalesDashboardPage() {
   const { hasPermission } = useUser()
+  const [users, setUsers] = useState<any[]>([])
 
   // UI state
   const [selectedPeriod, setSelectedPeriod] = useState<
@@ -152,6 +153,8 @@ export default function SalesDashboardPage() {
         } catch (error) {
           console.error("Failed to load system settings:", error);
         }
+       
+      setUsers(allUsers);
 
         if (!mounted) return
         setRawAllUsers(allUsers)
@@ -191,11 +194,7 @@ export default function SalesDashboardPage() {
       return created >= startDate
     })
 
-    const filteredAdminUsers = rawAdminUsers.filter((u) => {
-      if (!u.createdAt) return false
-      const created = new Date(u.createdAt)
-      return created >= startDate
-    })
+    const filteredAdminUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
 
     // activeClients (based on subscriptionEndDate irrespective of createdAt? 
     // Option A requested filter by createdAt — so we use filteredAdminUsers here)
@@ -211,21 +210,20 @@ export default function SalesDashboardPage() {
     const churnedUsers = filteredAdminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
     const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
 
+  // Only count revenue from subscribers, not admin users
+  const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
     // Calculate total Revenue from active/trial subscriptions from filteredAdminUsers (only users created within period)
     let totalRevenue = 0
     filteredAdminUsers.forEach((user) => {
-      if (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial") {
-        const plan = rawPlans.find((p) => (p._id || p.id) === user.subscriptionPlanId)
-        if (plan) {
-          const planPrice = Number(plan.price || 0);
+       const userPlan = rawPlans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId);
+      if (userPlan && userPlan.price) {
           if (user.billingCycle === 'yearly') {
-             const yearlyPrice = planPrice * 12;
+             const yearlyPrice = Number(userPlan.price) * 12;
              const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
              totalRevenue += (yearlyPrice - discountAmount);
           } else {
-             totalRevenue += planPrice;
+             totalRevenue += Number(userPlan.price);
           }
-        }
       }
     })
     const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalRevenue / activeSubscriptions) : 0
@@ -530,37 +528,17 @@ export default function SalesDashboardPage() {
                   }}
                  className="items-center justify-center h-full w-full relative"
                 >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenueData}>
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Area
-                        type="monotone"
-                        dataKey="standard"
-                        stackId="1"
-                        stroke="#3b82f6"
-                        fill="#3b82f6"
-                        fillOpacity={0.6}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="premium"
-                        stackId="1"
-                        stroke="#8b5cf6"
-                        fill="#8b5cf6"
-                        fillOpacity={0.6}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="enterprise"
-                        stackId="1"
-                        stroke="#f59e0b"
-                        fill="#f59e0b"
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                 <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={revenueData}>
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="total" stroke="#1f2937" strokeWidth={3} />
+                    <Line type="monotone" dataKey="standard" stroke="#3b82f6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="premium" stroke="#8b5cf6" strokeWidth={2} />
+                    <Line type="monotone" dataKey="enterprise" stroke="#f59e0b" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -895,7 +873,7 @@ export default function SalesDashboardPage() {
                   <div className="p-3 border rounded-lg">
                     <div className="text-sm text-gray-600">Total revenue (selected period)</div>
                     <div className="text-xl font-bold text-green-600">
-                      ₹{salesMetrics.find((m) => m.name === "Total Revenue")?.value ?? "0"}
+                      {salesMetrics.find((m) => m.name === "Total Revenue")?.value ?? "0"}
                     </div>
                   </div>
                   <div className="p-3 border rounded-lg">

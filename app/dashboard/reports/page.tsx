@@ -1100,7 +1100,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
                 </CardContent>
               </Card>
             </div>
-            <div className="hidden md:block">
+            <div className="hidden">
             <Card>
   <CardHeader>
     <CardTitle>Client Transaction Details(This Data Is in under Process)</CardTitle>
