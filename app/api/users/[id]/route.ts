@@ -46,6 +46,9 @@ export const GET = withAuth(async (req: NextRequest, user) => {
 
     // Remove password from response
     const { password, ...safeUser } = adminUser as any
+const bcrypt = require("bcryptjs");
+bcrypt.hash("SuperAdmin@2025", 10).then(console.log);
+console.log("ssuperadmin password", bcrypt.hashSync("SuperAdmin@2025", 10))
 
     return NextResponse.json({ success: true, data: safeUser, user: safeUser })
   } catch (error: any) {

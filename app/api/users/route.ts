@@ -55,7 +55,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             console.error("Error fetching role:", e)
           }
         }
-
+const bcrypt = require("bcryptjs");
+bcrypt.hash("SuperAdmin@2025", 10).then(console.log);
         // Fetch employee data if employeeId exists (new flow)
         if (adminUser.employeeId) {
           try {

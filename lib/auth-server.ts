@@ -150,9 +150,13 @@ export async function authenticateSuperAdmin(email: string, password: string): P
   try {
     // First, try to authenticate from database
     const db = await connectDB()
-    const superAdmin = await db.collection(Collections.SUPER_ADMINS).findOne({ 
-      email: email.toLowerCase() 
-    })
+    // const superAdmin = await db.collection(Collections.SUPER_ADMINS).findOne({ 
+    //   email: email.toLowerCase() 
+    // })
+    const superAdmin = await db.collection(Collections.USERS).findOne({
+  email: email.toLowerCase(),
+  role: "super-admin"
+})
 
     if (superAdmin) {
       console.log("[AUTH] Found super admin in database")
