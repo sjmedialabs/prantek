@@ -17,12 +17,12 @@ export function LandingHeader() {
   }, [])
 
   const navLinks = [
-    { href: "#features", label: "Features" },
-    { href: "#industries", label: "Industries" },
-    { href: "#pricing", label: "Pricing" },
+    { href: "/#features", label: "Features" },
+    { href: "/#industries", label: "Industries" },
+    { href: "/#pricing", label: "Pricing" },
     { href: "/videos", label: "Videos" },
-    { href: "#testimonials", label: "Testimonials" },
-    { href: "#faq", label: "FAQ" },
+    { href: "/#testimonials", label: "Customer Stories" },
+    { href: "/#faq", label: "FAQ" },
   ]
 
   return (
@@ -47,7 +47,7 @@ export function LandingHeader() {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden lg:flex space-x-8">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -60,7 +60,8 @@ export function LandingHeader() {
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="flex flex-row gap-4">
+          <div className="hidden md:flex items-center justify-end space-x-4">
             <Link href="/signin">
               <Button variant="ghost" className="text-gray-600 hover:text-blue-600">
                 Sign In
@@ -72,16 +73,17 @@ export function LandingHeader() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <Button variant="ghost" size="sm" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
+          </div>
           </div>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
               {navLinks.map((link) => (
                 <a
@@ -93,7 +95,7 @@ export function LandingHeader() {
                   {link.label}
                 </a>
               ))}
-              <div className="px-3 py-2 space-y-2">
+              <div className="px-3 py-2 space-y-2 flex md:hidden">
                 <Link href="/signin">
                   <Button variant="ghost" className="w-full justify-start text-gray-600">
                     Sign In

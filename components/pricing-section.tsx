@@ -15,13 +15,33 @@ export function PricingSection() {
   const { trialDays } = useTrialPeriod()
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
+  const [content, setContent] = useState<any | null>(null)
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
+  const [yearlyDiscount, setYearlyDiscount] = useState(17)
+    
+      useEffect(() => {
+        const loadData = async () => {
+          try {
+            const [websiteContent, allPlans, settingsRes] = await Promise.all([
+              api.websiteContent.getAll().then((data) => data[0] || {}),
+              api.subscriptionPlans.getAll().then((plans) => plans.filter((p: any) => p.isActive)),
+              fetch("/api/system-settings").then((res) => res.json()).catch(() => ({ success: false })),
+            ])
 
-  useEffect(() => {
-    api.subscriptionPlans.getAll().then(plans => plans.filter(p => p.isActive)).then((activePlans) => {
-    setPlans(activePlans)
-    })
-    setLoading(false)
-  }, [])
+            setContent(websiteContent)
+            setPlans(allPlans)
+
+            if (settingsRes.success && settingsRes.data?.yearlyDiscountPercentage) {
+              setYearlyDiscount(settingsRes.data.yearlyDiscountPercentage)
+            }
+          } catch (error) {
+            console.error("Failed to load pricing data", error)
+          } finally {
+            setLoading(false)
+          }
+        }
+        loadData()
+      }, [])
 
   if (loading) {
     return (
@@ -38,18 +58,46 @@ export function PricingSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-balance">
-            Choose the Perfect Plan to Suit Your Needs
+            {content?.pricingTitle || "Choose the Perfect Plan to Suit Your Needs"}
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto text-pretty">
-            Start with our Standard plan and upgrade as your business grows. All plans include core features with {trialDays}-day
-            free trial.
+            {content?.pricingSubtitle || `Start with our Standard plan and upgrade as your business grows. All plans include core features with {trialDays}-day free trial.`}
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Billing Cycle Toggle */}
+        <div className="flex items-center justify-center gap-2 bg-gray-100 rounded-xl p-1 w-fit mx-auto mb-10">
+          <button
+            type="button"
+            onClick={() => setBillingCycle("monthly")}
+            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+              billingCycle === "monthly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle("yearly")}
+            className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all relative ${
+              billingCycle === "yearly" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Yearly
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+              Save {yearlyDiscount}%
+            </span>
+          </button>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {plans.map((plan, index) => {
             const isPopular = plan.name === "Premium"
             const isEnterprise = plan.name === "Enterprise"
+            const monthlyPrice = plan.price
+            const yearlyPrice = monthlyPrice * 12
+            const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100))
+            const discountedYearlyPrice = yearlyPrice - discountAmount
 
             return (
               <Card
@@ -89,29 +137,49 @@ export function PricingSection() {
                   </div>
 
                   {/* Price - Prominently Displayed */}
-                  <div className="py-4">
-                    <div className="flex items-start justify-center gap-1">
-                      <span className="text-2xl font-bold text-gray-900 mt-2">₹</span>
-                      <span className={`text-6xl font-extrabold bg-gradient-to-br bg-clip-text text-transparent ${
-                        isPopular 
-                          ? "from-blue-600 to-indigo-600" 
-                          : "from-gray-900 to-gray-700"
-                      }`}>
-                        {isEnterprise ? "Custom" : plan.price.toLocaleString()}
-                      </span>
-                    </div>
-                    {!isEnterprise && (
-                      <p className="text-sm text-gray-500 font-medium mt-2">per {plan.billingCycle}</p>
-                    )}
-                    {isEnterprise && (
-                      <p className="text-sm text-gray-500 font-medium mt-2">Tailored pricing</p>
+                  <div className="py-4 min-h-[140px] flex flex-col justify-center">
+                    {isEnterprise ? (
+                      <>
+                        <div className="flex items-start justify-center gap-1">
+                          <span className="text-2xl font-bold text-gray-900 mt-2">₹</span>
+                          <span className="text-6xl font-extrabold bg-gradient-to-br bg-clip-text text-transparent from-gray-900 to-gray-700">
+                            Custom
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium mt-2">Tailored pricing</p>
+                      </>
+                    ) : (
+                      <>
+                        {billingCycle === "yearly" && (
+                          <span className="text-sm line-through text-gray-400 mb-1">
+                            ₹{yearlyPrice.toLocaleString()}
+                          </span>
+                        )}
+                        <div className="flex items-start justify-center gap-1">
+                          <span className="text-2xl font-bold text-gray-900 mt-2">₹</span>
+                          <span
+                            className={`text-6xl font-extrabold bg-gradient-to-br bg-clip-text text-transparent ${
+                              isPopular ? "from-blue-600 to-indigo-600" : "from-gray-900 to-gray-700"
+                            }`}
+                          >
+                            {billingCycle === "yearly"
+                              ? discountedYearlyPrice.toLocaleString()
+                              : monthlyPrice.toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium mt-2">
+                          per {billingCycle === "yearly" ? "year" : "month"}
+                        </p>
+                      </>
                     )}
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6 px-6 pb-8">
+                <div className="space-y-6 px-6 pb-8 h-full flex flex-col justify-between gap-4">
+                
+                  <div>
                   {/* Divider */}
-                  <div className="border-t border-gray-200" />
+                  <div className="border-t border-gray-200 mb-2" />
 
                   {/* Features List */}
                   <ul className="space-y-3">
@@ -128,7 +196,7 @@ export function PricingSection() {
                       </li>
                     ))}
                   </ul>
-
+                  </div>
                   {/* CTA Button */}
                   <div className="pt-4">
                     {isEnterprise ? (
@@ -159,7 +227,8 @@ export function PricingSection() {
                       </Link>
                     )}
                   </div>
-                </CardContent>
+              
+                </div>
               </Card>
             )
           })}
@@ -167,7 +236,7 @@ export function PricingSection() {
 
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">
-            All plans include {trialDays}-day free trial • Cancel anytime
+            {content?.pricingFooterText || `All plans include {trialDays}-day free trial • Cancel anytime`}
           </p>
         </div>
       </div>

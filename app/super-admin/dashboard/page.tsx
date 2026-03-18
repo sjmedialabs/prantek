@@ -136,7 +136,7 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Link href="/super-admin/sales">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -176,7 +176,7 @@ export default function SuperAdminDashboard() {
           </Card>
         </Link>
 
-        <Link href="/super-admin/dashboard">
+        {/* <Link href="/super-admin/dashboard">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">System Health</CardTitle>
@@ -187,7 +187,7 @@ export default function SuperAdminDashboard() {
               <p className="text-xs text-slate-500 mt-1">Uptime</p>
             </CardContent>
           </Card>
-        </Link>
+        </Link> */}
       </div>
     </div>
   )

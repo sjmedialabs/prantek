@@ -414,7 +414,7 @@ const handleSave = async () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="heroSecondaryCtaText">Secondary CTA Text</Label>
                   <Input
@@ -431,7 +431,7 @@ const handleSave = async () => {
                     onChange={(e) => updateContent("heroSecondaryCtaLink", e.target.value)}
                   />
                 </div>
-              </div>
+              </div> */}
               <div className="space-y-2">
                 <Label htmlFor="heroDemoVideoUrl">Demo Video URL (YouTube)</Label>
                 <Input

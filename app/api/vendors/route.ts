@@ -51,12 +51,19 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const body = await request.json()
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
+      const duplicateConditions: any[] = [
+      { name: body.name },
+      { phone: body.phone }
+    ]
+
+    // ✅ Only check email if provided
+    if (body.email && body.email.trim() !== "") {
+      duplicateConditions.push({ email: body.email })
+    }
+
    const existingVendor = await mongoStore.getAll("vendors", {
       userId: filterUserId,
-      $or: [
-        { email: body.email },
-        { phone: body.phone }
-      ]
+      $or: duplicateConditions
     });
 
     console.log("Existing vendor check:", existingVendor)

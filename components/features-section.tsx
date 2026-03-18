@@ -18,6 +18,7 @@ import {
   Receipt,
 } from "lucide-react"
 import { api } from "@/lib/api-client"
+import Link from "next/link"
 
 const iconMap: Record<string, any> = {
   Shield,
@@ -37,14 +38,14 @@ const iconMap: Record<string, any> = {
 }
 
 export function FeaturesSection() {
-  const [content, setContent] = useState<WebsiteContent | null>(null)
+  const [content, setContent] = useState<any | null>(null)
 
   useEffect(() => {
     api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
     setContent(websiteContent)
     })
   }, [])
-
+console.log(content, "website content")
   const features = content?.features || [
     {
       id: 1,
@@ -120,15 +121,15 @@ export function FeaturesSection() {
             </span>
           </div>
           <h2 className="text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 bg-clip-text text-transparent">
-            Built for Success
+           {content?.featuresTitle || "Built for Success"}
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Everything you need to manage your business finances efficiently and grow with confidence
+            {content?.featureSubtitle || "Everything you need to manage your business finances efficiently and grow with confidence"} 
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => {
+          {features.map((feature: any, index: number) => {
             const IconComponent = iconMap[feature.icon] || Star
             const colors = [
               "from-blue-500 to-cyan-500",
@@ -172,8 +173,9 @@ export function FeaturesSection() {
                   <p className="text-base text-gray-600 leading-relaxed">{feature.description}</p>
 
                   {/* Decorative element */}
+                  <Link href={feature.learnMoreUrl || "#"}>
                   <div className="mt-6 flex items-center text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-sm">Learn more</span>
+                    <span className="text-sm">{feature.learnMoreText || "Learn more"}</span>
                     <svg
                       className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"
                       fill="none"
@@ -183,6 +185,7 @@ export function FeaturesSection() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
+                  </Link>
                 </CardContent>
               </Card>
             )

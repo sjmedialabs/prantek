@@ -65,12 +65,22 @@ const capitalizeWords = (value: any) => {
           .replace(/\b\w/g, (char) => char.toUpperCase())
       }
 
-      const columns = Object.keys(data[0]).map((k) => ({
-        key: k,
-        label: formatHeader(k),
-      }))
-const formattedData = data.map((row) => {
-  const newRow: any = {}
+      const seenLabels = new Set<string>()
+      const columns = Object.keys(data[0])
+        .filter((key) => key !== "userId") // Do not export userId
+        .map((key) => {
+          const label = formatHeader(key)
+          // Handle cases where different keys might produce the same header label
+          if (seenLabels.has(label)) {
+            // Use the raw key as a fallback to ensure header uniqueness
+            return { key, label: key }
+          }
+          seenLabels.add(label)
+          return { key, label }
+        })
+
+      const formattedData = data.map((row) => {
+        const newRow: any = {}
 
   Object.keys(row).forEach((key) => {
     let value = row[key]
