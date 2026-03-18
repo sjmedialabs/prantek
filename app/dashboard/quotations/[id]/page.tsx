@@ -13,6 +13,7 @@ import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { QuotationPrint } from "@/components/print-templates/quotation-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
+import { tokenStorage } from "@/lib/token-storage"
 import type { Quotation } from "@/lib/models/types"
 
 export default function QuotationDetailsPage() {
@@ -24,6 +25,7 @@ export default function QuotationDetailsPage() {
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [quotation, setQuotation] = useState<Quotation | null>(null)
   const [loading, setLoading] = useState(true)
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
 const [sellerState, setSellerState] = useState("")
 const [buyerState, setBuyerState] = useState("")
 useEffect(() => {
@@ -40,6 +42,21 @@ useEffect(() => {
    loadCompany()
 }, [])
   useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+
     getCompanyDetails().then(setCompanyDetails)
     loadQuotation()
   }, [quotationId])
@@ -236,14 +253,18 @@ const quotationForPrint = {
               Accept Quotation
             </Button>
           )} */}
-          <Button variant="outline" onClick={handleDownloadPDF}  title="While downloading the quotation please cross verify Your owned company Detils in setting">
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint}  title="While Printing the quotation please cross verify Your owned company Detils in setting">
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          {planFeatures?.pdf && (
+            <Button variant="outline" onClick={handleDownloadPDF} title="While downloading the quotation please cross verify Your owned company Detils in setting">
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+          {planFeatures?.print && (
+            <Button variant="outline" onClick={handlePrint} title="While Printing the quotation please cross verify Your owned company Detils in setting">
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          )}
         </div>
       </div>
 

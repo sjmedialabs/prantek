@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { useUser } from "@/components/auth/user-context"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
+import { tokenStorage } from "@/lib/token-storage"
 import { PaymentPrint } from "@/components/print-templates/payment-print"
 
 // Helper component for displaying details
@@ -38,8 +39,24 @@ export default function PaymentDetailsPage() {
   const [payment, setPayment] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
 
   useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+
     if (paymentId) {
       const loadPayment = async () => {
         try {
@@ -142,14 +159,18 @@ export default function PaymentDetailsPage() {
               </Button>
             </Link>
           )}
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          {planFeatures?.pdf && (
+            <Button variant="outline" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+          {planFeatures?.print && (
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          )}
           {/* {hasPermission("delete_payments") && (
             <Button variant="destructive" disabled>
               <Trash2 className="h-4 w-4 mr-2" />
