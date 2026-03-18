@@ -67,6 +67,7 @@ const indianStates = [
   "Ladakh",
   "Lakshadweep",
   "Puducherry",
+  "Other",
 ];
 
 export default function NewPaymentPage() {

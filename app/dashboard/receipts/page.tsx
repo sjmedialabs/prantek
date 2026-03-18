@@ -445,7 +445,7 @@ export default function ReceiptsPage() {
                               </Button>
                             </Link>
                            {
-                            (hasPermission("edit_receipts")) && !["cleared", "cancelled"].includes(receipt.status) &&(
+                            (hasPermission("edit_receipts")) && !["cleared", "cancelled", "refunded"].includes(receipt.status) &&(
                                <Link href={`/dashboard/receipts/${receipt._id?.toString()}/edit`}>
                               <Button variant="ghost" size="sm" title="Edit Receipt">
                                 <Edit className="h-4 w-4" />

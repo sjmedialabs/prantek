@@ -62,6 +62,7 @@ const indianStates = [
   "Ladakh",
   "Lakshadweep",
   "Puducherry",
+  "Other",
 ];
 
 export default function VendorsPage() {
@@ -579,7 +580,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                               >
                                 Delete
                               </Button> */}
-                                                                                       { (hasPermission("edit_vendors"))&&(      <Switch
+                                          { (hasPermission("edit_vendors"))&&(      <Switch
                                                           checked={true}
                                                           title="Handle the status"
                                                           onCheckedChange={async (checked) => {

@@ -555,7 +555,7 @@ const exportToCSV = () => {
                   <TableCell>
                     <Badge
                       variant={
-                        payment.status === "completed"
+                        payment.status === "cleared"
                           ? "default"
                           : payment.status === "pending"
                             ? "secondary"
