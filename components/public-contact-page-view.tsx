@@ -7,10 +7,21 @@ import { normalizePublicContactPage } from "@/lib/cms-public-pages"
 import { LandingHeader } from "@/components/landing-header"
 import { LandingFooter } from "@/components/landing-footer"
 import { CmsBodyText, CmsContentBlocks } from "@/components/cms-page-blocks"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 export function PublicContactPageView() {
   const [page, setPage] = useState(() => normalizePublicContactPage(null))
   const [loaded, setLoaded] = useState(false)
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [message, setMessage] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [formSuccess, setFormSuccess] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -30,6 +41,34 @@ export function PublicContactPageView() {
       cancelled = true
     }
   }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormError(null)
+    setFormSuccess(false)
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/contact-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, message }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) {
+        setFormError(typeof data.error === "string" ? data.error : "Something went wrong. Please try again.")
+        return
+      }
+      setFormSuccess(true)
+      setName("")
+      setEmail("")
+      setPhone("")
+      setMessage("")
+    } catch {
+      setFormError("Network error. Please try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (!loaded) {
     return (
@@ -72,6 +111,92 @@ export function PublicContactPageView() {
         )}
 
         <CmsContentBlocks blocks={page.blocks} />
+
+        <section className="max-w-xl mx-auto px-4 pb-20">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Send us a message</h2>
+          <p className="text-sm text-gray-600 mb-6">Fill in your details and we&apos;ll get back to you.</p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {formSuccess ? (
+              <div
+                className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-900 text-sm"
+                role="status"
+              >
+                Thank you! Your message has been received. We&apos;ll be in touch soon.
+              </div>
+            ) : null}
+            {formError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 text-sm" role="alert">
+                {formError}
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="contact-form-name">Name</Label>
+              <Input
+                id="contact-form-name"
+                name="name"
+                autoComplete="name"
+                value={name}
+                onChange={(e) => {
+                  setFormSuccess(false)
+                  setName(e.target.value)
+                }}
+                required
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact-form-email">Email</Label>
+              <Input
+                id="contact-form-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setFormSuccess(false)
+                  setEmail(e.target.value)
+                }}
+                required
+                maxLength={320}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact-form-phone">Phone</Label>
+              <Input
+                id="contact-form-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => {
+                  setFormSuccess(false)
+                  setPhone(e.target.value)
+                }}
+                required
+                maxLength={60}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact-form-message">Message</Label>
+              <Textarea
+                id="contact-form-message"
+                name="message"
+                value={message}
+                onChange={(e) => {
+                  setFormSuccess(false)
+                  setMessage(e.target.value)
+                }}
+                required
+                rows={5}
+                maxLength={10000}
+                className="min-h-[120px] resize-y"
+              />
+            </div>
+            <Button type="submit" className="w-full sm:w-auto" disabled={submitting}>
+              {submitting ? "Sending…" : "Submit"}
+            </Button>
+          </form>
+        </section>
       </main>
       <LandingFooter />
     </div>

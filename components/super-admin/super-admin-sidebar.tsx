@@ -16,8 +16,10 @@ import {
   Globe,
   Activity,
   Video,
+  Inbox,
   X,
 } from "lucide-react"
+import { useSuperAdminSidebarCollapsed } from "@/components/super-admin/super-admin-sidebar-collapsed-context"
 
 const navigationItems = [
   { name: "Dashboard", href: "/super-admin/dashboard", icon: LayoutDashboard, permission: null },
@@ -32,6 +34,7 @@ const navigationItems = [
   { name: "Activity Log", href: "/super-admin/activity", icon: Activity, permission: null },
   { name: "Website CMS", href: "/super-admin/cms", icon: Globe, permission: null },
   { name: "Videos", href: "/super-admin/videos", icon: Video, permission: null },
+  { name: "Leads", href: "/super-admin/leads", icon: Inbox, permission: null },
   { name: "Platform Settings", href: "/super-admin/settings", icon: Settings, permission: "platform_management" },
 ]
 
@@ -41,7 +44,7 @@ type SuperAdminSidebarProps = {
 }
 
 export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps = {}) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, toggleCollapsed } = useSuperAdminSidebarCollapsed()
   const [brandLogo, setBrandLogo] = useState<string | null>(null)
   const [brandName, setBrandName] = useState("Admin Panel")
   const pathname = usePathname()
@@ -98,7 +101,7 @@ export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps 
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => toggleCollapsed()}
             className="min-h-[44px] min-w-[44px] shrink-0 p-2 rounded-lg"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >

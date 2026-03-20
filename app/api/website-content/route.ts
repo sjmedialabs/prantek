@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
+import { applyLandingContentDefaults } from "@/lib/website-content-landing-defaults"
 
 // GET - public access
 export async function GET(req: NextRequest) {
@@ -10,10 +11,12 @@ export async function GET(req: NextRequest) {
     const section = searchParams.get("section")
     
     const query = section ? { section } : {}
-    const content = await db
+    const raw = await db
       .collection(Collections.WEBSITE_CONTENT || "website_content")
       .find(query)
       .toArray()
+
+    const content = raw.map((doc) => applyLandingContentDefaults(doc as Record<string, unknown>))
 
     return NextResponse.json({ success: true, data: content, content })
   } catch (error) {

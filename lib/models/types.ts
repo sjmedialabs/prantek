@@ -29,6 +29,34 @@ export interface PublicContactPageContent {
   blocks: CmsPublicPageBlock[]
 }
 
+/** Submitted from public /contact form; listed in super-admin Leads */
+export interface ContactLead extends BaseDocument {
+  name: string
+  email: string
+  phone: string
+  message: string
+  source: "contact_page"
+}
+
+/** Top navigation link on public landing header */
+export interface LandingNavLink {
+  label: string
+  href: string
+}
+
+/** Stats row in dashboard showcase preview card */
+export interface ShowcaseCardStat {
+  label: string
+  value: string
+}
+
+/** Financial mock row in dashboard showcase preview */
+export interface ShowcaseFinanceMockRow {
+  label: string
+  value: string
+  trend: string
+}
+
 export interface BaseDocument {
   _id?: ObjectId
   createdAt: Date
@@ -237,6 +265,9 @@ export interface WebsiteContent {
     title: string
     description: string
     icon: string
+    image?: string
+    learnMoreText?: string
+    learnMoreUrl?: string
   }>
 
   // Industries Section
@@ -317,6 +348,55 @@ export interface WebsiteContent {
 
   /** Structured content for /contact page */
   publicContactPage?: PublicContactPageContent
+
+  // --- Landing header & section chrome (all controlled from CMS; merged from defaults when missing in DB)
+  landingNavLinks?: LandingNavLink[]
+  landingHeaderSignInLabel?: string
+  landingHeaderCtaLabel?: string
+
+  heroWatchDemoLabel?: string
+  heroTrialBullet1?: string
+  heroTrialBullet2?: string
+  heroSecureBadgeText?: string
+  heroRightImageAlt?: string
+
+  featuresSectionBadge?: string
+  industriesSectionBadge?: string
+  industriesCardCtaText?: string
+
+  showcaseCardTitle?: string
+  showcaseCardBadge?: string
+  showcaseCardStats?: ShowcaseCardStat[]
+  showcaseFinanceTitle?: string
+  showcaseFinanceRows?: ShowcaseFinanceMockRow[]
+  showcaseActivityTitle?: string
+  showcaseActivityLines?: string[]
+
+  faqSectionBadge?: string
+
+  pricingMonthlyLabel?: string
+  pricingYearlyLabel?: string
+  pricingYearlySaveTemplate?: string
+  pricingPlanTrialBadgeTemplate?: string
+  pricingPopularRibbonText?: string
+  pricingPopularPlanName?: string
+  pricingEnterprisePlanName?: string
+  pricingEnterpriseDisplayPrice?: string
+  pricingEnterpriseDisplaySubtext?: string
+  pricingContactSalesLabel?: string
+  pricingGetStartedLabel?: string
+  pricingPerMonthLabel?: string
+  pricingPerYearLabel?: string
+
+  /** Help Center (/help-center) chrome (categories still come from Video admin) */
+  videosPageSidebarTitle?: string
+  videosPageBrowseMobileLabel?: string
+  videosPageMoreHeading?: string
+  videosPageEmptySelect?: string
+  videosPageAllInCategoryTemplate?: string
+  videosPageLoadingLabel?: string
+  videosPageNoVideosLabel?: string
+  videosPageNoOtherInTabLabel?: string
 
   updatedAt: string
 }

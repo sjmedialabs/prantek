@@ -4,18 +4,25 @@ import { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { api } from "@/lib/api-client"
+import type { WebsiteContent } from "@/lib/models/types"
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
-    setContent(websiteContent)
-    })
+    api.websiteContent
+      .getAll()
+      .then((data) => (data[0] || null) as WebsiteContent | null)
+      .then((websiteContent) => {
+        setContent(websiteContent)
+      })
   }, [])
 
-  const faqs = content?.faqs || []
+  const faqs = content?.faqs ?? []
+  const faqBadge = content?.faqSectionBadge?.trim() ?? ""
+  const faqTitle = content?.faqTitle?.trim() ?? ""
+  const faqSubtitle = content?.faqSubtitle?.trim() ?? ""
 
   if (faqs.length === 0) {
     return null
@@ -25,15 +32,15 @@ export function FAQSection() {
     <section className="py-20 bg-white" id="faq">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <div className="inline-block mb-4">
-            <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider bg-blue-50 px-4 py-2 rounded-full">
-              Support
-            </span>
-          </div>
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{content?.faqTitle || "FAQs"}</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            {content?.faqSubtitle || "Got questions? We've got answers"}
-          </p>
+          {faqBadge ? (
+            <div className="inline-block mb-4">
+              <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider bg-blue-50 px-4 py-2 rounded-full">
+                {faqBadge}
+              </span>
+            </div>
+          ) : null}
+          {faqTitle ? <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{faqTitle}</h2> : null}
+          {faqSubtitle ? <p className="text-lg text-gray-600 max-w-2xl mx-auto">{faqSubtitle}</p> : null}
         </div>
 
         <div className="space-y-3">

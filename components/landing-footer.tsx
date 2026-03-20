@@ -126,6 +126,11 @@ export function LandingFooter() {
                   </Link>
                 </li>
               ))}
+              <li key="help-center">
+                <Link href="/help-center" className="hover:text-white transition-colors">
+                  Help Center
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

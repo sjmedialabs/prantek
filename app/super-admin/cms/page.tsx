@@ -56,6 +56,10 @@ export default function CMSPage() {
           features: websiteContent.features || [],
           industries: websiteContent.industries || [],
           showcaseFeatures: websiteContent.showcaseFeatures || [],
+          showcaseCardStats: websiteContent.showcaseCardStats || [],
+          showcaseFinanceRows: websiteContent.showcaseFinanceRows || [],
+          showcaseActivityLines: websiteContent.showcaseActivityLines || [],
+          landingNavLinks: websiteContent.landingNavLinks || [],
           testimonials: websiteContent.testimonials || [],
           faqs: websiteContent.faqs || [],
           ctaFeatures: websiteContent.ctaFeatures || [],
@@ -184,6 +188,81 @@ const handleSave = async () => {
     })
   }
 
+  const addLandingNavLink = () => {
+    if (!content) return
+    updateContent("landingNavLinks", [...(content.landingNavLinks || []), { label: "", href: "" }])
+  }
+  const updateLandingNavLink = (index: number, field: "label" | "href", value: string) => {
+    if (!content) return
+    const links = [...(content.landingNavLinks || [])]
+    links[index] = { ...links[index], [field]: value }
+    updateContent("landingNavLinks", links)
+  }
+  const removeLandingNavLink = (index: number) => {
+    if (!content) return
+    updateContent(
+      "landingNavLinks",
+      (content.landingNavLinks || []).filter((_, i) => i !== index),
+    )
+  }
+
+  const addShowcaseStat = () => {
+    if (!content) return
+    updateContent("showcaseCardStats", [...(content.showcaseCardStats || []), { label: "", value: "" }])
+  }
+  const updateShowcaseStat = (index: number, field: "label" | "value", value: string) => {
+    if (!content) return
+    const rows = [...(content.showcaseCardStats || [])]
+    rows[index] = { ...rows[index], [field]: value }
+    updateContent("showcaseCardStats", rows)
+  }
+  const removeShowcaseStat = (index: number) => {
+    if (!content) return
+    updateContent(
+      "showcaseCardStats",
+      (content.showcaseCardStats || []).filter((_, i) => i !== index),
+    )
+  }
+
+  const addShowcaseFinanceRow = () => {
+    if (!content) return
+    updateContent("showcaseFinanceRows", [
+      ...(content.showcaseFinanceRows || []),
+      { label: "", value: "", trend: "" },
+    ])
+  }
+  const updateShowcaseFinanceRow = (index: number, field: "label" | "value" | "trend", value: string) => {
+    if (!content) return
+    const rows = [...(content.showcaseFinanceRows || [])]
+    rows[index] = { ...rows[index], [field]: value }
+    updateContent("showcaseFinanceRows", rows)
+  }
+  const removeShowcaseFinanceRow = (index: number) => {
+    if (!content) return
+    updateContent(
+      "showcaseFinanceRows",
+      (content.showcaseFinanceRows || []).filter((_, i) => i !== index),
+    )
+  }
+
+  const addShowcaseActivityLine = () => {
+    if (!content) return
+    updateContent("showcaseActivityLines", [...(content.showcaseActivityLines || []), ""])
+  }
+  const updateShowcaseActivityLine = (index: number, value: string) => {
+    if (!content) return
+    const lines = [...(content.showcaseActivityLines || [])]
+    lines[index] = value
+    updateContent("showcaseActivityLines", lines)
+  }
+  const removeShowcaseActivityLine = (index: number) => {
+    if (!content) return
+    updateContent(
+      "showcaseActivityLines",
+      (content.showcaseActivityLines || []).filter((_, i) => i !== index),
+    )
+  }
+
   // Feature management
   const addFeature = () => {
     if (!content) return
@@ -191,6 +270,7 @@ const handleSave = async () => {
       id: Date.now().toString(),
       title: "New Feature",
       description: "Feature description",
+      icon: "Star",
       image: "",
       learnMoreText: "Learn More",
       learnMoreUrl: "",
@@ -390,6 +470,7 @@ const handleSave = async () => {
       <Tabs defaultValue="branding" className="space-y-6">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="navigation">Navigation</TabsTrigger>
           <TabsTrigger value="hero">Hero</TabsTrigger>
           <TabsTrigger value="trusted">Trusted By</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
@@ -437,6 +518,133 @@ const handleSave = async () => {
                 description="Upload your company logo or provide a URL"
                 previewClassName="w-32 h-32"
               />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Navigation / header labels */}
+        <TabsContent value="navigation" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Landing header</CardTitle>
+              <CardDescription>Top navigation links and button labels (public site only).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hdr-signin">Sign in label</Label>
+                  <Input
+                    id="hdr-signin"
+                    value={content.landingHeaderSignInLabel || ""}
+                    onChange={(e) => updateContent("landingHeaderSignInLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hdr-cta">Primary CTA label</Label>
+                  <Input
+                    id="hdr-cta"
+                    value={content.landingHeaderCtaLabel || ""}
+                    onChange={(e) => updateContent("landingHeaderCtaLabel", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Nav links</Label>
+                <p className="text-sm text-muted-foreground">Order matches left-to-right on desktop.</p>
+                {(content.landingNavLinks || []).map((link, index) => (
+                  <div key={index} className="flex flex-col sm:flex-row gap-2 items-start">
+                    <Input
+                      placeholder="Label"
+                      value={link.label}
+                      onChange={(e) => updateLandingNavLink(index, "label", e.target.value)}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Href e.g. /#pricing"
+                      value={link.href}
+                      onChange={(e) => updateLandingNavLink(index, "href", e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeLandingNavLink(index)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" onClick={addLandingNavLink} variant="outline" className="w-full bg-transparent">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add link
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Help Center (/help-center)</CardTitle>
+              <CardDescription>
+                Labels on the public Help Center (categories and videos still managed in Video admin).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Sidebar heading</Label>
+                <Input
+                  value={content.videosPageSidebarTitle || ""}
+                  onChange={(e) => updateContent("videosPageSidebarTitle", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Mobile “browse” button label</Label>
+                <Input
+                  value={content.videosPageBrowseMobileLabel || ""}
+                  onChange={(e) => updateContent("videosPageBrowseMobileLabel", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>“More videos” section heading</Label>
+                <Input
+                  value={content.videosPageMoreHeading || ""}
+                  onChange={(e) => updateContent("videosPageMoreHeading", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Empty state (no category selected)</Label>
+                <Input
+                  value={content.videosPageEmptySelect || ""}
+                  onChange={(e) => updateContent("videosPageEmptySelect", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>“All videos in category” item template</Label>
+                <Input
+                  value={content.videosPageAllInCategoryTemplate || ""}
+                  onChange={(e) => updateContent("videosPageAllInCategoryTemplate", e.target.value)}
+                  placeholder="All videos – {name}"
+                />
+              </div>
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Loading label</Label>
+                  <Input
+                    value={content.videosPageLoadingLabel || ""}
+                    onChange={(e) => updateContent("videosPageLoadingLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>No videos message</Label>
+                  <Input
+                    value={content.videosPageNoVideosLabel || ""}
+                    onChange={(e) => updateContent("videosPageNoVideosLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>No other in tab</Label>
+                  <Input
+                    value={content.videosPageNoOtherInTabLabel || ""}
+                    onChange={(e) => updateContent("videosPageNoOtherInTabLabel", e.target.value)}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -609,6 +817,15 @@ const handleSave = async () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="featuresSectionBadge">Small badge above title</Label>
+                <Input
+                  id="featuresSectionBadge"
+                  value={content.featuresSectionBadge || ""}
+                  onChange={(e) => updateContent("featuresSectionBadge", e.target.value)}
+                  placeholder="e.g. Features"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="featuresTitle">Section Title</Label>
                 <Input
                   id="featuresTitle"
@@ -648,9 +865,17 @@ const handleSave = async () => {
                               rows={2}
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label>Icon name (Lucide)</Label>
+                            <Input
+                              value={feature.icon || ""}
+                              onChange={(e) => updateFeature(feature.id, "icon", e.target.value)}
+                              placeholder="e.g. Shield, Zap, Star"
+                            />
+                          </div>
                           <ImageUpload
                             label="Feature Image"
-                            value={feature.image || feature.icon || ""}
+                            value={feature.image || ""}
                             onChange={(value) => updateFeature(feature.id, "image", value)}
                             description="Upload an image or provide a URL"
                             previewClassName="w-24 h-24"
@@ -822,6 +1047,118 @@ const handleSave = async () => {
                   Add Feature
                 </Button>
               </div>
+
+              <div className="border-t pt-6 space-y-4">
+                <h3 className="text-base font-semibold">Preview card (right column)</h3>
+                <p className="text-sm text-muted-foreground">
+                  Optional mock dashboard card beside the main copy.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Card title</Label>
+                    <Input
+                      value={content.showcaseCardTitle || ""}
+                      onChange={(e) => updateContent("showcaseCardTitle", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Card badge</Label>
+                    <Input
+                      value={content.showcaseCardBadge || ""}
+                      onChange={(e) => updateContent("showcaseCardBadge", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Label>Top stats (3 columns)</Label>
+                {(content.showcaseCardStats || []).map((row, index) => (
+                  <div key={index} className="flex flex-wrap gap-2 items-center">
+                    <Input
+                      placeholder="Label"
+                      value={row.label}
+                      onChange={(e) => updateShowcaseStat(index, "label", e.target.value)}
+                      className="flex-1 min-w-[120px]"
+                    />
+                    <Input
+                      placeholder="Value"
+                      value={row.value}
+                      onChange={(e) => updateShowcaseStat(index, "value", e.target.value)}
+                      className="flex-1 min-w-[120px]"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeShowcaseStat(index)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" onClick={addShowcaseStat} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add stat
+                </Button>
+
+                <div className="space-y-2">
+                  <Label>Financial block title</Label>
+                  <Input
+                    value={content.showcaseFinanceTitle || ""}
+                    onChange={(e) => updateContent("showcaseFinanceTitle", e.target.value)}
+                  />
+                </div>
+                {(content.showcaseFinanceRows || []).map((row, index) => (
+                  <div key={index} className="flex flex-wrap gap-2 items-center">
+                    <Input
+                      placeholder="Label"
+                      value={row.label}
+                      onChange={(e) => updateShowcaseFinanceRow(index, "label", e.target.value)}
+                      className="flex-1 min-w-[100px]"
+                    />
+                    <Input
+                      placeholder="Value"
+                      value={row.value}
+                      onChange={(e) => updateShowcaseFinanceRow(index, "value", e.target.value)}
+                      className="flex-1 min-w-[80px]"
+                    />
+                    <Input
+                      placeholder="Trend e.g. +12%"
+                      value={row.trend}
+                      onChange={(e) => updateShowcaseFinanceRow(index, "trend", e.target.value)}
+                      className="w-24"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeShowcaseFinanceRow(index)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" onClick={addShowcaseFinanceRow} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add row
+                </Button>
+
+                <div className="space-y-2">
+                  <Label>Activity block title</Label>
+                  <Input
+                    value={content.showcaseActivityTitle || ""}
+                    onChange={(e) => updateContent("showcaseActivityTitle", e.target.value)}
+                  />
+                </div>
+                {(content.showcaseActivityLines || []).map((line, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={line}
+                      onChange={(e) => updateShowcaseActivityLine(index, e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeShowcaseActivityLine(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" onClick={addShowcaseActivityLine} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add activity line
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -966,6 +1303,104 @@ const handleSave = async () => {
                   value={content.pricingFooterText}
                   onChange={(e) => updateContent("pricingFooterText", e.target.value)}
                 />
+                <p className="text-sm text-muted-foreground">Use {"{trialDays}"} for dynamic trial length.</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label>Monthly tab label</Label>
+                  <Input
+                    value={content.pricingMonthlyLabel || ""}
+                    onChange={(e) => updateContent("pricingMonthlyLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Yearly tab label</Label>
+                  <Input
+                    value={content.pricingYearlyLabel || ""}
+                    onChange={(e) => updateContent("pricingYearlyLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Yearly save badge</Label>
+                  <Input
+                    value={content.pricingYearlySaveTemplate || ""}
+                    onChange={(e) => updateContent("pricingYearlySaveTemplate", e.target.value)}
+                    placeholder="Save {yearlyDiscount}%"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Corner trial badge (non-enterprise)</Label>
+                  <Input
+                    value={content.pricingPlanTrialBadgeTemplate || ""}
+                    onChange={(e) => updateContent("pricingPlanTrialBadgeTemplate", e.target.value)}
+                    placeholder="{trialDays}-Day Free Trial"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Popular ribbon text</Label>
+                  <Input
+                    value={content.pricingPopularRibbonText || ""}
+                    onChange={(e) => updateContent("pricingPopularRibbonText", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Popular plan name (exact match)</Label>
+                  <Input
+                    value={content.pricingPopularPlanName || ""}
+                    onChange={(e) => updateContent("pricingPopularPlanName", e.target.value)}
+                    placeholder="Premium"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Enterprise plan name (exact match)</Label>
+                  <Input
+                    value={content.pricingEnterprisePlanName || ""}
+                    onChange={(e) => updateContent("pricingEnterprisePlanName", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Enterprise price display</Label>
+                  <Input
+                    value={content.pricingEnterpriseDisplayPrice || ""}
+                    onChange={(e) => updateContent("pricingEnterpriseDisplayPrice", e.target.value)}
+                    placeholder="Custom"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Enterprise subtext</Label>
+                  <Input
+                    value={content.pricingEnterpriseDisplaySubtext || ""}
+                    onChange={(e) => updateContent("pricingEnterpriseDisplaySubtext", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Contact sales button</Label>
+                  <Input
+                    value={content.pricingContactSalesLabel || ""}
+                    onChange={(e) => updateContent("pricingContactSalesLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Get started button</Label>
+                  <Input
+                    value={content.pricingGetStartedLabel || ""}
+                    onChange={(e) => updateContent("pricingGetStartedLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Per month caption</Label>
+                  <Input
+                    value={content.pricingPerMonthLabel || ""}
+                    onChange={(e) => updateContent("pricingPerMonthLabel", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Per year caption</Label>
+                  <Input
+                    value={content.pricingPerYearLabel || ""}
+                    onChange={(e) => updateContent("pricingPerYearLabel", e.target.value)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -979,6 +1414,14 @@ const handleSave = async () => {
               <CardDescription>Manage frequently asked questions</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="faqSectionBadge">Small badge above title</Label>
+                <Input
+                  id="faqSectionBadge"
+                  value={content.faqSectionBadge || ""}
+                  onChange={(e) => updateContent("faqSectionBadge", e.target.value)}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="faqTitle">Section Title</Label>
                 <Input

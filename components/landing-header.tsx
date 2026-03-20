@@ -18,14 +18,9 @@ export function LandingHeader() {
       .then((websiteContent) => setContent(websiteContent ?? null))
   }, [])
 
-  const navLinks = [
-    { href: "/#features", label: "Features" },
-    { href: "/#industries", label: "Industries" },
-    { href: "/#pricing", label: "Pricing" },
-    { href: "/videos", label: "Videos" },
-    { href: "/#testimonials", label: "Customer Stories" },
-    { href: "/#faq", label: "FAQ" },
-  ]
+  const navLinks = content?.landingNavLinks?.filter((l) => l.label?.trim() && l.href?.trim()) ?? []
+  const signInLabel = content?.landingHeaderSignInLabel?.trim() ?? ""
+  const ctaLabel = content?.landingHeaderCtaLabel?.trim() ?? ""
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
@@ -48,11 +43,10 @@ export function LandingHeader() {
             </div>
           </div>
 
-          {/* Desktop Navigation */}
           <nav className="hidden lg:flex space-x-8">
             {navLinks.map((link) => (
               <a
-                key={link.href}
+                key={`${link.href}-${link.label}`}
                 href={link.href}
                 className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
               >
@@ -61,35 +55,36 @@ export function LandingHeader() {
             ))}
           </nav>
 
-          {/* Desktop CTA */}
           <div className="flex flex-row gap-4">
-          <div className="hidden md:flex items-center justify-end space-x-4">
-            <Link href="/signin">
-              <Button variant="ghost" className="text-gray-600 hover:text-blue-600">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full">Get Started</Button>
-            </Link>
-          </div>
+            <div className="hidden md:flex items-center justify-end space-x-4">
+              {signInLabel ? (
+                <Link href="/signin">
+                  <Button variant="ghost" className="text-gray-600 hover:text-blue-600">
+                    {signInLabel}
+                  </Button>
+                </Link>
+              ) : null}
+              {ctaLabel ? (
+                <Link href="/signup">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full">{ctaLabel}</Button>
+                </Link>
+              ) : null}
+            </div>
 
-          {/* Mobile menu button */}
-          <div className="lg:hidden">
-            <Button variant="ghost" size="sm" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-          </div>
+            <div className="lg:hidden">
+              <Button variant="ghost" size="sm" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="lg:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
               {navLinks.map((link) => (
                 <a
-                  key={link.href}
+                  key={`${link.href}-${link.label}`}
                   href={link.href}
                   className="block px-3 py-2 text-gray-600 hover:text-blue-600"
                   onClick={() => setIsMenuOpen(false)}
@@ -98,14 +93,18 @@ export function LandingHeader() {
                 </a>
               ))}
               <div className="px-3 py-2 space-y-2 flex md:hidden">
-                <Link href="/signin">
-                  <Button variant="ghost" className="w-full justify-start text-gray-600">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full">Get Started</Button>
-                </Link>
+                {signInLabel ? (
+                  <Link href="/signin">
+                    <Button variant="ghost" className="w-full justify-start text-gray-600">
+                      {signInLabel}
+                    </Button>
+                  </Link>
+                ) : null}
+                {ctaLabel ? (
+                  <Link href="/signup">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-full">{ctaLabel}</Button>
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [{ source: "/videos", destination: "/help-center", permanent: true }]
+  },
   output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
