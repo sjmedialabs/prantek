@@ -25,13 +25,33 @@ export async function GET(request: NextRequest) {
 
     /**************************************
      * HANDLE SUPER-ADMIN (special case)
+     * DB super-admins have a real ObjectId in the token; only env-based fallback uses "super-admin".
      **************************************/
     if (payload.userId === "super-admin" || payload.role === "super-admin") {
+      const idFromToken = (() => {
+        const uid = payload.userId && String(payload.userId)
+        if (uid && ObjectId.isValid(uid)) return uid
+        const alias = payload.id && String(payload.id)
+        if (alias && ObjectId.isValid(alias)) return alias
+        return "super-admin"
+      })()
+
+      let displayName = "Super Admin"
+      if (idFromToken !== "super-admin" && ObjectId.isValid(idFromToken)) {
+        try {
+          const db = await connectDB()
+          const doc = await db.collection(Collections.USERS).findOne({ _id: new ObjectId(idFromToken) })
+          if (doc && typeof doc.name === "string" && doc.name.trim()) displayName = doc.name
+        } catch {
+          // ignore
+        }
+      }
+
       return NextResponse.json({
         user: {
-          id: "super-admin",
+          id: idFromToken,
           email: payload.email,
-          name: "Super Admin",
+          name: displayName,
           role: "super-admin",
           userType: "super-admin",
           permissions: ["*"],

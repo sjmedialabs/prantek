@@ -69,11 +69,60 @@ export async function POST(request: NextRequest) {
     // Handle trial registration - Give trial based on system configuration when a plan is selected
     let subscriptionStatus = "inactive"
     let subscriptionStartDate: Date | null = null
-    
+    let subscriptionEndDate: Date | null = data.subscriptionEndDate ? new Date(data.subscriptionEndDate) : null
+    let trialEndsAt: Date | null = data.trialEndDate ? new Date(data.trialEndDate) : null
+    let trialEndDate: Date | null = trialEndsAt
+
     if (data.subscriptionPlanId) {
       // User selected a plan - automatically start trial with configured period
       subscriptionStatus = "trial"
       subscriptionStartDate = new Date()
+      // Super-admin "Create client" and other flows often omit dates; use system trial days from settings
+      if (!subscriptionEndDate || Number.isNaN(subscriptionEndDate.getTime())) {
+        subscriptionEndDate = await calculateTrialEndDate()
+      }
+      if (!trialEndsAt || Number.isNaN(trialEndsAt.getTime())) {
+        trialEndsAt = subscriptionEndDate
+        trialEndDate = subscriptionEndDate
+      } else if (!subscriptionEndDate || Number.isNaN(subscriptionEndDate.getTime())) {
+        subscriptionEndDate = trialEndsAt
+      }
+    }
+
+    /** Initial history row so super-admin "subscription history" and APIs see the trial period. */
+    let subscriptionHistory: object[] | undefined
+    if (
+      data.subscriptionPlanId &&
+      subscriptionStartDate &&
+      subscriptionEndDate &&
+      !Number.isNaN(subscriptionStartDate.getTime()) &&
+      !Number.isNaN(subscriptionEndDate.getTime())
+    ) {
+      let planName = "Plan"
+      try {
+        if (ObjectId.isValid(String(data.subscriptionPlanId))) {
+          const planDoc = await db
+            .collection(Collections.SUBSCRIPTION_PLANS)
+            .findOne({ _id: new ObjectId(String(data.subscriptionPlanId)) })
+          if (planDoc && typeof (planDoc as { name?: string }).name === "string") {
+            planName = (planDoc as { name: string }).name
+          }
+        }
+      } catch {
+        // ignore plan name lookup failures
+      }
+      subscriptionHistory = [
+        {
+          planId: String(data.subscriptionPlanId),
+          planName,
+          startDate: subscriptionStartDate.toISOString(),
+          endDate: subscriptionEndDate.toISOString(),
+          status: subscriptionStatus === "trial" ? "trial" : "active",
+          amount: 0,
+          assignedAt: new Date().toISOString(),
+          source: "signup" as const,
+        },
+      ]
     }
 
     // If this registration was triggered after a Razorpay payment,
@@ -112,11 +161,11 @@ export async function POST(request: NextRequest) {
       paidAmount: data.paidAmount || 0,
       discountPercentage: data.discountPercentage || 0,
       subscriptionStatus,
-      trialEndsAt: data.trialEndDate || null,
-      trialEndDate: data.trialEndDate || null,
+      trialEndsAt,
+      trialEndDate,
       trialPaymentProcessed: false,
       subscriptionStartDate,
-      subscriptionEndDate: data.subscriptionEndDate || null,
+      subscriptionEndDate,
       razorpayCustomerId,
       razorpayTokenId,
       razorpaySubscriptionId: data.razorpaySubscriptionId || undefined,
@@ -127,6 +176,7 @@ export async function POST(request: NextRequest) {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      ...(subscriptionHistory ? { subscriptionHistory } : {}),
     }
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)

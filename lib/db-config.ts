@@ -36,10 +36,12 @@ export const COLLECTIONS = {
   NOTIFICATIONSETTINGS:"notification_settings",
   OTP_VERIFICATIONS: "otp_verifications", // Legacy signup OTP
   OTPS: "otps", // Email OTP (USE_EMAIL_SERVICE toggle); TTL index on expiresAt recommended
-  VIDEO_CATEGORIES: "video_categories", // Left menu items on /videos page
+  VIDEO_CATEGORIES: "video_categories", // Help Center sidebar topics (public /help-center)
   VIDEOS: "videos", // title, description, youtubeUrl, categoryId, tab, order
   RECONCILIATION_ENTRIES: "reconciliation_entries",
   BANK_STATEMENTS: "bank_statements",
+  /** Public contact form submissions (e.g. /contact) */
+  CONTACT_LEADS: "contact_leads",
 } as const
 
 export const INDEXES = {
@@ -154,6 +156,7 @@ export const INDEXES = {
     { key: { status: 1 } },
     { key: { createdAt: -1 } },
   ],
+  CONTACT_LEADS: [{ key: { createdAt: -1 } }, { key: { email: 1 } }],
 }
 
 // Alias for backward compatibility

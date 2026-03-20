@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -16,8 +16,10 @@ import {
   Globe,
   Activity,
   Video,
+  Inbox,
   X,
 } from "lucide-react"
+import { useSuperAdminSidebarCollapsed } from "@/components/super-admin/super-admin-sidebar-collapsed-context"
 
 const navigationItems = [
   { name: "Dashboard", href: "/super-admin/dashboard", icon: LayoutDashboard, permission: null },
@@ -32,6 +34,7 @@ const navigationItems = [
   { name: "Activity Log", href: "/super-admin/activity", icon: Activity, permission: null },
   { name: "Website CMS", href: "/super-admin/cms", icon: Globe, permission: null },
   { name: "Videos", href: "/super-admin/videos", icon: Video, permission: null },
+  { name: "Leads", href: "/super-admin/leads", icon: Inbox, permission: null },
   { name: "Platform Settings", href: "/super-admin/settings", icon: Settings, permission: "platform_management" },
 ]
 
@@ -41,7 +44,7 @@ type SuperAdminSidebarProps = {
 }
 
 export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps = {}) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, toggleCollapsed } = useSuperAdminSidebarCollapsed()
   const [brandLogo, setBrandLogo] = useState<string | null>(null)
   const [brandName, setBrandName] = useState("Admin Panel")
   const pathname = usePathname()
@@ -53,8 +56,18 @@ export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps 
     if (savedName) setBrandName(savedName)
   }, [])
 
+  /** Close drawer only after navigation, not on first mount (avoids instant close when opening sheet). */
+  const prevPathnameRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isMobile && onClose) onClose()
+    if (!isMobile || !onClose) return
+    if (prevPathnameRef.current === null) {
+      prevPathnameRef.current = pathname
+      return
+    }
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname
+      onClose()
+    }
   }, [pathname, isMobile, onClose])
 
   const effectiveCollapsed = isMobile ? false : collapsed
@@ -62,7 +75,7 @@ export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps 
 
   const wrapperClass = isMobile
     ? "flex flex-col h-full w-full bg-white"
-    : `${effectiveCollapsed ? "w-20" : "w-64"} fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`
+    : `${effectiveCollapsed ? "w-20" : "w-64"} hidden lg:flex fixed left-0 top-0 z-30 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex-col`
 
   return (
     <div className={wrapperClass}>
@@ -98,7 +111,7 @@ export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps 
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => toggleCollapsed()}
             className="min-h-[44px] min-w-[44px] shrink-0 p-2 rounded-lg"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >

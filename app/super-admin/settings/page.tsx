@@ -6,15 +6,22 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { Settings, Save, Calendar, Percent } from "lucide-react"
+import { Settings, Save, Calendar, Percent, KeyRound } from "lucide-react"
+import { useUser } from "@/components/auth/user-context"
+import { api } from "@/lib/api-client"
 
 export default function SuperAdminSettingsPage() {
+  const { user } = useUser()
   const [settings, setSettings] = useState({
     defaultTrialDays: "14",
     yearlyDiscountPercentage: "17",
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [pwdCurrent, setPwdCurrent] = useState("")
+  const [pwdNew, setPwdNew] = useState("")
+  const [pwdConfirm, setPwdConfirm] = useState("")
+  const [pwdSaving, setPwdSaving] = useState(false)
 
   // Load trial period from API
   useEffect(() => {
@@ -85,6 +92,39 @@ export default function SuperAdminSettingsPage() {
       toast.error('Failed to save settings')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handlePasswordUpdate = async () => {
+    const uid = user?.id
+    if (!uid) {
+      toast.error("You must be signed in to change your password.")
+      return
+    }
+    if (!pwdCurrent || !pwdNew || !pwdConfirm) {
+      toast.error("Fill in current password, new password, and confirmation.")
+      return
+    }
+    if (pwdNew !== pwdConfirm) {
+      toast.error("New password and confirmation do not match.")
+      return
+    }
+    if (pwdNew.length < 8) {
+      toast.error("New password must be at least 8 characters.")
+      return
+    }
+    setPwdSaving(true)
+    try {
+      await api.auth.updatePassword(String(uid), pwdCurrent, pwdNew, pwdConfirm, user?.email)
+      toast.success("Password updated successfully.")
+      setPwdCurrent("")
+      setPwdNew("")
+      setPwdConfirm("")
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to update password"
+      toast.error(msg)
+    } finally {
+      setPwdSaving(false)
     }
   }
 
@@ -168,6 +208,54 @@ export default function SuperAdminSettingsPage() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Account password
+            </CardTitle>
+            <CardDescription>
+              Change your super admin password. You must enter your current password.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 max-w-md">
+            <div className="space-y-2">
+              <Label htmlFor="pwd-current">Current password</Label>
+              <Input
+                id="pwd-current"
+                type="password"
+                autoComplete="current-password"
+                value={pwdCurrent}
+                onChange={(e) => setPwdCurrent(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pwd-new">New password</Label>
+              <Input
+                id="pwd-new"
+                type="password"
+                autoComplete="new-password"
+                value={pwdNew}
+                onChange={(e) => setPwdNew(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">At least 8 characters, with at least one letter and one number.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pwd-confirm">Confirm new password</Label>
+              <Input
+                id="pwd-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={pwdConfirm}
+                onChange={(e) => setPwdConfirm(e.target.value)}
+              />
+            </div>
+            <Button type="button" onClick={handlePasswordUpdate} disabled={pwdSaving} className="min-w-[140px]">
+              {pwdSaving ? "Updating…" : "Update password"}
+            </Button>
           </CardContent>
         </Card>
 

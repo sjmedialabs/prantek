@@ -28,20 +28,19 @@ interface Notification {
 export default function SuperAdminHeader() {
   const router = useRouter()
   const { user, logout } = useUser()
-  const { isSidebarOpen, openSidebar } = useSidebar()
+  const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications()
-      // Only poll for non-super-admin users
-      if (user.role !== "super-admin") {
-        const interval = setInterval(fetchNotifications, 30000)
-        return () => clearInterval(interval)
-      }
-    }
+    if (!user) return
+    // Super-admin shell: skip notifications API (saves a round-trip on every load/navigation)
+    if (user.role === "super-admin") return
+
+    void fetchNotifications()
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
   }, [user])
 
   const fetchNotifications = async () => {
@@ -122,9 +121,9 @@ export default function SuperAdminHeader() {
         <div className="flex items-center gap-2 min-w-0 lg:hidden">
           <button
             type="button"
-            onClick={() => openSidebar()}
+            onClick={() => (isSidebarOpen ? closeSidebar() : openSidebar())}
             className="min-h-[48px] min-w-[48px] shrink-0 rounded-lg touch-manipulation inline-flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors cursor-pointer"
-            aria-label="Open menu"
+            aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
             aria-expanded={isSidebarOpen}
           >
             <Menu className="h-5 w-5" />

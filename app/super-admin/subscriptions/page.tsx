@@ -35,6 +35,7 @@ import { Plus, Pencil, Power, PowerOff, Search, TrendingUp, Users, DollarSign, C
 import { toast } from "sonner"
 import { api } from "@/lib/api-client"
 import PlanFeatureMatrix from "@/components/super-admin/plan-feature-matrix"
+import { subscriberMRRAmount } from "@/lib/subscription-revenue"
 
 export default function SubscriptionPlansPage() {
   const [plans, setPlans] = useState<any[]>([])
@@ -82,8 +83,10 @@ export default function SubscriptionPlansPage() {
         (user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId === (plan._id || plan.id)
       )
       const subscriberCount = subscribers.length
-      const monthlyPrice = Number(plan.price || 0)
-      const revenue = monthlyPrice * subscriberCount
+      const revenue = subscribers.reduce(
+        (acc: number, user: any) => acc + subscriberMRRAmount(user, plan, currentDiscount),
+        0
+      )
       return {
         ...plan,
         subscriberCount,
@@ -96,28 +99,15 @@ export default function SubscriptionPlansPage() {
     setLoading(false)
   }
   const calculateTotalRevenue = () => {
-  if (!plans.length || !users.length) return 0;
-
-  // Only count revenue from subscribers, not admin users
-  const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
-
-  let total = 0;
-
-  subscriberUsers.forEach((user: any) => {
-    const userPlan = plans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId);
-    if (userPlan && userPlan.price) {
-      if (user.billingCycle === 'yearly') {
-          const yearlyPrice = Number(userPlan.price) * 12;
-          const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
-          total += (yearlyPrice - discountAmount);
-      } else {
-          total += Number(userPlan.price);
-      }
-    }
-  });
-
-  return total;
-};
+    if (!plans.length || !users.length) return 0
+    const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin")
+    let total = 0
+    subscriberUsers.forEach((user: any) => {
+      const userPlan = plans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId)
+      total += subscriberMRRAmount(user, userPlan, yearlyDiscount)
+    })
+    return total
+  }
 
 
   const validateForm = () => {

@@ -39,6 +39,7 @@ import {
   ArrowDownRight,
 } from "lucide-react"
 import { api } from "@/lib/api-client"
+import { subscriberMRRAmount } from "@/lib/subscription-revenue"
 
 import {
   DropdownMenu,
@@ -215,16 +216,8 @@ export default function SalesDashboardPage() {
     // Calculate total Revenue from active/trial subscriptions from filteredAdminUsers (only users created within period)
     let totalRevenue = 0
     filteredAdminUsers.forEach((user) => {
-       const userPlan = rawPlans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId);
-      if (userPlan && userPlan.price) {
-          if (user.billingCycle === 'yearly') {
-             const yearlyPrice = Number(userPlan.price) * 12;
-             const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
-             totalRevenue += (yearlyPrice - discountAmount);
-          } else {
-             totalRevenue += Number(userPlan.price);
-          }
-      }
+      const userPlan = rawPlans.find((plan: any) => (plan._id || plan.id) === user.subscriptionPlanId)
+      totalRevenue += subscriberMRRAmount(user, userPlan, yearlyDiscount)
     })
     const avgRevenuePerUser = activeSubscriptions > 0 ? Math.round(totalRevenue / activeSubscriptions) : 0
 
@@ -354,15 +347,10 @@ export default function SalesDashboardPage() {
           return s >= monthStart && s < monthEnd && (u.subscriptionPlanId === (plan._id || plan.id))
         })
 
-        const planRevenue = usersWithPlanInMonth.reduce((acc, user) => {
-          const planPrice = Number(plan.price || 0);
-          if (user.billingCycle === 'yearly') {
-             const yearlyPrice = planPrice * 12;
-             const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
-             return acc + (yearlyPrice - discountAmount);
-          }
-          return acc + planPrice;
-        }, 0);
+        const planRevenue = usersWithPlanInMonth.reduce(
+          (acc, user) => acc + subscriberMRRAmount(user, plan, yearlyDiscount),
+          0
+        )
 
         result[planKey] = planRevenue
         result.total += planRevenue
@@ -378,15 +366,10 @@ export default function SalesDashboardPage() {
         (u) => (u.subscriptionPlanId === plan._id || u.subscriptionPlanId === plan.id)
       )
 
-      const revenue = subscribers.reduce((acc, user) => {
-        const planPrice = Number(plan.price || 0);
-        if (user.billingCycle === 'yearly') {
-           const yearlyPrice = planPrice * 12;
-           const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100));
-           return acc + (yearlyPrice - discountAmount);
-        }
-        return acc + planPrice;
-      }, 0);
+      const revenue = subscribers.reduce(
+        (acc, user) => acc + subscriberMRRAmount(user, plan, yearlyDiscount),
+        0
+      )
 
       return {
         name: plan.name,

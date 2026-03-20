@@ -1,5 +1,62 @@
 import type { ObjectId } from "mongodb"
 
+/** Repeatable image + text section for public About / Contact pages */
+export interface CmsPublicPageBlock {
+  id: string
+  heading: string
+  body: string
+  image: string
+  imageAlt: string
+}
+
+/** Editable content for /about-us */
+export interface AboutUsPageContent {
+  pageTitle: string
+  heroImage: string
+  heroImageAlt: string
+  heroHeading: string
+  heroSubheading: string
+  blocks: CmsPublicPageBlock[]
+}
+
+/** Editable content for /contact (separate from site-wide Contact tab fields) */
+export interface PublicContactPageContent {
+  pageTitle: string
+  heroImage: string
+  heroImageAlt: string
+  introHeading: string
+  introBody: string
+  blocks: CmsPublicPageBlock[]
+}
+
+/** Submitted from public /contact form; listed in super-admin Leads */
+export interface ContactLead extends BaseDocument {
+  name: string
+  email: string
+  phone: string
+  message: string
+  source: "contact_page"
+}
+
+/** Top navigation link on public landing header */
+export interface LandingNavLink {
+  label: string
+  href: string
+}
+
+/** Stats row in dashboard showcase preview card */
+export interface ShowcaseCardStat {
+  label: string
+  value: string
+}
+
+/** Financial mock row in dashboard showcase preview */
+export interface ShowcaseFinanceMockRow {
+  label: string
+  value: string
+  trend: string
+}
+
 export interface BaseDocument {
   _id?: ObjectId
   createdAt: Date
@@ -64,6 +121,22 @@ export interface User extends BaseDocument {
   subscriptionPrice?: number
   paidAmount?: number
   discountPercentage?: number
+  /** Super-admin comped / free period: exclude from MRR & revenue dashboards */
+  subscriptionRevenueExcluded?: boolean
+  /** Audit trail of plan assignments (admin + optional payment snapshots) */
+  subscriptionHistory?: SubscriptionHistoryEntry[]
+}
+
+/** One row for client subscription history UI / audit */
+export interface SubscriptionHistoryEntry {
+  planId?: string
+  planName?: string
+  startDate?: string
+  endDate?: string
+  status?: string
+  amount?: number
+  assignedAt?: string
+  source?: "admin" | "payment"
 }
 
 /** Razorpay subscription lifecycle record (synced via webhooks / cron) */
@@ -208,6 +281,9 @@ export interface WebsiteContent {
     title: string
     description: string
     icon: string
+    image?: string
+    learnMoreText?: string
+    learnMoreUrl?: string
   }>
 
   // Industries Section
@@ -274,8 +350,69 @@ export interface WebsiteContent {
   socialLinkedin?: string
   socialInstagram?: string
 
-  // Footer
-  footerText: string
+  /** Footer-only logo (distinct from header `logo`); image URL from CMS upload */
+  footerLogo?: string
+
+  /** Legacy field; not used on public footer (address comes from `contactAddress`) */
+  footerText?: string
+
+  /** Optional copyright line shown below the footer columns */
+  footerCopyright?: string
+
+  /** Structured content for /about-us (images + blocks; managed in CMS) */
+  aboutUsPage?: AboutUsPageContent
+
+  /** Structured content for /contact page */
+  publicContactPage?: PublicContactPageContent
+
+  // --- Landing header & section chrome (all controlled from CMS; merged from defaults when missing in DB)
+  landingNavLinks?: LandingNavLink[]
+  landingHeaderSignInLabel?: string
+  landingHeaderCtaLabel?: string
+
+  heroWatchDemoLabel?: string
+  heroTrialBullet1?: string
+  heroTrialBullet2?: string
+  heroSecureBadgeText?: string
+  heroRightImageAlt?: string
+
+  featuresSectionBadge?: string
+  industriesSectionBadge?: string
+  industriesCardCtaText?: string
+
+  showcaseCardTitle?: string
+  showcaseCardBadge?: string
+  showcaseCardStats?: ShowcaseCardStat[]
+  showcaseFinanceTitle?: string
+  showcaseFinanceRows?: ShowcaseFinanceMockRow[]
+  showcaseActivityTitle?: string
+  showcaseActivityLines?: string[]
+
+  faqSectionBadge?: string
+
+  pricingMonthlyLabel?: string
+  pricingYearlyLabel?: string
+  pricingYearlySaveTemplate?: string
+  pricingPlanTrialBadgeTemplate?: string
+  pricingPopularRibbonText?: string
+  pricingPopularPlanName?: string
+  pricingEnterprisePlanName?: string
+  pricingEnterpriseDisplayPrice?: string
+  pricingEnterpriseDisplaySubtext?: string
+  pricingContactSalesLabel?: string
+  pricingGetStartedLabel?: string
+  pricingPerMonthLabel?: string
+  pricingPerYearLabel?: string
+
+  /** Help Center (/help-center) chrome (categories still come from Video admin) */
+  videosPageSidebarTitle?: string
+  videosPageBrowseMobileLabel?: string
+  videosPageMoreHeading?: string
+  videosPageEmptySelect?: string
+  videosPageAllInCategoryTemplate?: string
+  videosPageLoadingLabel?: string
+  videosPageNoVideosLabel?: string
+  videosPageNoOtherInTabLabel?: string
 
   updatedAt: string
 }
@@ -576,6 +713,8 @@ export interface SubscriptionPlan extends BaseDocument {
   price: number
   duration: number
   billingCycle: "monthly" | "yearly"
+  /** When true, same as price === 0 for revenue exclusion */
+  isFreePlan?: boolean
   features: string[] // Legacy feature list for backward compatibility
   planFeatures?: PlanFeatures // New granular feature flags
   maxUsers: number

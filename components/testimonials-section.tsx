@@ -4,17 +4,23 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Star, Quote } from "lucide-react"
 import { api } from "@/lib/api-client"
+import type { WebsiteContent } from "@/lib/models/types"
 
 export function TestimonialsSection() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
-    setContent(websiteContent)
-    })
+    api.websiteContent
+      .getAll()
+      .then((data) => (data[0] || null) as WebsiteContent | null)
+      .then((websiteContent) => {
+        setContent(websiteContent)
+      })
   }, [])
 
-  const testimonials = content?.testimonials || []
+  const testimonials = content?.testimonials ?? []
+  const testimonialsTitle = content?.testimonialsTitle?.trim() ?? ""
+  const testimonialsSubtitle = content?.testimonialsSubtitle?.trim() ?? ""
 
   if (testimonials.length === 0) {
     return null
@@ -24,12 +30,12 @@ export function TestimonialsSection() {
     <section className="py-20 bg-gray-50" id="testimonials">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-balance">
-            {content?.testimonialsTitle || "Testimonials"}
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto text-pretty">
-            {content?.testimonialsSubtitle || "Don't just take our word for it - hear what our customers have to say"}
-          </p>
+          {testimonialsTitle ? (
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-balance">{testimonialsTitle}</h2>
+          ) : null}
+          {testimonialsSubtitle ? (
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto text-pretty">{testimonialsSubtitle}</p>
+          ) : null}
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">

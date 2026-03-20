@@ -539,14 +539,25 @@ quotations: {
           body: JSON.stringify(userData),
         })
       },
-      updatePassword: async (userId:String,currentPassword:String,newPassword:String)=>{
+      updatePassword: async (
+        userId: string,
+        currentPassword: string,
+        newPassword: string,
+        confirmPassword?: string,
+        email?: string,
+      ) => {
         const data = await fetchAPI("/api/auth/update-password", {
           method: "PUT",
-          body: JSON.stringify({ userId, currentPassword, newPassword}),
+          body: JSON.stringify({
+            userId: userId || undefined,
+            currentPassword,
+            newPassword,
+            confirmPassword,
+            ...(email ? { email } : {}),
+          }),
         })
-        console.log("Update password Response:::",data)
         return data
-      }
+      },
     },
 
     // Team Members API

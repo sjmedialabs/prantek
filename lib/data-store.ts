@@ -1,6 +1,8 @@
 // Comprehensive data management layer using localStorage
 // This provides a simple but complete data persistence solution
 
+import { WEBSITE_CONTENT_LANDING_DEFAULTS } from "@/lib/website-content-landing-defaults"
+
 export interface User {
   id: string
   email: string
@@ -252,6 +254,9 @@ export interface WebsiteContent {
     title: string
     description: string
     icon: string
+    image?: string
+    learnMoreText?: string
+    learnMoreUrl?: string
   }>
 
   // Industries Section
@@ -319,7 +324,67 @@ export interface WebsiteContent {
   socialInstagram?: string
 
   // Footer
-  footerText: string
+  footerLogo?: string /** image URL */
+  footerText?: string
+  footerCopyright?: string
+  aboutUsPage?: {
+    pageTitle: string
+    heroImage: string
+    heroImageAlt: string
+    heroHeading: string
+    heroSubheading: string
+    blocks: Array<{ id: string; heading: string; body: string; image: string; imageAlt: string }>
+  }
+  publicContactPage?: {
+    pageTitle: string
+    heroImage: string
+    heroImageAlt: string
+    introHeading: string
+    introBody: string
+    blocks: Array<{ id: string; heading: string; body: string; image: string; imageAlt: string }>
+  }
+
+  landingNavLinks?: Array<{ label: string; href: string }>
+  landingHeaderSignInLabel?: string
+  landingHeaderCtaLabel?: string
+  heroWatchDemoLabel?: string
+  heroTrialBullet1?: string
+  heroTrialBullet2?: string
+  heroSecureBadgeText?: string
+  heroRightImageAlt?: string
+  featuresSectionBadge?: string
+  industriesSectionBadge?: string
+  industriesCardCtaText?: string
+  showcaseCardTitle?: string
+  showcaseCardBadge?: string
+  showcaseCardStats?: Array<{ label: string; value: string }>
+  showcaseFinanceTitle?: string
+  showcaseFinanceRows?: Array<{ label: string; value: string; trend: string }>
+  showcaseActivityTitle?: string
+  showcaseActivityLines?: string[]
+  faqSectionBadge?: string
+  pricingMonthlyLabel?: string
+  pricingYearlyLabel?: string
+  pricingYearlySaveTemplate?: string
+  pricingPlanTrialBadgeTemplate?: string
+  pricingPopularRibbonText?: string
+  pricingPopularPlanName?: string
+  pricingEnterprisePlanName?: string
+  pricingEnterpriseDisplayPrice?: string
+  pricingEnterpriseDisplaySubtext?: string
+  pricingContactSalesLabel?: string
+  pricingGetStartedLabel?: string
+  pricingPerMonthLabel?: string
+  pricingPerYearLabel?: string
+
+  videosPageSidebarTitle?: string
+  videosPageBrowseMobileLabel?: string
+  videosPageMoreHeading?: string
+  videosPageEmptySelect?: string
+  videosPageAllInCategoryTemplate?: string
+  videosPageLoadingLabel?: string
+  videosPageNoVideosLabel?: string
+  videosPageNoOtherInTabLabel?: string
 
   updatedAt: string
 }
@@ -774,6 +839,7 @@ class DataStore {
 
   private getDefaultWebsiteContent(): WebsiteContent {
     return {
+      ...WEBSITE_CONTENT_LANDING_DEFAULTS,
       companyName: "Your SaaS Platform",
       tagline: "Streamline Your Business Operations",
       logo: "/generic-company-logo.png",
@@ -1008,7 +1074,25 @@ class DataStore {
       socialLinkedin: "",
       socialInstagram: "",
 
-      footerText: "© 2025 Your Company. All rights reserved.",
+      footerLogo: "",
+      footerText: "",
+      footerCopyright: "",
+      aboutUsPage: {
+        pageTitle: "",
+        heroImage: "",
+        heroImageAlt: "",
+        heroHeading: "",
+        heroSubheading: "",
+        blocks: [],
+      },
+      publicContactPage: {
+        pageTitle: "",
+        heroImage: "",
+        heroImageAlt: "",
+        introHeading: "",
+        introBody: "",
+        blocks: [],
+      },
 
       updatedAt: new Date().toISOString(),
     }

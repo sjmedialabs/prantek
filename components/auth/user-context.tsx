@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { usePathname } from "next/navigation"
 import { verifyUser } from "@/lib/auth"
 import { tokenStorage } from "@/lib/token-storage"
 
@@ -39,31 +39,32 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
-  const router = useRouter()
 
-  const isSuperAdmin = pathname?.startsWith("/super-admin")
+  /** Re-verify only when switching super-admin vs rest-of-app, not on every /super-admin/* navigation */
+  const authRealm = useMemo<"super-admin" | "app" | null>(() => {
+    if (pathname == null) return null
+    return pathname.startsWith("/super-admin") ? "super-admin" : "app"
+  }, [pathname])
+
+  const isSuperAdmin = authRealm === "super-admin"
 
   useEffect(() => {
+    if (authRealm === null) return
+
     const loadUser = async () => {
-      console.log("[USER_CONTEXT] Loading user, pathname:", pathname, "isSuperAdmin:", isSuperAdmin)
       setLoading(true)
       try {
         const accessToken = tokenStorage.getAccessToken(isSuperAdmin)
-        console.log("[USER_CONTEXT] Access token exists:", !!accessToken)
 
         if (accessToken) {
           const userData = await verifyUser(accessToken)
-          console.log("[USER_CONTEXT] User data from verify:", userData)
           if (userData) {
             setUser(userData as User)
           } else {
-            // Token is invalid, clear it
-            console.log("[USER_CONTEXT] Token invalid, clearing")
             tokenStorage.clearTokens(isSuperAdmin)
             setUser(null)
           }
         } else {
-          console.log("[USER_CONTEXT] No access token found")
           setUser(null)
         }
       } catch (error) {
@@ -72,15 +73,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
       } finally {
         setLoading(false)
-        console.log("[USER_CONTEXT] Loading complete, user:", user)
       }
     }
 
-    // Only load if pathname is available (to avoid SSR issues)
-    if (pathname !== null) {
-      loadUser()
-    }
-  }, [pathname])
+    void loadUser()
+  }, [authRealm])
 
   const refreshUser = async () => {
     try {

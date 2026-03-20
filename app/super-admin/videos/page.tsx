@@ -239,7 +239,7 @@ export default function SuperAdminVideosPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Video Library</h1>
-        <p className="text-gray-600">Manage left menu categories and videos (title, description, YouTube URL). Shown on the public /videos page.</p>
+        <p className="text-gray-600">Manage left menu categories and videos (title, description, YouTube URL). Shown on the public Help Center (/help-center).</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -259,7 +259,7 @@ export default function SuperAdminVideosPage() {
                 <Plus className="h-4 w-4 mr-1" /> Add
               </Button>
             </div>
-            <CardDescription>Left sidebar items on /videos page</CardDescription>
+            <CardDescription>Left sidebar topics on Help Center (/help-center)</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -380,7 +380,7 @@ export default function SuperAdminVideosPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingCategory ? "Edit category" : "Add category"}</DialogTitle>
-            <DialogDescription>This appears as a left menu item on the /videos page.</DialogDescription>
+            <DialogDescription>This appears as a left menu topic on the Help Center.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>

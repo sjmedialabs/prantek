@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 
-/** GET - Public: list all video categories with their videos (for /videos page) */
+/** GET - Public: list all video categories with their videos (for /help-center) */
 export async function GET() {
   try {
     const db = await connectDB()
