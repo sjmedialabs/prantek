@@ -56,6 +56,9 @@ interface ClientAccount {
   autoDebit: boolean
   lastPayment?: string | null
   nextPayment?: string | null
+  /** Current subscription period (YYYY-MM-DD), from user.subscriptionStartDate / subscriptionEndDate */
+  subscriptionStartDate?: string | null
+  subscriptionEndDate?: string | null
   /** Subscriber's current plan id (for assign prefill) */
   subscriptionPlanId?: string | null
 }
@@ -143,10 +146,24 @@ export default function ClientAccountsPage() {
           const plan = plans.find((p: any) => (p._id || p.id) === user.subscriptionPlanId)
           const userId = user._id || user.id
 
+          const toYmd = (v: unknown): string | null => {
+            if (v == null || v === "") return null
+            try {
+              const d = v instanceof Date ? v : new Date(v as string | number)
+              if (Number.isNaN(d.getTime())) return null
+              return d.toISOString().slice(0, 10)
+            } catch {
+              return null
+            }
+          }
+
           const billingCycle = user.billingCycle || "monthly"
           const totalPeriodAmount = subscriberMRRAmount(user, plan, currentDiscount)
           const monthlyRevenue =
             billingCycle === "yearly" ? Math.round(totalPeriodAmount / 12) : totalPeriodAmount
+
+          const periodStart = toYmd(user.subscriptionStartDate)
+          const periodEnd = toYmd(user.subscriptionEndDate)
 
           const lastPayment = user.lastPaymentDate
             ? (typeof user.lastPaymentDate === "string" ? user.lastPaymentDate : new Date(user.lastPaymentDate).toISOString().split("T")[0])
@@ -178,7 +195,9 @@ export default function ClientAccountsPage() {
             subscriptionId: user.razorpaySubscriptionId || null,
             autoDebit: !!(user.razorpayCustomerId && user.razorpayTokenId),
             lastPayment: lastPayment || null,
-            nextPayment: nextPayment || trialNextPayment || null,
+            nextPayment: nextPayment || trialNextPayment || periodEnd || null,
+            subscriptionStartDate: periodStart,
+            subscriptionEndDate: periodEnd,
             subscriptionPlanId: user.subscriptionPlanId || null,
           }
         })
@@ -238,6 +257,24 @@ export default function ClientAccountsPage() {
     const l = last ? new Date(last).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"
     const n = next ? new Date(next).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"
     return `${l} / ${n}`
+  }
+
+  /** Shows subscription period (start / end) when set; otherwise last/next payment dates */
+  function ClientScheduleCell({ client }: { client: ClientAccount }) {
+    const paymentsPretty = formatPaymentDates(client.lastPayment, client.nextPayment)
+    const periodPretty =
+      client.subscriptionStartDate || client.subscriptionEndDate
+        ? formatPaymentDates(client.subscriptionStartDate ?? null, client.subscriptionEndDate ?? null)
+        : null
+    if (periodPretty && paymentsPretty !== "— / —") {
+      return (
+        <div className="text-sm whitespace-nowrap">
+          <div>{periodPretty}</div>
+          <div className="text-xs text-gray-500">Pay: {paymentsPretty}</div>
+        </div>
+      )
+    }
+    return <span className="text-sm whitespace-nowrap">{periodPretty || paymentsPretty}</span>
   }
 
   const getStatusBadge = (status: string) => {
@@ -426,11 +463,18 @@ export default function ClientAccountsPage() {
     setAssignLabel(client.companyName)
     const firstPlanId = plans.length ? String((plans[0] as any)._id || (plans[0] as any).id || "") : ""
     setAssignPlanId(client.subscriptionPlanId || firstPlanId)
-    const start = new Date()
-    const end = new Date(start)
-    end.setMonth(end.getMonth() + 1)
-    setAssignStart(start.toISOString().slice(0, 10))
-    setAssignEnd(end.toISOString().slice(0, 10))
+    let startStr = client.subscriptionStartDate || ""
+    let endStr = client.subscriptionEndDate || ""
+    if (!startStr) {
+      startStr = new Date().toISOString().slice(0, 10)
+    }
+    if (!endStr) {
+      const end = new Date(startStr)
+      end.setMonth(end.getMonth() + 1)
+      endStr = end.toISOString().slice(0, 10)
+    }
+    setAssignStart(startStr)
+    setAssignEnd(endStr)
     setAssignRevenueExcluded(false)
     setAssignOpen(true)
   }
@@ -653,7 +697,9 @@ export default function ClientAccountsPage() {
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        <ClientScheduleCell client={client} />
+                      </TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       <TableCell className="text-center">
                         <div className="inline-flex items-center gap-0">
@@ -746,7 +792,9 @@ export default function ClientAccountsPage() {
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        <ClientScheduleCell client={client} />
+                      </TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       <TableCell className="text-center">
                         <div className="inline-flex items-center gap-0">
@@ -839,7 +887,9 @@ export default function ClientAccountsPage() {
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        <ClientScheduleCell client={client} />
+                      </TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       <TableCell className="text-center">
                         <div className="inline-flex items-center gap-0">
@@ -932,7 +982,9 @@ export default function ClientAccountsPage() {
                       <TableCell>{getPaymentStatusBadge(client.paymentStatus)}</TableCell>
                       <TableCell className="font-mono text-xs">{client.subscriptionId ?? "—"}</TableCell>
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        <ClientScheduleCell client={client} />
+                      </TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
                       <TableCell className="text-center">
                         <div className="inline-flex items-center gap-0">
@@ -1047,6 +1099,38 @@ export default function ClientAccountsPage() {
                       <span>Payment Status:</span>
                       {getPaymentStatusBadge(selectedClient.paymentStatus)}
                     </div>
+                    {(selectedClient.subscriptionStartDate || selectedClient.subscriptionEndDate) && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span>Subscription start:</span>
+                          <span className="font-medium">
+                            {selectedClient.subscriptionStartDate
+                              ? new Date(
+                                  selectedClient.subscriptionStartDate + "T12:00:00",
+                                ).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Subscription end:</span>
+                          <span className="font-medium">
+                            {selectedClient.subscriptionEndDate
+                              ? new Date(
+                                  selectedClient.subscriptionEndDate + "T12:00:00",
+                                ).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "—"}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
