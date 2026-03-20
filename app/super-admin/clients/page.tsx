@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useUser } from "@/components/auth/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,28 +15,24 @@ import {
   Users,
   DollarSign,
   Calendar,
-  MoreHorizontal,
-  Eye,
   Pause,
   Play,
-  Trash2,
   AlertTriangle,
   CheckCircle,
   XCircle,
   Mail,
   Phone,
   MapPin,
+  History,
+  CalendarPlus,
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api-client"
+import { subscriberMRRAmount } from "@/lib/subscription-revenue"
+import { tokenStorage } from "@/lib/token-storage"
+import { ClientSubscriptionHistoryDialog } from "@/components/super-admin/client-subscription-history-dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ClientAccount {
@@ -61,6 +56,8 @@ interface ClientAccount {
   autoDebit: boolean
   lastPayment?: string | null
   nextPayment?: string | null
+  /** Subscriber's current plan id (for assign prefill) */
+  subscriptionPlanId?: string | null
 }
 const Label = ({ text }: { text: string }) => (
   <label className="text-sm font-medium">
@@ -68,13 +65,23 @@ const Label = ({ text }: { text: string }) => (
   </label>
 )
 export default function ClientAccountsPage() {
-  const { hasPermission } = useUser()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedClient, setSelectedClient] = useState<ClientAccount | null>(null)
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [yearlyDiscount, setYearlyDiscount] = useState(17);
+  const [yearlyDiscount, setYearlyDiscount] = useState(17)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyUserId, setHistoryUserId] = useState<string | null>(null)
+  const [historyLabel, setHistoryLabel] = useState("")
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [assignClientId, setAssignClientId] = useState<string | null>(null)
+  const [assignLabel, setAssignLabel] = useState("")
+  const [assignPlanId, setAssignPlanId] = useState("")
+  const [assignStart, setAssignStart] = useState("")
+  const [assignEnd, setAssignEnd] = useState("")
+  const [assignRevenueExcluded, setAssignRevenueExcluded] = useState(false)
+  const [assignSubmitting, setAssignSubmitting] = useState(false)
 
   useEffect(() => {
     loadClients()
@@ -135,16 +142,11 @@ export default function ClientAccountsPage() {
         .map((user: any) => {
           const plan = plans.find((p: any) => (p._id || p.id) === user.subscriptionPlanId)
           const userId = user._id || user.id
-          
-          const planPrice = Number(plan?.price || 0);
-          const billingCycle = user.billingCycle || "monthly";
-          let revenue = planPrice;
-          
-          if (billingCycle === 'yearly') {
-             const yearlyPrice = planPrice * 12;
-             const discountAmount = Math.round(yearlyPrice * (currentDiscount / 100));
-             revenue = yearlyPrice - discountAmount;
-          }
+
+          const billingCycle = user.billingCycle || "monthly"
+          const totalPeriodAmount = subscriberMRRAmount(user, plan, currentDiscount)
+          const monthlyRevenue =
+            billingCycle === "yearly" ? Math.round(totalPeriodAmount / 12) : totalPeriodAmount
 
           const lastPayment = user.lastPaymentDate
             ? (typeof user.lastPaymentDate === "string" ? user.lastPaymentDate : new Date(user.lastPaymentDate).toISOString().split("T")[0])
@@ -166,8 +168,8 @@ export default function ClientAccountsPage() {
             plan: plan?.name?.toLowerCase() || "standard",
             status: user.subscriptionStatus || "inactive",
             userCount: adminUserCounts[userId] || 0,
-            monthlyRevenue: billingCycle === 'yearly' ? Math.round(revenue / 12) : revenue,
-            totalRevenue: revenue,
+            monthlyRevenue,
+            totalRevenue: totalPeriodAmount,
             billingCycle: billingCycle,
             joinDate: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             lastActivity: user.updatedAt ? new Date(user.updatedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -177,6 +179,7 @@ export default function ClientAccountsPage() {
             autoDebit: !!(user.razorpayCustomerId && user.razorpayTokenId),
             lastPayment: lastPayment || null,
             nextPayment: nextPayment || trialNextPayment || null,
+            subscriptionPlanId: user.subscriptionPlanId || null,
           }
         })
         // Show latest records on top (newest createdAt first)
@@ -412,8 +415,61 @@ export default function ClientAccountsPage() {
     setIsDetailsDialogOpen(true)
   }
 
-  // Super-admin has access to everything - permission check removed
-  console.log("Clients List is :::", clients);
+  const openHistory = (client: ClientAccount) => {
+    setHistoryUserId(client.id)
+    setHistoryLabel(client.companyName)
+    setHistoryOpen(true)
+  }
+
+  const openAssignSubscription = (client: ClientAccount) => {
+    setAssignClientId(client.id)
+    setAssignLabel(client.companyName)
+    const firstPlanId = plans.length ? String((plans[0] as any)._id || (plans[0] as any).id || "") : ""
+    setAssignPlanId(client.subscriptionPlanId || firstPlanId)
+    const start = new Date()
+    const end = new Date(start)
+    end.setMonth(end.getMonth() + 1)
+    setAssignStart(start.toISOString().slice(0, 10))
+    setAssignEnd(end.toISOString().slice(0, 10))
+    setAssignRevenueExcluded(false)
+    setAssignOpen(true)
+  }
+
+  const handleSubmitAssignSubscription = async () => {
+    if (!assignClientId || !assignPlanId || !assignStart || !assignEnd) {
+      toast.error("Plan, start date, and end date are required.")
+      return
+    }
+    setAssignSubmitting(true)
+    try {
+      const token = tokenStorage.getAccessToken()
+      const res = await fetch(`/api/super-admin/clients/${assignClientId}/assign-subscription`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          subscriptionPlanId: assignPlanId,
+          subscriptionStartDate: assignStart,
+          subscriptionEndDate: assignEnd,
+          subscriptionRevenueExcluded: assignRevenueExcluded,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to assign subscription")
+      }
+      toast.success("Subscription updated.")
+      setAssignOpen(false)
+      await loadClients()
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to assign subscription")
+    } finally {
+      setAssignSubmitting(false)
+    }
+  }
   const exportCSV = () => {
     if (filteredClients.length === 0) {
       alert("No data available to export.")
@@ -572,7 +628,7 @@ export default function ClientAccountsPage() {
                     <TableHead>Auto-Debit</TableHead>
                     <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
-                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                    <TableHead className="w-[104px] text-center">Tools</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -599,46 +655,32 @@ export default function ClientAccountsPage() {
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
-                      {/* <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {client.status === "active" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleSuspendAccount(client.id)}
-                                className="text-red-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Pause className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
-                              </DropdownMenuItem>
-                            ) : client.status === "suspended" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleReactivateAccount(client.id)}
-                                className="text-green-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Play className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
-                              </DropdownMenuItem>
-                            ) : null}
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Account
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell> */}
+                      <TableCell className="text-center">
+                        <div className="inline-flex items-center gap-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openHistory(client)}
+                            aria-label="Subscription history"
+                            title="Subscription history"
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openAssignSubscription(client)}
+                            aria-label="Assign subscription"
+                            title="Assign subscription"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -679,7 +721,7 @@ export default function ClientAccountsPage() {
                     <TableHead>Auto-Debit</TableHead>
                     <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
-                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                    <TableHead className="w-[104px] text-center">Tools</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -706,46 +748,32 @@ export default function ClientAccountsPage() {
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
-                      {/* <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {client.status === "active" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleSuspendAccount(client.id)}
-                                className="text-red-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Pause className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
-                              </DropdownMenuItem>
-                            ) : client.status === "suspended" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleReactivateAccount(client.id)}
-                                className="text-green-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Play className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
-                              </DropdownMenuItem>
-                            ) : null}
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Account
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell> */}
+                      <TableCell className="text-center">
+                        <div className="inline-flex items-center gap-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openHistory(client)}
+                            aria-label="Subscription history"
+                            title="Subscription history"
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openAssignSubscription(client)}
+                            aria-label="Assign subscription"
+                            title="Assign subscription"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -786,7 +814,7 @@ export default function ClientAccountsPage() {
                     <TableHead>Auto-Debit</TableHead>
                     <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
-                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                    <TableHead className="w-[104px] text-center">Tools</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -813,46 +841,32 @@ export default function ClientAccountsPage() {
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
-                      {/* <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {client.status === "active" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleSuspendAccount(client.id)}
-                                className="text-red-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Pause className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
-                              </DropdownMenuItem>
-                            ) : client.status === "suspended" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleReactivateAccount(client.id)}
-                                className="text-green-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Play className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
-                              </DropdownMenuItem>
-                            ) : null}
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Account
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell> */}
+                      <TableCell className="text-center">
+                        <div className="inline-flex items-center gap-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openHistory(client)}
+                            aria-label="Subscription history"
+                            title="Subscription history"
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openAssignSubscription(client)}
+                            aria-label="Assign subscription"
+                            title="Assign subscription"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -893,7 +907,7 @@ export default function ClientAccountsPage() {
                     <TableHead>Auto-Debit</TableHead>
                     <TableHead>Last / Next Payment</TableHead>
                     <TableHead>Last Activity</TableHead>
-                    {/* <TableHead className="text-right">Actions</TableHead> */}
+                    <TableHead className="w-[104px] text-center">Tools</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -920,46 +934,32 @@ export default function ClientAccountsPage() {
                       <TableCell>{client.autoDebit ? "Yes" : "No"}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{formatPaymentDates(client.lastPayment, client.nextPayment)}</TableCell>
                       <TableCell>{client.lastActivity}</TableCell>
-                      {/* <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleViewDetails(client)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {client.status === "active" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleSuspendAccount(client.id)}
-                                className="text-red-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Pause className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Suspending..." : "Suspend Account"}
-                              </DropdownMenuItem>
-                            ) : client.status === "suspended" ? (
-                              <DropdownMenuItem
-                                onClick={() => handleReactivateAccount(client.id)}
-                                className="text-green-600"
-                                disabled={actionLoading === client.id}
-                              >
-                                <Play className="mr-2 h-4 w-4" />
-                                {actionLoading === client.id ? "Reactivating..." : "Reactivate Account"}
-                              </DropdownMenuItem>
-                            ) : null}
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Account
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell> */}
+                      <TableCell className="text-center">
+                        <div className="inline-flex items-center gap-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openHistory(client)}
+                            aria-label="Subscription history"
+                            title="Subscription history"
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openAssignSubscription(client)}
+                            aria-label="Assign subscription"
+                            title="Assign subscription"
+                          >
+                            <CalendarPlus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1250,6 +1250,72 @@ export default function ClientAccountsPage() {
           </div>
         </div>
       )}
+
+      <ClientSubscriptionHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        userId={historyUserId}
+        clientLabel={historyLabel}
+      />
+
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign subscription</DialogTitle>
+            <DialogDescription>
+              {assignLabel ? `Set plan and access period for ${assignLabel}.` : "Set plan and access period."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Plan</span>
+              <Select value={assignPlanId} onValueChange={setAssignPlanId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans.map((p: any) => (
+                    <SelectItem key={p._id || p.id} value={String(p._id || p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Start date</span>
+                <Input type="date" value={assignStart} onChange={(e) => setAssignStart(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm font-medium">End date</span>
+                <Input type="date" value={assignEnd} onChange={(e) => setAssignEnd(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="assign-revenue-excluded"
+                checked={assignRevenueExcluded}
+                onCheckedChange={(c) => setAssignRevenueExcluded(c === true)}
+              />
+              <label htmlFor="assign-revenue-excluded" className="text-sm cursor-pointer leading-snug">
+                Complimentary / exclude from revenue (treat as ₹0 for reporting)
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Plans with price 0 or marked free are excluded automatically. Use the option above to comp a paid plan.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => setAssignOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmitAssignSubscription} disabled={assignSubmitting}>
+              {assignSubmitting ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -121,6 +121,22 @@ export interface User extends BaseDocument {
   subscriptionPrice?: number
   paidAmount?: number
   discountPercentage?: number
+  /** Super-admin comped / free period: exclude from MRR & revenue dashboards */
+  subscriptionRevenueExcluded?: boolean
+  /** Audit trail of plan assignments (admin + optional payment snapshots) */
+  subscriptionHistory?: SubscriptionHistoryEntry[]
+}
+
+/** One row for client subscription history UI / audit */
+export interface SubscriptionHistoryEntry {
+  planId?: string
+  planName?: string
+  startDate?: string
+  endDate?: string
+  status?: string
+  amount?: number
+  assignedAt?: string
+  source?: "admin" | "payment"
 }
 
 /** Razorpay subscription lifecycle record (synced via webhooks / cron) */
@@ -697,6 +713,8 @@ export interface SubscriptionPlan extends BaseDocument {
   price: number
   duration: number
   billingCycle: "monthly" | "yearly"
+  /** When true, same as price === 0 for revenue exclusion */
+  isFreePlan?: boolean
   features: string[] // Legacy feature list for backward compatibility
   planFeatures?: PlanFeatures // New granular feature flags
   maxUsers: number

@@ -1,12 +1,14 @@
 "use client"
 
 import type React from "react"
+import { useEffect } from "react"
 
 import { UserProvider } from "@/components/auth/user-context"
 import ProtectedRoute from "@/components/auth/protected-route"
 import { SuperAdminSidebar } from "@/components/super-admin/super-admin-sidebar"
 import SuperAdminHeader from "@/components/super-admin/super-admin-header"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 import { useSessionTimeout } from "@/hooks/use-session-timeout"
 import { SidebarProvider, useSidebar } from "@/components/layout/sidebar-context"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
@@ -22,9 +24,19 @@ function SuperAdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   const handleOpenChange = (open: boolean) => {
     if (open) openSidebar()
+    else closeSidebar()
   }
 
   const preventCloseOutside = (e: Event) => e.preventDefault()
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)")
+    const onChange = () => {
+      if (mq.matches) closeSidebar()
+    }
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [closeSidebar])
 
   /** Desktop sidebar is `fixed` (w-64 / w-20); only offset main by that width — no separate flex aside (avoids double gutter). */
   const mainOffsetClass = collapsed ? "lg:pl-20" : "lg:pl-64"
@@ -72,6 +84,7 @@ export default function SuperAdminLayout({
           </SidebarProvider>
         </SuperAdminSidebarCollapsedProvider>
         <Toaster />
+        <SonnerToaster richColors position="top-center" />
       </ProtectedRoute>
     </UserProvider>
   )
