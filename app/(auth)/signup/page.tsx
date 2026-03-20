@@ -1096,7 +1096,7 @@ export default function SignUpPage() {
   const currentSelectedPlan = availablePlans.find(
     (p) => (p._id || p.id) === selectedPlan
   );
-
+  const planBillCycle = currentSelectedPlan?.billingCycle
   return (
     <div className="min-h-screen flex">
       <FeaturesSidebar

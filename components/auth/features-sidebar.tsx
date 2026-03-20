@@ -176,14 +176,14 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
                           </h1>
                         </div>
                       </div>
-                      <div className="flex items-baseline gap-0.5 flex-shrink-0">
+                      {/* <div className="flex items-baseline gap-0.5 flex-shrink-0">
                         <span className="text-2xl font-bold text-gray-900">
                           ₹{selectedPlan.price.toLocaleString()}
                         </span>
                         <span className="text-gray-600 text-xs">
                           /{selectedPlan.billingCycle || "mo"}
                         </span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
