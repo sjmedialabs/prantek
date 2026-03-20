@@ -494,7 +494,6 @@ export default function ClientDetailsPage() {
                   <TableCell>
                   <div className={`text-sm ${options?.descriptionCellClassName ?? ""}`}>
                   {transaction.items.slice(0, 2).join(", ")}
-                      {transaction.items.slice(0, 2).join(", ")}
                       {transaction.items.length > 2 && ` +${transaction.items.length - 2} more`}
                     </div>
                   </TableCell>
