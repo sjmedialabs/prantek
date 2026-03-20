@@ -222,7 +222,7 @@ export default function PaymentDetailsPage() {
             <CardContent>
               <dl className="space-y-2">
                 <DetailItem label="Method" value={payment.paymentMethod} />
-                <DetailItem label="Bank Account" value={payment.bankAccount} />
+                <DetailItem label="Bank Account" value={payment.bankAccount.bankName + " " + payment.bankAccount.accountNumber + " " + payment.bankAccount.accountName} />
                 <DetailItem label="Reference Number" value={payment.referenceNumber} />
               </dl>
             </CardContent>

@@ -29,7 +29,7 @@ interface CashEntry {
   referenceNumber?: string
   createdBy: string
   balance?: number
-  accountDetails?: string
+  accountDetails?: any
 }
 
 export default function CashbookPage() {
@@ -106,7 +106,7 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
       amount: r.ReceiptAmount,
       referenceNumber: r.referenceNumber,
       paymentMethod: r.paymentMethod || "",
-      accountDetails: r?.bankDetails?.bankName || ""
+      accountDetails:  r?.bankAccount || "",
       //   createdBy: r.createdBy
     }))
     console.log("formattedReceipts", formattedReceipts)
@@ -142,7 +142,8 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
       (entry.date || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.receiptNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (entry.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) 
+      (entry.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof entry.accountDetails === "string" ? entry.accountDetails : (entry.accountDetails?.bankName + entry.accountDetails?.accountNumber + entry.accountDetails?.accountName || "")).toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesType = typeFilter === "all" || entry.entryType === typeFilter
     const matchesPartyType = partyTypeFilter === "all" || entry.partyType === partyTypeFilter
@@ -152,8 +153,12 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
     const matchesDateTo = !dateToFilter || new Date(entry.date) <= new Date(dateToFilter)
 
     
-const matchesBankAccount =
-  selectedBankAccount === "all" || entry.accountDetails === selectedBankAccount
+    const matchesBankAccount =
+      selectedBankAccount === "all" ||
+      (typeof entry.accountDetails === "object"
+        ? entry.accountDetails?._id === selectedBankAccount
+        : entry.accountDetails ===
+          bankAccounts.find((b: any) => b._id === selectedBankAccount)?.bankName || entry.accountDetails === selectedBankAccount)
 
 const matchesPaymentMethods =
   selectedPaymentMethod === "all" || entry.paymentMethod === selectedPaymentMethod
@@ -285,7 +290,7 @@ setSelectedPaymentMethod("all")
       e.partyType || "",
       e.category || "",
       e.paymentMethod || "",
-      e.accountDetails || "",
+      typeof e.accountDetails === "object" ? e.accountDetails?.bankName : (e.accountDetails || ""),
       e.referenceNumber || "",
       e.entryType === "receipt" ? e.amount : 0,
       e.entryType === "payment" ? e.amount : 0,

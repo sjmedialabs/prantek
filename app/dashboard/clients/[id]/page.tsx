@@ -544,7 +544,7 @@ export default function ClientDetailsPage() {
 
       {/* === Client Info & Transactions UI (unchanged) === */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <Card className="md:col-span-1">
         {(() => {
             const infoItems: Array<{ label: string; value: string | JSX.Element }> = []
             const pushIf = (label: string, value?: string) => {
@@ -595,7 +595,7 @@ export default function ClientDetailsPage() {
           })()}
         </Card>
 
-        <div className="lg:col-span-2 space-y-6">
+        <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-3">
