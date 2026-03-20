@@ -98,19 +98,31 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const userId = await getUserIdFromRequest(request)
-    
+
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
-    const { notificationId, isRead } = body
+    const { notificationId, isRead, markAll } = body
 
+    const db = await getDb()
+
+    // ✅ CASE 1: Mark ALL as read
+    if (markAll) {
+      await db.collection<Notification>("notifications").updateMany(
+        { userId, isRead: false },
+        { $set: { isRead: true, updatedAt: new Date() } }
+      )
+
+      return NextResponse.json({ success: true, type: "all-updated" })
+    }
+
+    // ✅ CASE 2: Single notification
     if (!notificationId) {
       return NextResponse.json({ error: "Missing notification ID" }, { status: 400 })
     }
 
-    const db = await getDb()
     const result = await db.collection<Notification>("notifications").updateOne(
       { _id: new ObjectId(notificationId), userId },
       { $set: { isRead, updatedAt: new Date() } }
@@ -120,7 +132,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Notification not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, type: "single-updated" })
   } catch (error) {
     console.error("Error updating notification:", error)
     return NextResponse.json({ error: "Failed to update notification" }, { status: 500 })

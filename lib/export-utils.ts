@@ -22,8 +22,9 @@ export function convertToCSV(data: any[], columns: ExportColumn[]): string {
         const value = item[col.key]
         const formattedValue = col.format ? col.format(value) : value
         // Escape commas and quotes in CSV
-        const escaped = String(formattedValue || "").replace(/"/g, '""')
-        return `"${escaped}"`
+       const raw = formattedValue ?? ""
+const escaped = String(raw).replace(/"/g, '""')
+return `"${escaped}"`
       })
       .join(",")
   })
@@ -35,8 +36,15 @@ export function convertToCSV(data: any[], columns: ExportColumn[]): string {
  * Download data as CSV file
  */
 export function downloadCSV(filename: string, data: any[], columns: ExportColumn[]): void {
+  // const csv = convertToCSV(data, columns)
+  // const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
   const csv = convertToCSV(data, columns)
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+
+// ✅ Add BOM to fix ₹ encoding
+const BOM = "\uFEFF"
+const csvWithBOM = BOM + csv
+
+const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" })
   downloadBlob(blob, filename)
 }
 
@@ -78,6 +86,7 @@ export function formatDateForExport(date: string | Date): string {
 /**
  * Format currency for export
  */
-export function formatCurrencyForExport(amount: number, currency = "₹"): string {
-  return `${currency}${amount.toLocaleString()}`
+export function formatCurrencyForExport(amount: any, currency = "₹"): string {
+  const clean = String(amount).replace(/[^\d.-]/g, "")
+  return `="${currency}${Number(clean).toLocaleString()}"`
 }

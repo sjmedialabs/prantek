@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
+import { tokenStorage } from "@/lib/token-storage"
 import { PurchaseInvoicePrint } from "@/components/print-templates/purchase-invoice-print"
 
 export default function ViewPurchaseInvoicePage() {
@@ -22,8 +23,24 @@ export default function ViewPurchaseInvoicePage() {
   const [loading, setLoading] = useState(true)
   const [invoice, setInvoice] = useState<any>(null)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
 
   useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+
     const loadInvoice = async () => {
       try {
         const data = await api.purchaseInvoice.getById(id)
@@ -83,14 +100,18 @@ export default function ViewPurchaseInvoicePage() {
               </Button>
             </Link>
           )}
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          {planFeatures?.pdf && (
+            <Button variant="outline" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          )}
+          {planFeatures?.print && (
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          )}
         </div>
       </div>
 

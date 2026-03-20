@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast"
 import { downloadCSV, downloadJSON, formatCurrencyForExport } from "@/lib/export-utils"
 import { generatePDF } from "@/lib/pdf-utils"
 import { api } from "@/lib/api-client"
+import { tokenStorage } from "@/lib/token-storage"
 import { generateEnhancedPDF } from "@/lib/enhanced-pdf-utils"
 import type { Receipt, Quotation, Payment, Client, Item } from "@/lib/models/types"
 import { Calendar } from "@/components/ui/calendar"
@@ -53,10 +54,29 @@ export default function ReportsPage() {
   const [items, setItems] = useState<Item[]>([])
   const [hasTaxSettings, setHasTaxSettings] = useState(false)
   const [hasBankDetails, setHasBankDetails] = useState(false)
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
   const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
   const [customStartDate, setCustomStartDate] = useState<Date | null>(null)
 const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
   const [selectedClientForDetails, setSelectedClientForDetails] = useState<{ id: string; name: string } | null>(null)
+
+  useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+  }, [])
+
   useEffect(() => {
     const loadData = async () => {
       if (hasPermission("view_reports")) {
@@ -743,18 +763,20 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
   </div>
 )}
-          <Select
-            onValueChange={(value) => {
-              const dateSuffix = `${dateRange}-${new Date().toISOString().split("T")[0]}`
-              switch (value) {
-                case "financial":
-                  downloadCSV(`financial-report-${dateSuffix}.csv`, financialData, [
-                    { key: "month", label: "Month" },
-                    { key: "income", label: "Income", format: (v) => formatCurrencyForExport(v, "₹") },
-                    { key: "expenses", label: "Expenses", format: (v) => formatCurrencyForExport(v, "₹") },
-                    { key: "profit", label: "Profit", format: (v) => formatCurrencyForExport(v, "₹") },
-                  ])
-                  break
+
+          {(hasPermission("export_reports") && (planFeatures?.csv || planFeatures?.pdf || planFeatures?.exportReports)) && (
+            <Select
+              onValueChange={(value) => {
+                const dateSuffix = `${dateRange}-${new Date().toISOString().split("T")[0]}`
+                switch (value) {
+                  case "financial":
+                    downloadCSV(`financial-report-${dateSuffix}.csv`, financialData, [
+                      { key: "month", label: "Month" },
+                      { key: "income", label: "Income" },
+                      { key: "expenses", label: "Expenses" },
+                      { key: "profit", label: "Profit" },
+                    ])
+                    break
                 case "customer":
                   downloadCSV(`customer-analytics-${dateSuffix}.csv`, customerAnalytics, [
                     { key: "name", label: "Customer Name" },
@@ -807,24 +829,21 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
               }
             }}
           >
-            {
-              (hasPermission("export_reports")) && (
-                <SelectTrigger className="w-full sm:w-40">
-                  <Download className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Export" />
-                </SelectTrigger>
-              )
-            }
+            <SelectTrigger className="w-full sm:w-40">
+              <Download className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Export" />
+            </SelectTrigger>
 
             <SelectContent>
-              <SelectItem value="financial">Financial Data (CSV)</SelectItem>
-              <SelectItem value="customer">Customer Analytics (CSV)</SelectItem>
-              <SelectItem value="inventory">Inventory Data (CSV)</SelectItem>
-              <SelectItem value="kpi">KPI Summary (CSV)</SelectItem>
-              <SelectItem value="all">Complete Report (JSON)</SelectItem>
-              <SelectItem value="pdf">Export as PDF</SelectItem>
+              {planFeatures?.csv && <SelectItem value="financial">Financial Data (CSV)</SelectItem>}
+              {planFeatures?.csv && <SelectItem value="customer">Customer Analytics (CSV)</SelectItem>}
+              {planFeatures?.csv && <SelectItem value="inventory">Inventory Data (CSV)</SelectItem>}
+              {planFeatures?.csv && <SelectItem value="kpi">KPI Summary (CSV)</SelectItem>}
+              {(planFeatures?.exportReports || planFeatures?.csv) && <SelectItem value="all">Complete Report (JSON)</SelectItem>}
+              {planFeatures?.pdf && <SelectItem value="pdf">Export as PDF</SelectItem>}
             </SelectContent>
           </Select>
+          )}
         </div>
       </div>
 

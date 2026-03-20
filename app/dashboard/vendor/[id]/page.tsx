@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { api } from "@/lib/api-client"
 import type { Vendor } from "@/lib/models/types"
+import { tokenStorage } from "@/lib/token-storage"
 import { ArrowLeft, Download, Edit, Store } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { Input } from "@/components/ui/input"
@@ -38,10 +39,28 @@ export default function VendorDetailsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionQuery, setTransactionQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
 
   useEffect(() => {
     if (vendorId) loadVendor()
   }, [vendorId])
+
+  useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+  }, [])
 
   const loadVendor = async () => {
     try {
@@ -269,10 +288,12 @@ export default function VendorDetailsPage() {
           </h1>
         </div>
         <div>
-          <Button onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Transactions
-          </Button>
+          {planFeatures?.csv && (
+            <Button onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Transactions
+            </Button>
+          )}
         </div>
       </div>
 

@@ -110,14 +110,18 @@ export default function DashboardHeader() {
   try {
     const token = tokenStorage.getAccessToken();
 
-    await fetch("/api/notifications/mark-all-read", {
-      method: "PATCH",
-      credentials: "include",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
+   await fetch("/api/notifications", {
+  method: "PATCH",
+  credentials: "include",
+  headers: {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    markAll: true,
+    isRead: true,
+  }),
+})
 
     // Update UI instantly
     setNotifications([]); // because you show only unread

@@ -11,6 +11,7 @@ import { ArrowLeft, CreditCard, Pencil, Download } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { downloadCSV, formatCurrencyForExport, formatDateForExport } from "@/lib/export-utils"
+import { tokenStorage } from "@/lib/token-storage"
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -69,6 +70,7 @@ export default function ClientDetailsPage() {
   const [client, setClient] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [transactionNumberQuery, setTransactionNumberQuery] = useState("")
   // Client Type
@@ -107,6 +109,21 @@ export default function ClientDetailsPage() {
   })
 
   useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+
     const loadClientData = async () => {
       if (params.id) {
         try {
@@ -223,8 +240,10 @@ export default function ClientDetailsPage() {
   }
 
   const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0)
-  const totalPaid = transactions.reduce((sum, t) => sum + t.paidAmount, 0)
-  const totalBalance = transactions.reduce((sum, t) => sum + t.balanceAmount, 0)
+  const rec = transactions.filter((t) => t.type === "receipt")
+  const totalPaid = rec.reduce((sum, t) => sum + t.paidAmount, 0)
+  const invoice = transactions.filter((t) => t.type === "salesInvoice")
+  const totalBalance = invoice.reduce((sum, t) => sum + t.balanceAmount, 0)
 
   const handleExportTransactions = () => {
     const exportData = transactions.map((t) => ({
@@ -242,14 +261,14 @@ export default function ClientDetailsPage() {
       `client-${client.clientNumber}-transactions-${new Date().toISOString().split("T")[0]}.csv`,
       exportData,
       [
-        { key: "transactionNumber", label: "Transaction #" },
+        { key: "transactionNumber", label: "Transaction #", format: (v) => `="${v}"` },
         { key: "type", label: "Type" },
         { key: "date", label: "Date", format: formatDateForExport },
         { key: "items", label: "Items" },
-        { key: "amount", label: "Amount", format: (v) => formatCurrencyForExport(v) },
-        { key: "paidAmount", label: "Paid", format: (v) => formatCurrencyForExport(v) },
-        { key: "balanceAmount", label: "Balance", format: (v) => formatCurrencyForExport(v) },
         { key: "status", label: "Status" },
+        { key: "amount", label: "Amount", format: formatCurrencyForExport },
+        { key: "paidAmount", label: "Paid", format: formatCurrencyForExport },
+        { key: "balanceAmount", label: "Balance", format: formatCurrencyForExport },
       ],
     )
   }
@@ -511,10 +530,12 @@ export default function ClientDetailsPage() {
           </Button>
         </Link>
         <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm" onClick={handleExportTransactions}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Transactions
-          </Button>
+          {planFeatures?.csv && (
+            <Button variant="outline" size="sm" onClick={handleExportTransactions}>
+              <Download className="h-4 w-4 mr-2" />
+              Export Transactions
+            </Button>
+          )}
           {/* <Button size="sm" onClick={() => handleEdit(client)}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit Client

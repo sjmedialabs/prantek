@@ -23,6 +23,7 @@ import { ReceiptPrint } from "@/components/print-templates/receipt-print"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { api } from "@/lib/api-client"
 import type { Receipt } from "@/lib/models/types"
+import { tokenStorage } from "@/lib/token-storage"
 import { toast } from "sonner"
 import { useUser } from "@/components/auth/user-context"
 
@@ -113,12 +114,30 @@ export default function ReceiptDetailsPage() {
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [refundAmount, setRefundAmount] = useState("")
   const [refundSubmitting, setRefundSubmitting] = useState(false)
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
   const [refundError, setRefundError] = useState("")
 
   useEffect(() => {
     getCompanyDetails().then(setCompanyDetails)
     loadReceipt()
   }, [receiptId])
+
+  useEffect(() => {
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
+  }, [])
 
   const loadReceipt = async () => {
     try {
@@ -285,14 +304,18 @@ export default function ReceiptDetailsPage() {
               Refund
             </Button>
           )}
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          {planFeatures?.pdf && (
+            <Button variant="outline" onClick={handleDownloadPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+          {planFeatures?.print && (
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          )}
         </div>
       </div>
 

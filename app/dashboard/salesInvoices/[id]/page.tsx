@@ -12,6 +12,7 @@ import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { SalesInvoicePrint } from "@/components/print-templates/sales-invoice-print"
 import { SalesInvoice } from "@/lib/models/types"
+import { tokenStorage } from "@/lib/token-storage"
 
 // interface SalesInvoice {
 //   _id: string
@@ -51,12 +52,28 @@ export default function SalesInvoiceDetailsPage() {
   const [invoice, setInvoice] = useState<SalesInvoice | null>(null)
   const [loading, setLoading] = useState(true)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
 
   useEffect(() => {
     if (id) {
       loadInvoice()
       getCompanyDetails().then(setCompanyDetails)
     }
+
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+    fetchPlanFeatures()
   }, [id])
 
   const loadInvoice = async () => {
@@ -145,14 +162,18 @@ export default function SalesInvoiceDetailsPage() {
           <Badge className={getStatusColor(invoice.status)}><span className="capitalize">{invoice.status}</span></Badge>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownload} title="While downloading please cross verify Your owned company Detils in settings">
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint} title="While Printing please cross verify Your owned company Detils in setting">
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
+          {planFeatures?.pdf && (
+            <Button variant="outline" onClick={handleDownload} title="While downloading please cross verify Your owned company Detils in settings">
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          )}
+          {planFeatures?.print && (
+            <Button variant="outline" onClick={handlePrint} title="While Printing please cross verify Your owned company Detils in setting">
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          )}
         </div>
       </div>
 

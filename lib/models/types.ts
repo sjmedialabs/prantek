@@ -500,6 +500,11 @@ export interface PlanFeatures {
   reports: boolean
   settings: boolean
   hrSettings: boolean
+  print: boolean
+  pdf: boolean
+  csv: boolean
+  email: boolean
+  backup: boolean
 }
 
 export const PLAN_FEATURE_KEYS = [
@@ -516,6 +521,11 @@ export const PLAN_FEATURE_KEYS = [
   'reports',
   'settings',
   'hrSettings',
+  'print',
+  'pdf',
+  'csv',
+  'email',
+  'backup',
 ] as const
 
 export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
@@ -532,6 +542,11 @@ export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
   reports: 'Reports',
   settings: 'Settings',
   hrSettings: 'HR Settings',
+  print: 'Print',
+  pdf: 'PDF',
+  csv: 'CSV',
+  email: 'Email',
+  backup: 'Backup',
 }
 
 export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
@@ -548,6 +563,11 @@ export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
   reports: 'Generate business reports',
   settings: 'Access to system settings and configuration',
   hrSettings: 'Access to HR settings and configuration',
+  print: 'Access to print Details',
+  pdf: 'Access to download pdf',
+  csv: 'Access to download csv',
+  email: 'Access to send emails',
+  backup: 'Access to backup and restore',
 }
 
 export interface SubscriptionPlan extends BaseDocument {

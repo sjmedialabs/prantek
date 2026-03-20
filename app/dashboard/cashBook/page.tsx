@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { api } from "@/lib/api-client"
 import { dataStore } from '@/lib/data-store'
+import { tokenStorage } from "@/lib/token-storage"
 import Link from "next/link";
 import { generatePDF } from "@/lib/pdf-utils"
 import { Download, Eye, FileText, Filter, Search, X } from "lucide-react"
@@ -56,6 +57,7 @@ export default function CashbookPage() {
   const[netBalanceValue,setNetBalanceValue]=useState<any>()
   const itemsPerPage = 10; // choose how many entries per page
 const [selectedBankAccount, setSelectedBankAccount] = useState("all")
+  const [planFeatures, setPlanFeatures] = useState<any>(null)
 
   useEffect(() => {
     loadCashbookData()
@@ -69,7 +71,21 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
         setCompanyDetails(await api.company.get())
       setBankAccounts(await api.bankAccounts.getAll())
     }
-     loadData();loadCompanyDetails()
+
+    const fetchPlanFeatures = async () => {
+      try {
+        const token = tokenStorage.getAccessToken()
+        const response = await fetch("/api/user/plan-features", {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await response.json()
+        if (data.success) setPlanFeatures(data.planFeatures)
+      } catch (error) {
+        console.error("Failed to fetch plan features", error)
+      }
+    }
+     loadData();loadCompanyDetails();fetchPlanFeatures()
   }, [])
 
   const loadCashbookData = async () => {
@@ -90,7 +106,7 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
       amount: r.ReceiptAmount,
       referenceNumber: r.referenceNumber,
       paymentMethod: r.paymentMethod || "",
-      accountDetails: r?.bankDetails?._id || ""
+      accountDetails: r?.bankDetails?.bankName || ""
       //   createdBy: r.createdBy
     }))
     console.log("formattedReceipts", formattedReceipts)
@@ -253,10 +269,12 @@ setSelectedPaymentMethod("all")
       "Party Name",
       "Party Type",
       "Category",
+      "Payment Method",
+      "Bank Name",
       "Reference No",
       "Receipt Amount",
       "Payment Amount",
-      "Balance"
+      "Balance",
     ]
 
     const rows = entriesWithBalance.map((e) => [
@@ -266,10 +284,12 @@ setSelectedPaymentMethod("all")
       e.partyName || "",
       e.partyType || "",
       e.category || "",
+      e.paymentMethod || "",
+      e.accountDetails || "",
       e.referenceNumber || "",
       e.entryType === "receipt" ? e.amount : 0,
       e.entryType === "payment" ? e.amount : 0,
-      e.balance || 0
+      e.balance || 0,
     ])
 
     const csvContent =
@@ -320,14 +340,18 @@ setSelectedPaymentMethod("all")
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button variant="outline" onClick={handleExportPDF}>
-            <FileText className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
+          {planFeatures?.csv && (
+            <Button variant="outline" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          )}
+          {planFeatures?.pdf && (
+            <Button variant="outline" onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          )}
         </div>
       </div>
 

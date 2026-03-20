@@ -43,6 +43,28 @@ const capitalizeWords = (value: any) => {
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
+// const SENSITIVE_KEYS_TO_EXCLUDE = [
+//   // Phone numbers
+//   "phone", "phone2", "mobileNo1", "mobileNo2", "clientPhone", "clientContact", "recipientPhone", "contactNumber", "emergencyContact",
+
+//   // Financial amounts & numbers
+//   "amount", "price", "total", "subtotal", "grandTotal", "paidAmount", "balanceAmount", "taxAmount", "discount", "salary", "purchasePrice", "currentValue", "depreciationRate", "ReceiptAmount", "refundedAmount", "invoiceTotalAmount", "expenseAdjustment", "payAbleAmount", "subscriptionPrice", "invoicegrandTotal", "invoiceBalance", "quantity", "cgst", "sgst", "igst", "taxRate",
+
+//   // Financial identifiers
+//   "bankAccount", "bankAccountNumber", "ifscCode", "upiId", "razorpayTokenId", "stripeCustomerId", "razorpayCustomerId",
+
+//   // Government IDs
+//   "gst", "gstin", "pan", "tan", "aadharNumber",
+
+//   // Other
+//   "pincode",
+
+//   // Passwords/secrets
+//   "password",
+
+//   // Location
+//   "address", "city", "state",
+// ]
   const exportData = async (
     label: string,
     fetcher: () => Promise<any[]>
@@ -67,7 +89,10 @@ const capitalizeWords = (value: any) => {
 
       const seenLabels = new Set<string>()
       const columns = Object.keys(data[0])
-        .filter((key) => key !== "userId") // Do not export userId
+        .filter((key) => {
+          if (key === "userId") return false
+          return true
+        })
         .map((key) => {
           const label = formatHeader(key)
           // Handle cases where different keys might produce the same header label
@@ -82,21 +107,57 @@ const capitalizeWords = (value: any) => {
       const formattedData = data.map((row) => {
         const newRow: any = {}
 
-  Object.keys(row).forEach((key) => {
-    let value = row[key]
+Object.keys(row).forEach((key) => {
+  let value = row[key]
 
-    // ✅ If value is object or array → stringify it
-    if (typeof value === "object" && value !== null) {
+  if (value === null || value === undefined) {
+    value = ""
+  } else if (typeof value === "object") {
+    try {
       value = JSON.stringify(value)
+    } catch {
+      value = ""
     }
+  }
 
-    // ✅ Apply capitalization only for selected fields
-    if (fieldsToCapitalize.includes(key)) {
-      value = capitalizeWords(value)
-    }
+  if (fieldsToCapitalize.includes(key)) {
+    value = capitalizeWords(value)
+  }
 
-    newRow[key] = value
-  })
+  const lowerKey = key.toLowerCase()
+
+  // Protect sensitive numbers
+  if (
+    typeof value === "string" &&
+    (
+      lowerKey.includes("phone") ||
+      lowerKey.includes("mobile") ||
+      lowerKey.includes("pincode") ||
+      lowerKey.includes("gst") ||
+      lowerKey.includes("pan") ||
+      lowerKey.includes("aadhaar")
+    )
+  ) {
+    value = `="${value}"`
+  }
+
+  // Handle currency properly
+  const isCurrencyField = [
+    "amount",
+    "total",
+    "price",
+    "grandtotal",
+    "paidamount",
+    "balanceamount",
+    "taxamount",
+  ].includes(lowerKey)
+
+  if (isCurrencyField && value !== "") {
+    value = `="₹${value}"`
+  }
+
+  newRow[key] = value
+})
 
   return newRow
 })
@@ -142,8 +203,6 @@ const capitalizeWords = (value: any) => {
                   api.backup.getBankStatements(),
                 ])
                 const rows = (transactions || []).map((t: any) => {
-                  const isReceipt = t.type === "receipt"
-                  const amount = Number(t.amount) || 0
                   const bankAccount = t.bankAccount != null
                     ? (typeof t.bankAccount === "object"
                       ? (t.bankAccount.accountName || t.bankAccount.bankName || JSON.stringify(t.bankAccount))
@@ -157,8 +216,6 @@ const capitalizeWords = (value: any) => {
                     payment_method: t.paymentMethod || "",
                     bank_account: bankAccount,
                     reference: t.referenceNumber || "",
-                    amount_in: isReceipt ? amount : "",
-                    amount_out: !isReceipt ? amount : "",
                     status: t.status || "",
                   }
                 })

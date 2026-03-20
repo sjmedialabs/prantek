@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     const result = await authenticateUser(email, password)
 
     console.log('[AUTH-LOGIN] Auth result:', result ? 'SUCCESS' : 'FAILED')
-
+const bcrypt = require("bcryptjs");
+bcrypt.hash("SuperAdmin@2025", 10).then(console.log);
     if (!result) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }

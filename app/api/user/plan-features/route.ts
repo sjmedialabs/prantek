@@ -29,7 +29,12 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
           assets: true,
           reports: true,
           settings: true,
-          hrSettings: true
+          hrSettings: true,
+          print: true,
+          pdf: true,
+          csv: true,
+          email: true,
+          backup: true
         },
         hasActiveSubscription: true
       })
@@ -58,7 +63,12 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
           assets: false,
           reports: false,
           settings: false,
-          hrSettings: false
+          hrSettings: false,
+          print: false,
+          pdf: false,
+          csv: false,
+          email: false,
+          backup: false
         },
         hasActiveSubscription: false
       })
@@ -87,7 +97,12 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
           assets: false,
           reports: false,
           settings: false,
-          hrSettings: false
+          hrSettings: false,
+          print: false,
+          pdf: false,
+          csv: false,
+          email: false,
+          backup: false
         },
         hasActiveSubscription: false
       })

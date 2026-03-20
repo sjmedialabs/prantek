@@ -453,7 +453,7 @@ console.log("payment amount is ", paymentAmount)
                 </div>
 
 
-                <div>
+                {/* <div>
                   <span className="text-gray-600">Paid Before This Receipt:</span>
                   <span className="ml-2 font-medium">
                     ₹{(
@@ -461,7 +461,7 @@ console.log("payment amount is ", paymentAmount)
                       Number(receipt.ReceiptAmount || 0)
                     ).toLocaleString()}
                   </span>
-                </div>
+                </div> */}
 
                 <div>
                   <span className="text-gray-600">Paid In This Receipt:</span>

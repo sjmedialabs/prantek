@@ -245,15 +245,15 @@ const navigationItems: NavItem[] = [
         icon: Settings,
         href: "/dashboard/settings/terms",
         permission: "tenant_settings",
-      },
-            {
+      }
+    ],
+  },
+              {
         name: "Backup",
         icon: Settings,
         href: "/dashboard/settings/backup",
         permission: "backup",
       },
-    ],
-  },
 ];
 
 type DashboardSidebarProps = {
@@ -334,7 +334,8 @@ export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebar
       'Assets': 'assets',
       'Reports': 'reports',
       'Settings': 'settings',
-      'HR Settings': 'hrSettings'
+      'HR Settings': 'hrSettings',
+      'Backup': 'backup'
     };
     
     const featureKey = featureMap[featureName];

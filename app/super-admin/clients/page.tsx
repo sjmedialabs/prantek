@@ -469,9 +469,9 @@ export default function ClientAccountsPage() {
           <div className="flex items-center space-x-2">
             <Button variant="outline" onClick={exportCSV}>Export Clients</Button>
           </div>
-          {/* <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
             <Button variant="default" onClick={handleCreateClient}>Create Clients</Button>
-          </div> */}
+          </div>
         </div>
       </div>
 
