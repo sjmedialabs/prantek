@@ -248,6 +248,9 @@ export default function ClientAccountsPage() {
     phone: "",
     address: "",
     subscriptionPlanId: "",
+    subscriptionStartDate: "",
+    subscriptionEndDate: "",
+    subscriptionRevenueExcluded: false,
   })
 
   const [plans, setPlans] = useState([])
@@ -364,7 +367,8 @@ export default function ClientAccountsPage() {
     const newErrors: Record<string, string> = {}
 
     Object.entries(formData).forEach(([key, value]) => {
-      if (!value || value.trim() === "") {
+      if (key === "subscriptionRevenueExcluded") return
+      if (typeof value === "string" && (!value || value.trim() === "")) {
         newErrors[key] = "This field is required"
       }
     })
@@ -377,6 +381,8 @@ export default function ClientAccountsPage() {
       phone: true,
       address: true,
       subscriptionPlanId: true,
+      subscriptionStartDate: true,
+      subscriptionEndDate: true,
     })
 
     return Object.keys(newErrors).length === 0
@@ -410,6 +416,9 @@ export default function ClientAccountsPage() {
         phone: formData.phone,
         address: formData.address,
         subscriptionPlanId: formData.subscriptionPlanId,
+        subscriptionStartDate: formData.subscriptionStartDate,
+        subscriptionEndDate: formData.subscriptionEndDate,
+        subscriptionRevenueExcluded: formData.subscriptionRevenueExcluded,
         isActive: true,
         role: "admin",
         userType: "subscriber",
@@ -423,6 +432,9 @@ export default function ClientAccountsPage() {
         phone: "",
         address: "",
         subscriptionPlanId: "",
+        subscriptionStartDate: "",
+        subscriptionEndDate: "",
+        subscriptionRevenueExcluded: false,
       })
       setErrors({})
       setTouched({})
@@ -445,6 +457,17 @@ export default function ClientAccountsPage() {
   }
 
   const handleCreateClient = () => {
+    const today = new Date().toISOString().split("T")[0]
+    const nextMonth = new Date()
+    nextMonth.setMonth(nextMonth.getMonth() + 1)
+    const nextMonthStr = nextMonth.toISOString().split("T")[0]
+
+    setFormData((prev) => ({
+      ...prev,
+      subscriptionStartDate: today,
+      subscriptionEndDate: nextMonthStr,
+      subscriptionRevenueExcluded: false,
+    }))
     setIsCreateClientOpen(true)
   }
   const handleViewDetails = (client: ClientAccount) => {
@@ -1189,6 +1212,8 @@ export default function ClientAccountsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* create client dialogue */}
       {isCreateClientOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-lg rounded-2xl flex flex-col max-h-[90vh] relative">
@@ -1313,6 +1338,52 @@ export default function ClientAccountsPage() {
                   <p className="text-xs text-red-500">{errors.subscriptionPlanId}</p>
                 )}
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Subscription Start Date */}
+                <div className="space-y-1">
+                  <Label text="Start Date" />
+                  <Input
+                    type="date"
+                    name="subscriptionStartDate"
+                    value={formData.subscriptionStartDate}
+                    onChange={(e) => setFormData({ ...formData, subscriptionStartDate: e.target.value })}
+                    onBlur={handleBlur}
+                    className={errors.subscriptionStartDate && touched.subscriptionStartDate ? "border-red-500" : ""}
+                  />
+                  {errors.subscriptionStartDate && touched.subscriptionStartDate && (
+                    <p className="text-xs text-red-500">{errors.subscriptionStartDate}</p>
+                  )}
+                </div>
+
+                {/* Subscription End Date */}
+                <div className="space-y-1">
+                  <Label text="End Date" />
+                  <Input
+                    type="date"
+                    name="subscriptionEndDate"
+                    value={formData.subscriptionEndDate}
+                    onChange={(e) => setFormData({ ...formData, subscriptionEndDate: e.target.value })}
+                    onBlur={handleBlur}
+                    className={errors.subscriptionEndDate && touched.subscriptionEndDate ? "border-red-500" : ""}
+                  />
+                  {errors.subscriptionEndDate && touched.subscriptionEndDate && (
+                    <p className="text-xs text-red-500">{errors.subscriptionEndDate}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Revenue Excluded */}
+              <div className="flex items-center space-x-2 pt-1">
+                <Checkbox
+                  id="create-revenue-excluded"
+                  checked={formData.subscriptionRevenueExcluded}
+                  onCheckedChange={(c) => setFormData({ ...formData, subscriptionRevenueExcluded: c === true })}
+                />
+                <label htmlFor="create-revenue-excluded" className="text-sm cursor-pointer leading-snug">
+                  Complimentary / exclude from revenue
+                </label>
+              </div>
             </div>
 
             {/* ===== FOOTER (STICKY) ===== */}
@@ -1341,7 +1412,7 @@ export default function ClientAccountsPage() {
         userId={historyUserId}
         clientLabel={historyLabel}
       />
-
+      {/* plan assignment with duration dialogue */}
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
