@@ -1,5 +1,34 @@
 import type { ObjectId } from "mongodb"
 
+/** Repeatable image + text section for public About / Contact pages */
+export interface CmsPublicPageBlock {
+  id: string
+  heading: string
+  body: string
+  image: string
+  imageAlt: string
+}
+
+/** Editable content for /about-us */
+export interface AboutUsPageContent {
+  pageTitle: string
+  heroImage: string
+  heroImageAlt: string
+  heroHeading: string
+  heroSubheading: string
+  blocks: CmsPublicPageBlock[]
+}
+
+/** Editable content for /contact (separate from site-wide Contact tab fields) */
+export interface PublicContactPageContent {
+  pageTitle: string
+  heroImage: string
+  heroImageAlt: string
+  introHeading: string
+  introBody: string
+  blocks: CmsPublicPageBlock[]
+}
+
 export interface BaseDocument {
   _id?: ObjectId
   createdAt: Date
@@ -274,8 +303,20 @@ export interface WebsiteContent {
   socialLinkedin?: string
   socialInstagram?: string
 
-  // Footer
-  footerText: string
+  /** Footer-only logo (distinct from header `logo`); image URL from CMS upload */
+  footerLogo?: string
+
+  /** Legacy field; not used on public footer (address comes from `contactAddress`) */
+  footerText?: string
+
+  /** Optional copyright line shown below the footer columns */
+  footerCopyright?: string
+
+  /** Structured content for /about-us (images + blocks; managed in CMS) */
+  aboutUsPage?: AboutUsPageContent
+
+  /** Structured content for /contact page */
+  publicContactPage?: PublicContactPageContent
 
   updatedAt: string
 }

@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
+import type { WebsiteContent } from "@/lib/models/types"
 
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
-    api.websiteContent.getAll().then(data => data[0] || {}).then((websiteContent) => {
-    setContent(websiteContent)
-    })
+    api.websiteContent
+      .getAll()
+      .then((data) => data[0] as WebsiteContent | undefined)
+      .then((websiteContent) => setContent(websiteContent ?? null))
   }, [])
 
   const navLinks = [
@@ -32,16 +34,16 @@ export function LandingHeader() {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Link href="/" className="flex items-center space-x-2">
-                {content?.logo && content.logo !== "/generic-company-logo.png" ? (
-                  <img src={content.logo || "/placeholder.svg"} alt={content.companyName} className="h-10 w-auto" />
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">{content?.companyName?.charAt(0) || "S"}</span>
-                    </div>
-                    <span className="text-xl font-bold text-gray-900">{content?.companyName || "SaaS Platform"}</span>
-                  </div>
-                )}
+                {content?.logo?.trim() ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={content.logo}
+                    alt={content.companyName?.trim() ? content.companyName : ""}
+                    className="h-10 w-auto"
+                  />
+                ) : content?.companyName?.trim() ? (
+                  <span className="text-xl font-bold text-gray-900">{content.companyName}</span>
+                ) : null}
               </Link>
             </div>
           </div>

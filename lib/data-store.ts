@@ -319,7 +319,25 @@ export interface WebsiteContent {
   socialInstagram?: string
 
   // Footer
-  footerText: string
+  footerLogo?: string /** image URL */
+  footerText?: string
+  footerCopyright?: string
+  aboutUsPage?: {
+    pageTitle: string
+    heroImage: string
+    heroImageAlt: string
+    heroHeading: string
+    heroSubheading: string
+    blocks: Array<{ id: string; heading: string; body: string; image: string; imageAlt: string }>
+  }
+  publicContactPage?: {
+    pageTitle: string
+    heroImage: string
+    heroImageAlt: string
+    introHeading: string
+    introBody: string
+    blocks: Array<{ id: string; heading: string; body: string; image: string; imageAlt: string }>
+  }
 
   updatedAt: string
 }
@@ -1008,7 +1026,25 @@ class DataStore {
       socialLinkedin: "",
       socialInstagram: "",
 
-      footerText: "© 2025 Your Company. All rights reserved.",
+      footerLogo: "",
+      footerText: "",
+      footerCopyright: "",
+      aboutUsPage: {
+        pageTitle: "",
+        heroImage: "",
+        heroImageAlt: "",
+        heroHeading: "",
+        heroSubheading: "",
+        blocks: [],
+      },
+      publicContactPage: {
+        pageTitle: "",
+        heroImage: "",
+        heroImageAlt: "",
+        introHeading: "",
+        introBody: "",
+        blocks: [],
+      },
 
       updatedAt: new Date().toISOString(),
     }

@@ -11,7 +11,12 @@ import { api } from "@/lib/api-client"
 import { Save, Plus, Trash2 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ImageUpload } from "@/components/ui/image-upload"
-import { WebsiteContent } from "@/lib/models/types"
+import type { WebsiteContent, CmsPublicPageBlock, AboutUsPageContent, PublicContactPageContent } from "@/lib/models/types"
+import {
+  normalizeAboutUsPage,
+  normalizePublicContactPage,
+  emptyCmsBlock,
+} from "@/lib/cms-public-pages"
 
 export default function CMSPage() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
@@ -44,8 +49,9 @@ export default function CMSPage() {
         //   return
         // }
         
+        const { cmsPages: _legacyPages, ...wc } = websiteContent as WebsiteContent & { cmsPages?: unknown }
         const normalizedContent = {
-          ...websiteContent,
+          ...wc,
           trustedByLogos: websiteContent.trustedByLogos || [],
           features: websiteContent.features || [],
           industries: websiteContent.industries || [],
@@ -53,6 +59,8 @@ export default function CMSPage() {
           testimonials: websiteContent.testimonials || [],
           faqs: websiteContent.faqs || [],
           ctaFeatures: websiteContent.ctaFeatures || [],
+          aboutUsPage: normalizeAboutUsPage(websiteContent.aboutUsPage),
+          publicContactPage: normalizePublicContactPage(websiteContent.publicContactPage),
         }
         setContent(normalizedContent)
         setLoading(false)
@@ -68,7 +76,12 @@ const handleSave = async () => {
   if (!content) return
 
   try {
-    const { _id, id, updatedAt, ...contentData } = content as any
+    const { _id, id, updatedAt, cmsPages: _legacy, ...rest } = content as any
+    const contentData = {
+      ...rest,
+      aboutUsPage: normalizeAboutUsPage(rest.aboutUsPage),
+      publicContactPage: normalizePublicContactPage(rest.publicContactPage),
+    }
 
     let saved
     if (_id || id) {
@@ -90,6 +103,8 @@ const handleSave = async () => {
         testimonials: saved.testimonials || [],
         faqs: saved.faqs || [],
         ctaFeatures: saved.ctaFeatures || [],
+        aboutUsPage: normalizeAboutUsPage(saved.aboutUsPage),
+        publicContactPage: normalizePublicContactPage(saved.publicContactPage),
       }
       setContent(normalizedContent)
     }
@@ -104,6 +119,69 @@ const handleSave = async () => {
   const updateContent = (field: keyof WebsiteContent, value: any) => {
     if (!content) return
     setContent({ ...content, [field]: value })
+  }
+
+  const mergeAboutUs = (patch: Partial<AboutUsPageContent>) => {
+    if (!content) return
+    const prev = normalizeAboutUsPage(content.aboutUsPage)
+    setContent({ ...content, aboutUsPage: normalizeAboutUsPage({ ...prev, ...patch }) })
+  }
+
+  const updateAboutBlock = (blockId: string, field: keyof CmsPublicPageBlock, value: string) => {
+    if (!content) return
+    const a = normalizeAboutUsPage(content.aboutUsPage)
+    setContent({
+      ...content,
+      aboutUsPage: {
+        ...a,
+        blocks: a.blocks.map((b) => (b.id === blockId ? { ...b, [field]: value } : b)),
+      },
+    })
+  }
+
+  const addAboutBlock = () => {
+    if (!content) return
+    const a = normalizeAboutUsPage(content.aboutUsPage)
+    setContent({ ...content, aboutUsPage: { ...a, blocks: [...a.blocks, emptyCmsBlock()] } })
+  }
+
+  const removeAboutBlock = (blockId: string) => {
+    if (!content) return
+    const a = normalizeAboutUsPage(content.aboutUsPage)
+    setContent({ ...content, aboutUsPage: { ...a, blocks: a.blocks.filter((b) => b.id !== blockId) } })
+  }
+
+  const mergePublicContact = (patch: Partial<PublicContactPageContent>) => {
+    if (!content) return
+    const prev = normalizePublicContactPage(content.publicContactPage)
+    setContent({ ...content, publicContactPage: normalizePublicContactPage({ ...prev, ...patch }) })
+  }
+
+  const updateContactBlock = (blockId: string, field: keyof CmsPublicPageBlock, value: string) => {
+    if (!content) return
+    const p = normalizePublicContactPage(content.publicContactPage)
+    setContent({
+      ...content,
+      publicContactPage: {
+        ...p,
+        blocks: p.blocks.map((b) => (b.id === blockId ? { ...b, [field]: value } : b)),
+      },
+    })
+  }
+
+  const addContactBlock = () => {
+    if (!content) return
+    const p = normalizePublicContactPage(content.publicContactPage)
+    setContent({ ...content, publicContactPage: { ...p, blocks: [...p.blocks, emptyCmsBlock()] } })
+  }
+
+  const removeContactBlock = (blockId: string) => {
+    if (!content) return
+    const p = normalizePublicContactPage(content.publicContactPage)
+    setContent({
+      ...content,
+      publicContactPage: { ...p, blocks: p.blocks.filter((b) => b.id !== blockId) },
+    })
   }
 
   // Feature management
@@ -321,6 +399,9 @@ const handleSave = async () => {
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
           <TabsTrigger value="faq">FAQ</TabsTrigger>
           <TabsTrigger value="cta">CTA</TabsTrigger>
+          <TabsTrigger value="footer">Footer</TabsTrigger>
+          <TabsTrigger value="about-page">About Page</TabsTrigger>
+          <TabsTrigger value="contact-page">Contact Page</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
         </TabsList>
 
@@ -356,14 +437,6 @@ const handleSave = async () => {
                 description="Upload your company logo or provide a URL"
                 previewClassName="w-32 h-32"
               />
-              <div className="space-y-2">
-                <Label htmlFor="footerText">Footer Text</Label>
-                <Input
-                  id="footerText"
-                  value={content.footerText}
-                  onChange={(e) => updateContent("footerText", e.target.value)}
-                />
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1039,6 +1112,266 @@ const handleSave = async () => {
                   Add Feature
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Footer Tab */}
+        <TabsContent value="footer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Footer settings</CardTitle>
+              <CardDescription>Footer logo shown on the public site footer (separate from header logo).</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ImageUpload
+                label="Footer logo"
+                value={content.footerLogo || ""}
+                onChange={(value) => updateContent("footerLogo", value)}
+                description="Upload footer logo or provide an image URL"
+                previewClassName="w-32 h-32"
+              />
+              <div className="space-y-2">
+                <Label htmlFor="footerCopyright">Copyright / bottom text</Label>
+                <Input
+                  id="footerCopyright"
+                  value={content.footerCopyright || ""}
+                  onChange={(e) => updateContent("footerCopyright", e.target.value)}
+                  placeholder="e.g. © 2025 Company Name. All rights reserved."
+                />
+                <p className="text-sm text-muted-foreground">
+                  Shown centered below the footer columns. Address and contact details come from the{" "}
+                  <strong>Contact</strong> tab (address appears in the main footer column).
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* About Us public page (/about-us) */}
+        <TabsContent value="about-page" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>About Us page</CardTitle>
+              <CardDescription>Public URL: /about-us — hero, text, images, and content blocks.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(() => {
+                const about = normalizeAboutUsPage(content.aboutUsPage)
+                return (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="about-pageTitle">Page title (browser / SEO)</Label>
+                      <Input
+                        id="about-pageTitle"
+                        value={about.pageTitle}
+                        onChange={(e) => mergeAboutUs({ pageTitle: e.target.value })}
+                      />
+                    </div>
+                    <ImageUpload
+                      label="Hero image"
+                      value={about.heroImage}
+                      onChange={(v) => mergeAboutUs({ heroImage: v })}
+                      description="Wide banner image for the top of the page"
+                      previewClassName="h-40 w-full max-w-xl object-cover rounded-md"
+                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="about-heroAlt">Hero image alt text</Label>
+                      <Input
+                        id="about-heroAlt"
+                        value={about.heroImageAlt}
+                        onChange={(e) => mergeAboutUs({ heroImageAlt: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="about-heroHeading">Hero heading</Label>
+                      <Input
+                        id="about-heroHeading"
+                        value={about.heroHeading}
+                        onChange={(e) => mergeAboutUs({ heroHeading: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="about-heroSub">Hero subheading</Label>
+                      <Textarea
+                        id="about-heroSub"
+                        value={about.heroSubheading}
+                        onChange={(e) => mergeAboutUs({ heroSubheading: e.target.value })}
+                        rows={2}
+                      />
+                    </div>
+                    <div className="border-t pt-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-semibold">Content blocks</Label>
+                        <Button type="button" variant="outline" size="sm" onClick={addAboutBlock}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add block
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Each block can include a heading, body (use blank lines for paragraphs), and an image. Blocks
+                        alternate left/right on the live site.
+                      </p>
+                      {about.blocks.map((block, idx) => (
+                        <Card key={block.id} className="bg-muted/30">
+                          <CardHeader className="py-3 flex flex-row items-center justify-between space-y-0">
+                            <CardTitle className="text-sm">Block {idx + 1}</CardTitle>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeAboutBlock(block.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="space-y-2">
+                              <Label>Heading</Label>
+                              <Input
+                                value={block.heading}
+                                onChange={(e) => updateAboutBlock(block.id, "heading", e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Body</Label>
+                              <Textarea
+                                value={block.body}
+                                onChange={(e) => updateAboutBlock(block.id, "body", e.target.value)}
+                                rows={5}
+                              />
+                            </div>
+                            <ImageUpload
+                              label="Image"
+                              value={block.image}
+                              onChange={(v) => updateAboutBlock(block.id, "image", v)}
+                              previewClassName="h-32 w-full max-w-md object-cover rounded-md"
+                            />
+                            <div className="space-y-2">
+                              <Label>Image alt text</Label>
+                              <Input
+                                value={block.imageAlt}
+                                onChange={(e) => updateAboutBlock(block.id, "imageAlt", e.target.value)}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Public Contact page (/contact) */}
+        <TabsContent value="contact-page" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact page</CardTitle>
+              <CardDescription>
+                Public URL: /contact — separate from site contact details in the Contact tab (email, phone, address for
+                footer).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(() => {
+                const pub = normalizePublicContactPage(content.publicContactPage)
+                return (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-pub-title">Page title</Label>
+                      <Input
+                        id="contact-pub-title"
+                        value={pub.pageTitle}
+                        onChange={(e) => mergePublicContact({ pageTitle: e.target.value })}
+                      />
+                    </div>
+                    <ImageUpload
+                      label="Hero image"
+                      value={pub.heroImage}
+                      onChange={(v) => mergePublicContact({ heroImage: v })}
+                      description="Banner for the contact page"
+                      previewClassName="h-40 w-full max-w-xl object-cover rounded-md"
+                    />
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-heroAlt">Hero image alt text</Label>
+                      <Input
+                        id="contact-heroAlt"
+                        value={pub.heroImageAlt}
+                        onChange={(e) => mergePublicContact({ heroImageAlt: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-intro-h">Introduction heading</Label>
+                      <Input
+                        id="contact-intro-h"
+                        value={pub.introHeading}
+                        onChange={(e) => mergePublicContact({ introHeading: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact-intro-body">Introduction body</Label>
+                      <Textarea
+                        id="contact-intro-body"
+                        value={pub.introBody}
+                        onChange={(e) => mergePublicContact({ introBody: e.target.value })}
+                        rows={5}
+                      />
+                    </div>
+                    <div className="border-t pt-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-base font-semibold">Content blocks</Label>
+                        <Button type="button" variant="outline" size="sm" onClick={addContactBlock}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add block
+                        </Button>
+                      </div>
+                      {pub.blocks.map((block, idx) => (
+                        <Card key={block.id} className="bg-muted/30">
+                          <CardHeader className="py-3 flex flex-row items-center justify-between space-y-0">
+                            <CardTitle className="text-sm">Block {idx + 1}</CardTitle>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeContactBlock(block.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="space-y-2">
+                              <Label>Heading</Label>
+                              <Input
+                                value={block.heading}
+                                onChange={(e) => updateContactBlock(block.id, "heading", e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Body</Label>
+                              <Textarea
+                                value={block.body}
+                                onChange={(e) => updateContactBlock(block.id, "body", e.target.value)}
+                                rows={5}
+                              />
+                            </div>
+                            <ImageUpload
+                              label="Image"
+                              value={block.image}
+                              onChange={(v) => updateContactBlock(block.id, "image", v)}
+                              previewClassName="h-32 w-full max-w-md object-cover rounded-md"
+                            />
+                            <div className="space-y-2">
+                              <Label>Image alt text</Label>
+                              <Input
+                                value={block.imageAlt}
+                                onChange={(e) => updateContactBlock(block.id, "imageAlt", e.target.value)}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
