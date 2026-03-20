@@ -45,7 +45,7 @@ interface Transaction {
   clientName?: string
   recipientName?: string
   recipientType?: string
-  bankAccount?: string
+  bankAccount?: any
   paymentMethod: string
   referenceNumber?: string
   amount: number
@@ -269,7 +269,12 @@ export default function ReconciliationPage() {
           t.clientName?.toLowerCase().includes(search) ||
           t.recipientName?.toLowerCase().includes(search) ||
           t.referenceNumber?.toLowerCase().includes(search) ||
-          t.bankAccount?.toLowerCase().includes(search)
+          t.paymentMethod?.toLowerCase().includes(search) ||
+         (
+  t.bankAccount?.bankName?.toLowerCase().includes(search) ||
+  t.bankAccount?.accountNumber?.toLowerCase().includes(search) ||
+  t.bankAccount?.accountName?.toLowerCase().includes(search)
+)
       )
     }
 
@@ -499,7 +504,7 @@ export default function ReconciliationPage() {
       formatDate(t.date),
       t.type === "receipt" ? t.clientName : t.recipientName,
       t.paymentMethod,
-      t.bankAccount || "-",
+      typeof t.bankAccount === 'object' ? t.bankAccount?.bankName : (t.bankAccount || "-"),
       t.referenceNumber || "-",
       t.type === "receipt" ? t.amount.toFixed(2) : "0.00",
       t.type === "payment" ? t.amount.toFixed(2) : "0.00",
@@ -940,7 +945,11 @@ export default function ReconciliationPage() {
                           <TableCell>
                             <span className="capitalize">{transaction.paymentMethod}</span>
                           </TableCell>
-                          <TableCell>{transaction.bankAccount || "-"}</TableCell>
+                          <TableCell>
+                            {typeof transaction.bankAccount === 'object' 
+                              ? transaction.bankAccount?.bankName 
+                              : (transaction.bankAccount || "-")}
+                          </TableCell>
                           <TableCell>{transaction.referenceNumber || "-"}</TableCell>
                           <TableCell className="text-right font-medium text-green-600">
                             {transaction.type === "receipt"

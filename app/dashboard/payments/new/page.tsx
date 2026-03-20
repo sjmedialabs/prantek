@@ -92,7 +92,7 @@ export default function NewPaymentPage() {
     paymentMethod: "cash",
     payAbleAmount: 0,
     invoiceDate: new Date().toISOString().split("T")[0],
-    bankAccount: "",
+    bankAccount: "" as any,
     referenceNumber: "",
     billFile: "",
     screenshotFile: "",
@@ -1600,9 +1600,10 @@ export default function NewPaymentPage() {
                             Bank Account <span className="text-red-500">*</span>
                           </Label>
                           <Select
-                            value={paymentData.bankAccount}
+                            value={typeof paymentData.bankAccount === 'object' ? (paymentData.bankAccount as any)?._id : paymentData.bankAccount}
                             onValueChange={(value) => {
-                              setPaymentData({ ...paymentData, bankAccount: value })
+                              const selectedBank = bankAccounts.find(account => account._id === value);
+                              setPaymentData({ ...paymentData, bankAccount: selectedBank || value })
                               if (validationErrors.bankAccount) {
                                 setValidationErrors({ ...validationErrors, bankAccount: "" })
                               }
@@ -1614,7 +1615,7 @@ export default function NewPaymentPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {bankAccounts.map((account) => (
-                                <SelectItem key={account._id} value={account.bankName}>
+                                <SelectItem key={account._id} value={account._id}>
                                   {account.bankName}, {account.branchName}
                                 </SelectItem>
                               ))}
@@ -1766,7 +1767,11 @@ export default function NewPaymentPage() {
                   {paymentData.bankAccount && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Bank Account:</span>
-                      <span className="font-medium text-xs">{paymentData.bankAccount}</span>
+                      <span className="font-medium text-xs">
+                        {typeof paymentData.bankAccount === 'object' 
+                          ? (paymentData.bankAccount as any)?.bankName 
+                          : paymentData.bankAccount}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">

@@ -72,6 +72,14 @@ export default function EditPaymentPage() {
 
       setPayment(p)
 setPurchaseInvoices(invoicesRes || [])
+
+      // Try to resolve bank account object if it's a string (legacy data)
+      let bankAccountData = p.bankAccount || "";
+      if (typeof bankAccountData === 'string' && bankAccountData && bankRes) {
+        const foundBank = bankRes.find((b: any) => b.bankName === bankAccountData);
+        if (foundBank) bankAccountData = foundBank;
+      }
+
       setFormData({
         amount: p.amount?.toString() || "",
         category: p.category || "",
@@ -79,7 +87,7 @@ setPurchaseInvoices(invoicesRes || [])
         recipientId: p.recipientId || "",
         recipientName: p.recipientName || "",
         paymentMethod: p.paymentMethod || "cash",
-        bankAccount: p.bankAccount || "",
+        bankAccount: bankAccountData,
         referenceNumber: p.referenceNumber || "",
         description: p.description || "",
         purchaseInvoiceId: p.purchaseInvoiceId || "",
@@ -324,18 +332,19 @@ setPurchaseInvoices(invoicesRes || [])
                 <div className="w-full">
                   <Label>Bank Account</Label>
                   <Select
-                    value={formData.bankAccount}
-                    onValueChange={(v) =>
-                      setFormData({ ...formData, bankAccount: v })
-                    }
+                    value={typeof formData.bankAccount === 'object' ? formData.bankAccount?._id : formData.bankAccount}
+                    onValueChange={(v) => {
+                      const selectedBank = bankAccounts.find(b => b._id === v);
+                      setFormData({ ...formData, bankAccount: selectedBank || v })
+                    }}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select bank" />
                     </SelectTrigger>
                     <SelectContent>
                       {bankAccounts.map((b) => (
-                        <SelectItem key={b._id} value={b.bankName}>
-                          {b.bankName}
+                        <SelectItem key={b._id} value={b._id}>
+                          {b.bankName},{b.accountNumber},{b.accountName}
                         </SelectItem>
                       ))}
                     </SelectContent>
