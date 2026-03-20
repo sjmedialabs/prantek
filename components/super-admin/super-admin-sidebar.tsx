@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -56,8 +56,18 @@ export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps 
     if (savedName) setBrandName(savedName)
   }, [])
 
+  /** Close drawer only after navigation, not on first mount (avoids instant close when opening sheet). */
+  const prevPathnameRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isMobile && onClose) onClose()
+    if (!isMobile || !onClose) return
+    if (prevPathnameRef.current === null) {
+      prevPathnameRef.current = pathname
+      return
+    }
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname
+      onClose()
+    }
   }, [pathname, isMobile, onClose])
 
   const effectiveCollapsed = isMobile ? false : collapsed
@@ -65,7 +75,7 @@ export function SuperAdminSidebar({ isMobile, onClose }: SuperAdminSidebarProps 
 
   const wrapperClass = isMobile
     ? "flex flex-col h-full w-full bg-white"
-    : `${effectiveCollapsed ? "w-20" : "w-64"} fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`
+    : `${effectiveCollapsed ? "w-20" : "w-64"} hidden lg:flex fixed left-0 top-0 z-30 h-screen bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex-col`
 
   return (
     <div className={wrapperClass}>
