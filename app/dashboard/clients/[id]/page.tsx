@@ -238,7 +238,7 @@ export default function ClientDetailsPage() {
       </div>
     )
   }
-
+  
   const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0)
   const rec = transactions.filter((t) => t.type === "receipt")
   const totalPaid = rec.reduce((sum, t) => sum + t.paidAmount, 0)
@@ -596,15 +596,15 @@ export default function ClientDetailsPage() {
         </Card>
 
         <div className="md:col-span-2 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <Card>
+          <div className="grid grid-cols-2 gap-4">
+            {/* <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Amount</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">₹{totalAmount.toLocaleString()}</p>
               </CardContent>
-            </Card>
+            </Card> */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
