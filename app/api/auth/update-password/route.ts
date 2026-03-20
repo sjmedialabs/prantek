@@ -16,10 +16,13 @@ function validateNewPassword(pw: string): string | null {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json()
-    const { userId, currentPassword, newPassword, confirmPassword } = body
+    const { userId, currentPassword, newPassword, confirmPassword, email: bodyEmail } = body
 
-    if (!userId || !currentPassword || !newPassword) {
+    if (!currentPassword || !newPassword) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+    if (!userId && !bodyEmail) {
+      return NextResponse.json({ error: "Missing user identifier" }, { status: 400 })
     }
 
     if (confirmPassword != null && confirmPassword !== newPassword) {
@@ -35,8 +38,18 @@ export async function PUT(req: NextRequest) {
 
     let user: { password?: string; _id?: ObjectId } | null = null
 
-    if (ObjectId.isValid(String(userId))) {
+    if (userId && ObjectId.isValid(String(userId))) {
       user = await db.collection(Collections.USERS).findOne({ _id: new ObjectId(String(userId)) })
+    }
+
+    // Legacy tokens used id "super-admin" while the account lives in USERS — resolve by email
+    const normalizedEmail =
+      typeof bodyEmail === "string" ? bodyEmail.trim().toLowerCase() : ""
+    if (!user && normalizedEmail) {
+      user = await db.collection(Collections.USERS).findOne({
+        email: normalizedEmail,
+        role: "super-admin",
+      })
     }
 
     if (!user) {

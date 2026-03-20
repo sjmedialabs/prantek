@@ -115,7 +115,7 @@ export default function SuperAdminSettingsPage() {
     }
     setPwdSaving(true)
     try {
-      await api.auth.updatePassword(String(uid), pwdCurrent, pwdNew, pwdConfirm)
+      await api.auth.updatePassword(String(uid), pwdCurrent, pwdNew, pwdConfirm, user?.email)
       toast.success("Password updated successfully.")
       setPwdCurrent("")
       setPwdNew("")
