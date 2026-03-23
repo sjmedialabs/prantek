@@ -88,7 +88,7 @@ export default function SuperAdminLeadsPage() {
           <CardTitle>Contact inquiries</CardTitle>
           <CardDescription>Newest first. Sourced from /contact.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 md:px-6">
           {loading ? (
             <p className="text-sm text-gray-500 py-8 text-center">Loading…</p>
           ) : leads.length === 0 ? (

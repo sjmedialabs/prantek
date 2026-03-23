@@ -88,5 +88,5 @@ export function formatDateForExport(date: string | Date): string {
  */
 export function formatCurrencyForExport(amount: any, currency = "₹"): string {
   const clean = String(amount).replace(/[^\d.-]/g, "")
-  return `="${currency}${Number(clean).toLocaleString()}"`
+  return `="${Number(clean).toLocaleString()}"`
 }

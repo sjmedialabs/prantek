@@ -581,7 +581,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 Delete
                               </Button> */}
                                           { (hasPermission("edit_vendors"))&&(      <Switch
-                                                          checked={true}
+                                                          checked={vendor?.status === "active" ? true : false}
                                                           title="Handle the status"
                                                           onCheckedChange={async (checked) => {
                                                             try {

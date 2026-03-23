@@ -768,10 +768,13 @@ const handleSave = async () => {
                 <Label>Company Logos</Label>
                 {(content.trustedByLogos || []).length > 0 ? (
                   (content.trustedByLogos || []).map((logo, index) => (
-                    <Card key={logo.id}>
-                      <CardContent className="pt-6 space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 space-y-4">
+                    <Card key={logo.id} className="gap-1">
+                       <CardHeader>
+              <CardDescription className="flex justify-end">  <Button variant="ghost" size="sm" onClick={() => deleteTrustedByLogo(index)} className="ml-2">
+                            <Trash2 className="h-4 w-4" />
+                          </Button></CardDescription>
+            </CardHeader>
+                      <CardContent className="md:pt-6 space-y-4">
                             <div className="space-y-2">
                               <Label>Company Name</Label>
                               <Input
@@ -786,11 +789,6 @@ const handleSave = async () => {
                               description="Upload a logo or provide a URL (leave empty to show text only)"
                               previewClassName="w-24 h-24"
                             />
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => deleteTrustedByLogo(index)} className="ml-2">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </CardContent>
                     </Card>
                   ))

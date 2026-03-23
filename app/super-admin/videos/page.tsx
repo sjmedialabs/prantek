@@ -331,12 +331,13 @@ export default function SuperAdminVideosPage() {
               <p className="text-sm text-gray-500">Select a category from the left to manage its videos.</p>
             ) : (
               <Tabs defaultValue={tabs[0]} className="w-full">
-                <TabsList>
+                <TabsList className="w-full">
+                  <div className="flex flex-row gap-4 overflow-x-scroll w-full">
                   {tabs.map((tab) => (
                     <TabsTrigger key={tab} value={tab}>
                       {tab}
                     </TabsTrigger>
-                  ))}
+                  ))}</div>
                 </TabsList>
                 {tabs.map((tab) => (
                   <TabsContent key={tab} value={tab} className="space-y-3 mt-4">
