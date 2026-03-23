@@ -222,7 +222,45 @@ function toCanonicalKey(h: string): string {
   const n = normalizeHeader(h).toLowerCase()
   return CANONICAL_HEADERS[n] ?? normalizeHeader(h)
 }
+function parseFlexibleDate(value: any): string {
+  if (!value) return ""
 
+  const str = String(value).trim()
+
+  // ✅ Excel serial number (e.g. 44927)
+  if (!isNaN(str)) {
+    const date = new Date((Number(str) - 25569) * 86400 * 1000)
+    return date.toISOString().split("T")[0]
+  }
+
+  // ✅ Replace all separators with "/"
+  const normalized = str.replace(/[-.]/g, "/")
+
+  const parts = normalized.split("/")
+
+  // Handle DD/MM/YYYY
+  if (parts.length === 3) {
+    let [day, month, year] = parts
+
+    // handle YYYY/MM/DD
+    if (year.length === 2) year = "20" + year
+
+    // If format is YYYY/MM/DD
+    if (day.length === 4) {
+      return `${day}-${month.padStart(2, "0")}-${parts[2].padStart(2, "0")}`
+    }
+
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
+  }
+
+  // fallback
+  const d = new Date(str)
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().split("T")[0]
+  }
+
+  return ""
+}
 function mapRow(raw: Record<string, string>, rowIndex: number): BulkInvoiceRow | null {
   const get = (key: string) => {
     const v = raw[key] ?? raw[CANONICAL_HEADERS[key.toLowerCase()]] ?? ""
@@ -240,8 +278,8 @@ function mapRow(raw: Record<string, string>, rowIndex: number): BulkInvoiceRow |
   return {
     rowIndex,
     client,
-    invoiceDate: get("Invoice Date"),
-    dueDate: get("Due Date"),
+    invoiceDate: parseFlexibleDate(get("Invoice Date")),
+dueDate: parseFlexibleDate(get("Due Date")),
     itemName,
     quantity: q,
     price: p,
