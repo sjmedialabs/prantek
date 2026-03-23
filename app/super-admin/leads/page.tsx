@@ -70,7 +70,7 @@ export default function SuperAdminLeadsPage() {
   }, [])
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
+    <div className="md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-purple-100 p-2">
@@ -88,7 +88,7 @@ export default function SuperAdminLeadsPage() {
           <CardTitle>Contact inquiries</CardTitle>
           <CardDescription>Newest first. Sourced from /contact.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 md:px-6">
           {loading ? (
             <p className="text-sm text-gray-500 py-8 text-center">Loading…</p>
           ) : leads.length === 0 ? (

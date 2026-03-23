@@ -427,7 +427,6 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
 
     return Object.values(clientStats)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10)
   }, [filteredReceipts])
 
   const inventoryAnalytics = useMemo(() => {
@@ -1076,7 +1075,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
                      className="items-center justify-center h-full w-full relative"
                     >
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={customerAnalytics} layout="vertical">
+                        <BarChart data={customerAnalytics.slice(0, 5)} layout="vertical">
                           <CartesianGrid strokeDasharray="1 1" />
                           <XAxis type="number" />
                           <YAxis dataKey="name" type="category"  width={100}/>
@@ -1289,7 +1288,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
               <Card>
                 <CardHeader>
                   <CardTitle>Item Performance</CardTitle>
-                  <CardDescription>Quantity sold and revenue generated</CardDescription>
+                  <CardDescription>Quantity sold and revenue generated with Cleared amount</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3 max-h-80 overflow-y-auto">

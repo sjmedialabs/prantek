@@ -455,8 +455,8 @@ const handleSave = async () => {
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="md:p-8 space-y-6">
+      <div className="flex md:flex-row flex-col gap-4 md:items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Website Content Management</h1>
           <p className="text-muted-foreground">Manage all website content, sections, and settings</p>
@@ -468,22 +468,22 @@ const handleSave = async () => {
       </div>
 
       <Tabs defaultValue="branding" className="space-y-6">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="branding">Branding</TabsTrigger>
-          <TabsTrigger value="navigation">Navigation</TabsTrigger>
-          <TabsTrigger value="hero">Hero</TabsTrigger>
-          <TabsTrigger value="trusted">Trusted By</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="industries">Industries</TabsTrigger>
-          <TabsTrigger value="showcase">Showcase</TabsTrigger>
-          <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
-          <TabsTrigger value="pricing">Pricing</TabsTrigger>
-          <TabsTrigger value="faq">FAQ</TabsTrigger>
-          <TabsTrigger value="cta">CTA</TabsTrigger>
-          <TabsTrigger value="footer">Footer</TabsTrigger>
-          <TabsTrigger value="about-page">About Page</TabsTrigger>
-          <TabsTrigger value="contact-page">Contact Page</TabsTrigger>
-          <TabsTrigger value="contact">Contact</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto whitespace-nowrap scroll-smooth">
+          <TabsTrigger value="branding" className="flex-shrink-0 ml-190 md:ml-120 xl:ml-8">Branding</TabsTrigger>
+          <TabsTrigger value="navigation" className="flex-shrink-0">Navigation</TabsTrigger>
+          <TabsTrigger value="hero" className="flex-shrink-0">Hero</TabsTrigger>
+          <TabsTrigger value="trusted" className="flex-shrink-0">Trusted By</TabsTrigger>
+          <TabsTrigger value="features" className="flex-shrink-0">Features</TabsTrigger>
+          <TabsTrigger value="industries" className="flex-shrink-0">Industries</TabsTrigger>
+          <TabsTrigger value="showcase" className="flex-shrink-0">Showcase</TabsTrigger>
+          <TabsTrigger value="testimonials" className="flex-shrink-0">Testimonials</TabsTrigger>
+          <TabsTrigger value="pricing" className="flex-shrink-0">Pricing</TabsTrigger>
+          <TabsTrigger value="faq" className="flex-shrink-0">FAQ</TabsTrigger>
+          <TabsTrigger value="cta" className="flex-shrink-0">CTA</TabsTrigger>
+          <TabsTrigger value="footer" className="flex-shrink-0">Footer</TabsTrigger>
+          <TabsTrigger value="about-page" className="flex-shrink-0">About Page</TabsTrigger>
+          <TabsTrigger value="contact-page" className="flex-shrink-0">Contact Page</TabsTrigger>
+          <TabsTrigger value="contact" className="flex-shrink-0">Contact</TabsTrigger>
         </TabsList>
 
         {/* Branding Tab */}
@@ -768,10 +768,13 @@ const handleSave = async () => {
                 <Label>Company Logos</Label>
                 {(content.trustedByLogos || []).length > 0 ? (
                   (content.trustedByLogos || []).map((logo, index) => (
-                    <Card key={logo.id}>
-                      <CardContent className="pt-6 space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 space-y-4">
+                    <Card key={logo.id} className="gap-1">
+                       <CardHeader>
+              <CardDescription className="flex justify-end">  <Button variant="ghost" size="sm" onClick={() => deleteTrustedByLogo(index)} className="ml-2">
+                            <Trash2 className="h-4 w-4" />
+                          </Button></CardDescription>
+            </CardHeader>
+                      <CardContent className="md:pt-6 space-y-4">
                             <div className="space-y-2">
                               <Label>Company Name</Label>
                               <Input
@@ -786,11 +789,6 @@ const handleSave = async () => {
                               description="Upload a logo or provide a URL (leave empty to show text only)"
                               previewClassName="w-24 h-24"
                             />
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => deleteTrustedByLogo(index)} className="ml-2">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
                       </CardContent>
                     </Card>
                   ))
@@ -815,7 +813,7 @@ const handleSave = async () => {
               <CardTitle>Features Section</CardTitle>
               <CardDescription>Showcase your platform features</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-2 md:px-4">
               <div className="space-y-2">
                 <Label htmlFor="featuresSectionBadge">Small badge above title</Label>
                 <Input
@@ -847,9 +845,12 @@ const handleSave = async () => {
                 <Label>Features</Label>
                 {(content.features || []).map((feature) => (
                   <Card key={feature.id}>
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-4">
+                    <CardHeader>
+              <CardDescription className="flex justify-end"> <Button variant="ghost" size="sm" onClick={() => deleteFeature(feature.id)} className="ml-2">
+                          <Trash2 className="h-4 w-4" />
+                        </Button></CardDescription>
+            </CardHeader>
+                    <CardContent className="md:pt-6 md:space-y-4 md:px-4">       
                           <div className="space-y-2">
                             <Label>Feature Title</Label>
                             <Input
@@ -898,11 +899,7 @@ const handleSave = async () => {
                               />
                             </div>
                           </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => deleteFeature(feature.id)} className="ml-2">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    
                     </CardContent>
                   </Card>
                 ))}

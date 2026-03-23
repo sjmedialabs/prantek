@@ -140,7 +140,7 @@ export default function SuperAdminSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl">
+    <div className="container mx-auto md:p-6 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Settings className="h-8 w-8" />
@@ -211,6 +211,18 @@ export default function SuperAdminSettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Save Button */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="min-w-[150px]"
+            size="lg"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? "Saving..." : "Save Settings"}
+          </Button>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -258,19 +270,6 @@ export default function SuperAdminSettingsPage() {
             </Button>
           </CardContent>
         </Card>
-
-        {/* Save Button */}
-        <div className="flex justify-end gap-3 pt-4">
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="min-w-[150px]"
-            size="lg"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Settings"}
-          </Button>
-        </div>
       </div>
 
       {/* Info Footer */}

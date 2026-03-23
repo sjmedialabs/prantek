@@ -45,13 +45,13 @@ export function LandingHeader() {
 
           <nav className="hidden lg:flex space-x-8">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={`${link.href}-${link.label}`}
                 href={link.href}
                 className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -83,14 +83,15 @@ export function LandingHeader() {
           <div className="lg:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={`${link.href}-${link.label}`}
                   href={link.href}
                   className="block px-3 py-2 text-gray-600 hover:text-blue-600"
                   onClick={() => setIsMenuOpen(false)}
+                  scroll={false}
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
               <div className="px-3 py-2 space-y-2 flex md:hidden">
                 {signInLabel ? (

@@ -154,8 +154,8 @@ export default function SalesDashboardPage() {
         } catch (error) {
           console.error("Failed to load system settings:", error);
         }
-       
-      setUsers(allUsers);
+
+        setUsers(allUsers);
 
         if (!mounted) return
         setRawAllUsers(allUsers)
@@ -211,8 +211,8 @@ export default function SalesDashboardPage() {
     const churnedUsers = filteredAdminUsers.filter((u) => u.subscriptionStatus === "cancelled").length
     const churnRate = totalClients > 0 ? ((churnedUsers / totalClients) * 100).toFixed(1) : "0.0"
 
-  // Only count revenue from subscribers, not admin users
-  const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
+    // Only count revenue from subscribers, not admin users
+    const subscriberUsers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin");
     // Calculate total Revenue from active/trial subscriptions from filteredAdminUsers (only users created within period)
     let totalRevenue = 0
     filteredAdminUsers.forEach((user) => {
@@ -412,7 +412,7 @@ export default function SalesDashboardPage() {
 
   return (
     <div className="space-y-6">
-       <div className="flex items-center justify-between">
+      <div className="flex m:items-center flex-col gap-2 md:flex-row justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Sales Dashboard</h1>
           <p className="text-gray-600">Track revenue, client onboarding, and subscription metrics</p>
@@ -426,16 +426,16 @@ export default function SalesDashboardPage() {
                 {selectedPeriod === "weekly"
                   ? "This Week"
                   : selectedPeriod === "monthly"
-                  ? "Monthly"
-                  : selectedPeriod === "quarterly"
-                  ? "Quarterly"
-                  : selectedPeriod === "half-yearly"
-                  ? "Half-Yearly"
-                  : selectedPeriod === "yearly"
-                  ? "This Financial Year"
-                  : selectedPeriod === "all"
-                  ? "All Time"
-                  : "Last 6 Months"}
+                    ? "Monthly"
+                    : selectedPeriod === "quarterly"
+                      ? "Quarterly"
+                      : selectedPeriod === "half-yearly"
+                        ? "Half-Yearly"
+                        : selectedPeriod === "yearly"
+                          ? "This Financial Year"
+                          : selectedPeriod === "all"
+                            ? "All Time"
+                            : "Last 6 Months"}
               </Button>
             </DropdownMenuTrigger>
 
@@ -446,7 +446,7 @@ export default function SalesDashboardPage() {
               <DropdownMenuItem onClick={() => setSelectedPeriod("half-yearly")}>Half-Yearly</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSelectedPeriod("yearly")}>This Financial Year</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSelectedPeriod("all")}>All Time</DropdownMenuItem>
-              
+
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -469,14 +469,14 @@ export default function SalesDashboardPage() {
               <CardContent>
                 <div className="flex flex-row items-center justify-between">
                   <div className="text-2xl font-bold text-gray-900">{metric.value}</div>
-                 
+
                 </div>
                 <div className={`flex flex-row justify-between items-center text-xs ${getTrendColor(metric.trend)}`}>
                   <div className="flex items-center mt-4">
                     {getTrendIcon(metric.trend)}
-                  <span className="ml-1">{metric.change} from last month</span>
+                    <span className="ml-1">{metric.change} from last month</span>
                   </div>
-                   {/* {metric.name==="Total Clients Onboarded" && (<div>
+                  {/* {metric.name==="Total Clients Onboarded" && (<div>
                   <p className="text-[12px] font-bold">Active: {activeClients}</p>
                   <p className="text-[12px] font-bold">InActive: {parseInt(metric.value)-activeClients}</p>
                 </div>)} */}
@@ -488,11 +488,11 @@ export default function SalesDashboardPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue Analysis</TabsTrigger>
-          <TabsTrigger value="clients">Client Onboarding</TabsTrigger>
-          <TabsTrigger value="conversion">Conversion Funnel</TabsTrigger>
+        <TabsList className="flex w-full gap-4 overflow-x-auto whitespace-nowrap px-4">
+          <TabsTrigger className="flex-shrink-0 ml-40 md:ml-0" value="overview">Overview</TabsTrigger>
+          <TabsTrigger className="flex-shrink-0" value="revenue">Revenue Analysis</TabsTrigger>
+          <TabsTrigger className="flex-shrink-0" value="clients">Client Onboarding</TabsTrigger>
+          <TabsTrigger className="flex-shrink-0" value="conversion">Conversion Funnel</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -509,19 +509,19 @@ export default function SalesDashboardPage() {
                     premium: { label: "Premium", color: "#8b5cf6" },
                     enterprise: { label: "Enterprise", color: "#f59e0b" },
                   }}
-                 className="items-center justify-center h-full w-full relative"
+                  className="items-center justify-center h-full w-full relative"
                 >
-                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={revenueData}>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="total" stroke="#1f2937" strokeWidth={3} />
-                    <Line type="monotone" dataKey="standard" stroke="#3b82f6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="premium" stroke="#8b5cf6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="enterprise" stroke="#f59e0b" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={revenueData}>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="total" stroke="#1f2937" strokeWidth={3} />
+                      <Line type="monotone" dataKey="standard" stroke="#3b82f6" strokeWidth={2} />
+                      <Line type="monotone" dataKey="premium" stroke="#8b5cf6" strokeWidth={2} />
+                      <Line type="monotone" dataKey="enterprise" stroke="#f59e0b" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </CardContent>
             </Card>
@@ -572,7 +572,7 @@ export default function SalesDashboardPage() {
                   newClients: { label: "New Clients", color: "#10b981" },
                   totalClients: { label: "Total Clients", color: "#3b82f6" },
                 }}
-               className="items-center justify-center h-full w-full relative"
+                className="items-center justify-center h-full w-full relative"
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={clientOnboardingData}>
