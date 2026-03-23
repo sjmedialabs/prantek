@@ -537,53 +537,66 @@ export default function ClientAccountsPage() {
       setAssignSubmitting(false)
     }
   }
-  const exportCSV = () => {
-    if (filteredClients.length === 0) {
-      alert("No data available to export.")
-      return
-    }
-
-    const headers = [
-      "Name",
-      "Email",
-      "Phone",
-      "Plan",
-      "Status",
-      "Users",
-      "Total Revenue",
-      "Payment Status",
-      "Last Activity",
-    ]
-
-    const rows = filteredClients.map((e) => [
-      e.companyName,
-      e.email,
-      e.phone,
-      e.plan,
-      e.status || "",
-      e.userCount || 0,
-      e.totalRevenue || "",
-      e.paymentStatus || "",
-      e.lastActivity || ""
-    ])
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers, ...rows].map((row) => row.join(",")).join("\n")
-
-    const filename = `client_accounts_${statusFilter}_${new Date().toISOString().split('T')[0]}.csv`;
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+const exportCSV = () => {
+  if (filteredClients.length === 0) {
+    alert("No data available to export.")
+    return
   }
+
+  const headers = [
+    "Name",
+    "Email",
+    "Phone",
+    "Plan",
+    "Status",
+    "Users",
+    "Total Revenue",
+    "Payment Status",
+    "Last Activity",
+  ]
+
+  const rows = filteredClients.map((e) => [
+    `"${e.companyName || ""}"`,
+    `"${e.email || ""}"`,
+
+    // ✅ FIX: Force phone as text
+    `="${e.phone || ""}"`,
+
+    `"${e.plan || ""}"`,
+    `"${e.status || ""}"`,
+    e.userCount || 0,
+
+    // ✅ FIX: Remove ₹ and keep only number
+    (e.totalRevenue || "")
+      .toString()
+      .replace(/[^0-9.]/g, ""),
+
+    `"${e.paymentStatus || ""}"`,
+    `"${e.lastActivity || ""}"`,
+  ])
+
+  const csvContent =
+    "data:text/csv;charset=utf-8," +
+    [headers, ...rows].map((row) => row.join(",")).join("\n")
+
+  const filename = `client_accounts_${statusFilter}_${new Date()
+    .toISOString()
+    .split("T")[0]}.csv`
+
+  const encodedUri = encodeURI(csvContent)
+  const link = document.createElement("a")
+
+  link.setAttribute("href", encodedUri)
+  link.setAttribute("download", filename)
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Client Account Management</h1>
           <p className="text-gray-600">Manage client accounts, subscriptions, and billing</p>
@@ -665,7 +678,7 @@ export default function ClientAccountsPage() {
         <TabsContent value="active" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
                 <div>
                   <CardTitle>Client Accounts</CardTitle>
                   <CardDescription>Manage all client accounts and subscriptions</CardDescription>
@@ -760,7 +773,7 @@ export default function ClientAccountsPage() {
         <TabsContent value="all" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
                 <div>
                   <CardTitle>Client Accounts</CardTitle>
                   <CardDescription>Manage all client accounts and subscriptions</CardDescription>
@@ -855,7 +868,7 @@ export default function ClientAccountsPage() {
         <TabsContent value="suspended" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
                 <div>
                   <CardTitle>Client Accounts</CardTitle>
                   <CardDescription>Manage all client accounts and subscriptions</CardDescription>
@@ -950,7 +963,7 @@ export default function ClientAccountsPage() {
         <TabsContent value="trial" className="space-y-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
                 <div>
                   <CardTitle>Client Accounts</CardTitle>
                   <CardDescription>Manage all client accounts and subscriptions</CardDescription>

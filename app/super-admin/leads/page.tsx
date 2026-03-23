@@ -70,7 +70,7 @@ export default function SuperAdminLeadsPage() {
   }, [])
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
+    <div className="md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-purple-100 p-2">

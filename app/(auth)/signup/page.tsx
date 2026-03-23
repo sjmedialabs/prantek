@@ -1093,22 +1093,34 @@ export default function SignUpPage() {
   }
 
   // Step 3: Plan Selection
-  const currentSelectedPlan = availablePlans.find(
-    (p) => (p._id || p.id) === selectedPlan
-  );
+const currentSelectedPlan = availablePlans.find(
+  (p) => (p._id || p.id) === selectedPlan
+)
+
+const transformedPlan = currentSelectedPlan
+  ? {
+      name: currentSelectedPlan.name,
+
+      // ✅ Apply billing logic
+      price:
+        billingCycle === "yearly"
+          ? Math.round(
+              currentSelectedPlan.price * 12 * (1 - yearlyDiscount / 100)
+            )
+          : currentSelectedPlan.price,
+
+      billingCycle: billingCycle === "yearly" ? "yr" : "mo",
+
+      // ✅ Ensure features always array
+      features: currentSelectedPlan.features || [],
+    }
+  : null
   const planBillCycle = currentSelectedPlan?.billingCycle
   return (
     <div className="min-h-screen flex">
       <FeaturesSidebar
         selectedPlan={
-          currentSelectedPlan
-            ? {
-              name: currentSelectedPlan.name,
-              price: currentSelectedPlan.price,
-              billingCycle: currentSelectedPlan.billingCycle,
-              features: currentSelectedPlan.features,
-            }
-            : null
+        transformedPlan
         }
       />
 
