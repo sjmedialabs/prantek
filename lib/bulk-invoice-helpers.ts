@@ -236,7 +236,7 @@ function parseFlexibleDate(value: any): string {
   // ✅ Replace all separators with "/"
   const normalized = str.replace(/[-.]/g, "/")
 
-  const parts = normalized.split("/")
+  const parts = normalized.split("-")
 
   // Handle DD/MM/YYYY
   if (parts.length === 3) {

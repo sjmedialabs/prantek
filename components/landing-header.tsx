@@ -88,7 +88,6 @@ export function LandingHeader() {
                   href={link.href}
                   className="block px-3 py-2 text-gray-600 hover:text-blue-600"
                   onClick={() => setIsMenuOpen(false)}
-                  scroll={false}
                 >
                   {link.label}
                 </Link>
