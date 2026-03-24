@@ -63,7 +63,7 @@ export default function ItemsPage() {
       ...i,
       id: i._id?.toString?.() || i.id   // ✅ keep both
     }))
-
+    console.log("Loaded Items:", mapped)
     setItems(mapped)
   }
 
