@@ -10,14 +10,15 @@ export function HashScrollHandler() {
     const scrollToHash = () => {
       const hash = window.location.hash
       if (!hash) return
-
+      // console.log("hash url ", hash)
       const el = document.querySelector(hash)
-
+      // console.log("el", el)
       if (el) {
         const yOffset = -80 // adjust for sticky header
         const y = el.getBoundingClientRect().top + window.scrollY + yOffset
-
+        console.log("y", y)
         window.scrollTo({ top: y, behavior: "smooth" })
+        // console.log("scrolling to", y)
         return true
       }
 
