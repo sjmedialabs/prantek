@@ -17,8 +17,7 @@ import { Bell, User, LogOut, UserCircle, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Notification } from "@/lib/models/types";
 import Link from "next/link";
-
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek";
+import api from "@/lib/api-client";
 
 export default function DashboardHeader() {
   const { user, logout } = useUser();
@@ -39,6 +38,14 @@ export default function DashboardHeader() {
   const handleLogout = () => {
     logout();
   };
+ const [content, setContent] = useState<WebsiteContent | null>(null)
+
+  useEffect(() => {
+    api.websiteContent
+      .getAll()
+      .then((data) => data[0] as WebsiteContent | undefined)
+      .then((websiteContent) => setContent(websiteContent ?? null))
+  }, [])
 
   // Fetch notifications (fail silently so menu/header always work when API is down)
   useEffect(() => {
@@ -60,7 +67,6 @@ export default function DashboardHeader() {
         setUnreadCount(0);
       }
     };
-
     if (user) {
       fetchNotifications().catch(() => {});
       const interval = setInterval(() => fetchNotifications().catch(() => {}), 30000);
@@ -164,7 +170,7 @@ const handleClearAllNotifications = async () => {
     if (diffDays < 7) return `${diffDays}d ago`;
     return notifDate.toLocaleDateString();
   };
-
+const APP_NAME = content?.companyName || process.env.NEXT_PUBLIC_APP_NAME || "Prantek";
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shrink-0">
       <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-6 sm:py-2 min-h-[56px]">

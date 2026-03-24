@@ -13,6 +13,7 @@ import { FeaturesSidebar } from "@/components/auth/features-sidebar"
 import { useRouter } from "next/navigation"
 import { isSessionValid } from "@/lib/session-timeout"
 import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod"
+import api from "@/lib/api-client"
 
 function SignInForm() {
   const router = useRouter()
@@ -26,6 +27,14 @@ function SignInForm() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
   const{trialDays}=useTrialPeriod();
+ const [content, setContent] = useState<WebsiteContent | null>(null)
+
+  useEffect(() => {
+    api.websiteContent
+      .getAll()
+      .then((data) => data[0] as WebsiteContent | undefined)
+      .then((websiteContent) => setContent(websiteContent ?? null))
+  }, [])
 
   // Check for session expired error
   useEffect(() => {
@@ -104,7 +113,7 @@ function SignInForm() {
 
   return (
     <div className="min-h-screen flex">
-      <FeaturesSidebar />
+      <FeaturesSidebar/>
       
       {/* Right Side - Sign In Form */}
       <div className="w-full lg:w-1/2 lg:ml-[50%] overflow-y-auto bg-white">
@@ -113,7 +122,7 @@ function SignInForm() {
         <div className="bg-white rounded-lg p-8">
           <div className="flex items-center justify-center mb-6">
             <FileText className="h-10 w-10 text-blue-600 mr-2" />
-            <h1 className="text-3xl font-bold text-gray-900">Prantek Fin App</h1>
+            <h1 className="text-3xl font-bold text-gray-900 capitalize">{content?.companyName || "My Cash Ledger App"}</h1>
           </div>
 
           <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">Sign In to Your Account</h2>

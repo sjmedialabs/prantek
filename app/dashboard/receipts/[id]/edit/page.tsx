@@ -246,20 +246,6 @@ console.log("payment amount is ", paymentAmount)
     setSubmitting(true)
   console.log("submitting")
     try {
-      /* ----------------------------------------------
-         1️⃣ UPDATE QUOTATION — UNDO OLD RECEIPT PAYMENT
-      ---------------------------------------------- */
-
-      // await fetch(`/api/salesInvoice/${salesInvoice._id}`, {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     paidAmount: updatedPaidAmount,
-      //     balanceAmount: updatedBalanceAmount,
-      //     status: updatedStatus,
-      //   }),
-      // })
-
 
       /* ----------------------------------------------
          2️⃣ UPDATE RECEIPT
@@ -318,8 +304,22 @@ console.log("payment amount is ", paymentAmount)
 
       console.log("Payload to update receipt:::", payload)
       await api.receipts.update(receiptId, payload)
-
       toast.success("Receipt updated successfully")
+            /* ----------------------------------------------
+         1️⃣ UPDATE QUOTATION — UNDO OLD RECEIPT PAYMENT
+      ---------------------------------------------- */
+
+      if (salesInvoice?._id) {
+        await fetch(`/api/salesInvoice/${salesInvoice._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paidAmount: updatedPaidAmount,
+            balanceAmount: updatedBalanceAmount,
+            status: updatedStatus,
+          }),
+        })
+      }
       router.push(`/dashboard/receipts/${receiptId}`)
 
     } catch (err: any) {

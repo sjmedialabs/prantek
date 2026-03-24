@@ -126,6 +126,30 @@ setPurchaseInvoices(invoicesRes || [])
         amount: Number(formData.amount),
       })
 
+      if (isInvoiced && selectedInvoice?._id) {
+        const oldPaymentAmount = Number(payment.amount || 0)
+        const newPaymentAmount = Number(formData.amount)
+
+        const currentBalance = Number(selectedInvoice.balanceAmount || 0)
+        const currentPaid = Number(selectedInvoice.paidAmount || 0)
+
+        const updatedBalance = payment.payAbleAmount - formData.amount
+
+        const updatedPaid = currentPaid - oldPaymentAmount + newPaymentAmount
+        const status =
+          updatedBalance <= 0 ? "Closed" : updatedPaid > 0 ? "Partial" : "Open"
+
+        await fetch(`/api/purchaseInvoice/${selectedInvoice._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            balanceAmount: payment.payAbleAmount - formData.amount,
+            paidAmount: formData.amount,
+            invoiceStatus: status,
+          }),
+        })
+      }
+
       toast.success("Payment updated")
       router.push(`/dashboard/payments/${id}`)
     } catch {

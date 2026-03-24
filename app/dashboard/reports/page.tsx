@@ -429,34 +429,47 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
       .sort((a, b) => b.revenue - a.revenue)
   }, [filteredReceipts])
 
-  const inventoryAnalytics = useMemo(() => {
-    const itemStats: Record<string, { name: string; quantity: number; revenue: number }> = {}
+const inventoryAnalytics = useMemo(() => {
+  const itemStats: Record<
+    string,
+    { name: string; quantity: number; revenue: number; itemPaidAmount: number }
+  > = {}
 
-    filteredReceipts.forEach((quotation) => {
-      (quotation.items || []).forEach((item) => {
-        // Ensure we have an itemId to work with
-        if (item.itemId) {
-          if (!itemStats[item.itemId]) {
-            // Find the full item details from the `items` state to get the correct name
-            const fullItem = items.find((i) => i._id === item.itemId)
-            itemStats[item.itemId] = {
-              name: fullItem?.name || item.itemName || "Unknown Item",
-              quantity: 0,
-              revenue: 0,
-            }
+  filteredReceipts.forEach((receipt) => {
+    const itemsList = receipt.items || []
+    const receiptAmount = receipt.ReceiptAmount || 0
+
+    const itemCount = itemsList.length || 1
+
+    // 🔥 Divide receipt amount equally
+    const paidPerItem = receiptAmount / itemCount
+
+    itemsList.forEach((item) => {
+      if (item.itemId) {
+        if (!itemStats[item.itemId]) {
+          const fullItem = items.find((i) => i._id === item.itemId)
+
+          itemStats[item.itemId] = {
+            name: fullItem?.name || item.itemName || "Unknown Item",
+            quantity: 0,
+            revenue: 0,
+            itemPaidAmount: 0, // ✅ NEW FIELD
           }
-          itemStats[item.itemId].quantity += item.quantity || 0
-          itemStats[item.itemId].revenue += item.total || 0
         }
-      })
+
+        itemStats[item.itemId].quantity += item.quantity || 0
+        itemStats[item.itemId].revenue += item.total || 0
+
+        // ✅ Add divided receipt amount
+        itemStats[item.itemId].itemPaidAmount += paidPerItem
+      }
     })
+  })
 
-    const result = Object.values(itemStats)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10)
-
-    return result
-  }, [filteredReceipts, items])
+  return Object.values(itemStats)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10)
+}, [filteredReceipts, items])
 
   const detailedCustomerStats = useMemo(() => {
     const stats: Record<string, {
@@ -609,7 +622,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
     )
   }
   const totalRevenue = inventoryAnalytics.reduce(
-    (sum, item) => sum + item.revenue,
+    (sum, item) => sum + item.itemPaidAmount,
     0
   )
 
@@ -1250,7 +1263,7 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
                           <PieChart>
                             <Pie
                               data={inventoryAnalytics.slice(0, 6)}
-                              dataKey="revenue"
+                              dataKey="itemPaidAmount"
                               nameKey="name"
                               cx="50%"
                               cy="50%"
@@ -1293,16 +1306,27 @@ const [customEndDate, setCustomEndDate] = useState<Date | null>(null)
                 <CardContent className="space-y-4">
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {inventoryAnalytics.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg ">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{item.name}</p>
-                          <p className="text-sm text-gray-600">{item.quantity} units sold</p>
-                        </div>
-                        <div className="text-right ml-4">
-                          <p className="font-bold text-green-600">₹{item.revenue.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
+  <div
+    key={index}
+    className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+  >
+    <div className="flex-1 min-w-0">
+      <p className="font-medium text-gray-900 truncate">{item.name}</p>
+      <p className="text-sm text-gray-600">{item.quantity} units sold</p>
+    </div>
+
+    <div className="text-right ml-4">
+      <p className="font-bold text-green-600" title="Cleared Amount">
+        ₹{item.itemPaidAmount.toLocaleString()}
+      </p>
+
+      {/* ✅ NEW LINE */}
+      <p className="text-xs text-blue-600" title="Total Item Amount">
+        Total: ₹{item.revenue.toLocaleString()}
+      </p>
+    </div>
+  </div>
+))}
                   </div>
                   {inventoryAnalytics.length === 0 && (
                     <div className="text-center text-gray-500 py-8">No inventory data available</div>
