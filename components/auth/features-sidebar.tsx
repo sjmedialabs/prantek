@@ -1,3 +1,4 @@
+"use client"
 import {
   Check,
   Sparkles,
@@ -18,6 +19,9 @@ import {
 } from "lucide-react";
 
 import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod";
+import { useEffect, useState } from "react";
+import api from "@/lib/api-client";
+import { WebsiteContent } from "@/lib/models/types";
 interface FeaturesSidebarProps {
   selectedPlan?: {
     name: string;
@@ -68,6 +72,15 @@ const getFeatureIcon = (feature: string) => {
 };
 
 export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
+   const [content, setContent] = useState<WebsiteContent | null>(null)
+  
+    useEffect(() => {
+      api.websiteContent
+        .getAll()
+        .then((data) => data[0] as WebsiteContent | undefined)
+        .then((websiteContent) => setContent(websiteContent ?? null))
+    }, [])
+  
   const{trialDays}=useTrialPeriod();
   // Default features when no plan is selected
   const defaultFeatures = [
@@ -142,7 +155,7 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
         <div>
           <div className="mb-6">
             <img
-              src="/prantek-logo.png"
+              src={content?.logo || "/prantek-logo.png"}
               alt="Prantek Academy"
               className="h-12 w-auto"
             />

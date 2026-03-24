@@ -78,6 +78,14 @@ export default function SignUpPage() {
   const router = useRouter();
   const { trialDays } = useTrialPeriod();
   const [yearlyDiscount, setYearlyDiscount] = useState(17);
+ const [content, setContent] = useState<WebsiteContent | null>(null)
+
+  useEffect(() => {
+    api.websiteContent
+      .getAll()
+      .then((data) => data[0] as WebsiteContent | undefined)
+      .then((websiteContent) => setContent(websiteContent ?? null))
+  }, [])
 
   // Clear any existing sessions when signup page loads
   useEffect(() => {
@@ -582,8 +590,8 @@ export default function SignUpPage() {
             <div>
               <div className="mb-8">
                 <img
-                  src="/prantek-logo.png"
-                  alt="Prantek Academy"
+                  src={content?.logo || "/prantek-logo.png"}
+                  alt={content?.companyName || "Prantek Academy"}
                   className="h-16 w-auto"
                 />
               </div>
