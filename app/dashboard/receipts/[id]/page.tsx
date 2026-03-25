@@ -461,7 +461,7 @@ export default function ReceiptDetailsPage() {
                             {item.type}
                           </Badge>
                         </div>
-                        <p className="font-bold text-lg">₹{(((item.price * item.quantity) - item.discount) + (((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100))?.toLocaleString() || "0"}</p>
+                        <p className="font-bold text-lg">₹{(((item.price - item.discount) * item.quantity) + (((item.price - item.discount) * item.quantity) * (item.taxRate || 0) / 100))?.toLocaleString() || "0"}</p>
                       </div>
                       <Separator className="my-2" />
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">

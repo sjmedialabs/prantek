@@ -106,7 +106,7 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
       amount: r.ReceiptAmount,
       referenceNumber: r.referenceNumber,
       paymentMethod: r.paymentMethod || "",
-      accountDetails:  r?.bankAccount || "",
+      accountDetails:  r?.bankAccount || r?.bankDetails || "",
       //   createdBy: r.createdBy
     }))
     console.log("formattedReceipts", formattedReceipts)

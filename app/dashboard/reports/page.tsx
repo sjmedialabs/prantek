@@ -1113,7 +1113,7 @@ const inventoryAnalytics = useMemo(() => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {customerAnalytics.slice(0, 5).map((customer, index) => (
+                    {customerAnalytics.map((customer, index) => (
                       <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 truncate">{customer.name}</p>

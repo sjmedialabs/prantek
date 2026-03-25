@@ -22,7 +22,7 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       date: r.date,
       clientName: r.clientName,
       recipientName: r.clientName,
-      bankAccount: r.bankAccount,
+      bankAccount: r.bankDetails,
       paymentMethod: r.paymentMethod,
       referenceNumber: r.referenceNumber,
       amount: r.ReceiptAmount || r.amountPaid || r.total || 0,
