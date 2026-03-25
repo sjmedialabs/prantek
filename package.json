@@ -8,7 +8,8 @@
     "dev": "next dev",
     "dev:clean": "npm run clean && npm run dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "node .next/standalone/server.js",
+    "postbuild": "cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.700.0",
