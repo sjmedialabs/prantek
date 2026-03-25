@@ -196,7 +196,7 @@ export default function AssetCategoriesPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col xl:flex-row xl:items-center md:justify-between gap-4">
             <div>
               <div>
                 <CardTitle>Category List ({filteredCategories.length})</CardTitle>

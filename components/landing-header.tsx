@@ -6,18 +6,30 @@ import { Menu, X } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import type { WebsiteContent } from "@/lib/models/types"
+import { usePathname } from "next/navigation"
 
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [content, setContent] = useState<WebsiteContent | null>(null)
-
+  const [activeHash, setActiveHash] = useState("")
+  const pathname = usePathname()
+  // console.log(pathname)
   useEffect(() => {
     api.websiteContent
       .getAll()
       .then((data) => data[0] as WebsiteContent | undefined)
       .then((websiteContent) => setContent(websiteContent ?? null))
   }, [])
+  useEffect(() => {
+    const updateHash = () => {
+      setActiveHash(window.location.hash)
+    }
 
+    updateHash() // initial
+
+    window.addEventListener("hashchange", updateHash)
+    return () => window.removeEventListener("hashchange", updateHash)
+  }, [])
   const navLinks = content?.landingNavLinks?.filter((l) => l.label?.trim() && l.href?.trim()) ?? []
   const signInLabel = content?.landingHeaderSignInLabel?.trim() ?? ""
   const ctaLabel = content?.landingHeaderCtaLabel?.trim() ?? ""
@@ -44,22 +56,38 @@ export function LandingHeader() {
           </div>
 
           <nav className="hidden lg:flex space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={`${link.href}-${link.label}`}
-                href={link.href}
-                className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isHashLink = link.href.startsWith("/#")
+
+              const isActive = isHashLink
+                ? activeHash === link.href.replace("/", "")
+                : pathname === link.href
+
+              return (
+                <Link
+                  key={`${link.href}-${link.label}`}
+                  href={link.href}
+                  onClick={() => {
+    if (link.href.startsWith("/#")) {
+      setActiveHash(link.href.replace("/", ""))
+    }
+  }}
+                  className={`transition-colors font-medium ${isActive
+                      ? "text-blue-600"
+                      : "text-gray-600 hover:text-blue-600"
+                    }`}
+                >
+                  {link.label}
+                </Link>
+              )
+            })}
           </nav>
 
           <div className="flex flex-row gap-4">
             <div className="hidden md:flex items-center justify-end space-x-4">
               {signInLabel ? (
                 <Link href="/signin">
-                  <Button variant="ghost" className="text-gray-600 hover:text-blue-600">
+                  <Button variant="ghost" className="text-gray-600 hover:text-blue-600 border-2 border-b-gray-200 rounded-full">
                     {signInLabel}
                   </Button>
                 </Link>
@@ -82,20 +110,35 @@ export function LandingHeader() {
         {isMenuOpen && (
           <div className="lg:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-              {navLinks.map((link) => (
-                <Link
-                  key={`${link.href}-${link.label}`}
-                  href={link.href}
-                  className="block px-3 py-2 text-gray-600 hover:text-blue-600"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="px-3 py-2 space-y-2 flex md:hidden">
+              {navLinks.map((link) => {
+                const isHashLink = link.href.startsWith("/#")
+                // console.log(isHashLink)
+                const isActive = isHashLink
+                  ? activeHash === link.href.replace("/", "")
+                  : pathname === link.href
+
+                return (
+                  <Link
+                    key={`${link.href}-${link.label}`}
+                    href={link.href}
+                    onClick={() => {
+    if (link.href.startsWith("/#")) {
+      setActiveHash(link.href.replace("/", ""))
+    }
+  }}
+                    className={`transition-colors font-medium ${isActive
+                        ? "text-blue-600"
+                        : "text-gray-600 hover:text-blue-600"
+                      }`}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })}
+              <div className="px-3 py-2 gap-2 space-y-2 flex md:hidden">
                 {signInLabel ? (
                   <Link href="/signin">
-                    <Button variant="ghost" className="w-full justify-start text-gray-600">
+                    <Button variant="ghost" className="w-full justify-start text-gray-600 border-2 border-b-gray-200 rounded-full">
                       {signInLabel}
                     </Button>
                   </Link>

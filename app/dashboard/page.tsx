@@ -335,13 +335,16 @@ const clearedPayments = filteredPayments.filter(
       const allTransactions = [
         ...filteredReceipts.map((r: any) => ({
           type: "Income",
-          amount: r.amountPaid || 0,
+          number: r.receiptNumber,
+          category: "Receipt",
+          amount: r.ReceiptAmount || 0,
           description: `Receipt #${r.receiptNumber} - ${r.clientName}`,
           time: new Date(r.date).toLocaleDateString(),
           date: new Date(r.date),
         })),
         ...recentPayments.map((p: any) => ({
           type: "Expense",
+          number: p.paymentNumber,
           category: "Salary",
           amount: p.amount || 0,
           description: `${p.description || p.category}`,
@@ -775,7 +778,7 @@ const clearedPayments = filteredPayments.filter(
                   >
                     <div>
                       <p className="font-medium text-sm text-gray-900">
-                        {transaction.description}
+                        {transaction.number}
                       </p>
                       <p className="text-xs text-gray-500">
                         {transaction.time}

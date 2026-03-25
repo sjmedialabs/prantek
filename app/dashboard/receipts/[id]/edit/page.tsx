@@ -523,11 +523,11 @@ console.log("payment amount is ", paymentAmount)
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{((item.price * item.quantity) - item.discount)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{((item.price - item.discount) * item.quantity)?.toLocaleString() || "0"}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
-                          <p className="font-semibold">₹{(((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{(((item.price - item.discount) * item.quantity) * (item.taxRate || 0) / 100)?.toLocaleString() || "0"}</p>
                         </div>
                       </div>
                     </div>
