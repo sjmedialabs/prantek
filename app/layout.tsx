@@ -7,7 +7,7 @@ import { CookieConsent } from "@/components/cookie-consent"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Prantek - Financial & Operations Management Platform",
+  title: "MyCashLedger - Financial & Operations Management Platform",
   description:
     "Multi-tenant SaaS platform for comprehensive financial and operations management with role-based access control",
   generator: "Prantek",
