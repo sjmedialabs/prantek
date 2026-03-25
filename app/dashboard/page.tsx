@@ -708,7 +708,7 @@ const clearedPayments = filteredPayments.filter(
 
       {/* Primary Financial Metrics */}
       <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {statCards.map((stat) => {
             const Icon = stat.icon;
             return (
@@ -736,7 +736,7 @@ const clearedPayments = filteredPayments.filter(
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Business Metrics
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {financialOverview.map((stat) => {
             const Icon = stat.icon;
             return (

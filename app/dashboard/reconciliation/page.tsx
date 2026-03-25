@@ -794,17 +794,17 @@ export default function ReconciliationPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">Search</Label>
-              <div className="relative">
+              <div className="relative w-full">
                 <Search className="absolute left-2 top-4 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+                  className="pl-8 w-full"
                 />
               </div>
             </div>
@@ -812,7 +812,7 @@ export default function ReconciliationPage() {
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="status">
+                <SelectTrigger id="status" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -828,7 +828,7 @@ export default function ReconciliationPage() {
             <div className="space-y-2">
               <Label htmlFor="type">Type</Label>
               <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as any)}>
-                <SelectTrigger id="type">
+                <SelectTrigger id="type" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -842,7 +842,7 @@ export default function ReconciliationPage() {
             <div className="space-y-2">
               <Label htmlFor="payment-method">Payment Method</Label>
               <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                <SelectTrigger id="payment-method">
+                <SelectTrigger id="payment-method" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -946,9 +946,7 @@ export default function ReconciliationPage() {
                             <span className="capitalize">{transaction.paymentMethod}</span>
                           </TableCell>
                           <TableCell>
-                            {typeof transaction.bankAccount === 'object' 
-                              ? transaction.bankAccount?.bankName 
-                              : (transaction.bankAccount || "-")}
+                            {transaction.bankAccount?.bankName || "-"}
                           </TableCell>
                           <TableCell>{transaction.referenceNumber || "-"}</TableCell>
                           <TableCell className="text-right font-medium text-green-600">
