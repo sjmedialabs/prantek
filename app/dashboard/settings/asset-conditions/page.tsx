@@ -181,7 +181,7 @@ export default function AssetConditionsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center md:justify-between">
             <div>
               <CardTitle>Condition List ({filteredConditions.length})</CardTitle>
               <CardDescription>Create and manage asset condition statuses</CardDescription>
@@ -195,7 +195,7 @@ export default function AssetConditionsPage() {
                   placeholder="Search conditions..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full md:w-72"
+                  className="pl-10 w-full h-full md:w-72"
                 />
               </div>
 
@@ -203,7 +203,7 @@ export default function AssetConditionsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="border rounded-lg px-2  py-3 text-sm"
+                className="border rounded-2xl px-2  py-3 text-sm"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>

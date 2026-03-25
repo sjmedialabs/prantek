@@ -13,6 +13,7 @@ import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { SalesInvoicePrint } from "@/components/print-templates/sales-invoice-print"
 import { SalesInvoice } from "@/lib/models/types"
 import { tokenStorage } from "@/lib/token-storage"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 // interface SalesInvoice {
 //   _id: string
@@ -212,33 +213,71 @@ export default function SalesInvoiceDetailsPage() {
               <div>
                 <h3 className="font-semibold mb-4">Items</h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2 font-medium text-gray-500">Item</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Qty</th>
-                        <th className="text-right py-2 font-medium text-gray-500" title="Price per unit">Price</th>
-                        <th className="text-right py-2 font-medium text-gray-500" title="Tax applied on one quatity">Tax</th>
-                        <th className="text-right py-2 font-medium text-gray-500" title="Discount Applied on one Quantity">Discount</th>
-                        <th className="text-right py-2 font-medium text-gray-500" title="Total including Tax and Discount">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoice.items.map((item, index) => (
-                        <tr key={index} className="border-b last:border-0">
-                          <td className="py-3">
-                            <p className="font-medium">{item.itemName || "Item " + (index + 1)}</p>
-                            {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
-                          </td>
-                          <td className="text-right py-3">{item.quantity}</td>
-                          <td className="text-right py-3">₹{item.price.toLocaleString()}</td>
-                          <td className="text-right py-3">{item.cgst + item.sgst + item.igst}%</td>
-                          <td className="text-right py-3">₹{item?.discount}</td>
-                          <td className="text-right py-3 font-medium">₹{item?.total?.toLocaleString() || `${item.price * item.quantity}`}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <Table className="w-full text-sm">
+  <TableHeader>
+    <TableRow className="border-b">
+      <TableHead className="text-left py-2 font-medium text-gray-500">Item</TableHead>
+      <TableHead className="text-right py-2 font-medium text-gray-500">Qty</TableHead>
+      <TableHead className="text-right py-2 font-medium text-gray-500" title="Price per unit">Price</TableHead>
+      <TableHead className="text-right py-2 font-medium text-gray-500" title="Tax applied on one quantity">Tax</TableHead>
+      <TableHead className="text-right py-2 font-medium text-gray-500" title="Discount Applied on one Quantity">Discount</TableHead>
+      <TableHead className="text-right py-2 font-medium text-gray-500" title="Total including Tax and Discount">Total</TableHead>
+    </TableRow>
+  </TableHeader>
+
+  <TableBody>
+    {invoice.items.map((item, index) => {
+      const quantity = item.quantity || 0
+      const price = item.price || 0
+      const discount = item.discount || 0
+
+      // ✅ Safe tax calculation
+      const tax =
+        (item.cgst || 0) +
+        (item.sgst || 0) +
+        (item.igst || 0)
+
+      // ✅ Safe total calculation
+      const calculatedTotal = price * quantity
+      const total = item.total ?? calculatedTotal
+
+      return (
+        <TableRow key={index} className="border-b last:border-0">
+          <TableCell className="py-3">
+            <p className="font-medium">
+              {item.itemName || `Item ${index + 1}`}
+            </p>
+            {item.description && (
+              <p className="text-xs text-gray-500">
+                {item.description}
+              </p>
+            )}
+          </TableCell>
+
+          <TableCell className="text-right py-3">
+            {quantity}
+          </TableCell>
+
+          <TableCell className="text-right py-3">
+            ₹{price.toLocaleString()}
+          </TableCell>
+
+          <TableCell className="text-right py-3">
+            {tax}%
+          </TableCell>
+
+          <TableCell className="text-right py-3">
+            ₹{discount.toLocaleString()}
+          </TableCell>
+
+          <TableCell className="text-right py-3 font-medium">
+            ₹{total.toLocaleString()}
+          </TableCell>
+        </TableRow>
+      )
+    })}
+  </TableBody>
+</Table>
                 </div>
               </div>
 

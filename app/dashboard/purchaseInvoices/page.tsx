@@ -142,7 +142,7 @@ export default function PurchaseInvoiceList() {
   const totalAmount = filtered.reduce((s, i) => s + (i.invoiceTotalAmount || 0), 0)
   const paidAmount = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "paid").reduce((s, i) => s + (i.paidAmount || 0), 0)
   const unpaidAmount = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "unpaid").reduce((s, i) => s + (i.balanceAmount || 0), 0)
-  const unpaidInvoice = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "unpaid" && i?.invoiceStatus !== "Closed")
+  const unpaidInvoice = filtered.filter(i => i?.paymentStatus?.toLocaleLowerCase() === "unpaid" && !["Closed", "Cancelled"].includes(i.invoiceStatus))
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage)
 

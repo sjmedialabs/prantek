@@ -163,11 +163,11 @@ export default function ReceiptDetailsPage() {
   const refundableBalance =
     receipt != null
       ? Number(
-          (receipt as any).balanceAmount ??
-            receipt.balanceAmount ??
-            receipt.ReceiptAmount ??
-            0
-        )
+        (receipt as any).balanceAmount ??
+        receipt.balanceAmount ??
+        receipt.ReceiptAmount ??
+        0
+      )
       : 0
   const isAdvanceReceipt =
     (receipt?.receiptType === "advance" || receipt?.paymentType === "advance") ?? false
@@ -479,11 +479,11 @@ export default function ReceiptDetailsPage() {
                         </div>
                         <div>
                           <p className="text-gray-600">Amount</p>
-                          <p className="font-semibold">₹{((item.price * item.quantity) - item.discount)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{((item.price - item.discount) * item.quantity)?.toLocaleString() || "0"}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Tax ({item.taxRate || 0}%)</p>
-                          <p className="font-semibold">₹{(((item.price * item.quantity) - item.discount) * (item.taxRate || 0) / 100)?.toLocaleString() || "0"}</p>
+                          <p className="font-semibold">₹{(((item.price - item.discount) * item.quantity) * (item.taxRate || 0) / 100)?.toLocaleString() || "0"}</p>
                         </div>
                       </div>
                     </div>
@@ -501,7 +501,7 @@ export default function ReceiptDetailsPage() {
                 <CardTitle>Terms & Conditions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div       className="prose max-w-200 text-sm text-gray-600 
+                <div className="prose max-w-200 text-sm text-gray-600 
                    break-words break-all whitespace-pre-wrap leading-relaxed
                    [&_p]:mb-2 
                    [&_ul]:list-disc [&_ul]:pl-5 
@@ -520,29 +520,29 @@ export default function ReceiptDetailsPage() {
               <span className="text-gray-600">Grand Total</span>
               <span className="font-semibold">
                 ₹{(receipt?.invoicegrandTotal || receipt?.total || 0).toLocaleString()}
-                
+
               </span>
             </div>
 
             <Separator />
-  {(receipt as any).advanceAppliedAmount > 0 && (
-    <>
-              <div className="flex justify-between text-blue-600">
-                <span className="font-semibold">Advance Applied</span>
-                <span className="font-bold mb-2">
-                  ₹{(receipt as any).advanceAppliedAmount.toLocaleString()}
-                </span>
-                 
-              </div>  <Separator /></>
+            {(receipt as any).advanceAppliedAmount > 0 && (
+              <>
+                <div className="flex justify-between text-blue-600">
+                  <span className="font-semibold">Advance Applied</span>
+                  <span className="font-bold mb-2">
+                    ₹{(receipt as any).advanceAppliedAmount.toLocaleString()}
+                  </span>
+
+                </div>  <Separator /></>
             )}
             <div className="flex justify-between text-green-600">
               <span className="font-semibold">Receipt Amount(Paid)</span>
               <span className="font-bold">
                 ₹{(receipt.ReceiptAmount || 0).toLocaleString()}
               </span>
-           
+
             </div>
-                <span className="text-sm">In words: {numberToIndianCurrencyWords(receipt.ReceiptAmount || 0)}</span>
+            <span className="text-sm">In words: {numberToIndianCurrencyWords(receipt.ReceiptAmount || 0)}</span>
             {receipt?.badDeptAmount > 0 && (<>
               <Separator />
               <div className="flex justify-between text-green-600">
@@ -582,7 +582,7 @@ export default function ReceiptDetailsPage() {
               <CardTitle>Payment Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-wrap gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Payment Method</p>
                   <p className="font-semibold">{receipt.paymentMethod}</p>
@@ -609,7 +609,7 @@ export default function ReceiptDetailsPage() {
             </CardContent>
           </Card>
           {(receipt?.paymentMethod?.toLowerCase() !== "cash" && (receipt?.bankDetails || receipt.bankAccount)) && (
-            <div className="border rounded-lg mt-2 p-4 bg-white text-sm space-y-1">
+            <div className="border flex flex-col gap-1 rounded-lg mt-2 p-4 bg-white text-sm space-y-1">
               <h3 className="text-base font-medium py-2">Bank Details</h3>
               <p><strong>Bank:</strong> {receipt?.bankDetails?.bankName || receipt?.bankAccount?.bankName}</p>
               <p><strong>Account Name:</strong> {receipt?.bankDetails?.accountName || receipt.bankAccount.accountName}</p>
@@ -617,12 +617,17 @@ export default function ReceiptDetailsPage() {
               <p><strong>IFSC:</strong> {receipt?.bankDetails?.ifscCode || receipt?.bankAccount?.ifscCode}</p>
               <p><strong>Branch:</strong> {receipt?.bankDetails?.branchName || receipt?.bankAccount?.branchName}</p>
 
-              {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId && (
-                <p><strong>UPI ID:</strong> {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId}</p>
+              {(receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId) && (
+                <p>
+                  <strong>UPI ID:</strong>{" "}
+                  {receipt?.bankDetails?.upiId || receipt?.bankAccount?.upiId}
+                </p>
               )}
-              {receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner && (
+              {(receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner) && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium mb-1">UPI QR Code</p>
+                  <p className="text-sm font-medium mb-1">
+                    UPI QR Code
+                  </p>
                   <img
                     src={receipt?.bankDetails?.upiScanner || receipt?.bankAccount?.upiScanner}
                     alt="UPI Scanner"
@@ -649,10 +654,10 @@ export default function ReceiptDetailsPage() {
                 {(receipt.balanceAmount ?? 0) === 0 &&
                   receipt.status !== "refunded" &&
                   receipt.status !== "partially_refunded" && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800 font-medium">Payment Completed</p>
-                  </div>
-                )}
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800 font-medium">Payment Completed</p>
+                    </div>
+                  )}
                 {(receipt.status === "refunded" || receipt.status === "partially_refunded") && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm text-amber-800 font-medium">

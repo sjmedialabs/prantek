@@ -228,8 +228,8 @@ const handleToggleStatus = async (role: EmployeeRole) => {
                 Designations like Executive, Manager, Director, etc.
               </CardDescription>
             </div>
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative w-full md:w-64 flex items-center">
+              <Search className="absolute left-2 top-2.7 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search roles..."
                 value={searchQuery}

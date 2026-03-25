@@ -106,9 +106,9 @@ export default function SuperAdminSignInPage() {
               </div>
             </div>
 
-            <div className="text-xs text-slate-400 bg-slate-700 p-3 rounded">
+            {/* <div className="text-xs text-slate-400 bg-slate-700 p-3 rounded">
               <br />
-            </div>
+            </div> */}
 
             <Button
               type="submit"

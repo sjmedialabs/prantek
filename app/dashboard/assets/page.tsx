@@ -129,13 +129,14 @@ export default function AssetsPage() {
   //   localStorage.setItem("assets", JSON.stringify(updatedAssets))
   //   setAssets(updatedAssets)
   // }
+  const activeAsset = assets.filter((asset) => asset.isActive)
 
   // Calculate asset metrics
   const totalAssetValue = assets.reduce((sum, asset) => sum + (asset.currentValue || 0), 0)
   const totalPurchaseValue = assets.reduce((sum, asset) => sum + (asset.purchasePrice || 0), 0)
   const totalDepreciation = totalPurchaseValue - totalAssetValue
   const assignedAssets = assets.filter((asset) => asset.assignedTo && !asset.submittedDate).length
-  const availableAssets = assets.filter((asset) => !asset.assignedTo || asset.submittedDate).length
+  const availableAssets = activeAsset.filter((asset) => !asset.assignedTo || asset.submittedDate).length
 
 const categoryData = categories
   .filter((c) => c.isActive) // only active categories
