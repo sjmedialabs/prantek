@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Suspense } from "react"
 import { CookieConsent } from "@/components/cookie-consent"
+import { ScrollToHash } from "@/components/scroll-to-hash"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -21,7 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={null}>{children}</Suspense>
+        <Suspense fallback={null}>
+          <ScrollToHash />
+          {children}
+        </Suspense>
         <CookieConsent />
       </body>
     </html>

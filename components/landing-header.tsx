@@ -8,6 +8,15 @@ import { api } from "@/lib/api-client"
 import type { WebsiteContent } from "@/lib/models/types"
 import { usePathname } from "next/navigation"
 
+/** CMS may store `#pricing`; Next needs `/#pricing` so we leave /about and hit home + hash */
+function normalizeLandingNavHref(href: string): string {
+  const t = href.trim()
+  if (!t) return t
+  if (t.startsWith("/#")) return t
+  if (t.startsWith("#")) return `/${t}`
+  return t
+}
+
 export function LandingHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [content, setContent] = useState<WebsiteContent | null>(null)
@@ -111,21 +120,32 @@ export function LandingHeader() {
           <div className="lg:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
               {navLinks.map((link) => {
-                const isHashLink = link.href.startsWith("/#")
-                // console.log(isHashLink)
+                const normalizedHref = normalizeLandingNavHref(link.href)
+                const isHashLink = normalizedHref.startsWith("/#")
+                const hashFragment = isHashLink ? normalizedHref.replace(/^\//, "") : ""
+
                 const isActive = isHashLink
-                  ? activeHash === link.href.replace("/", "")
-                  : pathname === link.href
+                  ? activeHash === hashFragment
+                  : pathname === normalizedHref
 
                 return (
                   <Link
-                    key={`${link.href}-${link.label}`}
-                    href={link.href}
-                    onClick={() => {
-    if (link.href.startsWith("/#")) {
-      setActiveHash(link.href.replace("/", ""))
-    }
-  }}
+                    key={`${normalizedHref}-${link.label}`}
+                    href={normalizedHref}
+                    onClick={(e) => {
+                      setIsMenuOpen(false)
+                      if (!isHashLink) return
+                      setActiveHash(hashFragment)
+                      if (pathname === "/") {
+                        e.preventDefault()
+                        const el = document.querySelector<HTMLElement>(hashFragment)
+                        if (el) {
+                          const y = el.getBoundingClientRect().top + window.scrollY - 80
+                          window.scrollTo({ top: Math.max(0, y), behavior: "smooth" })
+                          window.history.pushState(null, "", normalizedHref)
+                        }
+                      }
+                    }}
                     className={`transition-colors font-medium ${isActive
                         ? "text-blue-600"
                         : "text-gray-600 hover:text-blue-600"

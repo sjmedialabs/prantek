@@ -661,21 +661,21 @@ quotations: {
       },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/website-content/${id}`)
-        return data.data || data.content
+        return data.data ?? data.content ?? data
       },
       create: async (contentData: any) => {
         const data = await fetchAPI("/api/website-content", {
           method: "POST",
           body: JSON.stringify(contentData),
         })
-        return data.data || data.content
+        return data.data ?? data.content ?? data
       },
       update: async (id: string, contentData: any) => {
         const data = await fetchAPI(`/api/website-content/${id}`, {
           method: "PUT",
           body: JSON.stringify(contentData),
         })
-        return data.data || data.content
+        return data.data ?? data.content ?? data
       },
       delete: async (id: string) => {
         await fetchAPI(`/api/website-content/${id}`, {

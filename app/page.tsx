@@ -9,14 +9,11 @@ import { PricingSection } from "@/components/pricing-section"
 import { FAQSection } from "@/components/faq-section"
 import { CTASection } from "@/components/cta-section"
 import { LandingFooter } from "@/components/landing-footer"
-import { HashScrollHandler } from "@/components/hashScroll"
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen">
-        <HashScrollHandler />
       <LandingHeader />
- <main>
+      <main className="landing-anchor-sections">
   <HeroSection />
   <TrustedBySection />
 
@@ -40,8 +37,8 @@ export default function LandingPage() {
     <FAQSection />
   </section>
 
-  <CTASection />
-</main>
+        <CTASection />
+      </main>
       <LandingFooter />
     </div>
   )

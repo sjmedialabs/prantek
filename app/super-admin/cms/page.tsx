@@ -17,6 +17,7 @@ import {
   normalizePublicContactPage,
   emptyCmsBlock,
 } from "@/lib/cms-public-pages"
+import { toMongoIdString } from "@/lib/mongo-entity-id"
 
 export default function CMSPage() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
@@ -50,8 +51,10 @@ export default function CMSPage() {
         // }
         
         const { cmsPages: _legacyPages, ...wc } = websiteContent as WebsiteContent & { cmsPages?: unknown }
+        const stableId = toMongoIdString((wc as { _id?: unknown })._id) ?? toMongoIdString((wc as { id?: unknown }).id)
         const normalizedContent = {
           ...wc,
+          ...(stableId ? { _id: stableId as unknown, id: stableId as unknown } : {}),
           trustedByLogos: websiteContent.trustedByLogos || [],
           features: websiteContent.features || [],
           industries: websiteContent.industries || [],
@@ -115,7 +118,8 @@ const handleSave = async () => {
     toast.success("Website content updated successfully!")
   } catch (error) {
     console.error("Failed to save content:", error)
-    toast.error("Failed to save content")
+    const msg = error instanceof Error ? error.message : "Failed to save content"
+    toast.error(msg)
   }
 }
 

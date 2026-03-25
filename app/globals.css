@@ -247,3 +247,8 @@
     -moz-appearance: textfield;
   }
 }
+
+/* Landing home: anchor targets clear sticky header (h-16 + padding) */
+.landing-anchor-sections > section[id] {
+  scroll-margin-top: 5rem;
+}
