@@ -454,6 +454,13 @@ quotations: {
         const data = await fetchAPI("/api/users")
         return data.users || []
       },
+      getAdminUsers: async () => {
+    const res = await fetch("/api/users?userType=admin-user", {
+      credentials: "include",
+    })
+    const data = await res.json()
+    return data.users || []
+  },
       getById: async (id: string) => {
         const data = await fetchAPI(`/api/users/${id}`)
         return data.user

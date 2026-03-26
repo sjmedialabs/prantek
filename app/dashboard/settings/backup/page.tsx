@@ -190,7 +190,7 @@ Object.keys(row).forEach((key) => {
           <Button onClick={() => exportData("payments", api.payments.getAll)}>Payments</Button>
           <Button onClick={() => exportData("assets", api.assets.getAll)}>Assets</Button>
           <Button onClick={() => exportData("employees", api.employees.getAll)}>Employees</Button>
-          <Button onClick={() => exportData("users", api.users.getAll)}>Users</Button>
+          <Button onClick={() => exportData("admin-users", api.users.getAdminUsers)}>Users</Button>
           <Button onClick={() => exportData("products", api.items.getAll)}>Products</Button>
 
           <Button
