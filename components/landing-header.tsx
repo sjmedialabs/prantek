@@ -119,6 +119,7 @@ export function LandingHeader() {
         {isMenuOpen && (
           <div className="lg:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
+              <div className="flex flex-col gap-2">
               {navLinks.map((link) => {
                 const normalizedHref = normalizeLandingNavHref(link.href)
                 const isHashLink = normalizedHref.startsWith("/#")
@@ -155,6 +156,7 @@ export function LandingHeader() {
                   </Link>
                 )
               })}
+              </div>
               <div className="px-3 py-2 gap-2 space-y-2 flex md:hidden">
                 {signInLabel ? (
                   <Link href="/signin">
