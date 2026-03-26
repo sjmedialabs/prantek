@@ -153,7 +153,7 @@ Object.keys(row).forEach((key) => {
   ].includes(lowerKey)
 
   if (isCurrencyField && value !== "") {
-    value = `="₹${value}"`
+    value = `="${value}"`
   }
 
   newRow[key] = value
