@@ -450,9 +450,9 @@ export default function SalesDashboardPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button variant="outline" size="sm">
+          {/* <Button variant="outline" size="sm">
             Export Report
-          </Button>
+          </Button> */}
         </div>
       </div>
 
