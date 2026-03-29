@@ -26,6 +26,7 @@ import {
   ClipboardList,
   ShoppingCart,
   X,
+  Send,
 } from "lucide-react";
 
 interface NavItem {
@@ -98,6 +99,7 @@ const navigationItems: NavItem[] = [
   { name: "Clearing", href: "/dashboard/reconciliation", icon: RefreshCw, permission: "view_reconciliation" },
   { name: "Assets", href: "/dashboard/assets", icon: Package, permission: "view_assets" },
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3, permission: "view_reports" },
+  { name: "Communications", href: "/dashboard/communications", icon: Send, permission: "view_communications" },
   {
     name: "Settings",
     icon: Settings,
@@ -333,6 +335,7 @@ export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebar
       'Reconciliation': 'reconciliation',
       'Assets': 'assets',
       'Reports': 'reports',
+      'Communications': 'bulkEmail',
       'Settings': 'settings',
       'HR Settings': 'hrSettings',
       'Backup': 'backup'

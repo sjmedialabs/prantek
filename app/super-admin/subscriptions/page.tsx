@@ -124,6 +124,31 @@ export default function SubscriptionPlansPage() {
     return Object.keys(newErrors).length === 0
   }
 
+  // Helper: derive planFeatures booleans from features[] strings to keep in sync
+  const derivePlanFeaturesFromStrings = (features: string[]): Record<string, boolean> => {
+    const lower = features.map(f => f.toLowerCase())
+    return {
+      cashBook: lower.some(f => f.includes('cash book')),
+      clients: lower.some(f => f.includes('client')),
+      vendors: lower.some(f => f.includes('vendor')),
+      quotations: lower.some(f => f.includes('quotation')),
+      salesInvoice: lower.some(f => f.includes('sales invoice') || f.includes('invoice')),
+      receipts: lower.some(f => f.includes('receipt')),
+      purchaseInvoice: lower.some(f => f.includes('purchase invoice')),
+      payments: lower.some(f => f.includes('payment')),
+      reconciliation: lower.some(f => f.includes('reconciliation')),
+      assets: lower.some(f => f.includes('asset')),
+      reports: lower.some(f => f.includes('report') || f.includes('analytics')),
+      settings: lower.some(f => f.includes('setting') || f.includes('configuration')),
+      hrSettings: lower.some(f => f.includes('hr')),
+      print: lower.some(f => f.includes('print')),
+      pdf: lower.some(f => f.includes('pdf')),
+      csv: lower.some(f => f.includes('csv')),
+      email: lower.some(f => f.includes('email')),
+      backup: lower.some(f => f.includes('backup')),
+    }
+  }
+
   const handleCreatePlan = async () => {
     if (!validateForm()) {
       toast.error("Please fix the errors in the form")
@@ -132,6 +157,7 @@ export default function SubscriptionPlansPage() {
 
     const plan = await api.subscriptionPlans.create({
       ...newPlan,
+      planFeatures: derivePlanFeaturesFromStrings(newPlan.features),
       subscriberCount: 0,
       revenue: 0,
     })
@@ -163,7 +189,10 @@ export default function SubscriptionPlansPage() {
     }
 
     const id = editingPlan._id || editingPlan.id
-    await api.subscriptionPlans.update(id, newPlan)
+    await api.subscriptionPlans.update(id, {
+      ...newPlan,
+      planFeatures: derivePlanFeaturesFromStrings(newPlan.features),
+    })
     setPlans(plans.map(p => (p._id || p.id) === id ? { ...newPlan, _id: id, id, subscriberCount: p.subscriberCount, revenue: p.revenue } : p))
     resetForm()
     toast.success("Subscription plan updated successfully")

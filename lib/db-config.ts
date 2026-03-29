@@ -42,6 +42,11 @@ export const COLLECTIONS = {
   BANK_STATEMENTS: "bank_statements",
   /** Public contact form submissions (e.g. /contact) */
   CONTACT_LEADS: "contact_leads",
+  // Communication Suite
+  CLIENT_GROUPS: "client_groups",
+  MESSAGE_TEMPLATES: "message_templates",
+  CAMPAIGNS: "campaigns",
+  CAMPAIGN_RECIPIENTS: "campaign_recipients",
 } as const
 
 export const INDEXES = {

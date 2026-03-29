@@ -143,7 +143,7 @@ const [selectedBankAccount, setSelectedBankAccount] = useState("all")
       (entry.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.receiptNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.paymentNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof entry.accountDetails === "string" ? entry.accountDetails : (entry.accountDetails?.bankName + entry.accountDetails?.accountNumber + entry.accountDetails?.accountName || "")).toLowerCase().includes(searchTerm.toLowerCase())
+      (typeof entry.accountDetails === "string" ? entry.accountDetails : (( entry.accountDetails?.bankName || "") + " " + (entry.accountDetails?.accountNumber || "") + " " + (entry.accountDetails?.accountName || ""))).toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesType = typeFilter === "all" || entry.entryType === typeFilter
     const matchesPartyType = partyTypeFilter === "all" || entry.partyType === partyTypeFilter

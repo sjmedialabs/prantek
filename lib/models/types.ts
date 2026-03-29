@@ -414,6 +414,13 @@ export interface WebsiteContent {
   videosPageNoVideosLabel?: string
   videosPageNoOtherInTabLabel?: string
 
+
+  /** Loader customization (managed from CMS → Loader tab) */
+  loaderType?: "spinner" | "logo" | "custom"
+  loaderImage?: string
+  loaderText?: string
+  loaderBgColor?: string
+  loaderSpinnerColor?: string
   updatedAt: string
 }
 export interface ReceiptItem {
@@ -642,6 +649,14 @@ export interface PlanFeatures {
   csv: boolean
   email: boolean
   backup: boolean
+  // Communication Suite
+  clientGrouping: boolean
+  bulkEmail: boolean
+  bulkWhatsapp: boolean
+  scheduledMessaging: boolean
+  messageTemplates: boolean
+  deliveryTracking: boolean
+  communicationMetrics: boolean
 }
 
 export const PLAN_FEATURE_KEYS = [
@@ -663,6 +678,13 @@ export const PLAN_FEATURE_KEYS = [
   'csv',
   'email',
   'backup',
+  'clientGrouping',
+  'bulkEmail',
+  'bulkWhatsapp',
+  'scheduledMessaging',
+  'messageTemplates',
+  'deliveryTracking',
+  'communicationMetrics',
 ] as const
 
 export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
@@ -684,6 +706,13 @@ export const PLAN_FEATURE_LABELS: Record<keyof PlanFeatures, string> = {
   csv: 'CSV',
   email: 'Email',
   backup: 'Backup',
+  clientGrouping: 'Client Grouping & Segmentation',
+  bulkEmail: 'Bulk Email Campaigns',
+  bulkWhatsapp: 'Bulk WhatsApp Messaging',
+  scheduledMessaging: 'Scheduled Messaging',
+  messageTemplates: 'Message Templates',
+  deliveryTracking: 'Delivery Tracking',
+  communicationMetrics: 'Communication Metrics',
 }
 
 export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
@@ -705,6 +734,13 @@ export const PLAN_FEATURE_DESCRIPTIONS: Record<keyof PlanFeatures, string> = {
   csv: 'Access to download csv',
   email: 'Access to send emails',
   backup: 'Access to backup and restore',
+  clientGrouping: 'Create client groups and segments for targeted messaging',
+  bulkEmail: 'Send bulk email campaigns to clients',
+  bulkWhatsapp: 'Send bulk WhatsApp messages (Coming Soon)',
+  scheduledMessaging: 'Schedule messages for future delivery',
+  messageTemplates: 'Create and manage reusable message templates',
+  deliveryTracking: 'Track email delivery status',
+  communicationMetrics: 'View communication analytics and metrics',
 }
 
 export interface SubscriptionPlan extends BaseDocument {

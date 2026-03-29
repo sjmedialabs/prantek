@@ -969,7 +969,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
 
                     {selectedBankAccount && (
                       <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
-                        <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
+                        <p><strong>Bank:</strong> {selectedBankAccount?.bankName || "N/A"}</p>
                         <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
                         <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
                         <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>

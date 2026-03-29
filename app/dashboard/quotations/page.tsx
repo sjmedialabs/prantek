@@ -622,7 +622,7 @@ export default function QuotationsPage() {
                       <SelectContent className="z-9999">
                         {bankAccounts.length !== 0 ? (bankAccounts.map((acc: any) => (
                           <SelectItem key={acc._id} value={acc._id}>
-                            {acc.bankName}, {acc.accountName}, {acc.accountNumber}
+                            {acc?.bankName || "N/A"}, {acc?.accountName || ""}, {acc?.accountNumber || ""}
                           </SelectItem>
 
                         ))) : (
@@ -634,11 +634,11 @@ export default function QuotationsPage() {
                     </Select>
                     {selectedBankAccount && (
                       <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
-                        <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
-                        <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
-                        <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
-                        <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
-                        <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+                        <p><strong>Bank:</strong> {selectedBankAccount?.bankName || "N/A"}</p>
+                        <p><strong>Account Name:</strong> {selectedBankAccount?.accountName || "N/A"}</p>
+                        <p><strong>Account Number:</strong> {selectedBankAccount?.accountNumber || "N/A"}</p>
+                        <p><strong>IFSC:</strong> {selectedBankAccount?.ifscCode || "N/A"}</p>
+                        <p><strong>Branch:</strong> {selectedBankAccount?.branchName || "N/A"}</p>
 
                         {selectedBankAccount.upiId && (
                           <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>

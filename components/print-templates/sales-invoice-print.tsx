@@ -115,11 +115,11 @@ export const SalesInvoicePrint: React.FC<SalesInvoicePrintProps> = ({ invoice, c
       {invoice.bankDetails && (
         <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
           <h3 className="text-base font-medium py-2">Bank Details</h3>
-          <p><strong>Bank:</strong> {invoice.bankDetails.bankName}</p>
-          <p><strong>Account Name:</strong> {invoice.bankDetails.accountName}</p>
-          <p><strong>Account Number:</strong> {invoice.bankDetails.accountNumber}</p>
-          <p><strong>IFSC:</strong> {invoice.bankDetails.ifscCode}</p>
-          <p><strong>Branch:</strong> {invoice.bankDetails.branchName}</p>
+          <p><strong>Bank:</strong> {invoice.bankDetails?.bankName || "N/A"}</p>
+          <p><strong>Account Name:</strong> {invoice.bankDetails?.accountName || "N/A"}</p>
+          <p><strong>Account Number:</strong> {invoice.bankDetails?.accountNumber || "N/A"}</p>
+          <p><strong>IFSC:</strong> {invoice.bankDetails?.ifscCode || "N/A"}</p>
+          <p><strong>Branch:</strong> {invoice.bankDetails?.branchName || "N/A"}</p>
 
           {invoice.bankDetails.upiId && (
             <p><strong>UPI ID:</strong> {invoice.bankDetails.upiId}</p>

@@ -24,6 +24,7 @@ async function fetchAPI(url: string, options: RequestInit = {}) {
   const token = tokenStorage.getAccessToken()
   const isFormData = options.body instanceof FormData
   const response = await fetch(url, {
+    cache: "no-store",
     ...options,
     credentials: "include",
     headers: {

@@ -5,7 +5,8 @@ import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Edit, FileText, Download, ExternalLink, Printer } from "lucide-react"
+import { ArrowLeft, Edit, FileText, Download, ExternalLink, Printer, Mail } from "lucide-react"
+import { SendEmailDialog } from "@/components/ui/send-email-dialog"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
@@ -24,6 +25,7 @@ export default function ViewPurchaseInvoicePage() {
   const [invoice, setInvoice] = useState<any>(null)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [planFeatures, setPlanFeatures] = useState<any>(null)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
 
   useEffect(() => {
     const fetchPlanFeatures = async () => {
@@ -110,6 +112,12 @@ export default function ViewPurchaseInvoicePage() {
             <Button variant="outline" onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Print
+            </Button>
+          )}
+          {planFeatures?.email && (
+            <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
             </Button>
           )}
         </div>
@@ -306,6 +314,15 @@ export default function ViewPurchaseInvoicePage() {
           )}
         </div>
       </div>
+
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        documentType="purchaseInvoice"
+        documentId={invoice?._id || invoice?.id || id}
+        defaultEmail={invoice?.vendorEmail || ""}
+        defaultName={invoice?.vendorName || ""}
+      />
 
       {/* Hidden Print Component */}
       <div className="hidden" id="invoice-print-content">

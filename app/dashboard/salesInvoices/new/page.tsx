@@ -1075,7 +1075,7 @@ export default function NewSalesInvoicePage() {
                     <SelectContent>
                       {bankAccounts.map((method: any) => (
                         <SelectItem key={method._id} value={method._id}>
-                          {method.bankName}, {method.accountName}, {method.accountNumber}
+                          {method?.bankName || "N/A"}, {method?.accountName || ""}, {method?.accountNumber || ""}
                         </SelectItem>
 
                       ))}
@@ -1086,11 +1086,11 @@ export default function NewSalesInvoicePage() {
                   )}
                   {selectedBankAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
-                      <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
-                      <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
-                      <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
-                      <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
-                      <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+                      <p><strong>Bank:</strong> {selectedBankAccount?.bankName || "N/A"}</p>
+                      <p><strong>Account Name:</strong> {selectedBankAccount?.accountName || "N/A"}</p>
+                      <p><strong>Account Number:</strong> {selectedBankAccount?.accountNumber || "N/A"}</p>
+                      <p><strong>IFSC:</strong> {selectedBankAccount?.ifscCode || "N/A"}</p>
+                      <p><strong>Branch:</strong> {selectedBankAccount?.branchName || "N/A"}</p>
 
                       {selectedBankAccount.upiId && (
                         <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>
@@ -1604,7 +1604,7 @@ export default function NewSalesInvoicePage() {
                     <SelectContent>
                       {bankAccounts.map((method: any) => (
                         <SelectItem key={method._id} value={method._id}>
-                          {method.bankName}, {method.accountName}, {method.accountNumber}
+                          {method?.bankName || "N/A"}, {method?.accountName || ""}, {method?.accountNumber || ""}
                         </SelectItem>
 
                       ))}
@@ -1617,11 +1617,11 @@ export default function NewSalesInvoicePage() {
 )}
                   {selectedBankAccount && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
-                      <p><strong>Bank:</strong> {selectedBankAccount.bankName}</p>
-                      <p><strong>Account Name:</strong> {selectedBankAccount.accountName}</p>
-                      <p><strong>Account Number:</strong> {selectedBankAccount.accountNumber}</p>
-                      <p><strong>IFSC:</strong> {selectedBankAccount.ifscCode}</p>
-                      <p><strong>Branch:</strong> {selectedBankAccount.branchName}</p>
+                      <p><strong>Bank:</strong> {selectedBankAccount?.bankName || "N/A"}</p>
+                      <p><strong>Account Name:</strong> {selectedBankAccount?.accountName || "N/A"}</p>
+                      <p><strong>Account Number:</strong> {selectedBankAccount?.accountNumber || "N/A"}</p>
+                      <p><strong>IFSC:</strong> {selectedBankAccount?.ifscCode || "N/A"}</p>
+                      <p><strong>Branch:</strong> {selectedBankAccount?.branchName || "N/A"}</p>
 
                       {selectedBankAccount.upiId && (
                         <p><strong>UPI ID:</strong> {selectedBankAccount.upiId}</p>

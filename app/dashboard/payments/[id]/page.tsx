@@ -1,4 +1,6 @@
+
 "use client"
+import { SendEmailDialog } from "@/components/ui/send-email-dialog"
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -8,7 +10,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Edit, Printer, Trash2, Download } from "lucide-react"
+import { ArrowLeft, Edit, Printer, Trash2, Download , Mail } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { useUser } from "@/components/auth/user-context"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
@@ -38,6 +40,7 @@ export default function PaymentDetailsPage() {
 
   const [payment, setPayment] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [planFeatures, setPlanFeatures] = useState<any>(null)
 
@@ -222,7 +225,7 @@ export default function PaymentDetailsPage() {
             <CardContent>
               <dl className="space-y-2">
                 <DetailItem label="Method" value={payment.paymentMethod} />
-                <DetailItem label="Bank Account" value={payment.bankAccount.bankName + " " + payment.bankAccount.accountNumber + " " + payment.bankAccount.accountName} />
+                <DetailItem label="Bank Account" value={payment.bankAccount?.bankName || "N/A" + " " + payment.bankAccount?.accountNumber || "" + " " + payment.bankAccount?.accountName || ""} />
                 <DetailItem label="Reference Number" value={payment.referenceNumber} />
               </dl>
             </CardContent>
@@ -319,6 +322,14 @@ export default function PaymentDetailsPage() {
           />
         )}
       </div>
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        documentType="payment"
+        documentId={payment?._id || payment?.id || params.id}
+        defaultEmail={payment?.vendorEmail || payment?.clientEmail || ""}
+        defaultName={payment?.vendorName || payment?.clientName || ""}
+      />
     </div>
   )
 }

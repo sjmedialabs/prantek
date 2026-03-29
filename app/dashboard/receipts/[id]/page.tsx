@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Download, Printer, ReceiptIcon, RotateCcw } from "lucide-react"
+import { ArrowLeft, Download, Printer, ReceiptIcon, RotateCcw, Mail } from "lucide-react"
+import { SendEmailDialog } from "@/components/ui/send-email-dialog"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
@@ -111,6 +112,7 @@ export default function ReceiptDetailsPage() {
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [loading, setLoading] = useState(true)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [refundAmount, setRefundAmount] = useState("")
   const [refundSubmitting, setRefundSubmitting] = useState(false)
@@ -316,6 +318,10 @@ export default function ReceiptDetailsPage() {
               Print
             </Button>
           )}
+          <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+            <Mail className="h-4 w-4 mr-2" />
+            Send Email
+          </Button>
         </div>
       </div>
 
@@ -714,6 +720,15 @@ export default function ReceiptDetailsPage() {
       </Dialog>
 
       <div className="hidden" id="print-content">
+        <SendEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          documentType="receipt"
+          documentId={receipt?._id || receipt?.id || params.id}
+          defaultEmail={receipt?.clientEmail || ""}
+          defaultName={receipt?.clientName || ""}
+        />
+
         {receiptForPrint && (
           <ReceiptPrint
             receipt={receiptForPrint}

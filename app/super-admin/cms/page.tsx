@@ -488,6 +488,7 @@ const handleSave = async () => {
           <TabsTrigger value="about-page" className="flex-shrink-0">About Page</TabsTrigger>
           <TabsTrigger value="contact-page" className="flex-shrink-0">Contact Page</TabsTrigger>
           <TabsTrigger value="contact" className="flex-shrink-0">Contact</TabsTrigger>
+          <TabsTrigger value="loader" className="flex-shrink-0">Loader</TabsTrigger>
         </TabsList>
 
         {/* Branding Tab */}
@@ -1900,6 +1901,164 @@ const handleSave = async () => {
                   placeholder="https://instagram.com/yourhandle"
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Loader Tab */}
+        <TabsContent value="loader" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Page Loader</CardTitle>
+              <CardDescription>
+                Customize the loading animation shown across the application while pages load.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Loader Type</Label>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {(
+                    [
+                      { value: "spinner", label: "Spinner", desc: "Animated circle spinner" },
+                      { value: "logo", label: "Logo Pulse", desc: "Your logo with pulse animation" },
+                      { value: "custom", label: "Custom GIF/Image", desc: "Upload a custom animated GIF" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => updateContent("loaderType", opt.value)}
+                      className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                        (content.loaderType || "spinner") === opt.value
+                          ? "border-indigo-500 bg-indigo-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <p className="font-medium text-sm">{opt.label}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(content.loaderType === "logo" || content.loaderType === "custom") && (
+                <ImageUpload
+                  label={content.loaderType === "logo" ? "Logo Image" : "Custom Loader Image / GIF"}
+                  value={content.loaderImage || ""}
+                  onChange={(value) => updateContent("loaderImage", value)}
+                  description={
+                    content.loaderType === "logo"
+                      ? "Upload your logo (PNG/SVG). It will pulse while loading."
+                      : "Upload an animated GIF or image to show as the loader."
+                  }
+                  previewClassName="w-24 h-24"
+                />
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="loaderText">Loading Text</Label>
+                <Input
+                  id="loaderText"
+                  value={content.loaderText || ""}
+                  onChange={(e) => updateContent("loaderText", e.target.value)}
+                  placeholder="Loading…"
+                />
+                <p className="text-sm text-muted-foreground">Text shown below the loader animation. Leave empty to hide.</p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="loaderSpinnerColor">Spinner / Accent Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="loaderSpinnerColor"
+                      value={content.loaderSpinnerColor || ""}
+                      onChange={(e) => updateContent("loaderSpinnerColor", e.target.value)}
+                      placeholder="#6366f1"
+                    />
+                    <input
+                      type="color"
+                      value={content.loaderSpinnerColor || "#6366f1"}
+                      onChange={(e) => updateContent("loaderSpinnerColor", e.target.value)}
+                      className="h-10 w-10 rounded cursor-pointer border border-gray-300"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="loaderBgColor">Background Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="loaderBgColor"
+                      value={content.loaderBgColor || ""}
+                      onChange={(e) => updateContent("loaderBgColor", e.target.value)}
+                      placeholder="transparent"
+                    />
+                    <input
+                      type="color"
+                      value={content.loaderBgColor || "#ffffff"}
+                      onChange={(e) => updateContent("loaderBgColor", e.target.value)}
+                      className="h-10 w-10 rounded cursor-pointer border border-gray-300"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live preview */}
+              <div className="border-t pt-6">
+                <Label className="text-base font-semibold">Preview</Label>
+                <div
+                  className="mt-3 rounded-lg border flex flex-col items-center justify-center gap-3 py-12"
+                  style={{
+                    backgroundColor: content.loaderBgColor || "#ffffff",
+                  }}
+                >
+                  {(content.loaderType || "spinner") === "spinner" && (
+                    <div
+                      className="h-10 w-10 rounded-full border-[3px] border-gray-200 animate-spin"
+                      style={{ borderTopColor: content.loaderSpinnerColor || "#6366f1" }}
+                    />
+                  )}
+                  {(content.loaderType === "logo" || content.loaderType === "custom") &&
+                  content.loaderImage ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <img
+                        src={content.loaderImage}
+                        alt="Loader preview"
+                        className={
+                          content.loaderType === "logo"
+                            ? "h-16 w-16 object-contain animate-pulse"
+                            : "h-20 w-auto object-contain"
+                        }
+                      />
+                      {content.loaderType === "logo" && (
+                        <div className="h-1 w-24 rounded-full overflow-hidden bg-gray-200">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              backgroundColor: content.loaderSpinnerColor || "#6366f1",
+                              animation: "loaderBar 1.5s ease-in-out infinite",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (content.loaderType === "logo" || content.loaderType === "custom") ? (
+                    <p className="text-sm text-muted-foreground italic">Upload an image above to preview</p>
+                  ) : null}
+                  {(content.loaderText || "Loading…") && (
+                    <p className="text-sm text-gray-500">{content.loaderText || "Loading…"}</p>
+                  )}
+                </div>
+              </div>
+
+              <style>{`
+                @keyframes loaderBar {
+                  0% { width: 0%; margin-left: 0; }
+                  50% { width: 60%; margin-left: 20%; }
+                  100% { width: 0%; margin-left: 100%; }
+                }
+              `}</style>
             </CardContent>
           </Card>
         </TabsContent>

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Download, Printer, FileText } from "lucide-react"
+import { ArrowLeft, Download, Printer, FileText, Mail } from "lucide-react"
+import { SendEmailDialog } from "@/components/ui/send-email-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { getCompanyDetails, type CompanyDetails } from "@/lib/company-utils"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
@@ -52,6 +53,7 @@ export default function SalesInvoiceDetailsPage() {
 
   const [invoice, setInvoice] = useState<SalesInvoice | null>(null)
   const [loading, setLoading] = useState(true)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [planFeatures, setPlanFeatures] = useState<any>(null)
 
@@ -173,6 +175,12 @@ export default function SalesInvoiceDetailsPage() {
             <Button variant="outline" onClick={handlePrint} title="While Printing please cross verify Your owned company Detils in setting">
               <Printer className="h-4 w-4 mr-2" />
               Print
+            </Button>
+          )}
+          {planFeatures?.email && (
+            <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
             </Button>
           )}
         </div>
@@ -397,11 +405,11 @@ export default function SalesInvoiceDetailsPage() {
                   {invoice.bankDetails && (
                     <div className="border rounded-lg mt-2 p-4 bg-gray-50 text-sm space-y-1">
                       <h3 className="text-base font-medium py-2">Bank Details</h3>
-                      <p><strong>Bank:</strong> {invoice.bankDetails.bankName}</p>
-                      <p><strong>Account Name:</strong> {invoice.bankDetails.accountName}</p>
-                      <p><strong>Account Number:</strong> {invoice.bankDetails.accountNumber}</p>
-                      <p><strong>IFSC:</strong> {invoice.bankDetails.ifscCode}</p>
-                      <p><strong>Branch:</strong> {invoice.bankDetails.branchName}</p>
+                      <p><strong>Bank:</strong> {invoice.bankDetails?.bankName || "N/A"}</p>
+                      <p><strong>Account Name:</strong> {invoice.bankDetails?.accountName || "N/A"}</p>
+                      <p><strong>Account Number:</strong> {invoice.bankDetails?.accountNumber || "N/A"}</p>
+                      <p><strong>IFSC:</strong> {invoice.bankDetails?.ifscCode || "N/A"}</p>
+                      <p><strong>Branch:</strong> {invoice.bankDetails?.branchName || "N/A"}</p>
 
                       {invoice.bankDetails.upiId && (
                         <p><strong>UPI ID:</strong> {invoice.bankDetails.upiId}</p>
@@ -421,6 +429,15 @@ export default function SalesInvoiceDetailsPage() {
                   )}
         </div>
       </div>
+
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        documentType="salesInvoice"
+        documentId={invoice._id || invoice.id}
+        defaultEmail={invoice.clientEmail || ""}
+        defaultName={invoice.clientName || ""}
+      />
 
       {/* Hidden Print Component */}
       <div className="hidden" id="print-content">

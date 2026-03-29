@@ -1262,7 +1262,7 @@ export default function ReceiptsPage() {
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
                               <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}, {method.accountName} ,{method.accountNumber}
+                                {method?.bankName || "N/A"}, {method.accountName} ,{method.accountNumber}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1835,7 +1835,7 @@ export default function ReceiptsPage() {
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
                               <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}, {method.accountName}, {method.accountNumber}
+                                {method?.bankName || "N/A"}, {method.accountName}, {method.accountNumber}
                               </SelectItem>
 
                             ))}
@@ -2140,7 +2140,7 @@ export default function ReceiptsPage() {
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
                               <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}, {method.accountName}, {method.accountNumber}
+                                {method?.bankName || "N/A"}, {method.accountName}, {method.accountNumber}
                               </SelectItem>
 
                             ))}
@@ -2446,7 +2446,7 @@ export default function ReceiptsPage() {
                           <SelectContent>
                             {bankAccounts.map((method: any) => (
                               <SelectItem key={method._id} value={method._id}>
-                                {method.bankName}, {method.accountName}, {method.accountNumber}
+                                {method?.bankName || "N/A"}, {method.accountName}, {method.accountNumber}
                               </SelectItem>
 
                             ))}
