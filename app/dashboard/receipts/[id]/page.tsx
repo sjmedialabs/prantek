@@ -318,10 +318,12 @@ export default function ReceiptDetailsPage() {
               Print
             </Button>
           )}
+           {planFeatures?.email && (
           <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
             <Mail className="h-4 w-4 mr-2" />
             Send Email
           </Button>
+           )}
         </div>
       </div>
 

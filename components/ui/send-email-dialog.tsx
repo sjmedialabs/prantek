@@ -17,7 +17,7 @@ import { toast } from "@/lib/toast"
 interface SendEmailDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  documentType: "salesInvoice" | "receipt" | "purchaseInvoice" | "payment"
+  documentType: "salesInvoice" | "receipt" | "purchaseInvoice" | "payment" | "quotation"
   documentId: string
   defaultEmail?: string
   defaultName?: string

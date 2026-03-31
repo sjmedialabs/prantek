@@ -174,6 +174,12 @@ export default function PaymentDetailsPage() {
               Print
             </Button>
           )}
+          {planFeatures?.email && (
+            <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
+            </Button>
+          )}
           {/* {hasPermission("delete_payments") && (
             <Button variant="destructive" disabled>
               <Trash2 className="h-4 w-4 mr-2" />
@@ -327,8 +333,8 @@ export default function PaymentDetailsPage() {
         onOpenChange={setEmailDialogOpen}
         documentType="payment"
         documentId={payment?._id || payment?.id || params.id}
-        defaultEmail={payment?.vendorEmail || payment?.clientEmail || ""}
-        defaultName={payment?.vendorName || payment?.clientName || ""}
+        defaultEmail={payment?.recipientEmail || ""}
+        defaultName={payment?.recipientName || ""}
       />
     </div>
   )
