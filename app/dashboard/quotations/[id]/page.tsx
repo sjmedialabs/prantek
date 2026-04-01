@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, Download, Printer, FileText, Check } from "lucide-react"
+import { ArrowLeft, Download, Printer, FileText, Check, Mail } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SendEmailDialog } from "@/components/ui/send-email-dialog"
 import { Input } from "@/components/ui/input"
 import { generatePDF, printDocument } from "@/lib/pdf-utils"
 import { QuotationPrint } from "@/components/print-templates/quotation-print"
@@ -22,6 +23,7 @@ export default function QuotationDetailsPage() {
   const quotationId = params.id as string
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false)
   const [acceptedDate, setAcceptedDate] = useState(new Date().toISOString().split("T")[0])
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null)
   const [quotation, setQuotation] = useState<Quotation | null>(null)
   const [loading, setLoading] = useState(true)
@@ -263,6 +265,12 @@ const quotationForPrint = {
             <Button variant="outline" onClick={handlePrint} title="While Printing the quotation please cross verify Your owned company Detils in setting">
               <Printer className="h-4 w-4 mr-2" />
               Print
+            </Button>
+          )}
+          {planFeatures?.email && (
+            <Button variant="outline" onClick={() => setEmailDialogOpen(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Email
             </Button>
           )}
         </div>
@@ -554,6 +562,15 @@ const quotationForPrint = {
 
       {/* Hidden print template for PDF generation */}
       <div className="hidden" id="print-content">
+        <SendEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          documentType="quotation"
+          documentId={quotation._id || quotation.id || quotationId}
+          defaultEmail={quotation.clientEmail || ""}
+          defaultName={quotation.clientName || ""}
+        />
+
         <QuotationPrint
           quotation={quotationForPrint}
           companyDetails={{
