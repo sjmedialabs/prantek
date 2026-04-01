@@ -2,41 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  Shield,
-  Zap,
-  BarChart3,
-  FileText,
-  Users,
-  Clock,
-  Lock,
-  Globe,
-  Smartphone,
-  Star,
-  CreditCard,
-  Package,
-  Receipt,
-  type LucideIcon,
-} from "lucide-react"
+import * as Icons from "lucide-react"
+import { type LucideIcon, Star } from "lucide-react"
 import { api } from "@/lib/api-client"
 import Link from "next/link"
 import type { WebsiteContent } from "@/lib/models/types"
 
-const iconMap: Record<string, LucideIcon> = {
-  Shield,
-  Zap,
-  BarChart3,
-  BarChart: BarChart3,
-  FileText,
-  Users,
-  Clock,
-  Lock,
-  Globe,
-  Smartphone,
-  Star,
-  CreditCard,
-  Package,
-  Receipt,
+// This maps all icons from the library. 
+// Note: This will increase your client bundle size significantly.
+const iconMap: Record<string, LucideIcon> = { 
+  ...(Icons as any), 
+  BarChart: Icons.BarChart3 
 }
 
 export function FeaturesSection() {
