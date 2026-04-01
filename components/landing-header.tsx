@@ -64,7 +64,7 @@ export function LandingHeader() {
             </div>
           </div>
 
-          <nav className="hidden lg:flex space-x-8">
+          <nav className="hidden lg:flex gap-4 xl:gap-0 text-sm xl:text-base xl:space-x-8">
             {navLinks.map((link) => {
               const isHashLink = link.href.startsWith("/#")
 
