@@ -332,7 +332,7 @@ export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebar
       'Receipts': 'receipts',
       'Purchase Invoices': 'purchaseInvoice',
       'Payments': 'payments',
-      'Reconciliation': 'reconciliation',
+      'Clearing': 'reconciliation',
       'Assets': 'assets',
       'Reports': 'reports',
       'Communications': 'bulkEmail',
