@@ -2,52 +2,16 @@
 
 import { Card } from "@/components/ui/card"
 import { api } from "@/lib/api-client"
-import {
-  Truck,
-  ShoppingBag,
-  Building2,
-  Utensils,
-  Briefcase,
-  Store,
-  Shield,
-  Zap,
-  BarChart3,
-  FileText,
-  Users,
-  Clock,
-  Lock,
-  Globe,
-  Smartphone,
-  Star,
-  CreditCard,
-  Package,
-  Receipt,
-  type LucideIcon,
-} from "lucide-react"
+import * as Icons from "lucide-react"
+import { type LucideIcon, Star } from "lucide-react"
 import { useState, useEffect } from "react"
 import type { WebsiteContent } from "@/lib/models/types"
 
+// This maps all icons from the library.
+// Note: This will increase your client bundle size significantly.
 const iconMap: Record<string, LucideIcon> = {
-  Truck,
-  ShoppingBag,
-  Building2,
-  Utensils,
-  Briefcase,
-  Store,
-  Shield,
-  Zap,
-  BarChart3,
-  BarChart: BarChart3,
-  FileText,
-  Users,
-  Clock,
-  Lock,
-  Globe,
-  Smartphone,
-  Star,
-  CreditCard,
-  Package,
-  Receipt,
+  ...(Icons as any),
+  BarChart: Icons.BarChart3, // Maintain your specific alias
 }
 
 export function IndustriesSection() {
@@ -97,18 +61,7 @@ export function IndustriesSection() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {industries.map((industry, index) => {
             const IconComponent = iconMap[industry.icon] ?? Star
-            const colors = [
-              "from-blue-500 to-cyan-500",
-              "from-purple-500 to-pink-500",
-              "from-orange-500 to-red-500",
-              "from-green-500 to-emerald-500",
-              "from-indigo-500 to-blue-500",
-              "from-yellow-500 to-orange-500",
-              "from-red-500 to-pink-500",
-              "from-teal-500 to-green-500",
-              "from-pink-500 to-rose-500",
-            ]
-            const gradient = colors[index % colors.length]
+            const gradient = industry.gradient?.trim() || "from-blue-500 to-cyan-500"
             return (
               <Card
                 key={industry.id || index}

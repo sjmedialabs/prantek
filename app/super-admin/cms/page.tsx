@@ -472,7 +472,7 @@ const handleSave = async () => {
       </div>
 
       <Tabs defaultValue="branding" className="space-y-6">
-        <TabsList className="flex w-full overflow-x-auto whitespace-nowrap scroll-smooth">
+        <TabsList className="flex w-full overflow-x-auto whitespace-nowrap scroll-smooth h-full">
           <TabsTrigger value="branding" className="flex-shrink-0 ml-190 md:ml-120 xl:ml-8">Branding</TabsTrigger>
           <TabsTrigger value="navigation" className="flex-shrink-0">Navigation</TabsTrigger>
           <TabsTrigger value="hero" className="flex-shrink-0">Hero</TabsTrigger>
@@ -879,13 +879,13 @@ const handleSave = async () => {
                               placeholder="e.g. Shield, Zap, Star"
                             />
                           </div>
-                          <ImageUpload
+                          {/* <ImageUpload
                             label="Feature Image"
                             value={feature.image || ""}
                             onChange={(value) => updateFeature(feature.id, "image", value)}
                             description="Upload an image or provide a URL"
                             previewClassName="w-24 h-24"
-                          />
+                          /> */}
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label>Learn More Text</Label>
