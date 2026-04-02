@@ -12,6 +12,8 @@ export interface User {
   subscriptionPlanId?: string
   subscriptionStatus?: string
   clientId?: string
+  avatar?: string
+  address?: string
 }
 
 export interface AuthTokens {

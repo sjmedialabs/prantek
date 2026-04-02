@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
         phone: user.phone,
         address: user.address,
         profilePicture: user.profilePicture,
+        avatar: user.avatar,
 
         // Subscription info (from payload or parent account)
         subscriptionPlanId: payload.subscriptionPlanId || user.subscriptionPlanId,
