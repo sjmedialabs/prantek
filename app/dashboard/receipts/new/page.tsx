@@ -163,7 +163,7 @@ export default function ReceiptsPage() {
   const [terms, setTerms] = useState("")
   const [masterItems, setMasterItems] = useState<MasterItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [paymentType, setPaymentType] = useState<any>("FullPayment")// Ful, Payment or Partial Payment
+  const [paymentType, setPaymentType] = useState<any>("Full Payment")// Ful, Payment or Partial Payment
   const [amountToPay, setAmountToPay] = useState(0)// if partial amount is selected then need to enter amount they paying currently
   // const [paymentMethods, setPaymentMethods] = useState<any>([])
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
@@ -1057,7 +1057,7 @@ export default function ReceiptsPage() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push("/dashboard/receipts")}>
+        <Button variant="outline" onClick={() => router.push("/dashboard/receipts")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Receipts
         </Button>
@@ -1082,7 +1082,7 @@ export default function ReceiptsPage() {
             {/* Scenario 1: From SalesInvoice */}
             <TabsContent value="invoice" className="space-y-4">
               <div className="space-y-4">
-                <div className="grid w-full grid-cols-1 gap-4">
+                <div className="grid w-full grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="w-full">
                     <Label>Select SalesInvoice</Label>
                     {/* <Select value={selectedInvoice} onValueChange={handleInvoiceSelect}>
@@ -1171,13 +1171,12 @@ export default function ReceiptsPage() {
                     </Label>
                     <Select
                       value={paymentType}
-                      onValueChange={(value: "Full Payment" | "Partial Payment") =>
-                        setPaymentType(value)
-                      }
+                      onValueChange={(value) => setPaymentType(value)}
+                      required
                     >
 
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select FullPayment/Partial" />
+                        <SelectValue placeholder="Select payment type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Full Payment">Full Payment</SelectItem>
@@ -1574,7 +1573,7 @@ export default function ReceiptsPage() {
                                   value={String(item.cgst || 0)}
                                   onValueChange={(v) => handleUpdateItem(item.id, "cgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select CGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1593,7 +1592,7 @@ export default function ReceiptsPage() {
                                   value={String(item.sgst || 0)}
                                   onValueChange={(v) => handleUpdateItem(item.id, "sgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select SGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1612,7 +1611,7 @@ export default function ReceiptsPage() {
                                   value={String(item.igst || 0)}
                                   onValueChange={(v) => handleUpdateItem(item.id, "igst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select IGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1780,7 +1779,7 @@ export default function ReceiptsPage() {
                       type="text"
                       value={(grandTotal - (advanceApplyAmount || 0)).toLocaleString()}
                       disabled
-                      placeholder="Enter amount paid (full or advance)"
+                      placeholder="Enter amount paid"
                     />
                   </div>
                   {/* <div>
@@ -2100,7 +2099,7 @@ export default function ReceiptsPage() {
                       type="number"
                       value={scenario3AmountPaid}
                       onChange={(e) => setScenario3AmountPaid(e.target.value)}
-                      placeholder="Enter amount paid (full or advance)"
+                      placeholder="Enter amount paid"
                     />
                     {/* {scenario3AmountPaid && (
                       <div className="text-sm text-muted-foreground mt-1">
@@ -2385,7 +2384,7 @@ export default function ReceiptsPage() {
                       type="number"
                       value={scenario3AmountPaid}
                       onChange={(e) => setScenario3AmountPaid(e.target.value)}
-                      placeholder="Enter amount paid (full or advance)"
+                      placeholder="Enter amount paid"
                     />
                     <p className="text-xs text-gray-600">In words : {numberToIndianCurrencyWords(scenario3AmountPaid)}</p>
                     {/* {scenario3AmountPaid && (

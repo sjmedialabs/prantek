@@ -557,9 +557,9 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
   return (
     <div className="space-y-6 pb-24">
       {/* HEADER */}
-      <div className="flex items-center justify-start">
+      <div className="flex items-center flex-col gap-1 justify-start">
         <div className="mr-5">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -806,7 +806,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
                                 value={String(item.cgst || 0)}
                                 onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full bg-white">
                                   <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -825,7 +825,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
                                 value={String(item.sgst || 0)}
                                 onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full bg-white">
                                   <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -844,7 +844,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
                                 value={String(item.igst || 0)}
                                 onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full bg-white">
                                   <SelectValue placeholder="0" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -933,6 +933,7 @@ updated.taxName = taxParts.length > 0 ? taxParts.join(" + ") : ""
                         type="date"
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
+                        className="pr-40"
                       />
                     </div>
                     {/* CREATED BY */}

@@ -378,8 +378,8 @@ console.log("payment amount is ", paymentAmount)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+      <div className="flex items-start justify-start flex-col gap-1">
+        <Button variant="outline" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>

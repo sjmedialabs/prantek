@@ -139,9 +139,9 @@ export default function PaymentDetailsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-start flex-col gap-1 space-x-4">
           <Link href="/dashboard/payments">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -297,7 +297,7 @@ export default function PaymentDetailsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <dt className="text-sm font-medium text-gray-500">Status</dt>
                   <dd className="text-sm text-gray-900">
-                    <Badge variant={getStatusVariant(payment.status)}>{payment.status}</Badge>
+                    <Badge variant={getStatusVariant(payment.status)} className="capitalize">{payment.status}</Badge>
                   </dd>
                 </div>
                 <DetailItem label="Description" value={payment.description} />

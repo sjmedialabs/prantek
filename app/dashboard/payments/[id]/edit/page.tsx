@@ -164,8 +164,8 @@ setPurchaseInvoices(invoicesRes || [])
   return (
     <div className="space-y-6">
       {/* HEADER */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.back()}>
+      <div className="flex items-start flex-col gap-1">
+        <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <div>

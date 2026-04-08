@@ -261,7 +261,7 @@ export default function VendorDetailsPage() {
                   <TableCell>
                     {viewLink && (
                       <Link href={viewLink}>
-                        <Button size="sm" variant="outline">View</Button>
+                        <Button size="sm" variant="outline" className="h-8">View</Button>
                       </Link>
                     )}
                   </TableCell>
@@ -279,13 +279,13 @@ export default function VendorDetailsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          <Button variant="outline" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back to Vendors List
           </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          {/* <h1 className="text-2xl font-bold flex items-center gap-2">
             <Store className="h-6 w-6 text-purple-600" />
             Vendor Details
-          </h1>
+          </h1> */}
         </div>
         <div>
           {planFeatures?.csv && (

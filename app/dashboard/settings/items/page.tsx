@@ -323,8 +323,8 @@ export default function ItemsPage() {
                 Add Product/Service
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+            <DialogContent className="w-[90vw]! sm:max-w-[70vw] max-h-[95vh] flex flex-col p-0 gap-0">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20 rounded-t-2xl">
                 <DialogHeader>
                   <DialogTitle>{editingItem ? "Edit Product/Service" : "Add New Product/Service"}</DialogTitle>
                   <DialogDescription>Enter item details below. Fields marked with * are required.</DialogDescription>
@@ -333,6 +333,7 @@ export default function ItemsPage() {
 
               <div className="flex-1 min-h-0 max-h-full mb-20 overflow-y-auto px-6 py-6">
                 <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="type">
                       Select Type <span className="text-red-500">*</span>
@@ -348,7 +349,7 @@ export default function ItemsPage() {
                       }
                     >
 
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full bg-white">
                         <SelectValue placeholder="Select Product/Service" />
                       </SelectTrigger>
                       <SelectContent>
@@ -360,13 +361,13 @@ export default function ItemsPage() {
 
                   {formData.type === "product" && (
                     <div className="space-y-2 flex gap-4 items-center">
-                      <div className="mb-4">
+                      <div className="mb-4 w-full">
                         <Label htmlFor="unitType" required>Unit Type</Label>
                         <Select
                           value={normalizeUnit(formData.unitType)}
                           onValueChange={(value) => setFormData({ ...formData, unitType: value })}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full bg-white">
                             <SelectValue placeholder="Select unit type" />
                           </SelectTrigger>
 
@@ -389,7 +390,7 @@ export default function ItemsPage() {
 
                     </div>
                   )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
                     <div className="space-y-2">
                       <Label htmlFor="name">
                         {`${formData.type==="product"?"Item Name":"Service Name"}`} <span className="text-red-500">*</span>
@@ -424,17 +425,7 @@ export default function ItemsPage() {
                         />
                       </div>
                     )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter item description"
-                      rows={3}
-                    />
-                  </div>
+              
 
                   <div className="space-y-2">
                     <Label htmlFor="price">
@@ -449,7 +440,7 @@ export default function ItemsPage() {
                       required
                     />
                   </div>
-
+                  </div>
                   <div className="space-y-4 border-t pt-4">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -470,7 +461,7 @@ export default function ItemsPage() {
                             value={formData.cgst.toString()}
                             onValueChange={(value) => setFormData({ ...formData, cgst: Number.parseFloat(value) })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full bg-white">
                               <SelectValue placeholder="Select CGST" />
                             </SelectTrigger>
                             <SelectContent>
@@ -491,7 +482,7 @@ export default function ItemsPage() {
                             value={formData.sgst.toString()}
                             onValueChange={(value) => setFormData({ ...formData, sgst: Number.parseFloat(value) })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full bg-white">
                               <SelectValue placeholder="Select SGST" />
                             </SelectTrigger>
                             <SelectContent>
@@ -512,7 +503,7 @@ export default function ItemsPage() {
                             value={formData.igst.toString()}
                             onValueChange={(value) => setFormData({ ...formData, igst: Number.parseFloat(value) })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full bg-white">
                               <SelectValue placeholder="Select IGST" />
                             </SelectTrigger>
                             <SelectContent>
@@ -529,10 +520,20 @@ export default function ItemsPage() {
                       </div>
                     )}
                   </div>
+                     <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Enter item description"
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg">
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg rounded-b-2xl">
                 <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel

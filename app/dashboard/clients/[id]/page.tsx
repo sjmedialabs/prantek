@@ -506,7 +506,7 @@ export default function ClientDetailsPage() {
                   <TableCell>
                     {viewLink && (
                       <Link href={viewLink}>
-                        <Button size="sm" variant="outline">View</Button>
+                        <Button size="sm" variant="outline" className="h-8">View</Button>
                       </Link>
                     )}
                   </TableCell>
@@ -566,7 +566,7 @@ export default function ClientDetailsPage() {
             if (client.status && client.status.trim()) {
               infoItems.push({
                 label: "Status",
-                value: <Badge variant={client.status === "active" ? "default" : "secondary"}>{client.status}</Badge>,
+                value: <Badge variant={client.status === "active" ? "default" : "secondary"} className="capitalize">{client.status}</Badge>,
               })
             }
             pushIf("Note", client.note)
@@ -632,21 +632,22 @@ export default function ClientDetailsPage() {
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4">
                 <div className="flex-1">
                   <Input
-                    placeholder="Search by transaction number, date, or staus....."
+                    placeholder="Search by transaction number, date, or status....."
                     value={transactionNumberQuery}
                     onChange={(e) => setTransactionNumberQuery(e.target.value)}
                   />
                 </div>
               </div>
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="overflow-x-auto whitespace-nowrap flex-nowrap w-full md:w-auto">
+                <TabsList className="px-2 w-full xl:w-130 ">
+                  <div className="overflow-x-auto flex justify-between">
                   <TabsTrigger value="all">All</TabsTrigger>
                   <TabsTrigger value="receipt">Receipt</TabsTrigger>
                   <TabsTrigger value="salesInvoice">Sales Invoice</TabsTrigger>
                   <TabsTrigger value="purchaseInvoice">Purchase Invoice</TabsTrigger>
                   <TabsTrigger value="payment">Payment</TabsTrigger>
                   <TabsTrigger value="quotation">Quotation</TabsTrigger>
-                 
+                 </div>
                 </TabsList>
                 <TabsContent value="all" className="mt-4">
                 {renderTransactionTable(filteredTransactions)}

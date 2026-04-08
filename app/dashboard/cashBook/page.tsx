@@ -464,7 +464,7 @@ setSelectedPaymentMethod("all")
               />
             </div>
 
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+            <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="px-2">
               <Filter className="h-4 w-4 mr-2" />
               Filters
             </Button>
@@ -485,11 +485,13 @@ setSelectedPaymentMethod("all")
 
           {/* Filters */}
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-gray-50 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-4 bg-gray-50 p-4 rounded-lg">
               <div>
                 <label className="text-sm font-medium">Entry Type</label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger><SelectValue placeholder="All Types" /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="receipt">Receipt</SelectItem>
@@ -501,7 +503,7 @@ setSelectedPaymentMethod("all")
               <div>
                 <label className="text-sm font-medium">Party Type</label>
                 <Select value={partyTypeFilter} onValueChange={setPartyTypeFilter}>
-                  <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white"><SelectValue placeholder="All" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     {partyTypes.map((p) => (
@@ -517,7 +519,7 @@ setSelectedPaymentMethod("all")
     value={selectedBankAccount}
     onValueChange={setSelectedBankAccount}
   >
-    <SelectTrigger>
+    <SelectTrigger className="w-full bg-white">
       <SelectValue placeholder="All Accounts" />
     </SelectTrigger>
 
@@ -539,7 +541,7 @@ setSelectedPaymentMethod("all")
     value={selectedPaymentMethod}
     onValueChange={setSelectedPaymentMethod}
   >
-    <SelectTrigger>
+    <SelectTrigger className="w-full bg-white">
       <SelectValue placeholder="All Methods" />
     </SelectTrigger>
 
@@ -570,7 +572,7 @@ setSelectedPaymentMethod("all")
               <div>
                 <label className="text-sm font-medium">Ledger</label>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger><SelectValue placeholder="All Ledgers" /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white"><SelectValue placeholder="All Ledgers" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     {uniqueCategories.map((cat) => (
@@ -602,12 +604,12 @@ setSelectedPaymentMethod("all")
 
               <div>
                 <label className="text-sm font-medium">Min Amount</label>
-                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} placeholder="Enter Min Amount"/>
               </div>
 
               <div>
                 <label className="text-sm font-medium">Max Amount</label>
-                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} placeholder="Enter Max Amount"/>
               </div>
             </div>
           )}
@@ -747,7 +749,7 @@ setSelectedPaymentMethod("all")
           </div>
         </div>
           <h1 className="text-2xl font-bold mb-4 text-center">Cashbook Report</h1>
-          <table className="w-full text-sm border-collapse border">
+          <table className="w-full bg-white text-sm border-collapse border">
             <thead>
               <tr className="bg-gray-100">
                 <th className="border p-2">Date</th>

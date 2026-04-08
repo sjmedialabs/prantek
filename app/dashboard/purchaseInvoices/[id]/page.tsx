@@ -81,9 +81,9 @@ export default function ViewPurchaseInvoicePage() {
     <div className="space-y-6 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-start flex-col gap-1 space-x-4">
           <Link href="/dashboard/purchaseInvoices">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -152,7 +152,7 @@ export default function ViewPurchaseInvoicePage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Ledger Head</p>
-                  <Badge variant="outline" className="mt-1">
+                  <Badge variant="outline" className="mt-1 capitalize">
                     {invoice.paymentCategory || invoice.category}
                   </Badge>
                 </div>
@@ -266,13 +266,13 @@ export default function ViewPurchaseInvoicePage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Invoice Status</span>
-                  <Badge variant={invoice.invoiceStatus === "Closed" ? "default" : "secondary"}>
+                  <Badge variant={invoice.invoiceStatus === "Closed" ? "default" : "secondary"} className="capitalize">
                     {invoice.invoiceStatus}
                   </Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Payment Status</span>
-                  <Badge variant={invoice.paymentStatus === "Paid" ? "default" : "secondary"}>
+                  <Badge variant={invoice.paymentStatus === "Paid" ? "default" : "secondary"} className="capitalize">
                     {invoice.paymentStatus}
                   </Badge>
                 </div>

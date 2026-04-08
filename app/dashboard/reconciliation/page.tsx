@@ -798,7 +798,7 @@ export default function ReconciliationPage() {
             <div className="space-y-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative w-full">
-                <Search className="absolute left-2 top-4 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Search..."
