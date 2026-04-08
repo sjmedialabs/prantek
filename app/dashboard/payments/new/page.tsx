@@ -28,7 +28,6 @@ import { useToast } from "@/hooks/use-toast"
 import { ClientSelectSimple } from "@/components/client-select-simple"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { toast as toast2 } from "@/lib/toast"
-import { errorTypeRegistries } from "@aws-sdk/client-ses"
 
 const indianStates = [
   "Andhra Pradesh",

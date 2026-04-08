@@ -199,8 +199,16 @@ const priceWithGST = Math.round((basePrice || 0) * 1.18)
         totalAmount=totalAmount - amountFromPreviousSubscription
       }
       // setTotalAmount(totalAmountTopaid);
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ""
+      if (!razorpayKey) {
+        setError("Payment gateway is not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID in environment.")
+        toast.error("Payment gateway is not configured.")
+        setProcessing(false)
+        return
+      }
+
       const options = {
-        key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
+        key: razorpayKey,
         amount: totalAmount * 100, // Amount in paise
         currency: "INR",
         name: "SaaS Platform",

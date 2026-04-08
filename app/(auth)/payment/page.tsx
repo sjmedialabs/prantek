@@ -90,8 +90,15 @@ export default function PaymentPage() {
         return
       }
 
+      const razorpayKey = checkoutData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ""
+      if (!razorpayKey) {
+        setError("Payment gateway is not configured. Set RAZORPAY_KEY_ID and NEXT_PUBLIC_RAZORPAY_KEY_ID.")
+        setLoading(false)
+        return
+      }
+
       const options = {
-        key: checkoutData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_RVhlVFbaKUJJDH",
+        key: razorpayKey,
         order_id: checkoutData.orderId,
         customer_id: checkoutData.customerId,
         name: "Prantek Academy",

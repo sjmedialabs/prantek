@@ -59,8 +59,16 @@ export default function TrialPaymentPage() {
     setError("")
 
     try {
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ""
+      if (!razorpayKey) {
+        setError("Payment gateway is not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID in environment.")
+        toast.error("Payment gateway is not configured.")
+        setLoading(false)
+        return
+      }
+
       const options = {
-        key: "rzp_test_RVhlVFbaKUJJDH", // Test Key ID
+        key: razorpayKey,
         amount: 100, // ₹1 in paise
         currency: "INR",
         name: "SaaS Platform",

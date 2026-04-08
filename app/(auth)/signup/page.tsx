@@ -42,7 +42,6 @@ export default function SignUpPage() {
   const [phoneOtp, setPhoneOtp] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpSent, setOtpSent] = useState(false);
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -391,7 +390,6 @@ export default function SignUpPage() {
         return;
       }
 
-      // Send OTP (send-email-otp: returns fallbackOtp/devOtp when email service is disabled)
       const otpRes = await fetch("/api/auth/send-email-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -407,8 +405,6 @@ export default function SignUpPage() {
       setEmailOtp("");
       setPhoneOtp("");
       setError("");
-      // Support both legacy devOtp and new fallbackOtp keys
-      setDevOtp(otpData.fallbackOtp ?? otpData.devOtp ?? null);
 
       sessionStorage.setItem(
         "signup_state",
@@ -443,8 +439,6 @@ export default function SignUpPage() {
       setResendCooldown(60);
       setEmailOtp("");
       setPhoneOtp("");
-      // Support both legacy devOtp and new fallbackOtp keys
-      setDevOtp(data.fallbackOtp ?? data.devOtp ?? null);
     } finally {
       setLoading(false);
     }
@@ -1052,13 +1046,6 @@ export default function SignUpPage() {
             <p className="text-sm text-gray-600 mb-6">
               We sent a 6-digit code to <strong>{formData.email}</strong>. Enter it below.
             </p>
-            {devOtp && (
-              <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-900">
-                <AlertDescription>
-                  <span className="font-medium">Fallback mode (email not sent).</span> Use this code: <strong className="text-lg tracking-widest">{devOtp}</strong>
-                </AlertDescription>
-              </Alert>
-            )}
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{error}</AlertDescription>

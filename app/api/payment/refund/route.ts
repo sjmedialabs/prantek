@@ -17,9 +17,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Razorpay credentials (use environment variables in production)
-    const keyId = process.env.RAZORPAY_KEY_ID || "rzp_test_RVhlVFbaKUJJDH"
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || "your_test_secret_key"
+    const keyId = process.env.RAZORPAY_KEY_ID
+    const keySecret = process.env.RAZORPAY_KEY_SECRET
+    if (!keyId || !keySecret) {
+      return NextResponse.json(
+        { success: false, error: "Razorpay is not configured (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET)" },
+        { status: 500 },
+      )
+    }
     
     // Create Basic Auth header
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64')

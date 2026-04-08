@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api-auth"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
-import { sendEmail } from "@/lib/email/sendEmail"
+import { sendEmailBatch } from "@/lib/email/sendEmail"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -51,24 +51,36 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       const result = await db.collection(Collections.CAMPAIGNS).insertOne(campaign)
       const campaignId = result.insertedId
 
-      // Send emails asynchronously (fire-and-forget for speed)
-      let sentCount = 0, failedCount = 0
-      for (const r of recipients) {
-        if (!r.email) { failedCount++; continue }
+      const withEmail = recipients.filter((r) => r.email)
+      let sentCount = 0
+      let failedCount = recipients.length - withEmail.length
+
+      const items = withEmail.map((r) => {
         const personalizedContent = (content || "").replace(/\{\{name\}\}/g, r.name || "Customer")
-        const emailResult = await sendEmail({
+        return {
           to: r.email,
           subject: subject || name,
           html: personalizedContent,
           text: personalizedContent.replace(/<[^>]*>/g, ""),
-        })
+        }
+      })
+
+      const batchResults = await sendEmailBatch(items)
+
+      for (let idx = 0; idx < withEmail.length; idx++) {
+        const r = withEmail[idx]
+        const emailResult = batchResults[idx]
         const recipientDoc = {
-          campaignId, recipientEmail: r.email, recipientName: r.name || "",
+          campaignId,
+          recipientEmail: r.email,
+          recipientName: r.name || "",
           status: emailResult.success ? "sent" : "failed",
-          sentAt: new Date(), failedReason: emailResult.success ? null : (emailResult as any).error,
+          sentAt: new Date(),
+          failedReason: emailResult.success ? null : (emailResult as { error?: string }).error ?? null,
         }
         await db.collection(Collections.CAMPAIGN_RECIPIENTS).insertOne(recipientDoc)
-        if (emailResult.success) sentCount++; else failedCount++
+        if (emailResult.success) sentCount++
+        else failedCount++
       }
 
       await db.collection(Collections.CAMPAIGNS).updateOne(

@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const db = await connectDB()
     const col = db.collection(Collections.OTPS)
 
-    await col.insertOne({
+    const inserted = await col.insertOne({
       email: normalizedEmail,
       otp,
       expiresAt,
@@ -28,18 +28,21 @@ export async function POST(req: Request) {
     })
 
     const result = await sendSignupOtpEmail(normalizedEmail, otp)
-  if (!result.sent) {
-    console.error("[send-email-otp] SES send failed:", result.reason)
-    // Always allow fallback: surface OTP in response so flows
-    // can proceed even if email service is not configured.
-    return NextResponse.json({
-      success: true,
-      message: "Verification code generated (fallback).",
-      emailSent: false,
-      fallbackOtp: otp,
-    })
-  }
-  return NextResponse.json({ success: true, emailSent: true })
+    if (!result.sent) {
+      await col.deleteOne({ _id: inserted.insertedId })
+      console.error("[send-email-otp] SES send failed:", result.reason)
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            result.reason ||
+            "Could not send verification email. Check your email settings or try again in a few minutes.",
+        },
+        { status: 503 },
+      )
+    }
+
+    return NextResponse.json({ success: true, emailSent: true, message: "Verification code sent to your email." })
   } catch (err) {
     console.error("[send-email-otp] Error:", err)
     return NextResponse.json({ success: false, error: "Failed to send OTP" }, { status: 500 })

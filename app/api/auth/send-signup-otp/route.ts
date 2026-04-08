@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS)
     const normalizedPhone = phone ? String(phone).trim().replace(/\D/g, "").slice(-10) : null
 
-    await col.insertOne({
+    const inserted = await col.insertOne({
       email: normalizedEmail,
       emailOtp,
       phoneOtp: phoneOtp ?? null,
@@ -62,15 +62,17 @@ export async function POST(request: NextRequest) {
     const result = await sendSignupOtpEmail(normalizedEmail, emailOtp)
 
     if (!result.sent) {
-      // Always allow fallback: surface OTP in response so signup
-      // can proceed even if email service is not configured.
-      return NextResponse.json({
-        success: true,
-        message: "Verification code generated (fallback).",
-        emailSent: false,
-        fallbackOtp: emailOtp,
-        ...(normalizedPhone ? { phoneOtpSent: false, messagePhone: "SMS not configured. Use email OTP only." } : {}),
-      })
+      await col.deleteOne({ _id: inserted.insertedId })
+      console.error("[send-signup-otp] SES send failed:", result.reason)
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            result.reason ||
+            "Could not send verification email. Check your email settings or try again in a few minutes.",
+        },
+        { status: 503 },
+      )
     }
 
     return NextResponse.json({

@@ -47,6 +47,15 @@ export async function POST(request: NextRequest) {
     )
 
     const keyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+    if (!keyId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Razorpay Key ID is not configured (set RAZORPAY_KEY_ID and NEXT_PUBLIC_RAZORPAY_KEY_ID to the same value)",
+        },
+        { status: 500 },
+      )
+    }
 
     return NextResponse.json({
       success: true,
