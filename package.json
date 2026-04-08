@@ -12,11 +12,11 @@
     "postbuild": "cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
   },
   "dependencies": {
-    "@aws-sdk/client-ses": "^3.700.0",
     "@aws-sdk/credential-providers": "^3.1009.0",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
+    "@mailchimp/mailchimp_transactional": "^1.4.1",
     "@mongodb-js/zstd": "latest",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",

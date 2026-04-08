@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const result = await sendSignupOtpEmail(normalizedEmail, otp)
     if (!result.sent) {
       await col.deleteOne({ _id: inserted.insertedId })
-      console.error("[send-email-otp] SES send failed:", result.reason)
+      console.error("[send-email-otp] Email send failed:", result.reason)
       return NextResponse.json(
         {
           success: false,

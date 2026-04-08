@@ -1,39 +1,53 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses"
+/**
+ * Transactional email via Mailchimp Transactional (Mandrill).
+ * Server-side only (API routes, server components, cron).
+ */
+// Default export is callable: (apiKey: string) => client
+import mailchimpInit from "@mailchimp/mailchimp_transactional"
 
-function getSesEnv() {
-  const accessKeyId = process.env.AWS_SES_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID
-  const secretAccessKey = process.env.AWS_SES_SECRET_KEY || process.env.AWS_SECRET_ACCESS_KEY
-  const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || "ap-south-1"
-  const fromEmail =
-    (process.env.AWS_SES_FROM_EMAIL || process.env.SES_FROM_EMAIL || "noreply@example.com").trim()
-  return { accessKeyId, secretAccessKey, region, fromEmail }
+type MandrillClient = ReturnType<typeof mailchimpInit>
+
+function getMailFromEmail(): string {
+  return (
+    process.env.MAIL_FROM_EMAIL ||
+    process.env.AWS_SES_FROM_EMAIL ||
+    process.env.SES_FROM_EMAIL ||
+    "noreply@example.com"
+  ).trim()
 }
 
-let sesClient: SESClient | null = null
+let mandrillClient: MandrillClient | null = null
 
-function getSESClient(): SESClient | null {
-  const { accessKeyId, secretAccessKey, region } = getSesEnv()
-  if (!accessKeyId || !secretAccessKey) {
-    return null
-  }
-  if (!sesClient) {
-    sesClient = new SESClient({
-      region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    })
-  }
-  return sesClient
+function getMandrillClient(): MandrillClient | null {
+  const key = process.env.MANDRILL_API_KEY?.trim()
+  if (!key) return null
+  if (!mandrillClient) mandrillClient = mailchimpInit(key)
+  return mandrillClient
 }
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+function isTransportError(data: unknown): data is { message?: string; response?: { data?: unknown } } {
+  if (typeof data !== "object" || data === null) return false
+  const o = data as Record<string, unknown>
+  return o.isAxiosError === true || o.name === "AxiosError" || o.code === "ECONNABORTED"
+}
+
+function transportErrorMessage(err: { message?: string; response?: { data?: unknown } }): string {
+  const d = err.response?.data
+  if (d && typeof d === "object" && d !== null) {
+    const msg = (d as Record<string, unknown>).message
+    if (typeof msg === "string" && msg) return msg
+    const name = (d as Record<string, unknown>).name
+    if (typeof name === "string" && name) return name
+  }
+  return err.message || "Network error sending email."
+}
+
 /** User-facing hint; full error is always logged server-side. */
-function normalizeSesErrorMessage(raw: string): string {
+function normalizeEmailProviderError(raw: string): string {
   const t = raw.toLowerCase()
   if (
     t.includes("not authorized") ||
@@ -53,7 +67,54 @@ function normalizeSesErrorMessage(raw: string): string {
       "or move the account out of sandbox and use a verified sending domain."
     )
   }
+  if (t.includes("invalid_key") || t.includes("invalid api key") || t.includes("payment required")) {
+    return "Email service rejected the request. Check MANDRILL_API_KEY and your Mailchimp Transactional account."
+  }
+  if (t === "unsigned" || t.includes("unsigned")) {
+    return (
+      "Your sending domain is not verified for Mailchimp Transactional (DKIM/SPF or domain approval). " +
+      "In Transactional settings, verify the domain used by MAIL_FROM_EMAIL, publish DKIM DNS records, then try again."
+    )
+  }
+  if (t.includes("invalid-sender") || t === "invalid") {
+    return (
+      "MAIL_FROM_EMAIL is not allowed as a sender. Verify that address or its domain in Mailchimp Transactional " +
+      "and use a matching from address."
+    )
+  }
   return raw
+}
+
+function parseMandrillSendResponse(
+  data: unknown,
+): { ok: true; messageId?: string } | { ok: false; error: string } {
+  if (data == null) {
+    return { ok: false, error: "Empty response from email provider." }
+  }
+  if (isTransportError(data)) {
+    return { ok: false, error: transportErrorMessage(data) }
+  }
+  if (typeof data === "object" && data !== null && "status" in data && (data as { status: string }).status === "error") {
+    const e = data as { message?: string; name?: string }
+    return { ok: false, error: e.message || e.name || "Mailchimp Transactional API error." }
+  }
+  if (!Array.isArray(data) || data.length === 0) {
+    return { ok: false, error: "Unexpected response from email provider." }
+  }
+  const row = data[0] as { email?: string; status?: string; reject_reason?: string | null; _id?: string }
+  const st = (row.status || "").toLowerCase()
+  if (st === "sent" || st === "queued" || st === "scheduled") {
+    return { ok: true, messageId: row._id }
+  }
+  const reason = row.reject_reason || row.status || "Message not sent."
+  const errStr = String(reason)
+  console.error("[Mandrill] Message not accepted:", {
+    recipient: row.email,
+    status: row.status,
+    reject_reason: row.reject_reason,
+    _id: row._id,
+  })
+  return { ok: false, error: errStr }
 }
 
 /**
@@ -78,7 +139,7 @@ export type SendEmailResult =
   | { success: false; error: string }
 
 /**
- * Send an email via Amazon SES.
+ * Send an email via Mailchimp Transactional (Mandrill).
  * Only call from server-side (API routes, server components, cron).
  */
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
@@ -86,21 +147,21 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
 
   const normalizedTo = to?.trim?.()?.toLowerCase?.()
   if (!normalizedTo || !isValidEmail(normalizedTo)) {
-    console.error("[SES] Invalid recipient email:", to)
+    console.error("[sendEmail] Invalid recipient email:", to)
     return { success: false, error: "Invalid recipient email" }
   }
 
-  const client = getSESClient()
+  const client = getMandrillClient()
   if (!client) {
     console.error(
-      "[SES] Missing credentials. Set AWS_SES_ACCESS_KEY + AWS_SES_SECRET_KEY (or AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY), AWS_SES_REGION (or AWS_REGION), and AWS_SES_FROM_EMAIL (or SES_FROM_EMAIL).",
+      "[Mandrill] Missing API key. Set MANDRILL_API_KEY (and MAIL_FROM_EMAIL or legacy AWS_SES_FROM_EMAIL / SES_FROM_EMAIL).",
     )
     return { success: false, error: "Email service not configured." }
   }
 
-  const { fromEmail } = getSesEnv()
+  const fromEmail = getMailFromEmail()
   if (!fromEmail) {
-    console.error("[SES] From address is not set.")
+    console.error("[Mandrill] From address is not set.")
     return { success: false, error: "SES from address is not configured." }
   }
 
@@ -108,23 +169,36 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   let lastMessage = ""
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const command = new SendEmailCommand({
-        Source: fromEmail,
-        Destination: { ToAddresses: [normalizedTo] },
-        Message: {
-          Subject: { Data: subject, Charset: "UTF-8" },
-          Body: {
-            Html: { Data: html, Charset: "UTF-8" },
-            ...(text ? { Text: { Data: text, Charset: "UTF-8" } } : {}),
-          },
+      const raw = await client.messages.send({
+        message: {
+          from_email: fromEmail,
+          subject,
+          html,
+          ...(text ? { text } : {}),
+          to: [{ email: normalizedTo, type: "to" }],
         },
+        async: false,
       })
-      const response = await client.send(command)
-      const messageId = response.MessageId
-      if (messageId) {
-        console.log("[SES] Email sent successfully:", { to: normalizedTo, messageId })
+
+      const parsed = parseMandrillSendResponse(raw)
+      if (parsed.ok) {
+        if (parsed.messageId) {
+          console.log("[Mandrill] Email sent successfully:", { to: normalizedTo, messageId: parsed.messageId })
+        }
+        return { success: true, messageId: parsed.messageId }
       }
-      return { success: true, messageId }
+
+      const message = parsed.error
+      lastMessage = message
+      const throttled =
+        /throttl|rate exceed|too many requests|limit exceeded/i.test(message) ||
+        /slow down/i.test(message.toLowerCase())
+      if (throttled && attempt < maxAttempts) {
+        await sleep(250 * attempt)
+        continue
+      }
+      console.error("[Mandrill] Failed to send email:", { to: normalizedTo, error: message })
+      return { success: false, error: normalizeEmailProviderError(message) }
     } catch (error: unknown) {
       const err = error as { message?: string; name?: string }
       const message = err?.message || String(error)
@@ -135,8 +209,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         await sleep(250 * attempt)
         continue
       }
-      console.error("[SES] Failed to send email:", { to: normalizedTo, error: message })
-      return { success: false, error: normalizeSesErrorMessage(message) }
+      console.error("[Mandrill] Failed to send email:", { to: normalizedTo, error: message })
+      return { success: false, error: normalizeEmailProviderError(message) }
     }
   }
   return { success: false, error: lastMessage || "Failed to send email" }
@@ -147,8 +221,8 @@ export type SendEmailBatchItem = SendEmailParams
 export type SendEmailBatchResult = { index: number; to: string } & SendEmailResult
 
 /**
- * Send many emails with optional concurrency (one recipient per SES call; avoids exposing addresses to each other).
- * Tune with SES_BULK_CONCURRENCY (default 5) for SES sending limits in your account/region.
+ * Send many emails with optional concurrency (one recipient per API call; avoids exposing addresses to each other).
+ * Tune with SES_BULK_CONCURRENCY (default 5) for provider rate limits.
  */
 export async function sendEmailBatch(
   items: SendEmailBatchItem[],

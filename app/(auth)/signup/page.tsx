@@ -400,6 +400,17 @@ export default function SignUpPage() {
         setError(otpData.error || "Failed to send verification code. Please try again.");
         return;
       }
+      // Never use in-browser OTP: require real delivery (blocks legacy API fallback fields).
+      if (otpData.fallbackOtp || otpData.devOtp) {
+        setError(
+          "Verification email could not be sent. Set MANDRILL_API_KEY and MAIL_FROM_EMAIL on the server, then try again."
+        );
+        return;
+      }
+      if (otpData.emailSent === false) {
+        setError(otpData.error || "Could not send verification email. Please try again later.");
+        return;
+      }
       setOtpSent(true);
       setResendCooldown(60);
       setEmailOtp("");
@@ -434,6 +445,16 @@ export default function SignUpPage() {
       const data = await res.json();
       if (!data.success) {
         setError(data.error || "Failed to resend code.");
+        return;
+      }
+      if (data.fallbackOtp || data.devOtp) {
+        setError(
+          "Verification email could not be sent. Set MANDRILL_API_KEY and MAIL_FROM_EMAIL on the server, then try again."
+        );
+        return;
+      }
+      if (data.emailSent === false) {
+        setError(data.error || "Could not resend verification email. Please try again later.");
         return;
       }
       setResendCooldown(60);
