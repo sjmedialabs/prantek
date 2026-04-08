@@ -341,17 +341,17 @@ export default function BankAccountPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+        <DialogContent className="w-[90vw]! sm:max-w-[70vw] max-h-[95vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="sticky top-0 bg-white border-b px-6 py-4 z-20 rounded-t-2xl">
             <DialogTitle>{editingAccount ? "Edit Bank Account" : "Add Bank Account"}</DialogTitle>
             <DialogDescription>
               {editingAccount ? "Update bank account details" : "Enter bank account details for transactions"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex-1 overflow-y-auto px-6 pt-6 pb-12">
+            <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+           
                 <div className="space-y-2">
                   <Label htmlFor="bankName" required>Bank Name</Label>
                   <Input
@@ -373,7 +373,7 @@ export default function BankAccountPage() {
                     placeholder="Enter branch name"
                   />
                 </div>
-              </div>
+          
 
               <div className="space-y-2">
                 <Label htmlFor="accountName" required>Bank Account Name</Label>
@@ -386,7 +386,7 @@ export default function BankAccountPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             
                 <div className="space-y-2">
                   <Label htmlFor="accountNumber" required>Bank Account Number </Label>
                   <Input
@@ -408,7 +408,7 @@ export default function BankAccountPage() {
                     placeholder="Enter IFSC code"
                   />
                 </div>
-              </div>
+    
 
               <div className="space-y-2">
                 <Label htmlFor="upiId">UPI ID</Label>
@@ -420,22 +420,22 @@ export default function BankAccountPage() {
                   placeholder="yourname@upi"
                 />
               </div>
-
+                </div>
               <div className="space-y-2 mb-[75px]">
                 <Label>UPI Scanner (QR Code)</Label>
                 <FileUpload
                   value={bankData.upiScanner}
                   onChange={(url) => setBankData({ ...bankData, upiScanner: url })}
-                  className="w-20 h-20"
+                  className="w-40 h-20"
                   accept="image/*"
                   placeholder="Upload UPI QR code"
                 />
                 {/* <p className="text-sm text-gray-500 mt-1 max-w-20 px-2">Upload UPI QR code for payments</p> */}
               </div>
-            </div>
+        
           </div>
 
-          <DialogFooter className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg">
+          <DialogFooter className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-30 shadow-lg rounded-b-2xl">
             <Button
               variant="outline"
               onClick={() => {

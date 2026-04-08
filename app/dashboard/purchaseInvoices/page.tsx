@@ -274,8 +274,10 @@ export default function PurchaseInvoiceList() {
 
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+              <div>
+              <label htmlFor="statusFilter" title="Select Payment Status" className="text-sm font-medium">Payment Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full bg-white">
                   <SelectValue placeholder="Payment Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -285,6 +287,7 @@ export default function PurchaseInvoiceList() {
                   <SelectItem value="Unpaid">Unpaid</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
               <div>
                 <label className="text-sm font-medium">Date From</label>
                 <Input type="date" value={dateFromFilter} onChange={(e) => setDateFromFilter(e.target.value)} />
@@ -297,12 +300,12 @@ export default function PurchaseInvoiceList() {
 
               <div>
                 <label className="text-sm font-medium" title="Filter by invoice total amount">Min Amount</label>
-                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} placeholder="Enter Min Amount"/>
               </div>
 
               <div>
                 <label className="text-sm font-medium" title="Filter by invoice total amount">Max Amount</label>
-                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} placeholder="Enter Max Amount"/>
               </div>
             </div>
           )}
@@ -310,15 +313,15 @@ export default function PurchaseInvoiceList() {
               <Table className="mt-4">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>#</TableHead>
+                    <TableHead>S.NO.</TableHead>
                     <TableHead>Invoice</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Vendor</TableHead>
                     <TableHead>Payment Status</TableHead>
                     <TableHead>Invoice Status</TableHead>
-                    <TableHead className="text-right">Total Amount</TableHead>
-                    <TableHead className="text-right">Balance Amount</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-start">Total Amount</TableHead>
+                    <TableHead className="text-start">Balance Amount</TableHead>
+                    <TableHead className="text-start">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -331,21 +334,21 @@ export default function PurchaseInvoiceList() {
                       <TableCell>{i.recipientName}</TableCell>
 
                       <TableCell>
-                        <Badge variant={i.paymentStatus === "Paid" ? "default" : "secondary"}>
+                        <Badge variant={i.paymentStatus === "Paid" ? "default" : "secondary"} className="capitalize">
                           {i.paymentStatus}
                         </Badge>
                       </TableCell>
 
                       <TableCell>
-                        <Badge className={`${getInvoiceStatusBadgeClass(i.invoiceStatus)}`}>
+                        <Badge className={`${getInvoiceStatusBadgeClass(i.invoiceStatus)} capitalize`}>
                           {i.invoiceStatus || "Open"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">₹{i?.invoiceTotalAmount?.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">₹{i?.balanceAmount?.toLocaleString()}</TableCell>
+                      <TableCell className="">₹{i?.invoiceTotalAmount?.toLocaleString()}</TableCell>
+                      <TableCell className="">₹{i?.balanceAmount?.toLocaleString()}</TableCell>
 
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                      <TableCell className="text-start">
+                        <div className="flex justify-start gap-2">
                           <Link href={`/dashboard/purchaseInvoices/${i._id}`}>
                             <Button size="icon" variant="ghost" title="View Invoice details"><Eye className="h-4 w-4" /></Button>
                           </Link>

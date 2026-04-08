@@ -300,11 +300,11 @@ export default function ReceiptsPage() {
             </div>
 
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white"  >
                       <SelectValue placeholder="All Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -320,7 +320,7 @@ export default function ReceiptsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Payment Type</label>
                   <Select value={paymentTypeFilter} onValueChange={setPaymentTypeFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent>
@@ -335,7 +335,7 @@ export default function ReceiptsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Payment Method</label>
                   <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Methods" />
                     </SelectTrigger>
                     <SelectContent>
@@ -352,7 +352,7 @@ export default function ReceiptsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Client</label>
                   <Select value={clientFilter} onValueChange={setClientFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Clients" />
                     </SelectTrigger>
                     <SelectContent>
@@ -380,7 +380,7 @@ export default function ReceiptsPage() {
                   <label className="text-sm font-medium">Min Amount (₹)</label>
                   <Input
                     type="number"
-                    placeholder="0"
+                    placeholder="Enter minimum amount"
                     value={minAmountFilter}
                     onChange={(e) => setMinAmountFilter(e.target.value)}
                   />
@@ -390,7 +390,7 @@ export default function ReceiptsPage() {
                   <label className="text-sm font-medium">Max Amount (₹)</label>
                   <Input
                     type="number"
-                    placeholder="No limit"
+                    placeholder="Enter maximum amount"
                     value={maxAmountFilter}
                     onChange={(e) => setMaxAmountFilter(e.target.value)}
                   />

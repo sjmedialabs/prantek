@@ -908,9 +908,9 @@ if (emailExists) {
                           )
                         }
 
-                        <DialogContent className="w-[90vw]! sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
+                        <DialogContent className="w-[90vw]! sm:max-w-[70vw] max-h-[95vh] flex flex-col p-0 gap-0">
                           {/* HEADER */}
-                          <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+                          <div className="sticky top-0 bg-white border-b px-6 py-4 z-20 rounded-t-2xl">
                             <DialogHeader>
                               <DialogTitle>Create New Client</DialogTitle>
                               <DialogDescription>Add a new client record</DialogDescription>
@@ -947,7 +947,7 @@ if (emailExists) {
                                     <Label required>Client Name</Label>
                                     <Input
                                       value={newClient.name}
-                                      placeholder="Client Name"
+                                      placeholder="Enter Client Name"
                                       onChange={(e) =>
                                         setNewClient({ ...newClient, name: e.target.value })
                                       }
@@ -1085,7 +1085,7 @@ if (emailExists) {
                                     value={newClient.state}
                                     onValueChange={(value) => setNewClient({ ...newClient, state: value })}
                                   >
-                                    <SelectTrigger id="state">
+                                    <SelectTrigger id="state" className="w-full">
                                       <SelectValue placeholder="Select a state" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1129,7 +1129,7 @@ if (emailExists) {
                           </div>
 
                           {/* FOOTER */}
-                          <div className="bg-white border-t px-6 py-4">
+                          <div className="bg-white border-t px-6 py-4 rounded-b-2xl ">
                             <div className="flex justify-end space-x-2">
                               <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                                 Cancel
@@ -1334,7 +1334,7 @@ if (emailExists) {
                                   value={String(item.cgst || 0)}
                                   onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select CGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1353,7 +1353,7 @@ if (emailExists) {
                                   value={String(item.sgst || 0)}
                                   onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select SGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1372,7 +1372,7 @@ if (emailExists) {
                                   value={String(item.igst || 0)}
                                   onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select IGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1417,9 +1417,9 @@ if (emailExists) {
                   <CardTitle>Quotation/Agreement Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="quotationNumber" required>Quotation/Agreement Number</Label>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+                    <div className="w-full">
+                      <Label htmlFor="quotationNumber" required>Quotation Number</Label>
                       <Input id="quotationNumber" value={quotationNumber} disabled className="bg-gray-50" />
                       <p className="text-xs text-gray-500 mt-1">Auto-generated</p>
                     </div>
@@ -1428,7 +1428,6 @@ if (emailExists) {
                       <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                       <p className="text-xs text-gray-500 mt-1">Default system date</p>
                     </div>
-                  </div>
                   <div>
                     <Label htmlFor="validityDate">Validity Date</Label>
                     <Input
@@ -1438,6 +1437,7 @@ if (emailExists) {
                       value={validityDate}
                       onChange={(e) => setValidityDate(e.target.value)}
                     />
+                  </div>
                   </div>
                   <div>
                     <Label htmlFor="note">Note</Label>

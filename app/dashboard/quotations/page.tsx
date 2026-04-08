@@ -394,11 +394,11 @@ export default function QuotationsPage() {
 
           {/* Filter dropdown section */}
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg mb-4">
               <div>
                 <label className="text-sm font-medium">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="created">Created</SelectItem>
@@ -413,7 +413,7 @@ export default function QuotationsPage() {
               <div>
                 <label className="text-sm font-medium">Client</label>
                 <Select value={clientFilter} onValueChange={setClientFilter}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
                     {uniqueClients.map((c) => (
@@ -435,12 +435,12 @@ export default function QuotationsPage() {
 
               <div>
                 <label className="text-sm font-medium">Min Amount</label>
-                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+                <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} placeholder="Enter Min Amount"/>
               </div>
 
               <div>
                 <label className="text-sm font-medium">Max Amount</label>
-                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+                <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} placeholder="Enter Max Amount"/>
               </div>
             </div>
           )}
@@ -457,7 +457,7 @@ export default function QuotationsPage() {
                   <TableHead>Validity</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="lg:ml-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -478,7 +478,7 @@ export default function QuotationsPage() {
                     <TableCell>
                       <Badge className={getStatusColor(q.status)}><span className="capitalize">{q.status}</span></Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
+                    <TableCell className="ml-4 space-x-2">
 
                       {/* VIEW */}
                       <Link href={`/dashboard/quotations/${q._id}`}>
