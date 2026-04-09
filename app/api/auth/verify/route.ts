@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         return "super-admin"
       })()
 
-      let displayName = "Super Admin"
+      let displayName = "Prakash Reddy"
       if (idFromToken !== "super-admin" && ObjectId.isValid(idFromToken)) {
         try {
           const db = await connectDB()
