@@ -322,9 +322,9 @@ const handleSubmit = async (e: React.FormEvent) => {
             </DialogTrigger>)
            }
 
-            <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] p-0 flex flex-col">
+            <DialogContent className="!w-[90vw] sm:max-w-[70vw] max-h-[95vh] p-0 flex flex-col">
               {/* Sticky Header */}
-              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20 rounded-t-2xl">
                 <DialogHeader>
                   <DialogTitle>{editingVendor ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
                   <DialogDescription>
@@ -336,96 +336,63 @@ const handleSubmit = async (e: React.FormEvent) => {
               {/* Form */}
               <div className="flex-1 overflow-y-auto px-6 py-6">
                 <form onSubmit={handleSubmit} className="space-y-5 pb-20" id="vendor-form">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-1">
                       <Label required>Vendor Name</Label>
                       <Input
                         value={formData.name}
-                        placeholder="Vendor Name"
+                        placeholder="Enter Vendor Name"
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       />
                       {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                     </div>
 
-                    <div>
+                    <div className="space-y-1">
                       <Label>Email</Label>
                       <Input
                         type="email"
                         value={formData.email}
-                        placeholder="Vendor Email"
+                        placeholder="Enter Vendor Email"
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
                       {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
+                    <div className="space-y-1">
                       <Label required>Phone</Label>
                       <Input
                         value={formData.phone}
-                        placeholder="Vendor Phone"
+                        placeholder="Enter Vendor Phone Number"
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       />
                       {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <Label>PAN</Label>
                       <Input
                         value={formData.pan}
-                        placeholder="Vendor PAN"
+                        placeholder="Enter Vendor PAN Number"
                         onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
                       />
                       {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
                     </div>
-                    <div>
+                    <div className="space-y-1">
                       <Label>GSTIN</Label>
                       <Input
                         value={formData.gstin}
+                        placeholder="Enter Vendor GSTIN"
                         onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
                       />
                       {errors.gstin && <p className="text-red-500 text-sm">{errors.gstin}</p>}
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* <div>
-                      <Label>PAN</Label>
-                      <Input
-                        value={formData.pan}
-                        onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                      />
-                      {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
-                    </div> */}
-
-                    {/* <div>
-                      <Label>Pincode</Label>
-                      <Input
-                        value={formData.pincode}
-                        onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                      />
-                    </div> */}
-                  </div>
-
-                  <div>
-                    <Label>Address</Label>
-                    <Textarea
-                      rows={2}
-                      value={formData.address}
-                      placeholder="Vendor Address"
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
-                    {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div>
+                    <div className="space-y-1">
                       <Label required>State</Label>
                       <Select
                         value={formData.state}
                         onValueChange={(value) => setFormData({ ...formData, state: value })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select a state" />
                         </SelectTrigger>
                         <SelectContent>
@@ -439,41 +406,54 @@ const handleSubmit = async (e: React.FormEvent) => {
                     {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                     </div>
 
-                    <div>
+                    <div className="space-y-1">
                       <Label>City</Label>
                       <Input
                         value={formData.city}
-                        placeholder="Vendor City"
+                        placeholder="Enter Vendor City"
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       />
                     {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
                     </div>
 
-                    <div>
+                    <div className="space-y-1">
                       <Label>Pincode</Label>
                       <Input
                         value={formData.pincode}
-                        placeholder="Vendor Pincode"
+                        placeholder="Enter Vendor Pincode"
                         onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
                       />
                     {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                     </div>
                   </div>
 
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea
-                      rows={2}
-                      value={formData.notes}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>Address</Label>
+                      <Textarea
+                        rows={2}
+                        value={formData.address}
+                        placeholder="Vendor Address"
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      />
+                      {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Notes</Label>
+                      <Textarea
+                        rows={2}
+                        value={formData.notes}
                         placeholder="Additional notes about the vendor"
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    />
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </form>
               </div>
 
               {/* Footer */}
-              <div className="bg-white border-t px-6 py-4 flex justify-end">
+              <div className="bg-white border-t px-6 py-4 flex justify-end rounded-b-2xl">
                 <Button variant="outline" className="mr-2" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>

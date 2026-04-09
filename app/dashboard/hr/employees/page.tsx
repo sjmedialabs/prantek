@@ -383,10 +383,10 @@ export default function EmployeePage() {
             </Button>
           </DialogTrigger>
           <DialogContent
-            className="max-w-[90vw] !w-[90vw] h-[98vh] flex flex-col p-0 gap-0 sm:max-w-[90vw]"
+            className="max-w-[90vw] !w-[90vw] max-h-[98vh] flex flex-col px-1 gap-0 sm:max-w-[70vw]"
             onInteractOutside={(e) => e.preventDefault()}
           >
-            <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 z-20 rounded-t-2xl">
               <div className="flex items-center justify-between">
                 <div>
                   <DialogTitle className="text-xl font-semibold text-gray-900">
@@ -409,7 +409,7 @@ export default function EmployeePage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-gray-50 px-6 py-6">
+            <div className="flex-1 overflow-y-auto bg-gray-50 px-2 md:px-6 py-6">
               <div className="max-w-7xl mx-auto space-y-6">
                 {/* Basic Information Section */}
                 <Card>
@@ -464,7 +464,7 @@ export default function EmployeePage() {
                           value={formData.memberType ?? ""}
                           onValueChange={(value) => setFormData((prev) => ({ ...prev, memberType: value }))}
                         >
-                          <SelectTrigger className="z-1000">
+                          <SelectTrigger className="z-1000 w-full">
                             <SelectValue placeholder="Employment type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -491,7 +491,7 @@ export default function EmployeePage() {
                           value={formData.role ?? ""}
                           onValueChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
                         >
-                          <SelectTrigger className="z-1000">
+                          <SelectTrigger className="z-1000 w-full">
                             <SelectValue placeholder="Select role" />
                           </SelectTrigger>
                           <SelectContent>
@@ -655,7 +655,7 @@ export default function EmployeePage() {
                     <CardTitle className="text-lg font-semibold">Documents & Media</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <ImageUpload
                           label="Employee Photo *"
@@ -903,8 +903,8 @@ export default function EmployeePage() {
               </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-50 shadow-lg">
-              <div className="max-w-7xl mx-auto flex justify-end space-x-3">
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-6 py-4 z-50 shadow-lg rounded-b-2xl">
+              <div className="max-w-7xl mx-auto flex justify-end space-x-3 rounded-b-2xl">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>

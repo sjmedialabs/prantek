@@ -388,8 +388,8 @@ export default function ClientsPage() {
             </DialogTrigger>
               )
             }
-            <DialogContent className="!w-[90vw] sm:max-w-[90vw] h-[95vh] flex flex-col p-0 gap-0">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20">
+            <DialogContent className="!w-[90vw] sm:max-w-[70vw] max-h-[95vh] flex flex-col p-0 gap-0 rounded-2xl">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 z-20 rounded-t-2xl">
                 <DialogHeader>
                   <DialogTitle>{editingClient ? "Edit Client" : "Add New Client"}</DialogTitle>
                   <DialogDescription>
@@ -400,35 +400,36 @@ export default function ClientsPage() {
 
               <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
                 <form onSubmit={handleSubmit} className="space-y-5 pb-20" id="client-form">
-                  <div className="pb-4">
-                    <Label className="text-sm font-medium">Client Type</Label>
-                    <Select value={clientType} onValueChange={(v) => setClientType(v as "individual" | "company")}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select client type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="individual">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" /> Individual
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="company">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" /> Company
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <div className="space-y-1">
+                      <Label className="text-sm font-medium">Client Type</Label>
+                      <Select value={clientType} onValueChange={(v) => setClientType(v as "individual" | "company")}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select client type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="individual">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" /> Individual
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="company">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4" /> Company
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-                  {clientType === "individual" && (
-                    <div className="grid grid-cols-2 gap-4">
+                    {clientType === "individual" && (
+                      <>
                       <div className="space-y-1">
                         <Label htmlFor="ind-name" required>Client Name </Label>
                         <Input
                           id="ind-name"
                           value={formData.name}
-                          placeholder="Client name"
+                          placeholder="Enter Client name"
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         />
                         {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
@@ -439,22 +440,21 @@ export default function ClientsPage() {
                           id="pan"
                           value={formData.pan}
                           onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                          placeholder="ABCDE1234F"
+                          placeholder="Enter PAN Number"
                         />
                         {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
                       </div>
-                    </div>
-                  )}
+                      </>
+                    )}
 
-                  {clientType === "company" && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
+                    {clientType === "company" && (
+                      <>
                         <div className="space-y-1">
                           <Label htmlFor="comp-name" required>Company Name </Label>
                           <Input
                             id="comp-name"
                             value={formData.companyName}
-                            placeholder="Company Name"
+                            placeholder="Enter Company Name"
                             onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                           />
                           {errors.companyName && <p className="text-red-500 text-sm">{errors.companyName}</p>}
@@ -464,20 +464,18 @@ export default function ClientsPage() {
                           <Input
                             id="contact-name"
                             value={formData.contactName}
-                            placeholder="Contact Holder Name"
+                            placeholder="Enter Contact Holder Name"
                             onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
                           />
                           {errors.contactName && <p className="text-red-500 text-sm">{errors.contactName}</p>}
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <Label htmlFor="gst">GST</Label>
                           <Input
                             id="gst"
                             value={formData.gst}
                             onChange={(e) => setFormData({ ...formData, gst: e.target.value.toUpperCase() })}
-                            placeholder="22AAAAA0000A1Z5"
+                            placeholder="Enter GST Number"
                           />
                           {errors.gst && <p className="text-red-500 text-sm">{errors.gst}</p>}
                         </div>
@@ -487,15 +485,13 @@ export default function ClientsPage() {
                             id="pan"
                             value={formData.pan}
                             onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                            placeholder="ABCDE1234F"
+                            placeholder="Enter PAN Number"
                           />
                           {errors.pan && <p className="text-red-500 text-sm">{errors.pan}</p>}
                         </div>
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
 
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="phone" required>Phone </Label>
                       <Input
@@ -517,28 +513,14 @@ export default function ClientsPage() {
                       />
                       {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="address">Address </Label>
-                    <Textarea
-                      id="address"
-                      value={formData.address}
-                      placeholder="Enter address"
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      rows={2}
-                    />
-                    {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="space-y-1">
                       <Label htmlFor="state" required>State </Label>
                       <Select
                         value={formData.state}
                         onValueChange={(value) => setFormData({ ...formData, state: value })}
                       >
-                        <SelectTrigger id="state">
+                        <SelectTrigger id="state" className="w-full">
                           <SelectValue placeholder="Select a state" />
                         </SelectTrigger>
                         <SelectContent>
@@ -572,22 +554,35 @@ export default function ClientsPage() {
                       {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                     </div>
                   </div>
-                  
-                  <div className="space-y-1">
-                    <Label htmlFor="note">Note </Label>
-                    <Textarea
-                      id="note"
-                      value={formData.note}
-                      placeholder="Enter note"
-                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                      rows={2}
-                    />
-                    {/* {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>} */}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="address">Address </Label>
+                      <Textarea
+                        id="address"
+                        value={formData.address}
+                        placeholder="Enter address"
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        rows={2}
+                      />
+                      {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label htmlFor="note">Note </Label>
+                      <Textarea
+                        id="note"
+                        value={formData.note}
+                        placeholder="Enter note"
+                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                        rows={2}
+                      />
+                    </div>
                   </div>
                 </form>
               </div>
 
-              <div className="bg-white border-t px-6 py-4">
+              <div className="bg-white border-t px-6 py-4 rounded-b-2xl">
                 <div className="flex justify-end space-x-2 max-w-[90vw] mx-auto">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel

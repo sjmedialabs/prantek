@@ -324,7 +324,7 @@ if (noCompanyIds) {
             previewClassName="w-24 h-24"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* ✅ COMPANY NAME */}
             <div className="space-y-2">
               <Label htmlFor="name" required>
@@ -357,24 +357,22 @@ if (noCompanyIds) {
               />
               {fieldErrors.email && <p className="text-red-500 text-sm">{fieldErrors.email}</p>}
             </div>
-          </div>
 
-          {/* ✅ ADDRESS */}
-          <div className="space-y-2">
-            <Label htmlFor="address" required>
-              Address
-            </Label>
-            <Textarea
-              id="address"
-              value={companyData.address}
-              onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })}
-              placeholder="Enter complete address"
-              rows={3}
-              required
-            />
-            {fieldErrors.address && <p className="text-red-500 text-sm">{fieldErrors.address}</p>}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* ✅ ADDRESS */}
+            <div className="space-y-2">
+              <Label htmlFor="address" required>
+                Address
+              </Label>
+              <Input
+                id="address"
+                value={companyData.address}
+                onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })}
+                placeholder="Enter complete address"
+                required
+              />
+              {fieldErrors.address && <p className="text-red-500 text-sm">{fieldErrors.address}</p>}
+            </div>
+
             {/* ✅ City */}
             <div className="space-y-2">
               <Label htmlFor="city" required>City</Label>
@@ -385,7 +383,6 @@ if (noCompanyIds) {
                 placeholder="Enter city"
               />
               {fieldErrors.city && <p className="text-red-500 text-sm">{fieldErrors.city}</p>}
-
             </div>
 
             {/* ✅ State */}
@@ -398,7 +395,6 @@ if (noCompanyIds) {
                 placeholder="Enter state"
               />
               {fieldErrors.state && <p className="text-red-500 text-sm">{fieldErrors.state}</p>}
-
             </div>
 
             {/* ✅ Pincode */}
@@ -412,9 +408,6 @@ if (noCompanyIds) {
               />
               {fieldErrors.pincode && <p className="text-red-500 text-sm">{fieldErrors.pincode}</p>}
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
             {/* ✅ PHONE */}
             <div className="space-y-2">
@@ -445,8 +438,6 @@ if (noCompanyIds) {
               />
               {fieldErrors.phone2 && <p className="text-red-500 text-sm">{fieldErrors.phone2}</p>}
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* ✅ WEBSITE */}
             <div className="space-y-2">
@@ -459,6 +450,7 @@ if (noCompanyIds) {
                 placeholder="https://www.example.com"
               />
             </div>
+
             {/* ✅ GSTIN */}
             <div className="space-y-2">
               <Label htmlFor="gstin" className="flex items-center gap-1">
@@ -489,6 +481,7 @@ if (noCompanyIds) {
               />
               {fieldErrors.pan && <p className="text-red-500 text-sm">{fieldErrors.pan}</p>}
             </div>
+
             {/* ✅ TAN */}
             <div className="space-y-2">
               <Label htmlFor="tan" className="flex items-center gap-1">
@@ -504,29 +497,29 @@ if (noCompanyIds) {
               />
               {fieldErrors.tan && <p className="text-red-500 text-sm">{fieldErrors.tan}</p>}
             </div>
+
             {noCompanyIds && (
-  <div className="space-y-2">
-    <Label htmlFor="personalId" required>
-      Personal Identity Proof (Aadhaar / PAN)
-      <InfoTooltip content="If Do not have company Pan, Tan and GSTIN then please fill any of identity proof for verificaion" side="right" />
-    </Label>
+              <div className="space-y-2">
+                <Label htmlFor="personalId" required>
+                  Personal Identity Proof (Aadhaar / PAN)
+                  <InfoTooltip content="If Do not have company Pan, Tan and GSTIN then please fill any of identity proof for verificaion" side="right" />
+                </Label>
 
-    <Input
-      id="personalId"
-      value={companyData.personalId}
-      onChange={(e) =>
-        setCompanyData({ ...companyData, personalId: e.target.value })
-      }
-      placeholder="Enter Aadhaar or PAN"
-    />
+                <Input
+                  id="personalId"
+                  value={companyData.personalId}
+                  onChange={(e) =>
+                    setCompanyData({ ...companyData, personalId: e.target.value })
+                  }
+                  placeholder="Enter Aadhaar or PAN"
+                />
 
-    {fieldErrors.personalId && (
-      <p className="text-red-500 text-sm">{fieldErrors.personalId}</p>
-    )}
-  </div>
-)}
+                {fieldErrors.personalId && (
+                  <p className="text-red-500 text-sm">{fieldErrors.personalId}</p>
+                )}
+              </div>
+            )}
           </div>
-
         </CardContent>
       </Card>
       <div className="text-end  mt-5 fixed bottom-1 right-10 bg-white/60 w-full z-20">

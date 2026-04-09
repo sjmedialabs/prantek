@@ -370,11 +370,11 @@ const exportToCSV = () => {
             </div>
 
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Statuses" />
                     </SelectTrigger>
                     <SelectContent>
@@ -389,7 +389,7 @@ const exportToCSV = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Ledger</label>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Ledgers" />
                     </SelectTrigger>
                     <SelectContent>
@@ -406,7 +406,7 @@ const exportToCSV = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Payment Method</label>
                   <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Methods" />
                     </SelectTrigger>
                     <SelectContent>
@@ -423,7 +423,7 @@ const exportToCSV = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Party Type</label>
                   <Select value={recipientFilter} onValueChange={setRecipientFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent>
@@ -438,7 +438,7 @@ const exportToCSV = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Client</label>
                   <Select value={clientFilter} onValueChange={setClientFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Clients" />
                     </SelectTrigger>
                     <SelectContent>
@@ -455,7 +455,7 @@ const exportToCSV = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Vendor</label>
                   <Select value={vendorFilter} onValueChange={setVendorFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Vendors" />
                     </SelectTrigger>
                     <SelectContent>
@@ -472,7 +472,7 @@ const exportToCSV = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Team</label>
                   <Select value={teamFilter} onValueChange={setTeamFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Teams" />
                     </SelectTrigger>
                     <SelectContent>
@@ -500,7 +500,7 @@ const exportToCSV = () => {
                   <label className="text-sm font-medium">Min Amount (₹)</label>
                   <Input
                     type="number"
-                    placeholder="0"
+                    placeholder="Enter Min Amount"
                     value={minAmountFilter}
                     onChange={(e) => setMinAmountFilter(e.target.value)}
                   />
@@ -510,7 +510,7 @@ const exportToCSV = () => {
                   <label className="text-sm font-medium">Max Amount (₹)</label>
                   <Input
                     type="number"
-                    placeholder="No limit"
+                    placeholder="Enter Max Amount"
                     value={maxAmountFilter}
                     onChange={(e) => setMaxAmountFilter(e.target.value)}
                   />
@@ -531,8 +531,8 @@ const exportToCSV = () => {
                 <TableHead>Invoice No.</TableHead>
                 <TableHead>Payment Method</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                {hasPermission("manage_payments") && <TableHead className="text-right">Actions</TableHead>}
+                <TableHead className="text-start">Amount</TableHead>
+                {hasPermission("manage_payments") && <TableHead className="text-start ml-4">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -548,7 +548,7 @@ const exportToCSV = () => {
                   </TableCell>
                   <TableCell>{payment.recipientName}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{payment.category}</Badge>
+                    <Badge variant="outline" className="capitalize">{payment.category}</Badge>
                   </TableCell>
                   <TableCell>{payment.purchaseInvoiceNumber || "-"}</TableCell>
                   <TableCell>{payment.paymentMethod}</TableCell>
@@ -563,14 +563,15 @@ const exportToCSV = () => {
                             ? "destructive"
                             : "destructive"
                       }
+                      className="capitalize"
                     >
                       {payment.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-semibold">₹{payment.amount ? payment.amount.toLocaleString() : "0"}</TableCell>
+                  <TableCell className="text-start font-semibold">₹{payment.amount ? payment.amount.toLocaleString() : "0"}</TableCell>
                
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <TableCell className="ml-4">
+                      <div className="flex items-center justify-start space-x-2">
                         <Link href={`/dashboard/payments/${payment._id?.toString()}`}>
                           <Button variant="ghost" size="sm"title="View Payment details"><Eye className="h-4 w-4" />
                           </Button>

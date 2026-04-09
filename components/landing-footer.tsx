@@ -126,6 +126,16 @@ export function LandingFooter() {
                   </Link>
                 </li>
               ))}
+              <li key="privacy-policy">
+                <Link href="/privacy-policy" className="hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li key="terms-and-conditions">
+                <Link href="/terms-and-conditions" className="hover:text-white transition-colors">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
               <li key="help-center">
                 <Link href="/help-center" className="hover:text-white transition-colors">
                   Help Center

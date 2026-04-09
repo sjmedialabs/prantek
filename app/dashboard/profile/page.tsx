@@ -268,7 +268,7 @@ export default function ProfilePage() {
       {/* Profile Overview with Edit */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center gap-2 items-start justify-between">
             <div>
               <CardTitle>Profile Overview</CardTitle>
               <CardDescription>Your account information and personal details</CardDescription>
@@ -294,9 +294,9 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Profile Picture and Basic Info */}
-          <div className="flex items-start space-x-6">
+          <div className="flex flex-col md:flex-row items-start space-x-6">
             {isEditingProfile ? (
-              <div className="space-y-2">
+              <div className="space-y-2 w-65 md:w-auto">
                 <Label>Profile Picture</Label>
                 <ImageUpload
                   value={profileData.avatar}
@@ -304,7 +304,7 @@ export default function ProfilePage() {
                     console.log("[Profile] Avatar updated:", value)
                     setProfileData({ ...profileData, avatar: value })
                   }}
-                  previewClassName="w-24 h-24 rounded-full"
+                  previewClassName="w-16 md:w-24 h-24 rounded-full"
                   description="Upload your profile picture"
                   maxSizeMB={2}
                   allowedTypes={["image/*"]}

@@ -368,7 +368,7 @@ export default function SalesInvoicesPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full bg-white">
                       <SelectValue placeholder="All Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -393,12 +393,12 @@ export default function SalesInvoicesPage() {
 
                 <div>
                   <label className="text-sm font-medium">Min Amount</label>
-                  <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} />
+                  <Input type="number" value={minAmountFilter} onChange={(e) => setMinAmountFilter(e.target.value)} placeholder="Enter Min Amount"/>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">Max Amount</label>
-                  <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} />
+                  <Input type="number" value={maxAmountFilter} onChange={(e) => setMaxAmountFilter(e.target.value)} placeholder="Enter Max Amount"/>
                 </div>
               </div>
             )}
@@ -440,7 +440,7 @@ export default function SalesInvoicesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex space-x-2 items-center justify-center">
+                          <div className="flex space-x-2 items-center justify-start">
                             <Link href={`/dashboard/salesInvoices/${invoice._id}`}>
                               <Button variant="ghost" size="sm" title="View in detail"><Eye className="h-4 w-4" /></Button>
                             </Link>

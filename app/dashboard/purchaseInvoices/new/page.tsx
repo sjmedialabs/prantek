@@ -772,9 +772,9 @@ export default function NewPurchaseInvoicePage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-start gap-1 flex-col space-x-4">
           <Link href="/dashboard/purchaseInvoices">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
@@ -890,7 +890,7 @@ export default function NewPurchaseInvoicePage() {
                           required
                         >
                           <SelectTrigger className={validationErrors.category ? "border-red-500" : "w-36"}>
-                            <SelectValue placeholder="Select ledger head" />
+                            <SelectValue placeholder="Select ledger" />
                           </SelectTrigger>
 
                           <SelectContent>

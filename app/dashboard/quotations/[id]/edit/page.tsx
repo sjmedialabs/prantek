@@ -420,9 +420,9 @@ async function handleSave() {
   return (
     <div className="space-y-6 pb-24">
       {/* HEADER */}
-      <div className="flex items-center justify-start">
+      <div className="flex items-start flex-col gap-1 justify-start">
         <div className="mr-5">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <Button variant="outline" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -653,7 +653,7 @@ async function handleSave() {
                                   value={String(item.cgst || 0)}
                                   onValueChange={(v) => updateItem(item.id, "cgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select CGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -672,7 +672,7 @@ async function handleSave() {
                                   value={String(item.sgst || 0)}
                                   onValueChange={(v) => updateItem(item.id, "sgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select SGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -691,7 +691,7 @@ async function handleSave() {
                                   value={String(item.igst || 0)}
                                   onValueChange={(v) => updateItem(item.id, "igst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select IGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -738,10 +738,10 @@ async function handleSave() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
                     {/* QUOTATION NUMBER */}
                     <div>
-                      <Label>Quotation/Agreement Number *</Label>
+                      <Label>Quotation Number *</Label>
                       <Input
                         value={quotationNumber}
                         disabled
@@ -761,7 +761,6 @@ async function handleSave() {
                         onChange={(e) => setDate(e.target.value)}
                       />
                     </div>
-                  </div>
 
                   {/* VALIDITY DATE */}
                   <div>
@@ -772,6 +771,8 @@ async function handleSave() {
                       onChange={(e) => setValidityDate(e.target.value)}
                     />
                   </div>
+                  </div>
+
 
                   {/* NOTE */}
                   <div>

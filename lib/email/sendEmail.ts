@@ -82,6 +82,14 @@ function normalizeEmailProviderError(raw: string): string {
       "and use a matching from address."
     )
   }
+  if (t.includes("recipient-domain-mismatch")) {
+    return (
+      "Mailchimp Transactional rejected this recipient domain for your account/pool. " +
+      "In Mailchimp Transactional, verify your sender domain and check outbound domain restrictions, " +
+      "sending domains, and dedicated/shared IP pool rules. If your account is in a restricted/trial state, " +
+      "send only to allowed recipient domains or request full sending access."
+    )
+  }
   return raw
 }
 

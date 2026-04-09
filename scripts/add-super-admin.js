@@ -34,6 +34,7 @@ async function addSuperAdmin() {
         {
           $set: {
             password: hashedPassword,
+            name: 'Prakash Reddy',
             role: 'super-admin',
             isActive: true,
             updatedAt: new Date()
@@ -56,7 +57,7 @@ async function addSuperAdmin() {
       const superAdmin = {
         email: 'superadmin@prantek.com',
         password: hashedPassword,
-        name: 'Prantek Super Admin',
+        name: 'Prakash Reddy',
         role: 'super-admin',
         userType: 'admin',
         isActive: true,

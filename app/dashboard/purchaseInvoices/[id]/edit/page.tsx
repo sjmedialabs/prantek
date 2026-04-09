@@ -190,9 +190,9 @@ export default function EditPurchaseInvoicePage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-start flex-col gap-1 space-x-4">
           <Link href="/dashboard/purchaseInvoices">
-            <Button variant="ghost" size="sm">
+            <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>

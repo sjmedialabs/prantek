@@ -972,7 +972,7 @@ export default function NewSalesInvoicePage() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push("/dashboard/salesInvoices")}>
+        <Button variant="outline" onClick={() => router.push("/dashboard/salesInvoices")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Invoices
         </Button>
@@ -1346,7 +1346,7 @@ export default function NewSalesInvoicePage() {
                                   value={String(item.cgst || 0)}
                                   onValueChange={(v) => handleUpdateItem(item.id, "cgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select CGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1365,7 +1365,7 @@ export default function NewSalesInvoicePage() {
                                   value={String(item.sgst || 0)}
                                   onValueChange={(v) => handleUpdateItem(item.id, "sgst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select SGST" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1384,7 +1384,7 @@ export default function NewSalesInvoicePage() {
                                   value={String(item.igst || 0)}
                                   onValueChange={(v) => handleUpdateItem(item.id, "igst", Number(v))}
                                 >
-                                  <SelectTrigger>
+                                  <SelectTrigger className="w-full bg-white">
                                     <SelectValue placeholder="Select IGST" />
                                   </SelectTrigger>
                                   <SelectContent>

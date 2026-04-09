@@ -190,7 +190,7 @@ export async function authenticateSuperAdmin(email: string, password: string): P
         user: {
           id: payload.userId,
           email: payload.email,
-          name: superAdmin.name || "Super Admin",
+          name: superAdmin.name || "Prakash Reddy",
           role: "super-admin",
           userType: "super-admin",
           permissions: ["*"],
@@ -245,7 +245,7 @@ export async function authenticateSuperAdmin(email: string, password: string): P
     user: {
       id: "super-admin",
       email: superAdminEmail,
-      name: "Super Admin",
+      name: "Prakash Reddy",
       role: "super-admin",
       userType: "super-admin",
       permissions: ["*"],

@@ -350,14 +350,14 @@ if (isDuplicate) {
             <DialogDescription>Configure tax rate for products and services</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 grid grid-cols-1 md:grid-cols-3 gap-2">
             <div className="space-y-2">
               <Label htmlFor="type" required>Tax Type</Label>
               <Select
                 value={rateData.type}
                 onValueChange={(value: "CGST" | "SGST" | "IGST") => setRateData({ ...rateData, type: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -369,14 +369,14 @@ if (isDuplicate) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="rate" required>Rate (%)</Label>
+              <Label htmlFor="rate" required title="Goverment Psecified Tax Rates in percentage put only Number">Rate (%)</Label>
               <Input
                 id="rate"
                 type="number"
                 step="0.01"
                 value={rateData.rate}
                 onChange={(e) => setRateData({ ...rateData, rate: e.target.value })}
-                placeholder="e.g., 5, 12, 18"
+                placeholder="Enter Rate"
               />
             </div>
 
@@ -386,7 +386,7 @@ if (isDuplicate) {
                 id="description"
                 value={rateData.description}
                 onChange={(e) => setRateData({ ...rateData, description: e.target.value })}
-                placeholder="e.g., Standard rate for goods"
+                placeholder="Enter Description"
               />
             </div>
           </div>
