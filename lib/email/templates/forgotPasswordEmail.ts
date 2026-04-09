@@ -1,5 +1,5 @@
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek"
-const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://mycashledger.com "
 
 export function getForgotPasswordEmailHtml(resetToken: string, toEmail: string): string {
   const resetUrl = `${APP_URL}/reset-password?email=${encodeURIComponent(toEmail)}&token=${resetToken}`
