@@ -3,6 +3,7 @@ import { verifyToken, extractTokenFromHeader } from "./jwt"
 import type { JWTPayload } from "./jwt"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
+import { coercePermissionStrings } from "@/lib/permission-utils"
 import { ObjectId } from "mongodb"
 
 // Backward-compatibility: map legacy permissions to the new granular ones
@@ -20,6 +21,7 @@ const LEGACY_TO_NEW: Record<string, string[]> = {
 function expandWithLegacy(perms: string[] | undefined | null): string[] {
   const out = new Set<string>()
   for (const p of perms || []) {
+    if (typeof p !== "string") continue
     out.add(p)
     const mapped = LEGACY_TO_NEW[p]
     if (mapped) mapped.forEach(m => out.add(m))
@@ -61,7 +63,7 @@ export async function verifyApiRequest(request: NextRequest): Promise<JWTPayload
     if (user) {
       payload.isAdminUser = true
       payload.companyId = user.companyId || payload.companyId
-      payload.permissions = expandWithLegacy(user.permissions || [])
+      payload.permissions = expandWithLegacy(coercePermissionStrings(user.permissions))
       return payload
     }
 
@@ -73,7 +75,7 @@ export async function verifyApiRequest(request: NextRequest): Promise<JWTPayload
     }
     if (user) {
       payload.isAdminUser = false
-      payload.permissions = expandWithLegacy(user.permissions || [])
+      payload.permissions = expandWithLegacy(coercePermissionStrings(user.permissions))
     }
   } catch (e) {
     console.error("[API-AUTH] Failed to resolve user from DB:", e)
@@ -133,7 +135,7 @@ export function hasPermission(user: JWTPayload, permission: string): boolean {
   if (user.role === "super-admin" || user.isSuperAdmin) return true
   if (!user.isAdminUser) return true // Account owners
 
-  const perms = expandWithLegacy(user.permissions || [])
+  const perms = expandWithLegacy(coercePermissionStrings(user.permissions))
   return perms.includes(permission)
 }
 
@@ -149,3 +151,6 @@ export function withPermission(permission: string, handler: (request: NextReques
     return handler(request, user, context)
   }
 }
+
+/** App Router alias: require a permission after authentication (use on protected API routes only, not login). */
+export const authorize = withPermission

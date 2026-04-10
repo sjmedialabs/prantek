@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { refreshAccessToken } from "@/lib/auth"
+import { reissueAccessTokenFromRefreshToken } from "@/lib/auth-server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,8 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Refresh token is required" }, { status: 400 })
     }
 
-    // Generate new access token
-    const newAccessToken = await refreshAccessToken(refreshToken)
+    const newAccessToken = await reissueAccessTokenFromRefreshToken(refreshToken)
 
     if (!newAccessToken) {
       return NextResponse.json({ error: "Invalid or expired refresh token" }, { status: 401 })

@@ -4,31 +4,34 @@ import { authenticateUser } from "@/lib/auth-server"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, userType = "admin" } = body
+    const { email, password } = body
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : ""
 
-    console.log('[AUTH-LOGIN] Login attempt:', email)
+    console.log("[AUTH-LOGIN] Login attempt:", normalizedEmail)
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const result = await authenticateUser(email, password)
+    const result = await authenticateUser(normalizedEmail, password)
 
-    console.log('[AUTH-LOGIN] Auth result:', result ? 'SUCCESS' : 'FAILED')
-const bcrypt = require("bcryptjs");
-bcrypt.hash("SuperAdmin@2025", 10).then(console.log);
+    console.log("[AUTH-LOGIN] Auth result:", result ? "SUCCESS" : "FAILED")
     if (!result) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-const response = NextResponse.json({
-  user: result.user,
-  accessToken: result.accessToken,
-  refreshToken: result.refreshToken
-})
+    const p = result.user.permissions
+    console.log("[AUTH-LOGIN] User:", result.user.email)
+    console.log("[AUTH-LOGIN] Permissions (session from DB on verify):", Array.isArray(p) ? p : [])
 
-response.cookies.set("userType", result.user.userType, { path: "/" })
-response.cookies.set("companyId", result.user.companyId, { path: "/" })
+    const response = NextResponse.json({
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    })
+
+    response.cookies.set("userType", result.user.userType, { path: "/" })
+    response.cookies.set("companyId", result.user.companyId, { path: "/" })
 
 
     // Set tokens in httpOnly cookies for security

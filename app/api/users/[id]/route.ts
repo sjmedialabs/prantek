@@ -4,8 +4,13 @@ import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
 import { withAuth, hasPermission } from "@/lib/api-auth"
+import { coercePermissionStrings } from "@/lib/permission-utils"
 import { createNotification } from "@/lib/notification-utils"
 import { sub } from "date-fns"
+
+function removeUndefinedValues<T extends Record<string, any>>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as Partial<T>
+}
 
 // ✅ helper
 function getIdFromRequest(req: NextRequest): string {
@@ -46,10 +51,6 @@ export const GET = withAuth(async (req: NextRequest, user) => {
 
     // Remove password from response
     const { password, ...safeUser } = adminUser as any
-const bcrypt = require("bcryptjs");
-bcrypt.hash("SuperAdmin@2025", 10).then(console.log);
-console.log("ssuperadmin password", bcrypt.hashSync("SuperAdmin@2025", 10))
-
     return NextResponse.json({ success: true, data: safeUser, user: safeUser })
   } catch (error: any) {
     console.error("Error fetching user:", error)
@@ -76,14 +77,15 @@ export const PUT = withAuth(async (req: NextRequest, user) => {
 
   try {
     const body = await req.json()
-    const { password, _id, ...updateData } = body
+    const { password, _id, ...rawUpdateData } = body
+    const updateData: any = removeUndefinedValues(rawUpdateData)
     console.log("Update data for user:", id, updateData);
 
     // Set updated timestamp
     updateData.updatedAt = new Date()
 
     // If password is being updated, hash it
-    if (password) {
+    if (typeof password === "string" && password.trim().length > 0) {
       const salt = await bcrypt.genSalt(10)
       updateData.password = await bcrypt.hash(password, salt)
     }
@@ -100,7 +102,7 @@ export const PUT = withAuth(async (req: NextRequest, user) => {
           const db = await connectDB()
           const role = await db.collection(Collections.ROLES).findOne({ _id: new ObjectId(updateData.roleId) })
           if (role) {
-            updateData.permissions = role.permissions || []
+            updateData.permissions = coercePermissionStrings(role.permissions)
           }
         } catch (roleError) {
           console.error("Error fetching role permissions:", roleError)

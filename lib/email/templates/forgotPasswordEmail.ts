@@ -1,8 +1,17 @@
+import { getAppBaseUrl } from "@/lib/email/app-base-url"
+
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek"
-const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://mycashledger.com "
+
+/** Production default when env is unset; never include trailing spaces. */
+const RESET_LINK_FALLBACK_BASE = "https://mycashledger.com"
+
+export function buildPasswordResetUrl(toEmail: string, resetToken: string): string {
+  const base = getAppBaseUrl(RESET_LINK_FALLBACK_BASE)
+  return `${base}/reset-password?email=${encodeURIComponent(toEmail)}&token=${encodeURIComponent(resetToken)}`
+}
 
 export function getForgotPasswordEmailHtml(resetToken: string, toEmail: string): string {
-  const resetUrl = `${APP_URL}/reset-password?email=${encodeURIComponent(toEmail)}&token=${resetToken}`
+  const resetUrl = buildPasswordResetUrl(toEmail, resetToken)
   return `
 <!DOCTYPE html>
 <html>
@@ -31,6 +40,6 @@ export function getForgotPasswordEmailHtml(resetToken: string, toEmail: string):
 }
 
 export function getForgotPasswordEmailText(resetToken: string, toEmail: string): string {
-  const resetUrl = `${APP_URL}/reset-password?email=${encodeURIComponent(toEmail)}&token=${resetToken}`
+  const resetUrl = buildPasswordResetUrl(toEmail, resetToken)
   return `Reset Your Password\n\nHello,\n\nWe received a request to reset your password for your ${APP_NAME} account.\n\nClick the link below to reset your password:\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request a password reset, you can safely ignore this email.\n\n---\nThis is an automated email from ${APP_NAME}.`
 }

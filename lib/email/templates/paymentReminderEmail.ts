@@ -1,5 +1,6 @@
+import { getAppBaseUrl } from "@/lib/email/app-base-url"
+
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek"
-const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://mycashledger.com "
 
 export interface PaymentReminderParams {
   recipientName: string
@@ -10,7 +11,7 @@ export interface PaymentReminderParams {
 
 export function getPaymentReminderEmailHtml(params: PaymentReminderParams): string {
   const { recipientName, planName, expiryDate, daysUntilExpiry } = params
-  const dashboardUrl = `${APP_URL}/dashboard/plans`
+  const dashboardUrl = `${getAppBaseUrl("https://mycashledger.com")}/dashboard/plans`
   return `
 <!DOCTYPE html>
 <html>
@@ -38,6 +39,6 @@ export function getPaymentReminderEmailHtml(params: PaymentReminderParams): stri
 
 export function getPaymentReminderEmailText(params: PaymentReminderParams): string {
   const { recipientName, planName, expiryDate, daysUntilExpiry } = params
-  const dashboardUrl = `${APP_URL}/dashboard/plans`
+  const dashboardUrl = `${getAppBaseUrl("https://mycashledger.com")}/dashboard/plans`
   return `Hello ${recipientName},\n\nYour ${planName} subscription will expire in ${daysUntilExpiry} day(s) (${expiryDate}).\n\nRenew here: ${dashboardUrl}\n\n---\n${APP_NAME}`
 }

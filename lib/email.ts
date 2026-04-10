@@ -6,7 +6,12 @@
 
 import { sendEmail, isValidEmail } from "@/lib/email/sendEmail"
 import { getOtpEmailHtml, getOtpEmailText } from "@/lib/email/templates/otpEmail"
-import { getForgotPasswordEmailHtml, getForgotPasswordEmailText } from "@/lib/email/templates/forgotPasswordEmail"
+import { getAppBaseUrl } from "@/lib/email/app-base-url"
+import {
+  buildPasswordResetUrl,
+  getForgotPasswordEmailHtml,
+  getForgotPasswordEmailText,
+} from "@/lib/email/templates/forgotPasswordEmail"
 import { getWelcomeEmailHtml, getWelcomeEmailText } from "@/lib/email/templates/welcomeEmail"
 import {
   getPaymentReminderEmailHtml,
@@ -20,7 +25,6 @@ import {
 } from "@/lib/email/templates/offerEmail"
 
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek"
-const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
 export { isValidEmail }
 
@@ -32,6 +36,9 @@ export async function sendPasswordResetEmail(to: string, resetToken: string): Pr
     console.error("[EMAIL] Invalid email for password reset:", to)
     return false
   }
+  const resetUrl = buildPasswordResetUrl(to, resetToken)
+  console.log("[EMAIL] Reset URL:", resetUrl)
+
   const result = await sendEmail({
     to,
     subject: `Reset Your ${APP_NAME} Password`,
@@ -115,7 +122,7 @@ export async function sendEmployeeCredentials(
   companyName?: string
 ): Promise<boolean> {
   if (!isValidEmail(to)) return false
-  const loginUrl = `${APP_URL}/signin`
+  const loginUrl = `${getAppBaseUrl()}/signin`
   const html = `
 <!DOCTYPE html>
 <html>

@@ -1,5 +1,3 @@
-import { generateAccessToken, generateRefreshToken, verifyToken } from "./jwt"
-
 export interface User {
   id: string
   email: string
@@ -49,29 +47,3 @@ export async function verifyUser(accessToken: string): Promise<User | null> {
   }
 }
 
-/**
- * Refresh access token using refresh token
- * @param refreshToken - Valid refresh token
- * @returns New access token if successful, null if failed
- */
-export async function refreshAccessToken(refreshToken: string): Promise<string | null> {
-  const payload = await verifyToken(refreshToken)
-
-  if (!payload) {
-    return null
-  }
-
-  // Generate new access token with same payload
-  const newAccessToken = await generateAccessToken(
-    {
-      userId: payload.userId,
-      email: payload.email,
-      role: payload.role,
-      permissions: payload.permissions,
-      roleId: payload.roleId,
-    },
-    "15m"
-  )
-
-  return newAccessToken
-}

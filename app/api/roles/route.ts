@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
+import { coercePermissionStrings } from "@/lib/permission-utils"
 
 // GET - Fetch all roles for admin users (dashboard permissions)
 export const GET = withAuth(async (req: NextRequest, user: any) => {
@@ -47,7 +48,7 @@ export const POST = withAuth(async (req: NextRequest, user: any) => {
       userId: filterUserId,  // Owner of this role definition
       name: data.name,
       code: data.code || data.name.toLowerCase().replace(/\s+/g, '_'),
-      permissions: data.permissions,
+      permissions: coercePermissionStrings(data.permissions),
       description: data.description || '',
       isActive: data?.isActive ?? true,
       createdAt: new Date(),

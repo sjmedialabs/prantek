@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
+import { coercePermissionStrings } from "@/lib/permission-utils"
 import { ObjectId } from "mongodb"
 
 // ✅ helper
@@ -14,6 +15,9 @@ function getIdFromRequest(req: NextRequest): string {
 export const PUT = withAuth(async (req: NextRequest, user: any) => {
   const db = await connectDB()
   const data = await req.json()
+  if (Array.isArray(data.permissions)) {
+    data.permissions = coercePermissionStrings(data.permissions)
+  }
 
   const id = getIdFromRequest(req)
 

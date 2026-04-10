@@ -113,8 +113,7 @@ export function extractTokenFromHeader(authHeader: string | null): string | null
  * @returns true if user has permission
  */
 export function hasPermission(user: JWTPayload, permission: string): boolean {
-  // Super admins have all permissions
-  if (user.role === "super-admin") {
+  if (user.role === "super-admin" || user.isSuperAdmin) {
     return true
   }
   
@@ -129,8 +128,7 @@ export function hasPermission(user: JWTPayload, permission: string): boolean {
  * @returns true if user has at least one permission
  */
 export function hasAnyPermission(user: JWTPayload, permissions: string[]): boolean {
-  // Super admins have all permissions
-  if (user.role === "super-admin") {
+  if (user.role === "super-admin" || user.isSuperAdmin) {
     return true
   }
   
@@ -145,8 +143,7 @@ export function hasAnyPermission(user: JWTPayload, permissions: string[]): boole
  * @returns true if user has all permissions
  */
 export function hasAllPermissions(user: JWTPayload, permissions: string[]): boolean {
-  // Super admins have all permissions
-  if (user.role === "super-admin") {
+  if (user.role === "super-admin" || user.isSuperAdmin) {
     return true
   }
   

@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    // Normalize email to lowercase
-    const normalizedEmail = data.email.toLowerCase()
+    // Normalize email to lowercase and trim whitespace
+    const normalizedEmail = String(data.email).trim().toLowerCase()
 
     // If OTP verification token is provided, validate it (JWT from verify-email-otp or legacy token)
     const verificationToken = data.verificationToken
@@ -52,10 +52,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if user already exists (case-insensitive)
-    const existingUser = await db.collection(Collections.USERS).findOne({ 
-      email: { $regex: new RegExp(`^${data.email}$`, 'i') }
-    })
+    // Check if user already exists (works with both normalized and legacy rows)
+    const existingUser =
+      (await db.collection(Collections.USERS).findOne({ email: normalizedEmail })) ||
+      (await db.collection(Collections.USERS).findOne({
+        $expr: {
+          $eq: [{ $toLower: { $trim: { input: "$email" } } }, normalizedEmail],
+        },
+      }))
     if (existingUser) {
       return NextResponse.json({ 
         success: false, 

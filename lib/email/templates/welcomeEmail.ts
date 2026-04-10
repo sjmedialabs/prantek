@@ -1,8 +1,9 @@
+import { getAppBaseUrl } from "@/lib/email/app-base-url"
+
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Prantek"
-const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
 export function getWelcomeEmailHtml(name: string): string {
-  const dashboardUrl = `${APP_URL}/dashboard`
+  const dashboardUrl = `${getAppBaseUrl()}/dashboard`
   return `
 <!DOCTYPE html>
 <html>
@@ -26,6 +27,6 @@ export function getWelcomeEmailHtml(name: string): string {
 }
 
 export function getWelcomeEmailText(name: string): string {
-  const dashboardUrl = `${APP_URL}/dashboard`
+  const dashboardUrl = `${getAppBaseUrl()}/dashboard`
   return `Welcome to ${APP_NAME}!\n\nHello ${name},\n\nThank you for joining. Get started here: ${dashboardUrl}\n\n---\n${APP_NAME}`
 }

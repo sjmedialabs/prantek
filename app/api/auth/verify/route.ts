@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { verifyToken } from "@/lib/jwt"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
+import { coercePermissionStrings } from "@/lib/permission-utils"
 import { ObjectId } from "mongodb"
 
 export async function GET(request: NextRequest) {
@@ -81,11 +82,12 @@ export async function GET(request: NextRequest) {
 
     if (user) {
       isAdminUser = true
+      const safePerms = coercePermissionStrings(user.permissions)
       console.log("[AUTH-VERIFY] Admin user found:", {
         email: user.email,
-        permissions: user.permissions,
-        hasPermissions: !!user.permissions,
-        permissionCount: user.permissions?.length || 0
+        permissions: safePerms,
+        hasPermissions: safePerms.length > 0,
+        permissionCount: safePerms.length,
       })
     }
 
@@ -107,6 +109,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
+    const permsFromDb = coercePermissionStrings(user.permissions)
+    const resolvedPermissions =
+      permsFromDb.length > 0 ? permsFromDb : coercePermissionStrings(payload.permissions)
+
     const userResponse = {
       user: {
         id: user._id.toString(),
@@ -115,7 +121,7 @@ export async function GET(request: NextRequest) {
         role: user.role || (isAdminUser ? "admin" : "employee"),
         userType: isAdminUser ? "admin-user" : user.userType,
         roleId: user.roleId,
-        permissions: user.permissions || payload.permissions || [],
+        permissions: resolvedPermissions,
         isAdminUser,
         companyId: user.companyId || payload.companyId,
         phone: user.phone,
@@ -136,7 +142,7 @@ export async function GET(request: NextRequest) {
       email: userResponse.user.email,
       isAdminUser: userResponse.user.isAdminUser,
       permissions: userResponse.user.permissions,
-      permissionCount: userResponse.user.permissions?.length || 0
+      permissionCount: userResponse.user.permissions.length,
     })
 
     return NextResponse.json(userResponse)

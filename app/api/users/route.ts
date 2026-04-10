@@ -5,7 +5,11 @@ import { withAuth } from "@/lib/api-auth"
 import { hasPermission } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
 import bcrypt from "bcryptjs"
-import { expandPermissions } from "@/lib/permission-utils"
+import { coercePermissionStrings, expandPermissions } from "@/lib/permission-utils"
+
+function removeUndefinedValues<T extends Record<string, any>>(obj: T): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as Partial<T>
+}
 
 /*************************************************************
  * Helper: Pick collection based on userType
@@ -55,8 +59,6 @@ export const GET = withAuth(async (request: NextRequest, user) => {
             console.error("Error fetching role:", e)
           }
         }
-const bcrypt = require("bcryptjs");
-bcrypt.hash("SuperAdmin@2025", 10).then(console.log);
         // Fetch employee data if employeeId exists (new flow)
         if (adminUser.employeeId) {
           try {
@@ -173,7 +175,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         userType: "admin-user",
         companyId,
         employeeId: body.employeeId,
-        permissions: expandPermissions(body.permissions || []),
+        permissions: coercePermissionStrings(expandPermissions(body.permissions || [])),
         phone: employee.phone || null,
         isActive: true,
         createdAt: new Date(),
@@ -208,12 +210,12 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 
     const hashedPassword = await bcrypt.hash(body.password, 10)
 
-    let permissions = []
+    let permissions: string[] = []
     if (body.roleId) {
       const role = await db.collection(Collections.ROLES).findOne({
         _id: new ObjectId(body.roleId)
       })
-      permissions = role?.permissions || []
+      permissions = coercePermissionStrings(role?.permissions)
     }
 
     const companyId = user.companyId || user.userId
@@ -263,23 +265,24 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
       return NextResponse.json({ success: false, error: "User ID is required" }, { status: 400 })
     }
 
-    const { _id, password, ...updateData } = body
+    const { _id, password, ...rawUpdateData } = body
+    const updateData: any = removeUndefinedValues(rawUpdateData)
 
-    if (password) {
+    if (typeof password === "string" && password.trim().length > 0) {
       updateData.password = await bcrypt.hash(password, 10)
     }
 
     // Handle permissions update
     // If permissions array is provided directly, use it
     if (body.permissions && Array.isArray(body.permissions)) {
-      updateData.permissions = expandPermissions(body.permissions)
+      updateData.permissions = coercePermissionStrings(expandPermissions(body.permissions))
     }
     // Otherwise, get permissions from roleId (backward compatibility)
     else if (body.roleId) {
       const role = await db.collection(Collections.ROLES).findOne({
         _id: new ObjectId(body.roleId)
       })
-      updateData.permissions = role?.permissions || []
+      updateData.permissions = coercePermissionStrings(role?.permissions)
     }
 
     updateData.updatedAt = new Date()

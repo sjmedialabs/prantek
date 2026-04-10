@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { sendPasswordResetEmail } from "@/lib/email"
+import { buildPasswordResetUrl } from "@/lib/email/templates/forgotPasswordEmail"
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     // If email wasn't sent (SMTP not configured), include the reset link for development
     if (!emailSent) {
       response.resetToken = resetToken
-      response.resetLink = `/reset-password?email=${encodeURIComponent(user.email)}&token=${resetToken}`
+      response.resetLink = buildPasswordResetUrl(user.email, resetToken)
       console.log("[FORGOT-PASSWORD] Email not sent. Reset link:", response.resetLink)
     }
 
