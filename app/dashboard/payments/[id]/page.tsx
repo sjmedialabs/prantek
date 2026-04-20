@@ -335,6 +335,14 @@ export default function PaymentDetailsPage() {
         documentId={payment?._id || payment?.id || params.id}
         defaultEmail={payment?.recipientEmail || ""}
         defaultName={payment?.recipientName || ""}
+        companyDetails={companyDetails ? {
+          name: companyDetails.companyName,
+          address: companyDetails.address,
+          phone: companyDetails.mobileNo1,
+          email: companyDetails.email,
+          website: companyDetails.website,
+          logo: companyDetails.logo
+        } : undefined}
       />
     </div>
   )

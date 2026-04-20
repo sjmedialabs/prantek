@@ -322,6 +322,14 @@ export default function ViewPurchaseInvoicePage() {
         documentId={invoice?._id || invoice?.id || id}
         defaultEmail={invoice?.vendorEmail || ""}
         defaultName={invoice?.vendorName || ""}
+        companyDetails={{
+          logo: companyDetails?.logo,
+          name: companyDetails?.companyName,
+          address: companyDetails?.address,
+          phone: companyDetails?.mobileNo1,
+          email: companyDetails?.email,
+          website: companyDetails?.website,
+        }}
       />
 
       {/* Hidden Print Component */}

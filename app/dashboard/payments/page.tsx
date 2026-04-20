@@ -537,7 +537,7 @@ const exportToCSV = () => {
             </TableHeader>
             <TableBody>
               {paginatedPayments.map((payment, index) => (
-                <TableRow key={payment._id?.toString() || `payment-${index}`}>
+                <TableRow key={payment._id?.toString() || `payment-${index}`} className="capitalize">
                   <TableCell>{(currentPage - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell className="font-medium">{payment.paymentNumber}</TableCell>
                   <TableCell>{payment.date ? new Date(payment.date).toLocaleDateString() : "N/A"}</TableCell>
@@ -551,7 +551,7 @@ const exportToCSV = () => {
                     <Badge variant="outline" className="capitalize">{payment.category}</Badge>
                   </TableCell>
                   <TableCell>{payment.purchaseInvoiceNumber || "-"}</TableCell>
-                  <TableCell>{payment.paymentMethod}</TableCell>
+                  <TableCell className="capitalize">{payment.paymentMethod}</TableCell>
                   <TableCell>
                     <Badge
                       variant={
