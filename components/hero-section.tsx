@@ -61,7 +61,7 @@ export function HeroSection() {
   return (
     <>
       <section
-        className="relative bg-white py-6 lg:py-0 lg:min-h-screen lg:flex lg:items-center overflow-hidden"
+        className="relative bg-white py-6 lg:py-0 lg:max-h-[80vh] lg:flex lg:items-center overflow-hidden"
         style={
           heroBackgroundImage
             ? {

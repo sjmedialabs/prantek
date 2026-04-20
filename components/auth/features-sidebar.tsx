@@ -155,7 +155,7 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
         <div>
           <div className="mb-6">
             <img
-              src={content?.logo || "/prantek-logo.png"}
+              src={content?.logo || "https://via.placeholder.com/150x50?text=Logo"}
               alt="Prantek Academy"
               className="h-12 w-auto"
             />

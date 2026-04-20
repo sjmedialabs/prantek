@@ -901,11 +901,12 @@ export default function CMSPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Icon name (Lucide)</Label>
-                        <Input
+                        <ImageUpload
+                          label="Feature Icon"
                           value={feature.icon || ""}
-                          onChange={(e) => updateFeature(feature.id, "icon", e.target.value)}
-                          placeholder="e.g. Shield, Zap, Star"
+                          onChange={(value) => updateFeature(feature.id, "icon", value)}
+                          description="Upload an icon image or provide a URL"
+                          previewClassName="w-16 h-16"
                         />
                       </div>
                       {/* <ImageUpload
@@ -988,11 +989,12 @@ export default function CMSPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Icon Name</Label>
-                              <Input
-                                value={industry.icon}
-                                onChange={(e) => updateIndustry(industry.id, "icon", e.target.value)}
-                                placeholder="e.g., Truck, ShoppingBag, Utensils"
+                              <ImageUpload
+                                label="Industry Icon"
+                                value={industry.icon || ""}
+                                onChange={(value) => updateIndustry(industry.id, "icon", value)}
+                                description="Upload an icon image or provide a URL"
+                                previewClassName="w-16 h-16"
                               />
                             </div>
                           </div>
