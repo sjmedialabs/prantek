@@ -86,7 +86,7 @@ export function PricingSection() {
   }
 
   return (
-    <section className="py-20 bg-gray-50" id="pricing">
+    <section className="py-6 bg-gray-50" id="pricing">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {(title || subtitle) && (
           <div className="text-center mb-16">

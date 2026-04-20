@@ -789,10 +789,10 @@ export default function NewPaymentPage() {
   }
 
   const handleCreateNewVendor = async () => {
-    if (!newVendor.name || !newVendor.phone || !newVendor.category) {
+    if (!newVendor.name || !newVendor.category) {
       toast({
         title: "Validation Error",
-        description: "Vendor name, phone, and category are required",
+        description: "Vendor name and category are required",
         variant: "destructive",
       })
       return
@@ -1378,7 +1378,7 @@ export default function NewPaymentPage() {
                                       />
                                     </div>
                                     <div>
-                                      <Label htmlFor="newVendorPhone">Phone *</Label>
+                                      <Label htmlFor="newVendorPhone">Phone</Label>
                                       <Input
                                         id="newVendorPhone"
                                         value={newVendor.phone}

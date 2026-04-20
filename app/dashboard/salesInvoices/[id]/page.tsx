@@ -434,9 +434,17 @@ export default function SalesInvoiceDetailsPage() {
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
         documentType="salesInvoice"
-        documentId={invoice._id || invoice.id}
+        documentId={invoice._id || invoice?.id || ""}
         defaultEmail={invoice.clientEmail || ""}
         defaultName={invoice.clientName || ""}
+        companyDetails={{
+          logo: companyDetails?.logo,
+          name: companyDetails?.companyName,
+          address: companyDetails?.address,
+          phone: companyDetails?.mobileNo1,
+          email: companyDetails?.email,
+          website: companyDetails?.website
+        }}
       />
 
       {/* Hidden Print Component */}

@@ -730,6 +730,14 @@ export default function ReceiptDetailsPage() {
           documentId={receipt?._id || receipt?.id || params.id}
           defaultEmail={receipt?.clientEmail || ""}
           defaultName={receipt?.clientName || ""}
+          companyDetails={{
+            logo: companyDetailsForPrint.logo,
+            name: companyDetailsForPrint.companyName,
+            address: companyDetailsForPrint.address,
+            phone: companyDetailsForPrint.mobileNo1,
+            email: companyDetailsForPrint.email,
+            website: companyDetailsForPrint.website
+          }}
         />
 
         {receiptForPrint && (

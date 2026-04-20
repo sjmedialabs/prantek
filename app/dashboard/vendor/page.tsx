@@ -158,7 +158,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   // --------- Phone ---------
   const phoneRegex = /^[6-9]\d{9}$/
-  if (!phoneRegex.test(formData.phone)) {
+  if (formData.phone && !phoneRegex.test(formData.phone)) {
     newErrors.phone = "Enter a valid 10-digit Indian mobile number"
     isValid = false
   }
@@ -359,7 +359,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                     </div>
 
                     <div className="space-y-1">
-                      <Label required>Phone</Label>
+                      <Label>Phone</Label>
                       <Input
                         value={formData.phone}
                         placeholder="Enter Vendor Phone Number"

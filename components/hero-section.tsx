@@ -29,7 +29,7 @@ export function HeroSection() {
 
   if (loading || !content) {
     return (
-      <section className="relative bg-white py-16 lg:py-0 lg:min-h-screen lg:flex lg:items-center">
+      <section className="relative bg-white py-8 lg:py-0 lg:min-h-screen lg:flex lg:items-center">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-pulse space-y-4 w-full max-w-2xl">
@@ -61,7 +61,7 @@ export function HeroSection() {
   return (
     <>
       <section
-        className="relative bg-white py-16 lg:py-0 lg:min-h-screen lg:flex lg:items-center overflow-hidden"
+        className="relative bg-white py-6 lg:py-0 lg:max-h-[80vh] lg:flex lg:items-center overflow-hidden"
         style={
           heroBackgroundImage
             ? {

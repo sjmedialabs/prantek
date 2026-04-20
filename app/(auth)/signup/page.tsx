@@ -34,6 +34,7 @@ import { useTrialPeriod } from "@/lib/hooks/useTrialPeriod";
 import { FeaturesSidebar } from "@/components/auth/features-sidebar";
 import { tokenStorage } from "@/lib/token-storage";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { WebsiteContent } from "@/lib/models/types";
 
 export default function SignUpPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -605,7 +606,7 @@ export default function SignUpPage() {
             <div>
               <div className="mb-8">
                 <img
-                  src={content?.logo || "/prantek-logo.png"}
+                  src={content?.logo || "https://via.placeholder.com/150x50?text=Logo"}
                   alt={content?.companyName || "Prantek Academy"}
                   className="h-16 w-auto"
                 />

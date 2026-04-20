@@ -51,15 +51,47 @@ export async function POST(request: NextRequest) {
     const name = recipientName || doc.clientName || "Customer"
     const totalAmount = doc.grandTotal ?? doc.total ?? doc.ReceiptAmount ?? doc.amount ?? 0
     const date = doc.date || doc.invoiceDate || doc.createdAt
+    const company = doc.companyDetails || {}
 
+const companyName = company.name || ""
+const companyLogo = company.logo || ""
+const companyAddress = company.address || ""
+const companyPhone = company.phone || ""
+const companyEmail = company.email || ""
+const companyWebsite = company.website || ""
     const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">${APP_NAME}</h1>
-  </div>
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+  
+  <h1 style="color: white; margin: 0; font-size: 24px;">
+    ${APP_NAME}
+  </h1>
+
+  ${companyLogo ? `
+    <div style="margin-top: 15px;">
+      <img src="${companyLogo}" alt="logo" style="max-height: 60px; object-fit: contain;" />
+    </div>
+  ` : ""}
+
+  ${companyName ? `
+    <p style="color: #ffffff; font-size: 16px; font-weight: 600; margin: 10px 0 5px;">
+      ${companyName}
+    </p>
+  ` : ""}
+
+  ${(companyAddress || companyPhone || companyEmail || companyWebsite) ? `
+    <p style="color: #e0e0e0; font-size: 12px; margin: 0; line-height: 1.5;">
+      ${companyAddress ? `${companyAddress}<br/>` : ""}
+      ${companyPhone ? `📞 ${companyPhone}<br/>` : ""}
+      ${companyEmail ? `✉️ ${companyEmail}<br/>` : ""}
+      ${companyWebsite ? `🌐 ${companyWebsite}` : ""}
+    </p>
+  ` : ""}
+
+</div>
   <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
     <h2 style="color: #333; margin-top: 0;">${label}: ${docNumber}</h2>
     <p>Dear ${name},</p>
@@ -104,6 +136,7 @@ export async function POST(request: NextRequest) {
       html,
       text,
     })
+    console.log("[SEND-DOC-EMAIL] Result:", result)
 
     if (result.success) {
       return NextResponse.json({ success: true, message: `${label} sent to ${recipientEmail}` })

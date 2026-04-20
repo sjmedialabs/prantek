@@ -22,13 +22,13 @@ import { toMongoIdString } from "@/lib/mongo-entity-id"
 export default function CMSPage() {
   const [content, setContent] = useState<WebsiteContent | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const [logoErrors, setLogoErrors] = useState<Record<number, string>>({})
   useEffect(() => {
     const loadContent = async () => {
       try {
         const data = await api.websiteContent.getAll()
         const websiteContent = data && data.length > 0 ? data[0] : null
-        
+
         // If no content exists, create default content
         // if (!websiteContent) {
         //   const defaultContent = {
@@ -49,7 +49,7 @@ export default function CMSPage() {
         //   setLoading(false)
         //   return
         // }
-        
+
         const { cmsPages: _legacyPages, ...wc } = websiteContent as WebsiteContent & { cmsPages?: unknown }
         const stableId = toMongoIdString((wc as { _id?: unknown })._id) ?? toMongoIdString((wc as { id?: unknown }).id)
         const normalizedContent = {
@@ -79,49 +79,61 @@ export default function CMSPage() {
     loadContent()
   }, [])
 
-const handleSave = async () => {
-  if (!content) return
+  const handleSave = async () => {
+    if (!content) return
+    const errors: Record<number, string> = {}
 
-  try {
-    const { _id, id, updatedAt, cmsPages: _legacy, ...rest } = content as any
-    const contentData = {
-      ...rest,
-      aboutUsPage: normalizeAboutUsPage(rest.aboutUsPage),
-      publicContactPage: normalizePublicContactPage(rest.publicContactPage),
-    }
+      ; (content.trustedByLogos || []).forEach((item: any, index: number) => {
+        if (!item.logo || item.logo.trim() === "") {
+          errors[index] = "Logo is required"
+        }
+      })
 
-    let saved
-    if (_id || id) {
-      // ✅ Update
-      saved = await api.websiteContent.update(_id || id, contentData)
-    } else {
-      // ✅ Create
-      saved = await api.websiteContent.create(contentData)
-    }
-
-    // Ensure we preserve the content with proper normalization
-    if (saved) {
-      const normalizedContent = {
-        ...saved,
-        trustedByLogos: saved.trustedByLogos || [],
-        features: saved.features || [],
-        industries: saved.industries || [],
-        showcaseFeatures: saved.showcaseFeatures || [],
-        testimonials: saved.testimonials || [],
-        faqs: saved.faqs || [],
-        ctaFeatures: saved.ctaFeatures || [],
-        aboutUsPage: normalizeAboutUsPage(saved.aboutUsPage),
-        publicContactPage: normalizePublicContactPage(saved.publicContactPage),
-      }
-      setContent(normalizedContent)
-    }
-    toast.success("Website content updated successfully!")
-  } catch (error) {
-    console.error("Failed to save content:", error)
-    const msg = error instanceof Error ? error.message : "Failed to save content"
-    toast.error(msg)
+    setLogoErrors(errors)
+      if (Object.keys(errors).length > 0) {
+    toast.error("Please Add Logo for all Trusted By entries before saving.")
+    return
   }
-}
+    try {
+      const { _id, id, updatedAt, cmsPages: _legacy, ...rest } = content as any
+      const contentData = {
+        ...rest,
+        aboutUsPage: normalizeAboutUsPage(rest.aboutUsPage),
+        publicContactPage: normalizePublicContactPage(rest.publicContactPage),
+      }
+
+      let saved
+      if (_id || id) {
+        // ✅ Update
+        saved = await api.websiteContent.update(_id || id, contentData)
+      } else {
+        // ✅ Create
+        saved = await api.websiteContent.create(contentData)
+      }
+
+      // Ensure we preserve the content with proper normalization
+      if (saved) {
+        const normalizedContent = {
+          ...saved,
+          trustedByLogos: saved.trustedByLogos || [],
+          features: saved.features || [],
+          industries: saved.industries || [],
+          showcaseFeatures: saved.showcaseFeatures || [],
+          testimonials: saved.testimonials || [],
+          faqs: saved.faqs || [],
+          ctaFeatures: saved.ctaFeatures || [],
+          aboutUsPage: normalizeAboutUsPage(saved.aboutUsPage),
+          publicContactPage: normalizePublicContactPage(saved.publicContactPage),
+        }
+        setContent(normalizedContent)
+      }
+      toast.success("Website content updated successfully!")
+    } catch (error) {
+      console.error("Failed to save content:", error)
+      const msg = error instanceof Error ? error.message : "Failed to save content"
+      toast.error(msg)
+    }
+  }
 
 
   const updateContent = (field: keyof WebsiteContent, value: any) => {
@@ -774,26 +786,43 @@ const handleSave = async () => {
                 {(content.trustedByLogos || []).length > 0 ? (
                   (content.trustedByLogos || []).map((logo, index) => (
                     <Card key={logo.id} className="gap-1">
-                       <CardHeader>
-              <CardDescription className="flex justify-end">  <Button variant="ghost" size="sm" onClick={() => deleteTrustedByLogo(index)} className="ml-2">
-                            <Trash2 className="h-4 w-4" />
-                          </Button></CardDescription>
-            </CardHeader>
+                      <CardHeader>
+                        <CardDescription className="flex justify-end">  <Button variant="ghost" size="sm" onClick={() => deleteTrustedByLogo(index)} className="ml-2">
+                          <Trash2 className="h-4 w-4" />
+                        </Button></CardDescription>
+                      </CardHeader>
                       <CardContent className="md:pt-6 space-y-4">
-                            <div className="space-y-2">
-                              <Label>Company Name</Label>
-                              <Input
-                                value={logo.name}
-                                onChange={(e) => updateTrustedByLogo(index, "name", e.target.value)}
-                              />
-                            </div>
-                            <ImageUpload
-                              label="Company Logo"
-                              value={logo.logo}
-                              onChange={(value) => updateTrustedByLogo(index, "logo", value)}
-                              description="Upload a logo or provide a URL (leave empty to show text only)"
-                              previewClassName="w-24 h-24"
-                            />
+                        <div className="space-y-2">
+                          <Label>Company Name</Label>
+                          <Input
+                            value={logo.name}
+                            onChange={(e) => updateTrustedByLogo(index, "name", e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <ImageUpload
+                            label="Company Logo *"
+                            value={logo.logo}
+                            onChange={(value) => {
+                              updateTrustedByLogo(index, "logo", value)
+
+                              // ✅ clear error when user fixes it
+                              if (logoErrors[index]) {
+                                const newErrors = { ...logoErrors }
+                                delete newErrors[index]
+                                setLogoErrors(newErrors)
+                              }
+                            }}
+                            description="Upload a logo (required)"
+                            previewClassName="w-24 h-24"
+                          />
+
+                          {logoErrors[index] && (
+                            <p className="text-sm text-red-500 mt-1">
+                              {logoErrors[index]}
+                            </p>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))
@@ -851,60 +880,61 @@ const handleSave = async () => {
                 {(content.features || []).map((feature) => (
                   <Card key={feature.id}>
                     <CardHeader>
-              <CardDescription className="flex justify-end"> <Button variant="ghost" size="sm" onClick={() => deleteFeature(feature.id)} className="ml-2">
-                          <Trash2 className="h-4 w-4" />
-                        </Button></CardDescription>
-            </CardHeader>
-                    <CardContent className="md:pt-6 md:space-y-4 md:px-4">       
-                          <div className="space-y-2">
-                            <Label>Feature Title</Label>
-                            <Input
-                              value={feature.title}
-                              onChange={(e) => updateFeature(feature.id, "title", e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Description</Label>
-                            <Textarea
-                              value={feature.description}
-                              onChange={(e) => updateFeature(feature.id, "description", e.target.value)}
-                              rows={2}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Icon name (Lucide)</Label>
-                            <Input
-                              value={feature.icon || ""}
-                              onChange={(e) => updateFeature(feature.id, "icon", e.target.value)}
-                              placeholder="e.g. Shield, Zap, Star"
-                            />
-                          </div>
-                          {/* <ImageUpload
+                      <CardDescription className="flex justify-end"> <Button variant="ghost" size="sm" onClick={() => deleteFeature(feature.id)} className="ml-2">
+                        <Trash2 className="h-4 w-4" />
+                      </Button></CardDescription>
+                    </CardHeader>
+                    <CardContent className="md:pt-6 md:space-y-4 md:px-4">
+                      <div className="space-y-2">
+                        <Label>Feature Title</Label>
+                        <Input
+                          value={feature.title}
+                          onChange={(e) => updateFeature(feature.id, "title", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={feature.description}
+                          onChange={(e) => updateFeature(feature.id, "description", e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <ImageUpload
+                          label="Feature Icon"
+                          value={feature.icon || ""}
+                          onChange={(value) => updateFeature(feature.id, "icon", value)}
+                          description="Upload an icon image or provide a URL"
+                          previewClassName="w-16 h-16"
+                        />
+                      </div>
+                      {/* <ImageUpload
                             label="Feature Image"
                             value={feature.image || ""}
                             onChange={(value) => updateFeature(feature.id, "image", value)}
                             description="Upload an image or provide a URL"
                             previewClassName="w-24 h-24"
                           /> */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Learn More Text</Label>
-                              <Input
-                                value={feature.learnMoreText || "Learn More"}
-                                onChange={(e) => updateFeature(feature.id, "learnMoreText", e.target.value)}
-                                placeholder="e.g., Learn More, Explore, View Details"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Learn More URL</Label>
-                              <Input
-                                value={feature.learnMoreUrl || ""}
-                                onChange={(e) => updateFeature(feature.id, "learnMoreUrl", e.target.value)}
-                                placeholder="e.g., /features/financial-management"
-                              />
-                            </div>
-                          </div>
-                    
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Learn More Text</Label>
+                          <Input
+                            value={feature.learnMoreText || "Learn More"}
+                            onChange={(e) => updateFeature(feature.id, "learnMoreText", e.target.value)}
+                            placeholder="e.g., Learn More, Explore, View Details"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Learn More URL</Label>
+                          <Input
+                            value={feature.learnMoreUrl || ""}
+                            onChange={(e) => updateFeature(feature.id, "learnMoreUrl", e.target.value)}
+                            placeholder="e.g., /features/financial-management"
+                          />
+                        </div>
+                      </div>
+
                     </CardContent>
                   </Card>
                 ))}
@@ -959,11 +989,12 @@ const handleSave = async () => {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Icon Name</Label>
-                              <Input
-                                value={industry.icon}
-                                onChange={(e) => updateIndustry(industry.id, "icon", e.target.value)}
-                                placeholder="e.g., Truck, ShoppingBag, Utensils"
+                              <ImageUpload
+                                label="Industry Icon"
+                                value={industry.icon || ""}
+                                onChange={(value) => updateIndustry(industry.id, "icon", value)}
+                                description="Upload an icon image or provide a URL"
+                                previewClassName="w-16 h-16"
                               />
                             </div>
                           </div>
@@ -1929,11 +1960,10 @@ const handleSave = async () => {
                       key={opt.value}
                       type="button"
                       onClick={() => updateContent("loaderType", opt.value)}
-                      className={`p-4 rounded-lg border-2 text-left transition-colors ${
-                        (content.loaderType || "spinner") === opt.value
+                      className={`p-4 rounded-lg border-2 text-left transition-colors ${(content.loaderType || "spinner") === opt.value
                           ? "border-indigo-500 bg-indigo-50"
                           : "border-gray-200 hover:border-gray-300"
-                      }`}
+                        }`}
                     >
                       <p className="font-medium text-sm">{opt.label}</p>
                       <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
@@ -2020,7 +2050,7 @@ const handleSave = async () => {
                     />
                   )}
                   {(content.loaderType === "logo" || content.loaderType === "custom") &&
-                  content.loaderImage ? (
+                    content.loaderImage ? (
                     <div className="flex flex-col items-center gap-3">
                       <img
                         src={content.loaderImage}

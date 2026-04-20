@@ -52,8 +52,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     const filterUserId = user.isAdminUser && user.companyId ? user.companyId : user.userId
 
       const duplicateConditions: any[] = [
-      { name: body.name },
-      { phone: body.phone }
+      { name: body.name }
     ]
 
     // ✅ Only check email if provided

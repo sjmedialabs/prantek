@@ -21,6 +21,14 @@ interface SendEmailDialogProps {
   documentId: string
   defaultEmail?: string
   defaultName?: string
+  companyDetails?: {
+    logo?: string
+    name?: string
+    address?: string
+    phone?: string
+    email?: string
+    website?: string
+  }
 }
 
 export function SendEmailDialog({
@@ -30,6 +38,7 @@ export function SendEmailDialog({
   documentId,
   defaultEmail = "",
   defaultName = "",
+  companyDetails,
 }: SendEmailDialogProps) {
   const [email, setEmail] = useState(defaultEmail)
   const [sending, setSending] = useState(false)
@@ -50,6 +59,7 @@ export function SendEmailDialog({
           documentId,
           recipientEmail: email,
           recipientName: defaultName,
+          companyDetails,
         }),
       })
       const data = await res.json()

@@ -38,7 +38,7 @@ export function CTASection() {
   }
 
   return (
-    <section className="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+    <section className="py-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {title ? (
           <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-balance">{title}</h2>

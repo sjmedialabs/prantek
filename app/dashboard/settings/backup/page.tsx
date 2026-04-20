@@ -36,6 +36,24 @@ export default function BackupPage() {
   "roleName",
   "unitType",
 ]
+const formatDateTime = (value: any) => {
+  if (!value) return ""
+
+  const date = new Date(value)
+
+  // Invalid date check
+  if (isNaN(date.getTime())) return value
+
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
+const EXCLUDED_FIELDS = ["_id", "createdAt", "updatedAt", "id", "Id"]
 const capitalizeWords = (value: any) => {
   if (typeof value !== "string") return value
 
@@ -91,6 +109,7 @@ const capitalizeWords = (value: any) => {
       const columns = Object.keys(data[0])
         .filter((key) => {
           if (key === "userId") return false
+          if (EXCLUDED_FIELDS.includes(key)) return false
           return true
         })
         .map((key) => {
@@ -103,61 +122,81 @@ const capitalizeWords = (value: any) => {
           seenLabels.add(label)
           return { key, label }
         })
+const formattedData = data.map((row) => {
+  const newRow: any = {}
 
-      const formattedData = data.map((row) => {
-        const newRow: any = {}
+  Object.keys(row).forEach((key) => {
+    if (EXCLUDED_FIELDS.includes(key)) return
 
-Object.keys(row).forEach((key) => {
-  let value = row[key]
+    let value = row[key]
 
-  if (value === null || value === undefined) {
-    value = ""
-  } else if (typeof value === "object") {
-    try {
-      value = JSON.stringify(value)
-    } catch {
+    if (value === null || value === undefined) {
       value = ""
     }
-  }
 
-  if (fieldsToCapitalize.includes(key)) {
-    value = capitalizeWords(value)
-  }
+    const lowerKey = key.toLowerCase()
 
-  const lowerKey = key.toLowerCase()
+    // 🔥 Detect DATE properly (field name + ISO format)
+    const isDateValue =
+      value instanceof Date ||
+      (typeof value === "string" && /^\d{4}-\d{2}-\d{2}t/i.test(value))
 
-  // Protect sensitive numbers
-  if (
-    typeof value === "string" &&
-    (
-      lowerKey.includes("phone") ||
-      lowerKey.includes("mobile") ||
-      lowerKey.includes("pincode") ||
-      lowerKey.includes("gst") ||
-      lowerKey.includes("pan") ||
-      lowerKey.includes("aadhaar")
-    )
-  ) {
-    value = `="${value}"`
-  }
+    const isDateField =
+      lowerKey.includes("date") ||
+      lowerKey.includes("created") ||
+      lowerKey.includes("updated") ||
+      lowerKey.includes("time") ||
+      lowerKey.includes("login") // 🔥 FIXED (covers lastLogin)
 
-  // Handle currency properly
-  const isCurrencyField = [
-    "amount",
-    "total",
-    "price",
-    "grandtotal",
-    "paidamount",
-    "balanceamount",
-    "taxamount",
-  ].includes(lowerKey)
+    if ((isDateField || isDateValue) && value) {
+      value = formatDateTime(value)
+    } 
+    // 🔥 Convert objects AFTER date check
+    else if (typeof value === "object") {
+      try {
+        value = JSON.stringify(value)
+      } catch {
+        value = ""
+      }
+    }
 
-  if (isCurrencyField && value !== "") {
-    value = `="${value}"`
-  }
+    // Capitalization
+    if (fieldsToCapitalize.includes(key)) {
+      value = capitalizeWords(value)
+    }
 
-  newRow[key] = value
-})
+    // Protect sensitive numbers
+    if (
+      typeof value === "string" &&
+      (
+        lowerKey.includes("phone") ||
+        lowerKey.includes("mobile") ||
+        lowerKey.includes("pincode") ||
+        lowerKey.includes("gst") ||
+        lowerKey.includes("pan") ||
+        lowerKey.includes("aadhaar")
+      )
+    ) {
+      value = `="${value}"`
+    }
+
+    // Currency formatting
+    const isCurrencyField = [
+      "amount",
+      "total",
+      "price",
+      "grandtotal",
+      "paidamount",
+      "balanceamount",
+      "taxamount",
+    ].includes(lowerKey)
+
+    if (isCurrencyField && value !== "") {
+      value = `="${value}"`
+    }
+
+    newRow[key] = value
+  })
 
   return newRow
 })

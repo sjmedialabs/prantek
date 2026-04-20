@@ -327,7 +327,7 @@ export default function PurchaseInvoiceList() {
 
                 <TableBody>
                   {paginated.map((i, idx) => (
-                    <TableRow key={i._id}>
+                    <TableRow key={i._id} className="capitalize">
                       <TableCell>{(currentPage - 1) * rowsPerPage + idx + 1}</TableCell>
                       <TableCell>{i.purchaseInvoiceNumber}</TableCell>
                       <TableCell>{i.date ? new Date(i.date).toLocaleDateString() : "-"}</TableCell>

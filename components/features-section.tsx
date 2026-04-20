@@ -10,9 +10,9 @@ import type { WebsiteContent } from "@/lib/models/types"
 
 // This maps all icons from the library. 
 // Note: This will increase your client bundle size significantly.
-const iconMap: Record<string, LucideIcon> = { 
-  ...(Icons as any), 
-  BarChart: Icons.BarChart3 
+const iconMap: Record<string, LucideIcon> = {
+  ...(Icons as any),
+  BarChart: Icons.BarChart3
 }
 
 export function FeaturesSection() {
@@ -37,9 +37,9 @@ export function FeaturesSection() {
   }
 
   return (
-    <section className="py-24 bg-gradient-to-b from-white via-gray-50 to-white" id="features">
+    <section className="py-6 bg-gradient-to-b from-white via-gray-50 to-white" id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div className="text-center mb-6">
           {sectionBadge ? (
             <div className="inline-block mb-4">
               <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider bg-blue-50 px-4 py-2 rounded-full">
@@ -56,75 +56,70 @@ export function FeaturesSection() {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">{subtitle}</p>
           ) : null}
         </div>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+  {features.map((feature) => {
+    const learnUrl = feature.learnMoreUrl?.trim()
+    const learnText = feature.learnMoreText?.trim()
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => {
-            const IconComponent = iconMap[feature.icon] ?? Star
-            const colors = [
-              "from-blue-500 to-cyan-500",
-              "from-purple-500 to-pink-500",
-              "from-orange-500 to-red-500",
-              "from-green-500 to-emerald-500",
-              "from-indigo-500 to-blue-500",
-              "from-yellow-500 to-orange-500",
-              "from-red-500 to-pink-500",
-              "from-teal-500 to-green-500",
-              "from-pink-500 to-rose-500",
-            ]
-            const gradient = colors[index % colors.length]
-            const learnUrl = feature.learnMoreUrl?.trim()
-            const learnText = feature.learnMoreText?.trim()
-
-            const linkInner = (
-              <div className="mt-6 flex items-center text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-sm">{learnText}</span>
-                <svg
-                  className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            )
-
-            return (
-              <Card
-                key={feature.id}
-                className="group relative border-0 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 bg-white overflow-hidden"
-              >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}
-                ></div>
-
-                <CardContent className="p-8 relative z-10">
-                  <div className="relative mb-6">
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 rounded-2xl blur-xl group-hover:blur-2xl transition-all`}
-                    ></div>
-                    <div
-                      className={`relative w-16 h-16 bg-gradient-to-br ${gradient} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
-                    >
-                      <IconComponent className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
-
-                  {feature.title?.trim() ? (
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">
-                      {feature.title}
-                    </h3>
-                  ) : null}
-                  {feature.description?.trim() ? (
-                    <p className="text-base text-gray-600 leading-relaxed">{feature.description}</p>
-                  ) : null}
-
-                  {learnUrl && learnText ? <Link href={learnUrl}>{linkInner}</Link> : null}
-                </CardContent>
-              </Card>
-            )
-          })}
+    return (
+      <Card
+        key={feature.id}
+        className="group py-0 overflow-hidden rounded-2xl shadow-md hover:shadow-xl bg-white border-0 
+        transform transition-all duration-500 hover:-translate-y-2"
+      >
+        {/* IMAGE */}
+        <div className="h-60 w-full overflow-hidden">
+          {feature.icon ? (
+            <img
+              src={feature.icon}
+              alt={feature.title || "feature image"}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
+              No Image
+            </div>
+          )}
         </div>
+
+        {/* CONTENT */}
+        <CardContent className="px-5 py-3 mb-4 flex flex-col justify-between">
+          <div>
+            {feature.title?.trim() && (
+              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+                {feature.title}
+              </h3>
+            )}
+
+            {feature.description?.trim() && (
+              <p className="text-sm text-gray-600 line-clamp-3">
+                {feature.description}
+              </p>
+            )}
+          </div>
+
+          {/* LINK (animated) */}
+          {learnUrl && learnText && (
+            <Link
+              href={learnUrl}
+              className="
+                mt-2 inline-flex items-center text-blue-600 text-sm font-medium
+                opacity-0 translate-y-2
+                transition-all duration-500
+                group-hover:opacity-100 group-hover:translate-y-0
+              "
+            >
+              {learnText}
+              <span className="ml-1 transition-transform duration-300 group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
+          )}
+        </CardContent>
+      </Card>
+    )
+  })}
+</div>
       </div>
     </section>
   )

@@ -569,6 +569,14 @@ const quotationForPrint = {
           documentId={quotation._id || quotation.id || quotationId}
           defaultEmail={quotation.clientEmail || ""}
           defaultName={quotation.clientName || ""}
+          companyDetails={{
+            logo: companyDetailsForPrint.logo,
+            name: companyDetailsForPrint.companyName,
+            address: companyDetailsForPrint.address,
+            phone: companyDetailsForPrint.mobileNo1,
+            email: companyDetailsForPrint.email,
+            website: companyDetailsForPrint.website,
+          }}
         />
 
         <QuotationPrint

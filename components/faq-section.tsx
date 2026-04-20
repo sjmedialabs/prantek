@@ -29,9 +29,9 @@ export function FAQSection() {
   }
 
   return (
-    <section className="py-20 bg-white" id="faq">
+    <section className="py-6 bg-white" id="faq">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-8">
           {faqBadge ? (
             <div className="inline-block mb-4">
               <span className="text-sm font-semibold text-blue-600 uppercase tracking-wider bg-blue-50 px-4 py-2 rounded-full">
@@ -39,7 +39,7 @@ export function FAQSection() {
               </span>
             </div>
           ) : null}
-          {faqTitle ? <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">{faqTitle}</h2> : null}
+          {faqTitle ? <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-1">{faqTitle}</h2> : null}
           {faqSubtitle ? <p className="text-lg text-gray-600 max-w-2xl mx-auto">{faqSubtitle}</p> : null}
         </div>
 
@@ -47,10 +47,10 @@ export function FAQSection() {
           {faqs.map((faq, index) => (
             <Card
               key={faq.id || index}
-              className="border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+              className="border border-gray-200 shadow-sm overflow-hidden hover:shadow-md py-2 transition-shadow"
             >
               <button className="w-full text-left" onClick={() => setOpenIndex(openIndex === index ? null : index)}>
-                <CardContent className="p-4">
+                <CardContent className="px-4 py-2">
                   <div className="flex justify-between items-start gap-4">
                     <h3 className="font-semibold text-gray-900 text-base">{faq.question}</h3>
                     <ChevronDown
@@ -59,7 +59,7 @@ export function FAQSection() {
                       }`}
                     />
                   </div>
-                  {openIndex === index && <p className="text-gray-600 mt-3 leading-relaxed text-sm">{faq.answer}</p>}
+                  {openIndex === index && <p className="text-gray-600 leading-relaxed text-sm">{faq.answer}</p>}
                 </CardContent>
               </button>
             </Card>

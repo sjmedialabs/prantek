@@ -27,7 +27,7 @@ export function TestimonialsSection() {
   }
 
   return (
-    <section className="py-20 bg-gray-50" id="testimonials">
+    <section className="py-6 bg-gray-50" id="testimonials">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           {testimonialsTitle ? (

@@ -13,57 +13,61 @@ import { SubscriptionPlan } from "@/lib/models/types"
 import { json } from "node:stream/consumers"
 
   // Convert planFeatures to displayable feature list — merges BOTH sources
+  // const getPlanFeatures = (plan: SubscriptionPlan): string[] => {
+  //   const features: string[] = []
+
+  //   // 1. Derive labels from planFeatures boolean flags (if any)
+  //   const pf = plan.planFeatures
+  //   if (pf) {
+  //     if (pf.cashBook) features.push('Cash Book Management')
+  //     if (pf.clients) features.push('Client Management')
+  //     if (pf.vendors) features.push('Vendor Management')
+  //     if (pf.quotations) features.push('Quotation Management')
+  //     if (pf.salesInvoice) features.push('Sales Invoice')
+  //     if (pf.receipts) features.push('Receipt Management')
+  //     if (pf.purchaseInvoice) features.push('Purchase Invoice')
+  //     if (pf.payments) features.push('Payment Management')
+  //     if (pf.reconciliation) features.push('Reconciliation')
+  //     if (pf.assets) features.push('Asset Management')
+  //     if (pf.reports) features.push('Reports & Analytics')
+  //     if (pf.settings) features.push('Settings & Configuration')
+  //     if (pf.hrSettings) features.push('HR Settings')
+  //     if (pf.print) features.push('Print')
+  //     if (pf.pdf) features.push('PDF Export')
+  //     if (pf.csv) features.push('CSV Export')
+  //     if (pf.email) features.push('Email')
+  //     if (pf.backup) features.push('Backup')
+  //     // Communication suite features
+  //     if ((pf as any).clientGrouping) features.push('Client Grouping & Segmentation')
+  //     if ((pf as any).bulkEmail) features.push('Bulk Email Campaigns')
+  //     if ((pf as any).scheduledMessaging) features.push('Scheduled Messaging')
+  //     if ((pf as any).messageTemplates) features.push('Message Templates')
+  //     if ((pf as any).deliveryTracking) features.push('Delivery Tracking')
+  //     if ((pf as any).communicationMetrics) features.push('Communication Metrics')
+  //   }
+
+  //   // 2. Merge legacy features[] strings that aren't already covered
+  //   if (plan.features?.length) {
+  //     const lowerSet = new Set(features.map(f => f.toLowerCase()))
+  //     for (const f of plan.features) {
+  //       if (f && !lowerSet.has(f.toLowerCase())) {
+  //         features.push(f)
+  //       }
+  //     }
+  //   }
+
+  //   // 3. Add usage limits
+  //   if (plan.maxUsers) features.push(`Up to ${plan.maxUsers} Users`)
+  //   if (plan.maxClients) features.push(`Up to ${plan.maxClients} Clients`)
+  //   if (plan.maxReceipts) features.push(`Up to ${plan.maxReceipts} Receipts`)
+  //   if (plan.maxStorage) features.push(`${plan.maxStorage} Storage`)
+
+  //   return features
+  // }
+
   const getPlanFeatures = (plan: SubscriptionPlan): string[] => {
-    const features: string[] = []
-
-    // 1. Derive labels from planFeatures boolean flags (if any)
-    const pf = plan.planFeatures
-    if (pf) {
-      if (pf.cashBook) features.push('Cash Book Management')
-      if (pf.clients) features.push('Client Management')
-      if (pf.vendors) features.push('Vendor Management')
-      if (pf.quotations) features.push('Quotation Management')
-      if (pf.salesInvoice) features.push('Sales Invoice')
-      if (pf.receipts) features.push('Receipt Management')
-      if (pf.purchaseInvoice) features.push('Purchase Invoice')
-      if (pf.payments) features.push('Payment Management')
-      if (pf.reconciliation) features.push('Reconciliation')
-      if (pf.assets) features.push('Asset Management')
-      if (pf.reports) features.push('Reports & Analytics')
-      if (pf.settings) features.push('Settings & Configuration')
-      if (pf.hrSettings) features.push('HR Settings')
-      if (pf.print) features.push('Print')
-      if (pf.pdf) features.push('PDF Export')
-      if (pf.csv) features.push('CSV Export')
-      if (pf.email) features.push('Email')
-      if (pf.backup) features.push('Backup')
-      // Communication suite features
-      if ((pf as any).clientGrouping) features.push('Client Grouping & Segmentation')
-      if ((pf as any).bulkEmail) features.push('Bulk Email Campaigns')
-      if ((pf as any).scheduledMessaging) features.push('Scheduled Messaging')
-      if ((pf as any).messageTemplates) features.push('Message Templates')
-      if ((pf as any).deliveryTracking) features.push('Delivery Tracking')
-      if ((pf as any).communicationMetrics) features.push('Communication Metrics')
-    }
-
-    // 2. Merge legacy features[] strings that aren't already covered
-    if (plan.features?.length) {
-      const lowerSet = new Set(features.map(f => f.toLowerCase()))
-      for (const f of plan.features) {
-        if (f && !lowerSet.has(f.toLowerCase())) {
-          features.push(f)
-        }
-      }
-    }
-
-    // 3. Add usage limits
-    if (plan.maxUsers) features.push(`Up to ${plan.maxUsers} Users`)
-    if (plan.maxClients) features.push(`Up to ${plan.maxClients} Clients`)
-    if (plan.maxReceipts) features.push(`Up to ${plan.maxReceipts} Receipts`)
-    if (plan.maxStorage) features.push(`${plan.maxStorage} Storage`)
-
-    return features
-  }
+  return plan.features || []
+}
 
 export default function PlansPage() {
   const router = useRouter()
