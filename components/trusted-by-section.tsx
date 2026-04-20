@@ -25,7 +25,7 @@ export function TrustedBySection() {
   }
 
   return (
-    <section className="w-full bg-gradient-to-r from-gray-50 via-white to-gray-50 py-12 border-y border-gray-200">
+    <section className="w-full bg-gradient-to-r from-gray-50 via-white to-gray-50 py-6 border-y border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {title ? (
           <h2 className="pb-5 text-center text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 bg-clip-text text-transparent">
@@ -38,14 +38,14 @@ export function TrustedBySection() {
               {[...trustedLogos, ...trustedLogos].map((logo, index) => (
                 <div
                   key={index}
-                  className="text-3xl font-bold text-gray-400 whitespace-nowrap flex-shrink-0 hover:text-gray-600 transition-colors"
+                  className="text-3xl font-bold mb-2 text-gray-400 whitespace-nowrap flex-shrink-0 hover:text-gray-600 transition-colors"
                 >
                   {logo.logo?.trim() ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={logo.logo}
                       alt={logo.name?.trim() || "Partner"}
-                      className="h-30 object-contain border-radius-lg shadow-md"
+                      className="h-20 object-contain border-radius-lg shadow-md"
                     />
                   ) : (
                     logo.name
