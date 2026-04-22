@@ -7,8 +7,9 @@ import { sendEmail } from "@/lib/email/sendEmail"
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "MyCashLedger"
 
 export async function POST(request: NextRequest) {
+  console.log("[SEND-DOC-EMAIL] Request:", request)
   try {
-    const { documentType, documentId, recipientEmail, recipientName, tenantId } = await request.json()
+    const { documentType, documentId, recipientEmail, recipientName, tenantId, companyDetails } = await request.json()
 
     if (!documentType || !documentId || !recipientEmail) {
       return NextResponse.json(
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Map documentType to collection
     const collectionMap: Record<string, string> = {
-      salesInvoice: Collections.SALES_INVOICES || "salesInvoices",
+      salesInvoice: Collections.SALES_CATEGORIES || "salesInvoices",
       receipt: Collections.RECEIPTS || "receipts",
       purchaseInvoice: Collections.PURCHASE_INVOICES || "purchaseInvoices",
       payment: Collections.PAYMENTS || "payments",
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (!doc) {
       return NextResponse.json({ success: false, error: "Document not found" }, { status: 404 })
     }
-
+    console.log("[SEND-DOC-EMAIL] Document data:", doc)
     // Build email content based on document type
     const typeLabels: Record<string, string> = {
       salesInvoice: "Sales Invoice",
@@ -52,13 +53,13 @@ export async function POST(request: NextRequest) {
     const totalAmount = doc.grandTotal ?? doc.total ?? doc.ReceiptAmount ?? doc.amount ?? 0
     const date = doc.date || doc.invoiceDate || doc.createdAt
     const company = doc.companyDetails || {}
-
-const companyName = company.name || ""
-const companyLogo = company.logo || ""
-const companyAddress = company.address || ""
-const companyPhone = company.phone || ""
-const companyEmail = company.email || ""
-const companyWebsite = company.website || ""
+    console.log("[SEND-DOC-EMAIL] Company details from document:", company , "Company details from request:", companyDetails)
+const companyName = company.name || companyDetails?.name || ""
+const companyLogo = company.logo || companyDetails?.logo || ""
+const companyAddress = company.address || companyDetails?.address || ""
+const companyPhone = company.phone || companyDetails?.phone || ""
+const companyEmail = company.email || companyDetails?.email || ""
+const companyWebsite = company.website || companyDetails?.website || ""
     const html = `
 <!DOCTYPE html>
 <html>

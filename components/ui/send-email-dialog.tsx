@@ -50,6 +50,13 @@ export function SendEmailDialog({
       return
     }
     setSending(true)
+    console.log("Sending email with details:", {
+      documentType,
+      documentId,
+      recipientEmail: email,
+      recipientName: defaultName,
+      companyDetails,
+    })
     try {
       const res = await fetch("/api/send-document-email", {
         method: "POST",
