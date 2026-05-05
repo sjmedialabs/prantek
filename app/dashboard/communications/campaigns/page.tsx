@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [sending, setSending] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState({ name: "", subject: "", content: "", audience: "all", groupId: "", scheduledAt: "" })
+  const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 
   useEffect(() => {
     Promise.all([
@@ -36,6 +37,13 @@ export default function CampaignsPage() {
 
   const handleSend = async (action: "send" | "schedule") => {
     if (!form.name || !form.content) { toast.error("Name and content required"); return }
+    if (action === "schedule") {
+      if (!form.scheduledAt) { toast.error("Scheduled time is required"); return }
+      if (new Date(form.scheduledAt).getTime() <= Date.now()) {
+        toast.error("Please select a future scheduled time")
+        return
+      }
+    }
     setSending(true)
     try {
       const r = await fetch("/api/campaigns", {
@@ -53,8 +61,14 @@ export default function CampaignsPage() {
   }
 
   const applyTemplate = (templateId: string) => {
-    const t = templates.find(t => t._id === templateId)
-    if (t) setForm({ ...form, subject: t.subject || t.name, content: t.content })
+    const t = templates.find((tpl: any) => String(tpl._id || tpl.id) === String(templateId))
+    if (t) {
+      setForm((prev) => ({
+        ...prev,
+        subject: t.subject || t.name || prev.subject,
+        content: t.content || "",
+      }))
+    }
   }
 
   const statusColors: Record<string, string> = { sent: "bg-green-100 text-green-800", draft: "bg-gray-100 text-gray-800", scheduled: "bg-blue-100 text-blue-800", sending: "bg-yellow-100 text-yellow-800", failed: "bg-red-100 text-red-800" }
@@ -95,7 +109,16 @@ export default function CampaignsPage() {
             {templates.length > 0 && (
               <div className="space-y-2"><Label>Use Template</Label>
                 <Select onValueChange={applyTemplate}><SelectTrigger><SelectValue placeholder="Select a template" /></SelectTrigger>
-                  <SelectContent>{templates.map(t => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {templates.map((t: any) => {
+                      const templateId = String(t._id || t.id)
+                      return (
+                        <SelectItem key={templateId} value={templateId}>
+                          {t.name}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
                 </Select></div>
             )}
             <div className="space-y-2"><Label>Subject</Label><Input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} /></div>
@@ -127,7 +150,15 @@ export default function CampaignsPage() {
                   </Select></div>
               )}
             </div>
-            <div className="space-y-2"><Label>Schedule (leave empty to send now)</Label><Input type="datetime-local" value={form.scheduledAt} onChange={e => setForm({ ...form, scheduledAt: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Schedule (leave empty to send now)</Label>
+              <Input
+                type="datetime-local"
+                min={nowLocal}
+                value={form.scheduledAt}
+                onChange={e => setForm({ ...form, scheduledAt: e.target.value })}
+              />
+            </div>
             <div className="flex gap-2">
               <Button onClick={() => handleSend("send")} disabled={sending} className="flex-1">{sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Send className="h-4 w-4 mr-2" />Send Now</>}</Button>
               {form.scheduledAt && <Button variant="outline" onClick={() => handleSend("schedule")} disabled={sending} className="flex-1">Schedule</Button>}

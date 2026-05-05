@@ -44,6 +44,11 @@ export default function SubscriptionPlansPage() {
     name: "",
     price: 0,
     billingCycle: ["monthly", "yearly"],
+    isPayAsYouGo: false,
+    minTopupAmount: 0,
+    costPerEmailCampaign: 0,
+    costPerBulkMessageCampaign: 0,
+    taxIncluded: false,
     maxUsers: 0,
     maxStorage: "",
     features: [] as string[],
@@ -56,6 +61,12 @@ export default function SubscriptionPlansPage() {
   const [users,setUsers]=useState<any>([]);
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [yearlyDiscount, setYearlyDiscount] = useState(17);
+  const [reachProConfig, setReachProConfig] = useState<any>({
+    minTopupAmount: 500,
+    taxIncluded: false,
+    isActive: true,
+    reachProPricingRanges: [] as Array<{ minAmount: number; maxAmount: number; costPerMail: number }>,
+  })
 
   useEffect(() => {
     loadPlans()
@@ -95,6 +106,16 @@ export default function SubscriptionPlansPage() {
     })
     
     setPlans(enrichedPlans)
+    const rp = enrichedPlans.find((p: any) => p.isReachPro || p.isPayAsYouGo || String(p.name || "").toLowerCase() === "reachpro")
+    if (rp) {
+      setReachProConfig({
+        minTopupAmount: Number(rp.minTopupAmount || 500),
+        taxIncluded: Boolean(rp.taxIncluded),
+        isActive: Boolean(rp.isActive),
+        reachProPricingRanges: Array.isArray(rp.reachProPricingRanges) ? rp.reachProPricingRanges : [],
+        id: rp._id || rp.id,
+      })
+    }
     setUsers(loadusers)
     setLoading(false)
   }
@@ -114,8 +135,13 @@ export default function SubscriptionPlansPage() {
     const newErrors: Record<string, string> = {}
     
     if (!newPlan.name.trim()) newErrors.name = "Plan name is required"
-    if (!newPlan.price || newPlan.price <= 0) newErrors.price = "Price must be greater than 0"
-    if (!newPlan.billingCycle) newErrors.billingCycle = "Billing cycle is required"
+    const isReachPro = newPlan.isPayAsYouGo || newPlan.name.trim().toLowerCase() === "reachpro"
+    if (!isReachPro) {
+      if (!newPlan.price || newPlan.price <= 0) newErrors.price = "Price must be greater than 0"
+      if (!newPlan.billingCycle) newErrors.billingCycle = "Billing cycle is required"
+    } else if (!newPlan.minTopupAmount || newPlan.minTopupAmount <= 0) {
+      newErrors.minTopupAmount = "Minimum topup amount must be greater than 0"
+    }
     if (!newPlan.maxUsers || newPlan.maxUsers <= 0) newErrors.maxUsers = "Max users must be greater than 0"
     if (!newPlan.maxStorage || !newPlan.maxStorage.trim()) newErrors.maxStorage = "Storage limit is required"
     if (newPlan.features.length === 0) newErrors.features = "At least one feature is required"
@@ -173,6 +199,11 @@ export default function SubscriptionPlansPage() {
       name: plan.name,
       price: plan.price,
       billingCycle: ["monthly", "yearly"],
+      isPayAsYouGo: Boolean(plan.isPayAsYouGo),
+      minTopupAmount: Number(plan.minTopupAmount || 0),
+      costPerEmailCampaign: Number(plan.costPerEmailCampaign || 0),
+      costPerBulkMessageCampaign: Number(plan.costPerBulkMessageCampaign || 0),
+      taxIncluded: Boolean(plan.taxIncluded),
       maxUsers: plan.maxUsers,
       maxStorage: plan.maxStorage,
       features: plan.features || [],
@@ -213,6 +244,11 @@ export default function SubscriptionPlansPage() {
       name: "",
       price: 0,
       billingCycle: ["monthly", "yearly"],
+      isPayAsYouGo: false,
+      minTopupAmount: 0,
+      costPerEmailCampaign: 0,
+      costPerBulkMessageCampaign: 0,
+      taxIncluded: false,
       maxUsers: 0,
       maxStorage: "",
       features: [],
@@ -241,10 +277,50 @@ export default function SubscriptionPlansPage() {
   )
 
   const totalRevenue = calculateTotalRevenue()
+  const nonReachProPlans = filteredPlans.filter((plan) => !(plan.isReachPro || plan.isPayAsYouGo || String(plan.name || "").toLowerCase() === "reachpro"))
 
   const totalSubscribers = users.filter((user: any) => user.userType === "subscriber" && user.role !== "super-admin" && user.subscriptionPlanId).length;
 
   const activePlans = plans.filter((plan) => plan.isActive).length
+
+  const validateReachProRanges = () => {
+    const ranges = [...(reachProConfig.reachProPricingRanges || [])]
+      .map((r: any) => ({ minAmount: Number(r.minAmount), maxAmount: Number(r.maxAmount), costPerMail: Number(r.costPerMail) }))
+      .sort((a, b) => a.minAmount - b.minAmount)
+    for (let i = 0; i < ranges.length; i++) {
+      const r = ranges[i]
+      if (!(r.minAmount < r.maxAmount) || r.costPerMail <= 0) return "Invalid range values"
+      const prev = ranges[i - 1]
+      if (prev && r.minAmount <= prev.maxAmount) return "Ranges overlap"
+    }
+    return null
+  }
+
+  const handleSaveReachProConfig = async () => {
+    const validationError = validateReachProRanges()
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+    if (!reachProConfig.id) {
+      toast.error("ReachPro plan not found. Create ReachPro first.")
+      return
+    }
+    await api.subscriptionPlans.update(reachProConfig.id, {
+      isReachPro: true,
+      isPayAsYouGo: true,
+      minTopupAmount: Number(reachProConfig.minTopupAmount || 0),
+      taxIncluded: Boolean(reachProConfig.taxIncluded),
+      isActive: Boolean(reachProConfig.isActive),
+      reachProPricingRanges: (reachProConfig.reachProPricingRanges || []).map((r: any) => ({
+        minAmount: Number(r.minAmount || 0),
+        maxAmount: Number(r.maxAmount || 0),
+        costPerMail: Number(r.costPerMail || 0),
+      })),
+    })
+    toast.success("ReachPro configuration updated")
+    loadPlans()
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>
@@ -282,34 +358,81 @@ export default function SubscriptionPlansPage() {
                 />
                 {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
               </div>
+              <div className="flex items-center justify-between">
+                <Label>Pay As You Go</Label>
+                <Switch
+                  checked={newPlan.isPayAsYouGo}
+                  onCheckedChange={(checked) => setNewPlan({ ...newPlan, isPayAsYouGo: checked })}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Price (₹) *</Label>
-                  <Input
-                    type="number"
-                    placeholder="Price"
-                    value={newPlan.price || ""}
-                    onChange={(e) => setNewPlan({ ...newPlan, price: Number(e.target.value) })}
-                    className={errors.price ? "border-red-500" : ""}
-                  />
-                  {errors.price && <p className="text-sm text-red-500 mt-1">{errors.price}</p>}
-                </div>
-                <div>
-                  <Label>Billing Cycle *</Label>
-                  <Select
-                    value={newPlan.billingCycle}
-                    onValueChange={(value) => setNewPlan({ ...newPlan, billingCycle: value })}
-                  >
-                    <SelectTrigger className={errors.billingCycle ? "border-red-500" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.billingCycle && <p className="text-sm text-red-500 mt-1">{errors.billingCycle}</p>}
-                </div>
+                {!(newPlan.isPayAsYouGo || newPlan.name.trim().toLowerCase() === "reachpro") ? (
+                  <>
+                    <div>
+                      <Label>Price (₹) *</Label>
+                      <Input
+                        type="number"
+                        placeholder="Price"
+                        value={newPlan.price || ""}
+                        onChange={(e) => setNewPlan({ ...newPlan, price: Number(e.target.value) })}
+                        className={errors.price ? "border-red-500" : ""}
+                      />
+                      {errors.price && <p className="text-sm text-red-500 mt-1">{errors.price}</p>}
+                    </div>
+                    <div>
+                      <Label>Billing Cycle *</Label>
+                      <Select
+                        value={newPlan.billingCycle}
+                        onValueChange={(value) => setNewPlan({ ...newPlan, billingCycle: value })}
+                      >
+                        <SelectTrigger className={errors.billingCycle ? "border-red-500" : ""}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.billingCycle && <p className="text-sm text-red-500 mt-1">{errors.billingCycle}</p>}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <Label>Minimum Topup Amount (₹) *</Label>
+                      <Input
+                        type="number"
+                        value={newPlan.minTopupAmount || ""}
+                        onChange={(e) => setNewPlan({ ...newPlan, minTopupAmount: Number(e.target.value) })}
+                        className={errors.minTopupAmount ? "border-red-500" : ""}
+                      />
+                      {errors.minTopupAmount && <p className="text-sm text-red-500 mt-1">{errors.minTopupAmount}</p>}
+                    </div>
+                    <div>
+                      <Label>Email Campaign Cost (₹)</Label>
+                      <Input
+                        type="number"
+                        value={newPlan.costPerEmailCampaign}
+                        onChange={(e) => setNewPlan({ ...newPlan, costPerEmailCampaign: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Bulk Message Campaign Cost (₹)</Label>
+                      <Input
+                        type="number"
+                        value={newPlan.costPerBulkMessageCampaign}
+                        onChange={(e) => setNewPlan({ ...newPlan, costPerBulkMessageCampaign: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-6">
+                      <Label>Tax Included</Label>
+                      <Switch
+                        checked={newPlan.taxIncluded}
+                        onCheckedChange={(checked) => setNewPlan({ ...newPlan, taxIncluded: checked })}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -409,6 +532,7 @@ export default function SubscriptionPlansPage() {
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all">All Plans</TabsTrigger>
+          <TabsTrigger value="reachpro">ReachPro Wallet</TabsTrigger>
           <TabsTrigger value="features">Feature Management</TabsTrigger>
         </TabsList>
         <TabsContent value="all" className="space-y-4">
@@ -437,14 +561,20 @@ export default function SubscriptionPlansPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPlans.map((plan) => (
+                {nonReachProPlans.map((plan) => (
                   <TableRow key={plan._id || plan.id}>
                     <TableCell>
                       <div className="font-medium">{plan.name}</div>
                     </TableCell>
                     <TableCell>
-                      <div>₹{plan.price}</div>
-                      <div className="text-sm text-gray-500">per {plan.billingCycle}</div>
+                      {plan.isPayAsYouGo || String(plan.name || "").toLowerCase() === "reachpro" ? (
+                        <div className="text-sm font-medium">Pay as you go</div>
+                      ) : (
+                        <>
+                          <div>₹{plan.price}</div>
+                          <div className="text-sm text-gray-500">per {plan.billingCycle}</div>
+                        </>
+                      )}
                     </TableCell>
                     <TableCell>{plan.subscriberCount || 0}</TableCell>
                     <TableCell>₹{(plan.revenue || 0).toLocaleString()}</TableCell>
@@ -499,6 +629,113 @@ export default function SubscriptionPlansPage() {
                 ))}
               </TableBody>
             </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reachpro" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>ReachPro Configuration</CardTitle>
+              <CardDescription>Configure wallet topup rules and range-based cost per mail</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Minimum Topup Amount</Label>
+                  <Input
+                    type="number"
+                    value={reachProConfig.minTopupAmount}
+                    onChange={(e) => setReachProConfig({ ...reachProConfig, minTopupAmount: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-6">
+                  <Label>Tax Included</Label>
+                  <Switch
+                    checked={reachProConfig.taxIncluded}
+                    onCheckedChange={(checked) => setReachProConfig({ ...reachProConfig, taxIncluded: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-6">
+                  <Label>Active</Label>
+                  <Switch
+                    checked={reachProConfig.isActive}
+                    onCheckedChange={(checked) => setReachProConfig({ ...reachProConfig, isActive: checked })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Pricing Ranges</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setReachProConfig({
+                        ...reachProConfig,
+                        reachProPricingRanges: [
+                          ...(reachProConfig.reachProPricingRanges || []),
+                          { minAmount: 0, maxAmount: 0, costPerMail: 0.1 },
+                        ],
+                      })
+                    }
+                  >
+                    Add Range
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {(reachProConfig.reachProPricingRanges || []).map((range: any, index: number) => (
+                    <div key={index} className="grid grid-cols-4 gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min amount"
+                        value={range.minAmount}
+                        onChange={(e) => {
+                          const updated = [...reachProConfig.reachProPricingRanges]
+                          updated[index] = { ...updated[index], minAmount: Number(e.target.value) }
+                          setReachProConfig({ ...reachProConfig, reachProPricingRanges: updated })
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max amount"
+                        value={range.maxAmount}
+                        onChange={(e) => {
+                          const updated = [...reachProConfig.reachProPricingRanges]
+                          updated[index] = { ...updated[index], maxAmount: Number(e.target.value) }
+                          setReachProConfig({ ...reachProConfig, reachProPricingRanges: updated })
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Cost per mail"
+                        value={range.costPerMail}
+                        onChange={(e) => {
+                          const updated = [...reachProConfig.reachProPricingRanges]
+                          updated[index] = { ...updated[index], costPerMail: Number(e.target.value) }
+                          setReachProConfig({ ...reachProConfig, reachProPricingRanges: updated })
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const updated = [...reachProConfig.reachProPricingRanges]
+                          updated.splice(index, 1)
+                          setReachProConfig({ ...reachProConfig, reachProPricingRanges: updated })
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSaveReachProConfig}>Save ReachPro Config</Button>
+              </div>
+            </CardContent>
           </Card>
         </TabsContent>
 

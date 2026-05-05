@@ -28,16 +28,20 @@ export default function PaymentPage() {
   const email = searchParams.get("email") || ""
   const companyName = searchParams.get("company") || ""
   const planAmount = searchParams.get("amount") || "0"
+  const actualPlanAmount = searchParams.get("actualPlanAmount") || "0"
   const billingCycle = searchParams.get("billingCycle") || "monthly"
+  const isPayAsYouGo = searchParams.get("isPayAsYouGo") === "1"
+  const topupBase = Number(searchParams.get("topupBase") || 0)
+  const topupTax = Number(searchParams.get("topupTax") || 0)
 
   // For trial period: charge only ₹1, but store the actual plan amount
-  const trialAmount = 1 // ₹1 for trial
+  const trialAmount = Number(planAmount || 0) // This is the amount to pay today (₹1 + ReachPro topup)
   const selectedPlan = {
     name: plan.charAt(0).toUpperCase() + plan.slice(1) + " Plan",
     trialPrice: trialAmount * 100, // ₹1 in paise for trial
-    actualPrice: parseInt(planAmount) * 100, // Actual plan price in paise
+    actualPrice: parseInt(actualPlanAmount) * 100, // Actual plan price in paise
     displayTrialPrice: `₹${trialAmount}`,
-    displayActualPrice: `₹${planAmount}`,
+    displayActualPrice: `₹${actualPlanAmount}`,
     billingCycle: billingCycle === 'yearly' ? 'year' : 'month'
   }
 
@@ -76,7 +80,7 @@ export default function PaymentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: 1, // ₹1 for trial
+          amount: trialAmount,
           currency: "INR",
           name: companyName || "Customer",
           email: email || "",
@@ -102,7 +106,9 @@ export default function PaymentPage() {
         order_id: checkoutData.orderId,
         customer_id: checkoutData.customerId,
         name: "Prantek Academy",
-        description: `${selectedPlan.name} - ${trialDays} Day Trial (₹1)`,
+        description: planId && topupBase > 0
+          ? `Trial + ReachPro Recharge` // Both plan and ReachPro selected
+          : isPayAsYouGo ? `ReachPro Wallet Recharge` : `${selectedPlan.name} Trial`,
         image: "https://31.97.224.169:9080/images/prantek-logo.png",
         prefill: {
           name: companyName,
@@ -155,8 +161,14 @@ export default function PaymentPage() {
       tempdate.setDate(tempdate.getDate() + trialDays);
       const updatedSignupData ={
         ...signupData,
-        trialEndDate: tempdate,
-        subscriptionEndDate: tempdate
+        trialEndDate: planId ? tempdate : undefined, // Set trial end date if a plan is selected
+        subscriptionEndDate: planId ? tempdate : undefined, // Set subscription end date if a plan is selected
+        reachProEnabled: topupBase > 0,
+        reachProTopupAmount: topupBase,
+        reachProTaxAmount: topupTax,
+        walletBalance: topupBase,
+        totalRechargeAmount: topupBase,
+        lastRechargeAt: topupBase > 0 ? new Date().toISOString() : undefined,
       }
       console.log("[v0] Found pending signup data, creating account...")
       console.log("[v0] Updated signup data:", updatedSignupData)
@@ -264,12 +276,22 @@ export default function PaymentPage() {
             <div className="border-t border-blue-200 pt-3 mt-2">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-semibold text-green-800">Trial Payment (Today)</span>
+                  <span className="text-sm font-semibold text-green-800">
+                    {isPayAsYouGo ? "Recharge Payment" : planId ? "Trial + Recharge" : "Payment"} (Today)
+                  </span>
                   <span className="text-xl font-bold text-green-600">{selectedPlan.displayTrialPrice}</span>
                 </div>
-                <p className="text-xs text-green-700">Start your {trialDays}-day free trial with just ₹1</p>
+                <p className="text-xs text-green-700">
+                  {isPayAsYouGo ? "ReachPro wallet will be credited after payment success." : planId ? `Start ${trialDays}-day trial (₹1) + ReachPro topup` : "Payment processed via Razorpay"}
+                </p>
               </div>
-              <div className="flex justify-between items-center">
+              {(isPayAsYouGo || topupBase > 0) && (
+                <div className="text-xs text-gray-600">
+                  Wallet credit: ₹{topupBase.toLocaleString()} {topupTax > 0 ? `| Tax: ₹${topupTax.toLocaleString()}` : ""}
+                </div>
+              )}
+              {planId && (
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-blue-200">
                 <div>
                   <span className="text-sm font-semibold text-gray-700">Plan Amount</span>
                   <p className="text-xs text-gray-500">Auto-debit(with 18% GST) after trial ends</p>
@@ -284,6 +306,7 @@ export default function PaymentPage() {
                   )}
                 </div>
               </div>
+              )}
             </div>
           </div>
 
@@ -302,7 +325,7 @@ export default function PaymentPage() {
             ) : (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Pay {selectedPlan.displayTrialPrice} - Start Trial
+                {isPayAsYouGo ? `Pay ${selectedPlan.displayTrialPrice} - Add Wallet Balance` : `Pay ${selectedPlan.displayTrialPrice} - Start Trial`}
               </>
             )}
           </Button>

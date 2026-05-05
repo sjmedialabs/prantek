@@ -3,6 +3,40 @@ import { NextRequest } from "next/server"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
+import { normalizePlanName } from "@/lib/reachpro"
+
+function withPayAsYouGoDefaults(input: any) {
+  const isReachProByName = normalizePlanName(input?.name) === "reachpro"
+  const isPayAsYouGo = Boolean(input?.isPayAsYouGo) || isReachProByName
+  const reachProPricingRanges = Array.isArray(input?.reachProPricingRanges)
+    ? input.reachProPricingRanges.map((r: any) => ({
+        minAmount: Number(r?.minAmount || 0),
+        maxAmount: Number(r?.maxAmount || 0),
+        costPerMail: Number(r?.costPerMail || 0),
+      }))
+    : []
+  return {
+    ...input,
+    isReachPro: isReachProByName || Boolean(input?.isReachPro),
+    isPayAsYouGo,
+    minTopupAmount: Number(input?.minTopupAmount || 0),
+    costPerEmailCampaign: Number(input?.costPerEmailCampaign || 0),
+    costPerBulkMessageCampaign: Number(input?.costPerBulkMessageCampaign || 0),
+    taxIncluded: Boolean(input?.taxIncluded),
+    reachProPricingRanges,
+  }
+}
+
+function validateReachProRanges(ranges: Array<{ minAmount: number; maxAmount: number; costPerMail: number }>) {
+  const sorted = [...ranges].sort((a, b) => a.minAmount - b.minAmount)
+  for (let i = 0; i < sorted.length; i++) {
+    const r = sorted[i]
+    if (!(r.minAmount < r.maxAmount) || r.costPerMail <= 0) return "Invalid ReachPro pricing ranges."
+    const prev = sorted[i - 1]
+    if (prev && r.minAmount <= prev.maxAmount) return "ReachPro pricing ranges must not overlap."
+  }
+  return null
+}
 
 export async function GET() {
   try {
@@ -26,8 +60,13 @@ export async function POST(request: NextRequest) {
     const db = await connectDB()
     const data = await request.json()
     
+    const normalized = withPayAsYouGoDefaults(data)
+    if (normalized.isReachPro || normalized.isPayAsYouGo) {
+      const err = validateReachProRanges(normalized.reachProPricingRanges || [])
+      if (err) return NextResponse.json({ success: false, error: err }, { status: 400 })
+    }
     const newPlan = {
-      ...data,
+      ...normalized,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -55,9 +94,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Plan ID is required" }, { status: 400 })
     }
     
+    const normalized = withPayAsYouGoDefaults(updateData)
+    if (normalized.isReachPro || normalized.isPayAsYouGo) {
+      const err = validateReachProRanges(normalized.reachProPricingRanges || [])
+      if (err) return NextResponse.json({ success: false, error: err }, { status: 400 })
+    }
     const result = await db.collection(Collections.SUBSCRIPTION_PLANS).updateOne(
       { _id: new ObjectId(id) },
-      { $set: { ...updateData, updatedAt: new Date() } }
+      { $set: { ...normalized, updatedAt: new Date() } }
     )
     
     if (result.matchedCount === 0) {

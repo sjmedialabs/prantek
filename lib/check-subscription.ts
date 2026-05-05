@@ -7,6 +7,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "./mongodb"
 import { Collections } from "./db-config"
 import { ObjectId } from "mongodb"
+import { isReachProPlan } from "./reachpro"
 
 export const SUBSCRIPTION_REQUIRED_MESSAGE = "Subscription required"
 
@@ -20,6 +21,15 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
   })
   if (!user) return false
   if (user.role === "super-admin") return true
+
+  if (user.subscriptionPlanId && ObjectId.isValid(String(user.subscriptionPlanId))) {
+    const plan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({
+      _id: new ObjectId(String(user.subscriptionPlanId)),
+    })
+    if (isReachProPlan(plan)) {
+      return Number(user.walletBalance || 0) > 0
+    }
+  }
 
   const status = user.subscriptionStatus
   if (!status || status === "inactive" || status === "expired" || status === "payment_failed") return false

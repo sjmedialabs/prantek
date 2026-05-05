@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 import { PLAN_FEATURE_KEYS } from "@/lib/models/types"
+import { REACHPRO_FEATURES, getReachProWallet } from "@/lib/reachpro-wallet"
 
 /**
  * GET /api/user/plan-features
@@ -40,36 +41,50 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       })
     }
 
+    const wallet = await getReachProWallet(user.userId)
+    const hasReachProWallet = Boolean(wallet && Number(wallet.balance || 0) > 0)
+
     // Check if user has active subscription
     const hasActiveSubscription = user.subscriptionPlanId && 
       (user.subscriptionStatus === "active" || user.subscriptionStatus === "trial" ||
        (user.subscriptionStatus === "cancelled" && user.subscriptionEndDate && new Date(user.subscriptionEndDate) >= new Date()))
 
-    // If no active subscription, return only basic features
+    // If no active subscription, allow only communication suite when ReachPro wallet exists
     if (!hasActiveSubscription || !user.subscriptionPlanId) {
+      const baseFeatures: Record<string, boolean> = {
+        dashboard: true,
+        cashBook: false,
+        clients: false,
+        vendors: false,
+        quotations: false,
+        salesInvoice: false,
+        receipts: false,
+        purchaseInvoice: false,
+        payments: false,
+        reconciliation: false,
+        assets: false,
+        reports: false,
+        settings: false,
+        hrSettings: false,
+        print: false,
+        pdf: false,
+        csv: false,
+        email: false,
+        backup: false,
+        clientGrouping: false,
+        bulkEmail: false,
+        bulkWhatsapp: false,
+        scheduledMessaging: false,
+        messageTemplates: false,
+        deliveryTracking: false,
+        communicationMetrics: false,
+      }
+      if (hasReachProWallet) {
+        for (const key of REACHPRO_FEATURES) baseFeatures[key] = true
+      }
       return NextResponse.json({
         success: true,
-        planFeatures: {
-          dashboard: true,
-          cashBook: true,  // Always available
-          clients: false,
-          vendors: false,
-          quotations: false,
-          salesInvoice: false,
-          receipts: false,
-          purchaseInvoice: false,
-          payments: false,
-          reconciliation: false,
-          assets: false,
-          reports: false,
-          settings: false,
-          hrSettings: false,
-          print: false,
-          pdf: false,
-          csv: false,
-          email: false,
-          backup: false
-        },
+        planFeatures: baseFeatures,
         hasActiveSubscription: false
       })
     }
@@ -127,6 +142,17 @@ export const GET = withAuth(async (req: NextRequest, user: any) => {
       // Legacy plan: no planFeatures object — grant full access
       for (const key of PLAN_FEATURE_KEYS) {
         planFeatures[key] = true
+      }
+    }
+
+    // ReachPro works as an add-on for communication suite even with any subscription plan
+    if (hasReachProWallet) {
+      for (const key of REACHPRO_FEATURES) {
+        planFeatures[key] = true
+      }
+    } else {
+      for (const key of REACHPRO_FEATURES) {
+        planFeatures[key] = false
       }
     }
 

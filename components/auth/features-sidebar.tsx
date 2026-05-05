@@ -29,6 +29,12 @@ interface FeaturesSidebarProps {
     billingCycle?: string;
     features: string[];
   } | null;
+  reachProPlan?: {
+    name: string;
+    price: number;
+    billingCycle?: string;
+    features: string[];
+  } | null;
 }
 
 // Map feature keywords to icons
@@ -71,7 +77,7 @@ const getFeatureIcon = (feature: string) => {
   return Check;
 };
 
-export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
+export function FeaturesSidebar({ selectedPlan, reachProPlan }: FeaturesSidebarProps = {}) {
    const [content, setContent] = useState<WebsiteContent | null>(null)
   
     useEffect(() => {
@@ -139,6 +145,12 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
     amber: { bg: "bg-amber-100", text: "text-amber-600" },
   };
 
+  const hasSelection = !!selectedPlan || !!reachProPlan;
+  const combinedFeatures = [
+    ...(selectedPlan?.features || []),
+    ...(reachProPlan?.features || [])
+  ];
+
   return (
     <div
       className="hidden lg:flex lg:w-1/2 bg-cover bg-center p-6 xl:p-8 flex-col fixed left-0 top-0 h-screen overflow-hidden"
@@ -162,10 +174,11 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
           </div>
 
           <div className="space-y-3 flex-shrink-0">
-            {selectedPlan ? (
-              <div>
+            {hasSelection ? (
+              <div className="space-y-2">
+                {selectedPlan && (
                 <div
-                  className="relative rounded-xl overflow-hidden p-3 mb-3 shadow-lg border-2 border-blue-200"
+                  className="relative rounded-xl overflow-hidden p-3 shadow-lg border-2 border-blue-200"
                   style={{
                     backgroundImage:
                       "url('https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&auto=format&fit=crop')",
@@ -200,6 +213,44 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
                     </div>
                   </div>
                 </div>
+                )}
+
+                {reachProPlan && (
+                  <div
+                    className="relative rounded-xl overflow-hidden p-3 shadow-lg border-2 border-emerald-200"
+                    style={{
+                      backgroundImage:
+                        "url('https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&auto=format&fit=crop')",
+                    }}
+                  >
+                    {/* Light overlay with blur */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/95 to-white/95 backdrop-blur-sm"></div>
+
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                            <Zap className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide block">
+                              Add-on Selected
+                            </span>
+                            <h1 className="text-base font-extrabold text-gray-900 truncate">
+                              {reachProPlan.name}
+                            </h1>
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-0.5 flex-shrink-0">
+                          <span className="text-2xl font-bold text-gray-900">
+                            ₹{reachProPlan.price.toLocaleString()}
+                          </span>
+                          <span className="text-gray-600 text-xs">/topup</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <h2 className="text-xs font-bold text-gray-900 mb-2 uppercase tracking-wide">
                   What's Included
                 </h2>
@@ -218,10 +269,10 @@ export function FeaturesSidebar({ selectedPlan }: FeaturesSidebarProps = {}) {
 
           {/* Feature List - Scrollable */}
           <div className="flex-1 min-h-0 mt-2 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-            {selectedPlan ? (
+            {hasSelection ? (
               // Show selected plan's features in responsive columns
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 pb-4">
-                {selectedPlan.features.map((feature, index) => {
+                {combinedFeatures.map((feature, index) => {
                   const colors = [
                     "blue",
                     "green",

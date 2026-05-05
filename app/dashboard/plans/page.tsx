@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, ArrowLeft, Crown, TrendingUp } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Check, ArrowLeft, Crown, TrendingUp, Wallet, Zap, Info } from "lucide-react"
 import { api } from "@/lib/api-client"
 import { useUser } from "@/components/auth/user-context"
 import Link from "next/link"
 import { SubscriptionPlan } from "@/lib/models/types"
-import { json } from "node:stream/consumers"
+
+
+declare global {
+  interface Window {
+    Razorpay: any
+  }
+}
 
   // Convert planFeatures to displayable feature list — merges BOTH sources
   // const getPlanFeatures = (plan: SubscriptionPlan): string[] => {
@@ -80,10 +87,15 @@ const { user } = useUser();
 //   }
 // }, [user]);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
+  const [reachProPlan, setReachProPlan] = useState<SubscriptionPlan | null>(null)
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [yearlyDiscount, setYearlyDiscount] = useState(17);
+  const [reachProAmount, setReachProAmount] = useState(0)
+  const [reachProMeta, setReachProMeta] = useState<any>(null)
+  const [reachProTransactions, setReachProTransactions] = useState<any[]>([])
+
   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
  
   const loginedUserLocalStorage = loginedUserLocalStorageString
@@ -94,13 +106,32 @@ const { user } = useUser();
       try {
         const plans = await api.subscriptionPlans.getAll()
         const activeUser = await api.users.getById(loginedUserLocalStorage.id);
- setCurrentUser(activeUser);
+        setCurrentUser(activeUser);
         const activePlans = plans.filter((p: any) => p.isActive)
-                const currentPlan = plans.find((eachItem: any) =>
+
+        // Separate ReachPro plan from regular plans
+        const rpPlan = activePlans.find((p: any) =>
+          String(p.name || "").toLowerCase() === "reachpro" || p.isPayAsYouGo
+        ) || null
+        setReachProPlan(rpPlan)
+        const regularPlans = activePlans.filter((p: any) =>
+          String(p.name || "").toLowerCase() !== "reachpro" && !p.isPayAsYouGo
+        )
+        setPlans(regularPlans)
+
+        // Always fetch ReachPro wallet meta (needed for topup section regardless of current plan)
+        const txRes = await fetch("/api/reachpro/transactions", { credentials: "include" })
+        const txData = await txRes.json()
+        if (txData?.success) {
+          setReachProMeta(txData)
+          setReachProTransactions(txData.data || [])
+          setReachProAmount(Number(txData.pricing?.minTopupAmount || 0))
+        }
+
+        const currentPlan = plans.find((eachItem: any) =>
           eachItem._id.toString() === loginedUserLocalStorage.subscriptionPlanId
         )
-        setPlans(activePlans)
-                setCurrentPlan(currentPlan) // This is now the single plan object
+        setCurrentPlan(currentPlan)
         // // Set user's billing cycle for the toggle if it exists
         // if (user?.billingCycle) {
         //   setBillingCycle(user.billingCycle as "monthly" | "yearly");
@@ -156,6 +187,7 @@ const { user } = useUser();
     loadData()
   }, [user])
 
+
   const handleSelectPlan = (planId: string) => {
     // Store selected plan and redirect to payment
     if (typeof window !== "undefined") {
@@ -185,6 +217,33 @@ const { user } = useUser();
     console.log("[PLANS] Comparing:", plan.name, "(" + planId + ")", "with current:", currentPlan.name, "(" + currentPlanId + ")", "=>", result)
     return result
   }
+  const isReachProCurrentPlan = Boolean(
+    currentPlan && (String(currentPlan.name || "").toLowerCase() === "reachpro" || (currentPlan as any).isPayAsYouGo)
+  )
+  // Pricing config — read directly from the plan DB record (primary), fallback to wallet API
+  const taxIncluded = Boolean(reachProPlan?.taxIncluded ?? reachProMeta?.pricing?.taxIncluded)
+  const minTopup = Number(reachProPlan?.minTopupAmount ?? reachProMeta?.pricing?.minTopupAmount ?? 0)
+  const costPerEmail = Number(reachProPlan?.costPerEmailCampaign ?? reachProMeta?.pricing?.costPerEmailCampaign ?? 0)
+  const costPerBulk = Number(reachProPlan?.costPerBulkMessageCampaign ?? reachProMeta?.pricing?.costPerBulkMessageCampaign ?? 0)
+  const pricingRanges = Array.isArray(reachProMeta?.pricing?.reachProPricingRanges) ? reachProMeta.pricing.reachProPricingRanges : []
+  const taxAmount = taxIncluded ? Math.round(reachProAmount * 0.18) : 0
+  const totalPayable = reachProAmount + taxAmount
+  const walletBalance = Number(reachProMeta?.walletBalance || currentUser?.walletBalance || 0)
+  const remainingMailCredits = Number(reachProMeta?.remainingMailCredits || 0)
+  const currentCostPerMail = Number(reachProMeta?.currentCostPerMail || 0)
+  const selectedRange = pricingRanges.find((r: any) => reachProAmount >= Number(r.minAmount || 0) && reachProAmount <= Number(r.maxAmount || 0))
+  const selectedRate = Number(selectedRange?.costPerMail || currentCostPerMail || 0)
+  const estimatedCredits = selectedRate > 0 ? Math.floor(reachProAmount / selectedRate) : 0
+  const handleReachProRecharge = () => {
+    if (!reachProAmount || reachProAmount < minTopup) return
+    const planId = reachProPlan?.id || reachProPlan?._id?.toString() || ""
+    localStorage.setItem("selected_plan_id", planId)
+    localStorage.setItem("reachpro_topup_amount", String(reachProAmount))
+    localStorage.setItem("reachpro_topup_tax", String(taxAmount))
+    localStorage.setItem("reachpro_topup_total", String(totalPayable))
+    localStorage.setItem("reachpro_topup_tax_included", String(taxIncluded))
+    router.push("/dashboard/checkout")
+  }
 
   if (loading) {
     return (
@@ -210,16 +269,18 @@ const { user } = useUser();
             Back to Profile
           </Button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {currentPlan ? "Upgrade Your Plan" : "Choose Your Plan"}
+            {isReachProCurrentPlan ? "ReachPro Add-on" : currentPlan ? "Upgrade Your Plan" : "Choose Your Plan"}
           </h1>
           <p className="text-lg text-gray-600">
-            {currentPlan
+            {isReachProCurrentPlan
+              ? "You have ReachPro active. Top-up your wallet below or select a base plan."
+              : currentPlan
               ? "Select a plan to upgrade your subscription and unlock more features"
               : "Select the perfect plan for your business needs"}
           </p>
         </div>
 
-        {currentPlan && (
+        {currentPlan && !isReachProCurrentPlan && (
           <Card className="mb-8 border-2 border-blue-500 bg-blue-50">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -232,7 +293,6 @@ const { user } = useUser();
                       {user?.subscriptionStatus === "trial" && " (Trial Period)"}
                       {user?.subscriptionStatus === "cancelled" && " (Cancelled – plan ended)"}
                       {user?.subscriptionStatus === "active" && " (Active)"}
-
                     </CardDescription>
                   </div>
                 </div>
@@ -245,26 +305,21 @@ const { user } = useUser();
                 {user?.subscriptionStatus === "cancelled" && (
                   <Badge className="bg-red-600 text-white">Cancelled</Badge>
                 )}
-
               </div>
             </CardHeader>
             <CardContent>
               {(() => {
                 const userCycle = currentUser?.billingCycle || "monthly";
                 const isYearly = userCycle === "yearly";
-                // Use stored values if available, else calculate based on current plan and cycle
                 const price = user?.subscriptionPrice ?? (isYearly ? currentPlan.price * 12 : currentPlan.price);
                 const paid = user?.paidAmount ?? (isYearly ? Math.round(price * (1 - yearlyDiscount / 100)) : price);
                 const discount = user?.discountPercentage ?? (isYearly ? yearlyDiscount : 0);
-
                 return (
                   <div>
                     {isYearly ? (
                       <div>
                         <div className="mb-1">
-                          <span className="text-sm line-through text-gray-400">
-                            ₹{price.toLocaleString()}
-                          </span>
+                          <span className="text-sm line-through text-gray-400">₹{price.toLocaleString()}</span>
                           {discount > 0 && <span className="ml-2 text-xs text-green-600">({discount}% off)</span>}
                         </div>
                         <div className="flex items-baseline gap-2">
@@ -278,19 +333,18 @@ const { user } = useUser();
                         <span className="text-gray-600">/monthly</span>
                       </div>
                     )}
+                    {user?.subscriptionStatus === 'trial' && user?.trialEndsAt ? (
+                      <p className="text-sm text-amber-700 mt-2 font-medium">
+                        Trial expires on {new Date(user.trialEndsAt).toLocaleDateString()}
+                      </p>
+                    ) : user?.subscriptionEndDate ? (
+                      <p className="text-sm text-gray-600 mt-2">
+                        Renews on {new Date(user.subscriptionEndDate).toLocaleDateString()}
+                      </p>
+                    ) : null}
                   </div>
                 )
               })()}
-
-              {user?.subscriptionStatus === 'trial' && user?.trialEndsAt ? (
-                <p className="text-sm text-amber-700 mt-2 font-medium">
-                  Trial expires on {new Date(user.trialEndsAt).toLocaleDateString()}
-                </p>
-              ) : user?.subscriptionEndDate ? (
-                <p className="text-sm text-gray-600 mt-2">
-                  Renews on {new Date(user.subscriptionEndDate).toLocaleDateString()}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         )}
@@ -446,6 +500,168 @@ const { user } = useUser();
               </li>
             </ul>
           </div>
+        )}
+        {/* ReachPro Add-on Section — always shown */}
+        {reachProPlan && (
+          <Card className="mt-10 border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50">
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Zap className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-purple-900">ReachPro — Communication Add-on</CardTitle>
+                    <CardDescription className="text-purple-700 mt-0.5">
+                      Pay-as-you-go wallet for email &amp; bulk messaging campaigns
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isReachProCurrentPlan && (
+                    <Badge className="bg-purple-600 text-white">Active Add-on</Badge>
+                  )}
+                  {!isReachProCurrentPlan && (
+                    <Badge variant="outline" className="border-purple-400 text-purple-700">Available Add-on</Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Stats row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+                  <Wallet className="h-4 w-4 text-purple-500 mx-auto mb-1" />
+                  <p className="text-xs text-gray-500">Wallet Balance</p>
+                  <p className="text-lg font-bold text-gray-900">₹{walletBalance.toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+                  <p className="text-xs text-gray-500">Mail Credits</p>
+                  <p className="text-lg font-bold text-gray-900">{remainingMailCredits.toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+                  <p className="text-xs text-gray-500">Min Top-up</p>
+                  <p className="text-lg font-bold text-gray-900">₹{minTopup.toLocaleString()}</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+                  <p className="text-xs text-gray-500">Current Rate</p>
+                  <p className="text-lg font-bold text-gray-900">₹{currentCostPerMail.toLocaleString()}/mail</p>
+                </div>
+              </div>
+              {remainingMailCredits > 0 && remainingMailCredits < 200 && (
+                <p className="text-xs text-amber-600 font-medium">Low ReachPro Balance: Only {remainingMailCredits} emails remaining</p>
+              )}
+
+              {/* Features list */}
+              {getPlanFeatures(reachProPlan).length > 0 && (
+                <ul className="grid sm:grid-cols-2 gap-1.5">
+                  {getPlanFeatures(reachProPlan).map((f, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-purple-800">
+                      <Check className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Recharge / top-up form */}
+              <div className="bg-white rounded-xl border border-purple-100 p-4 space-y-3">
+                <p className="font-semibold text-gray-800 flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-purple-600" />
+                  {isReachProCurrentPlan ? "Top-up Wallet" : "Buy ReachPro Top-up"}
+                </p>
+                {!isReachProCurrentPlan && (
+                  <p className="text-xs text-gray-500 flex items-start gap-1.5">
+                    <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-indigo-400" />
+                    ReachPro works as an add-on with or without a base plan. Your wallet balance is credited after payment.
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={minTopup}
+                    value={reachProAmount || ""}
+                    onChange={(e) => setReachProAmount(Number(e.target.value || 0))}
+                    placeholder={`Enter amount (min ₹${minTopup})`}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleReachProRecharge}
+                    disabled={!reachProAmount || reachProAmount < minTopup}
+                    className="bg-purple-600 hover:bg-purple-700 text-white min-w-[110px]"
+                  >
+                    Pay &amp; Recharge
+                  </Button>
+                </div>
+                {/* Tax breakdown */}
+                {reachProAmount > 0 && (
+                  <div className="text-xs text-gray-500 space-y-0.5 border-t pt-2">
+                    {pricingRanges.length > 0 && (
+                      <div className="rounded-md border p-2 mb-2 text-[11px] space-y-1">
+                        {pricingRanges.map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between">
+                            <span>₹{Number(r.minAmount || 0)} - ₹{Number(r.maxAmount || 0)}</span>
+                            <span>₹{Number(r.costPerMail || 0)}/mail</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Base amount</span>
+                      <span>₹{reachProAmount.toLocaleString()}</span>
+                    </div>
+                    {taxIncluded && (
+                      <div className="flex justify-between text-amber-700">
+                        <span>GST (18%)</span>
+                        <span>+ ₹{taxAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold text-gray-800 border-t pt-1">
+                      <span>Total payable</span>
+                      <span>₹{totalPayable.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-indigo-700">
+                      <span>Estimated mail credits</span>
+                      <span>{estimatedCredits.toLocaleString()}</span>
+                    </div>
+                    {taxIncluded && (
+                      <p className="text-[10px] text-gray-400">
+                        Wallet will be credited ₹{reachProAmount.toLocaleString()} (excl. GST)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {reachProAmount > 0 && reachProAmount < minTopup && (
+                  <p className="text-xs text-red-500">Minimum top-up amount is ₹{minTopup}</p>
+                )}
+              </div>
+
+              {/* Recent transactions */}
+              {reachProTransactions.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Recent Transactions</p>
+                  <div className="space-y-1.5">
+                    {reachProTransactions.slice(0, 5).map((txn) => (
+                      <div key={txn._id} className="flex justify-between items-center text-sm bg-white rounded-lg px-3 py-2 border border-purple-50">
+                        <div>
+                          <span className="capitalize text-gray-700">{String(txn.type).replace(/_/g, " ")}</span>
+                          {txn.createdAt && (
+                            <span className="ml-2 text-xs text-gray-400">
+                              {new Date(txn.createdAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`font-medium ${txn.type === "recharge" ? "text-green-600" : "text-red-500"}`}>
+                          {txn.type === "recharge" ? "+" : "-"}₹{Number(txn.amount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

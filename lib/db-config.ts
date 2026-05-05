@@ -47,6 +47,8 @@ export const COLLECTIONS = {
   MESSAGE_TEMPLATES: "message_templates",
   CAMPAIGNS: "campaigns",
   CAMPAIGN_RECIPIENTS: "campaign_recipients",
+  REACHPRO_TRANSACTIONS: "reachpro_transactions",
+  REACHPRO_WALLETS: "reachpro_wallets",
 } as const
 
 export const INDEXES = {
@@ -162,6 +164,18 @@ export const INDEXES = {
     { key: { createdAt: -1 } },
   ],
   CONTACT_LEADS: [{ key: { createdAt: -1 } }, { key: { email: 1 } }],
+  REACHPRO_TRANSACTIONS: [
+    { key: { userId: 1 } },
+    { key: { type: 1 } },
+    { key: { createdAt: -1 } },
+    { key: { referenceId: 1 } },
+    { key: { costPerMail: 1 } },
+  ],
+  REACHPRO_WALLETS: [
+    { key: { userId: 1 }, unique: true },
+    { key: { isActive: 1 } },
+    { key: { updatedAt: -1 } },
+  ],
 }
 
 // Alias for backward compatibility

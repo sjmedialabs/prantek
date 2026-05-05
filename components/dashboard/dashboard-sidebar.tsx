@@ -357,14 +357,7 @@ export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebar
 };
 
   const renderNavItem = (item: NavItem, level: number = 0, parentKey: string = "") => {
-    // LEVEL 1: Check if user has active subscription
-    // Only Dashboard is accessible without an active subscription
-    if (!hasActiveSubscription(user) && item.name !== "Dashboard") {
-      return null;
-    }
-
-
-    // LEVEL 2: Check plan features - strictly gate based on subscription plan
+    // LEVEL 1: Check plan features - strict gate (supports subscription + ReachPro wallet scenarios)
     // Dashboard and Cash Book are always accessible
     if (item.name !== 'Dashboard') {
       // If planFeatures hasn't loaded yet, hide menu items to prevent showing restricted features
@@ -377,7 +370,7 @@ export default function DashboardSidebar({ isMobile, onClose }: DashboardSidebar
       }
     }
 
-    // LEVEL 3: Check admin user's specific permission for this feature
+    // LEVEL 2: Check admin user's specific permission for this feature
     // Even if feature is in the plan, admin user must have the specific permission
     if (item.permission && !hasPermission(item.permission)) {
       return null;

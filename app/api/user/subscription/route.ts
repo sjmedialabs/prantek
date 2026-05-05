@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { withAuth } from "@/lib/api-auth"
 import { ObjectId } from "mongodb"
+import { isReachProPlan } from "@/lib/reachpro"
 
 /**
  * GET /api/user/subscription
@@ -24,15 +25,20 @@ export const GET = withAuth(async (request: NextRequest, user) => {
 
   const planId = subscriptionDoc?.planId || userDoc?.subscriptionPlanId
   let planName = "—"
+  let planDoc: any = null
   if (planId) {
     const plan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({
       _id: new ObjectId(planId),
     })
+    planDoc = plan
     planName = plan?.name ?? plan?.planName ?? "—"
   }
+  const reachPro = isReachProPlan(planDoc)
 
   const status = subscriptionDoc?.status ?? userDoc?.subscriptionStatus ?? "inactive"
-  const nextBillingDate = subscriptionDoc?.nextBillingDate ?? userDoc?.subscriptionEndDate ?? userDoc?.nextPaymentDate
+  const nextBillingDate = reachPro
+    ? null
+    : subscriptionDoc?.nextBillingDate ?? userDoc?.subscriptionEndDate ?? userDoc?.nextPaymentDate
   const nextDate = nextBillingDate ? new Date(nextBillingDate) : null
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -52,6 +58,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     success: true,
     plan: planName,
     status,
+    walletBalance: Number(userDoc?.walletBalance || 0),
+    isPayAsYouGo: reachPro,
     autoDebit,
     nextBillingDate: nextDate ? nextDate.toISOString().slice(0, 10) : null,
     daysRemaining,

@@ -29,18 +29,32 @@ export default function CheckoutPage() {
   const [amountFromPreviousSubscription, setAmountFromPreviousSubscription] = useState(0)
   const [previousPlan, setPreviousPlan] = useState<SubscriptionPlan | null>(null)
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
-  // const[totalAmount,setTotalAmount]=useState(0);
   const [loginedUserLocalStorage, setLoginedUserLocalStorage] = useState<any>(null)
-   const [yearlyDiscount, setYearlyDiscount] = useState(17);
-   const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
-
-  const loginedUserLocalStorageDetails = loginedUserLocalStorageString
-    ? JSON.parse(loginedUserLocalStorageString)
-    : null;
+  const [yearlyDiscount, setYearlyDiscount] = useState(17);
+  const loginedUserLocalStorageString = localStorage.getItem("loginedUser");
+  const loginedUserLocalStorageDetails = loginedUserLocalStorageString ? JSON.parse(loginedUserLocalStorageString) : null;
   const [isClient, setIsClient] = useState(false)
+  // ReachPro topup state
+  const [isReachProTopup, setIsReachProTopup] = useState(false)
+  const [topupBase, setTopupBase] = useState(0)
+  const [topupTax, setTopupTax] = useState(0)
+  const [topupTotal, setTopupTotal] = useState(0)
+  const [topupTaxIncluded, setTopupTaxIncluded] = useState(false)
   // 1️⃣ Mark client-side render finished
   useEffect(() => {
     setIsClient(true)
+    // Read ReachPro topup params set by plans page
+    const base = Number(localStorage.getItem("reachpro_topup_amount") || 0)
+    const tax = Number(localStorage.getItem("reachpro_topup_tax") || 0)
+    const total = Number(localStorage.getItem("reachpro_topup_total") || 0)
+    const taxInc = localStorage.getItem("reachpro_topup_tax_included") === "true"
+    if (base > 0) {
+      setIsReachProTopup(true)
+      setTopupBase(base)
+      setTopupTax(tax)
+      setTopupTotal(total)
+      setTopupTaxIncluded(taxInc)
+    }
   }, [])
 
   // 2️⃣ Load all localStorage values
@@ -57,102 +71,55 @@ useEffect(() => {
     setBillingCycle(cycle)
   }
 }, [])
-  // 3️⃣ Load plan and calculate balance
-useEffect(() => {
-  if (!loginedUserLocalStorage) return;
+  useEffect(() => {
+    const loadPlan = async () => {
+      try {
+        const planId = localStorage.getItem("selected_plan_id");
+        if (!planId) { router.push("/dashboard/plans"); return; }
+        const selectedPlan = await api.subscriptionPlans.getById(planId);
+        setPlan(selectedPlan);
 
-  const loadPlan = async () => {
-    try {
-      const planId = localStorage.getItem("selected_plan_id");
+        // If this is a ReachPro topup, skip previous plan balance logic
+        const topupBase = Number(localStorage.getItem("reachpro_topup_amount") || 0)
+        if (topupBase > 0 || selectedPlan?.isPayAsYouGo ||
+            String(selectedPlan?.name || "").toLowerCase() === "reachpro") {
+          setAmountFromPreviousSubscription(0);
+          setLoading(false);
+          return;
+        }
 
-      if (!planId) {
-        router.push("/dashboard/plans");
-        return;
+        const subscriptionStatus = user?.subscriptionStatus;
+        const subscriptionPlanId = user?.subscriptionPlanId || "";
+        if (subscriptionStatus === "cancelled" || subscriptionStatus === "trial" || !subscriptionPlanId) {
+          setPreviousPlan(null);
+          setAmountFromPreviousSubscription(0);
+        } else {
+          const prevPlan = await api.subscriptionPlans.getById(subscriptionPlanId);
+          setPreviousPlan(prevPlan);
+          const subscriptionEndDate = new Date(loginedUserLocalStorageDetails.subscriptionEndDate);
+          const subscriptionStartDate = new Date(loginedUserLocalStorageDetails.subscriptionStartDate);
+          const currentDate = new Date();
+          const totalDays = prevPlan.billingCycle === "monthly" ? 30 : prevPlan.billingCycle === "yearly" ? 365
+            : Math.ceil((subscriptionEndDate.getTime() - subscriptionStartDate.getTime()) / (1000 * 60 * 60 * 24));
+          const daysLeft = Math.max(Math.ceil((subscriptionEndDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)), 0);
+          setAmountFromPreviousSubscription(Math.ceil(((prevPlan.price || 0) * daysLeft) / totalDays));
+        }
+      } catch (err) {
+        console.error("Failed to load plan:", err);
+      } finally {
+        setLoading(false);
       }
-
-      const selectedPlan = await api.subscriptionPlans.getById(planId);
-      setPlan(selectedPlan);
-
-      const subscriptionStatus = user?.subscriptionStatus;
-      const subscriptionPlanId = user?.subscriptionPlanId || "";
-
-      console.log("User subscriptionStatus:", subscriptionStatus);
-      console.log("User subscriptionPlanId:", subscriptionPlanId);
-
-      // 1️⃣ If cancelled → no previous plan
-      if (subscriptionStatus === "cancelled") {
-        console.log("User subscription is cancelled → no previous plan.");
-        setPreviousPlan(null);
-        setAmountFromPreviousSubscription(0);
-        return;
-      }
-
-      // 2️⃣ If trial → no previous amount
-      if (subscriptionStatus === "trial") {
-        console.log("User is in trial → no previous plan amount.");
-        setPreviousPlan(null);
-        setAmountFromPreviousSubscription(0);
-        return;
-      }
-
-      // 3️⃣ If no plan linked → no previous plan
-      if (!subscriptionPlanId || subscriptionPlanId.trim() === "") {
-        console.log("No existing subscription plan → no previous plan.");
-        setPreviousPlan(null);
-        setAmountFromPreviousSubscription(0);
-        return;
-      }
-
-      // 4️⃣ Valid previous plan → fetch 
-      const prevPlan = await api.subscriptionPlans.getById(subscriptionPlanId);
-      setPreviousPlan(prevPlan);
-
-      // Fetch dates
-      const subscriptionEndDate = new Date(loginedUserLocalStorage.subscriptionEndDate);
-      const subscriptionStartDate = new Date(loginedUserLocalStorage.subscriptionStartDate);
-      const currentDate = new Date();
-
-      let totalDays =
-        prevPlan.billingCycle === "monthly"
-          ? 30
-          : prevPlan.billingCycle === "yearly"
-          ? 365
-          : Math.ceil(
-              (subscriptionEndDate - subscriptionStartDate) /
-                (1000 * 60 * 60 * 24)
-            );
-
-      const daysLeft = Math.max(
-        Math.ceil(
-          (subscriptionEndDate - currentDate) /
-            (1000 * 60 * 60 * 24)
-        ),
-        0
-      );
-
-      const remainingBalance = Math.ceil(
-        ((prevPlan.price || 0) * daysLeft) / totalDays
-      );
-
-      setAmountFromPreviousSubscription(remainingBalance);
-    } catch (err) {
-      console.error("Failed to load plan:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const loadDiscount = async () => {
-
-                // Fetch system settings for discount
+    };
+    const loadDiscount = async () => {
       const settingsResponse = await fetch('/api/system-settings');
       const settingsData = await settingsResponse.json();
       if (settingsData.success && settingsData.data.yearlyDiscountPercentage) {
         setYearlyDiscount(settingsData.data.yearlyDiscountPercentage);
       }
-  }
-  loadDiscount();
-  loadPlan();
-}, [loginedUserLocalStorage, router, user]);
+    }
+    loadDiscount();
+    loadPlan();
+  }, [loginedUserLocalStorageDetails, router, user]);
 
 // base price 
 const basePrice =
@@ -188,62 +155,43 @@ const priceWithGST = Math.round((basePrice || 0) * 1.18)
     }
 
     if (!plan) return
-
     setProcessing(true)
     setError("")
-
     try {
-      let totalAmount = Math.round((basePrice || 0) * 1.18)
-      console.log("handle payment called:::")
-      if((Math.round(((basePrice || 0) * 1.18)) - amountFromPreviousSubscription)>0){
-        totalAmount=totalAmount - amountFromPreviousSubscription
-      }
-      // setTotalAmount(totalAmountTopaid);
       const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ""
       if (!razorpayKey) {
-        setError("Payment gateway is not configured. Set NEXT_PUBLIC_RAZORPAY_KEY_ID in environment.")
-        toast.error("Payment gateway is not configured.")
+        setError("Payment gateway is not configured.")
         setProcessing(false)
         return
       }
-
+      // Determine amount to charge
+      let totalAmount: number
+      if (isReachProTopup) {
+        totalAmount = topupTotal
+      } else {
+        const gross = Math.round((basePrice || 0) * 1.18)
+        totalAmount = Math.max(gross - amountFromPreviousSubscription, Math.round((plan.price || 0) * 1.18))
+      }
       const options = {
         key: razorpayKey,
-        amount: totalAmount * 100, // Amount in paise
+        amount: totalAmount * 100,
         currency: "INR",
         name: "SaaS Platform",
-        description: `${plan.name} Plan Subscription`,
+        description: isReachProTopup ? "ReachPro Wallet Top-up" : `${plan.name} Plan Subscription`,
         image: "https://31.97.224.169:9080/images/prantek-logo.png",
-        prefill: {
-          name: user?.name || "",
-          email: user?.email || "",
-        },
-        theme: {
-          color: "#3b82f6", // Blue theme color
-        },
-        handler: (response: any) => {
-          console.log("[v0] Payment successful:", response)
-          handlePaymentSuccess(response)
-        },
-        modal: {
-          ondismiss: () => {
-            console.log("[v0] Payment modal closed")
-            setProcessing(false)
-          },
-        },
+        prefill: { name: user?.name || "", email: user?.email || "" },
+        theme: { color: isReachProTopup ? "#7c3aed" : "#3b82f6" },
+        handler: (response: any) => handlePaymentSuccess(response),
+        modal: { ondismiss: () => setProcessing(false) },
       }
-
       const razorpay = new window.Razorpay(options)
       razorpay.on("payment.failed", (response: any) => {
-        console.error("[v0] Payment failed:", response.error)
         setError(`Payment failed: ${response.error.description}`)
         toast.error("Payment failed. Please try again.")
         setProcessing(false)
       })
-
       razorpay.open()
     } catch (err) {
-      console.error("[v0] Payment error:", err)
       setError("Failed to initiate payment. Please try again.")
       toast.error("Failed to initiate payment. Please try again.")
       setProcessing(false)
@@ -251,42 +199,53 @@ const priceWithGST = Math.round((basePrice || 0) * 1.18)
   }
 
   const handlePaymentSuccess = async (response: any) => {
-    
-    if (user && plan) {
-      const updatedUser = await api.users.update( user.id, {
+    if (!user || !plan) { setProcessing(false); return }
+
+    if (isReachProTopup) {
+      // ReachPro topup — credit wallet via API
+      const res = await fetch("/api/reachpro/recharge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ amount: topupBase, paymentReference: response.razorpay_payment_id }),
+      })
+      const data = await res.json()
+      if (data?.success) {
+        toast.success("Wallet topped up successfully!")
+        // Clean up topup keys
+        localStorage.removeItem("reachpro_topup_amount")
+        localStorage.removeItem("reachpro_topup_tax")
+        localStorage.removeItem("reachpro_topup_total")
+        localStorage.removeItem("reachpro_topup_tax_included")
+        localStorage.removeItem("selected_plan_id")
+        setTimeout(() => router.push("/dashboard/plans"), 1500)
+      } else {
+        setError(data?.error || "Wallet recharge failed. Contact support.")
+        toast.error("Wallet recharge failed.")
+      }
+    } else {
+      // Regular plan subscription
+      const updatedUser = await api.users.update(user.id, {
         subscriptionPlanId: plan._id,
         subscriptionStatus: "active",
         subscriptionStartDate: new Date().toISOString(),
         subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
-      
-      console.log("Updated user after payment plan-id:", plan._id)
-
-      if (updatedUser) {
-        await api.auth.setCurrentUser(updatedUser)
-      }
-
-      localStorage.setItem(
-        "subscriptionPaymentDetails",
-        JSON.stringify({
-          paymentId: response.razorpay_payment_id,
-          planId: plan.id,
-          planName: plan.name,
-          amount: Math.round((basePrice || 0) * 1.18),
-          timestamp: new Date().toISOString(),
-        }),
-      )
-      localStorage.removeItem("loginedUser")
-      const temp={...loginedUserLocalStorageDetails,subscriptionPlanId:plan._id,subscriptionStatus:"active"}
-      console.log("updated user details to store in local:",temp)
-      localStorage.setItem("loginedUser",JSON.stringify({...loginedUserLocalStorageDetails,subscriptionPlanId:plan._id,subscriptionStatus:"active"}))
-
+      if (updatedUser) await api.auth.setCurrentUser(updatedUser)
+      localStorage.setItem("subscriptionPaymentDetails", JSON.stringify({
+        paymentId: response.razorpay_payment_id,
+        planId: plan.id, planName: plan.name,
+        amount: Math.round((basePrice || 0) * 1.18),
+        timestamp: new Date().toISOString(),
+      }))
+      localStorage.setItem("loginedUser", JSON.stringify({
+        ...loginedUserLocalStorageDetails,
+        subscriptionPlanId: plan._id,
+        subscriptionStatus: "active",
+      }))
       toast.success("Payment successful! Your subscription is now active.")
       localStorage.removeItem("selected_plan_id")
-      // window.location.reload()
-      setTimeout(() => {
-        router.push("/dashboard/plans")
-      }, 1500)
+      setTimeout(() => router.push("/dashboard/plans"), 1500)
     }
     setProcessing(false)
   }
@@ -325,36 +284,66 @@ const priceWithGST = Math.round((basePrice || 0) * 1.18)
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Order Summary */}
-          <Card>
+          <Card className={isReachProTopup ? "border-purple-200" : ""}>
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-              <CardDescription>Review your subscription details</CardDescription>
+              <CardTitle>{isReachProTopup ? "ReachPro Wallet Top-up" : "Order Summary"}</CardTitle>
+              <CardDescription>
+                {isReachProTopup ? "Review your wallet recharge details" : "Review your subscription details"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="border-b pb-4">
-                <h3 className="font-semibold text-lg">{plan.name} Plan</h3>
-                <p className="text-sm text-gray-600">{plan.description}</p>
+                <h3 className="font-semibold text-lg">
+                  {isReachProTopup ? "ReachPro — Communication Add-on" : `${plan.name} Plan`}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {isReachProTopup ? "Pay-as-you-go wallet for email & bulk messaging campaigns" : plan.description}
+                </p>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold">₹{basePrice?.toLocaleString()}</span>
+              {isReachProTopup ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Wallet top-up amount</span>
+                    <span className="font-semibold">₹{topupBase.toLocaleString()}</span>
+                  </div>
+                  {topupTaxIncluded && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">GST (18%)</span>
+                      <span className="font-semibold">₹{topupTax.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                    <span>Total Payable</span>
+                    <span>₹{topupTotal.toLocaleString()}</span>
+                  </div>
+                  {topupTaxIncluded && (
+                    <p className="text-xs text-gray-400">
+                      Your wallet will be credited ₹{topupBase.toLocaleString()} (excl. GST)
+                    </p>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (18% GST)</span>
-                  <span className="font-semibold">₹{Math.round((basePrice || 0) * 0.18).toLocaleString()}</span>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-semibold">₹{basePrice?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tax (18% GST)</span>
+                    <span className="font-semibold">₹{Math.round((basePrice || 0) * 0.18).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Previous plan Amount</span>
+                    <span className="font-semibold">-₹{Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?amountFromPreviousSubscription:0}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span>₹{(Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Previous plan Amount</span>
-                  <span className="font-semibold">-₹{Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?amountFromPreviousSubscription:0}</span>
-                </div>
-                <div className="border-t pt-2 flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span>₹{(Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription):Math.round((plan.price * 1.18)))}</span>
-                </div>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-900">
+              )}
+              <div className={`p-4 rounded-lg ${isReachProTopup ? "bg-purple-50" : "bg-blue-50"}`}>
+                <p className={`text-sm ${isReachProTopup ? "text-purple-900" : "text-blue-900"}`}>
                   <Lock className="inline h-4 w-4 mr-1" />
                   Secure payment powered by Razorpay
                 </p>
@@ -369,48 +358,35 @@ const priceWithGST = Math.round((basePrice || 0) * 1.18)
               <CardDescription>Secure checkout with Razorpay</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200">
-                <h3 className="font-semibold text-lg mb-2">Ready to subscribe?</h3>
+              <div className={`p-6 rounded-lg border ${isReachProTopup ? "bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200" : "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"}`}>
+                <h3 className="font-semibold text-lg mb-2">
+                  {isReachProTopup ? "Ready to top-up?" : "Ready to subscribe?"}
+                </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Click the button below to complete your payment securely through Razorpay.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-4">
-                  <li className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-blue-600" />
-                    256-bit SSL encryption
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-blue-600" />
-                    PCI DSS compliant
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-blue-600" />
-                    Multiple payment options
-                  </li>
+                  <li className="flex items-center gap-2"><Lock className="h-4 w-4 text-blue-600" />256-bit SSL encryption</li>
+                  <li className="flex items-center gap-2"><Lock className="h-4 w-4 text-blue-600" />PCI DSS compliant</li>
+                  <li className="flex items-center gap-2"><Lock className="h-4 w-4 text-blue-600" />Multiple payment options</li>
                 </ul>
               </div>
-
               <Button
                 onClick={handlePayment}
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className={`w-full ${isReachProTopup ? "bg-purple-600 hover:bg-purple-700" : "bg-blue-600 hover:bg-blue-700"}`}
                 size="lg"
                 disabled={processing || !scriptLoaded}
               >
                 {processing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</>
                 ) : !scriptLoaded ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading Payment Gateway...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading Payment Gateway...</>
+                ) : isReachProTopup ? (
+                  `Pay ₹${topupTotal.toLocaleString()} — Top-up Wallet`
                 ) : (
                   `Pay ₹${((Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription)>0?Math.round(((basePrice || 0) * 1.18)-amountFromPreviousSubscription):Math.round(((basePrice || 0) * 1.18)))).toLocaleString()}`
                 )}
               </Button>
-
               <p className="text-xs text-center text-gray-500">
                 By completing this payment, you agree to our Terms of Service and Privacy Policy.
               </p>

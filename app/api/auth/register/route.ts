@@ -8,6 +8,8 @@ import { calculateTrialEndDate } from "@/lib/trial-helper"
 import { ObjectId } from "mongodb"
 import { getPaymentDetails } from "@/lib/razorpay"
 import { verifyEmailVerificationToken } from "@/lib/jwt"
+import { isReachProPlan } from "@/lib/reachpro"
+import { getReachProConfig } from "@/lib/reachpro-wallet"
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,19 +79,51 @@ export async function POST(request: NextRequest) {
     let trialEndsAt: Date | null = data.trialEndDate ? new Date(data.trialEndDate) : null
     let trialEndDate: Date | null = trialEndsAt
 
+    let isReachProUser = false
+    let reachProMinTopup = 0
+    const reachProEnabled = Boolean(data.reachProEnabled)
+    const reachProTopupAmount = Number(data.reachProTopupAmount || data.walletBalance || 0)
     if (data.subscriptionPlanId) {
-      // User selected a plan - automatically start trial with configured period
-      subscriptionStatus = "trial"
-      subscriptionStartDate = new Date()
-      // Super-admin "Create client" and other flows often omit dates; use system trial days from settings
-      if (!subscriptionEndDate || Number.isNaN(subscriptionEndDate.getTime())) {
-        subscriptionEndDate = await calculateTrialEndDate()
+      let selectedPlan: any = null
+      if (ObjectId.isValid(String(data.subscriptionPlanId))) {
+        selectedPlan = await db
+          .collection(Collections.SUBSCRIPTION_PLANS)
+          .findOne({ _id: new ObjectId(String(data.subscriptionPlanId)) })
       }
-      if (!trialEndsAt || Number.isNaN(trialEndsAt.getTime())) {
-        trialEndsAt = subscriptionEndDate
-        trialEndDate = subscriptionEndDate
-      } else if (!subscriptionEndDate || Number.isNaN(subscriptionEndDate.getTime())) {
-        subscriptionEndDate = trialEndsAt
+      isReachProUser = isReachProPlan(selectedPlan)
+      reachProMinTopup = Number(selectedPlan?.minTopupAmount || 0)
+
+      // User selected a plan - automatically start trial with configured period
+      if (isReachProUser) {
+        subscriptionStatus = Number(data.walletBalance || 0) > 0 ? "active" : "inactive"
+        subscriptionStartDate = new Date()
+        subscriptionEndDate = null
+        trialEndsAt = null
+        trialEndDate = null
+      } else {
+        subscriptionStatus = "trial"
+        subscriptionStartDate = new Date()
+        // Super-admin "Create client" and other flows often omit dates; use system trial days from settings
+        if (!subscriptionEndDate || Number.isNaN(subscriptionEndDate.getTime())) {
+          subscriptionEndDate = await calculateTrialEndDate()
+        }
+        if (!trialEndsAt || Number.isNaN(trialEndsAt.getTime())) {
+          trialEndsAt = subscriptionEndDate
+          trialEndDate = subscriptionEndDate
+        } else if (!subscriptionEndDate || Number.isNaN(subscriptionEndDate.getTime())) {
+          subscriptionEndDate = trialEndsAt
+        }
+      }
+    }
+    if (isReachProUser || reachProEnabled) {
+      const cfg = isReachProUser ? null : await getReachProConfig()
+      if (!reachProMinTopup) reachProMinTopup = Number(cfg?.minTopupAmount || 0)
+      const walletAmount = reachProTopupAmount
+      if (!walletAmount || walletAmount < reachProMinTopup) {
+        return NextResponse.json(
+          { success: false, error: `Minimum topup amount is ₹${reachProMinTopup}.` },
+          { status: 400 },
+        )
       }
     }
 
@@ -160,10 +194,13 @@ export async function POST(request: NextRequest) {
       phone: data.phone || "",
       address: data.address || "",
       subscriptionPlanId: data.subscriptionPlanId || "",
-      billingCycle: data.billingCycle || "monthly",
+      billingCycle: isReachProUser ? undefined : data.billingCycle || "monthly",
       subscriptionPrice: data.subscriptionPrice || 0,
       paidAmount: data.paidAmount || 0,
       discountPercentage: data.discountPercentage || 0,
+      walletBalance: Number(data.walletBalance || 0),
+      totalRechargeAmount: Number(data.totalRechargeAmount || data.walletBalance || 0),
+      lastRechargeAt: data.lastRechargeAt ? new Date(data.lastRechargeAt) : undefined,
       subscriptionStatus,
       trialEndsAt,
       trialEndDate,
@@ -185,6 +222,36 @@ export async function POST(request: NextRequest) {
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
     const userId = result.insertedId.toString()
+
+    if (isReachProUser || reachProEnabled) {
+      const balance = Number(reachProTopupAmount || 0)
+      await db.collection(Collections.REACHPRO_WALLETS).updateOne(
+        { userId },
+        {
+          $set: {
+            userId,
+            balance,
+            totalRecharge: balance,
+            isActive: balance > 0,
+            lastRechargeAt: new Date(),
+            updatedAt: new Date(),
+          },
+          $setOnInsert: { createdAt: new Date() },
+        },
+        { upsert: true },
+      )
+      await db.collection(Collections.REACHPRO_TRANSACTIONS).insertOne({
+        userId,
+        type: "recharge",
+        amount: balance,
+        taxAmount: Number(data.reachProTaxAmount || 0),
+        balanceBefore: 0,
+        balanceAfter: balance,
+        referenceId: String(data.paymentId || ""),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
 
     if (data.razorpaySubscriptionId && data.subscriptionPlanId && razorpayCustomerId) {
       try {

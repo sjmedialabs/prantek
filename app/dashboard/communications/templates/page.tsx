@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Pencil, Trash2, FileText, ArrowLeft } from "lucide-react"
 import { toast } from "@/lib/toast"
 import Link from "next/link"
+import RichTextEditor from "@/components/editor/rich-text-editor"
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<any[]>([])
@@ -63,7 +63,14 @@ export default function TemplatesPage() {
           <div className="space-y-4 pt-2">
             <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Payment Reminder" /></div>
             <div className="space-y-2"><Label>Subject</Label><Input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Content</Label><Textarea value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} rows={6} placeholder="Dear {{name}}, your payment is due..." /></div>
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <RichTextEditor
+                value={form.content}
+                onChange={(value) => setForm({ ...form, content: value })}
+              />
+              <p className="text-xs text-muted-foreground">Available variable: {"{{name}}"}</p>
+            </div>
             <Button onClick={handleSave} className="w-full">{editing ? "Update" : "Create"}</Button>
           </div>
         </DialogContent>
