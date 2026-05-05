@@ -18,9 +18,11 @@ const modules = [
 
 export default function CommunicationsPage() {
   const [metrics, setMetrics] = useState<any>(null)
+  const [walletMeta, setWalletMeta] = useState<any>(null)
 
   useEffect(() => {
     fetch("/api/communication-metrics").then(r => r.json()).then(d => { if (d.success) setMetrics(d.data) }).catch(() => {})
+    fetch("/api/reachpro/transactions").then(r => r.json()).then(d => { if (d.success) setWalletMeta(d) }).catch(() => {})
   }, [])
 
   return (
@@ -29,6 +31,22 @@ export default function CommunicationsPage() {
         <h1 className="text-3xl font-bold">Communications</h1>
         <p className="text-muted-foreground">Manage client communications, campaigns, and messaging</p>
       </div>
+      {walletMeta && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <span>Wallet: ₹{Number(walletMeta.walletBalance || 0).toLocaleString()}</span>
+              <span>Credits: {Number(walletMeta.remainingMailCredits || 0).toLocaleString()}</span>
+              <span>Rate: ₹{Number(walletMeta.currentCostPerMail || 0)}/mail</span>
+              {Number(walletMeta.remainingMailCredits || 0) <= 0 ? (
+                <span className="text-red-600 font-medium">Recharge ReachPro wallet to continue sending campaigns.</span>
+              ) : Number(walletMeta.remainingMailCredits || 0) < 200 ? (
+                <span className="text-amber-600 font-medium">Low ReachPro Balance: Only {walletMeta.remainingMailCredits} emails remaining</span>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

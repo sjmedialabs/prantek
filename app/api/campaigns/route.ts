@@ -4,11 +4,19 @@ import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
 import { ObjectId } from "mongodb"
 import { sendEmailBatch } from "@/lib/email/sendEmail"
+import { deductReachProBalance, getReachProWallet, hasReachProAccess } from "@/lib/reachpro-wallet"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
     const db = await connectDB()
     const userId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+    const reachProAllowed = await hasReachProAccess(String(userId))
+    if (!reachProAllowed) {
+      return NextResponse.json(
+        { success: false, error: "ReachPro top-up required to use communication features." },
+        { status: 403 },
+      )
+    }
     const campaigns = await db.collection(Collections.CAMPAIGNS)
       .find({ userId: String(userId) }).sort({ createdAt: -1 }).toArray()
     return NextResponse.json({ success: true, data: campaigns })
@@ -21,13 +29,31 @@ export const POST = withAuth(async (request: NextRequest, user) => {
   try {
     const db = await connectDB()
     const userId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+    const reachProAllowed = await hasReachProAccess(String(userId))
+    if (!reachProAllowed) {
+      return NextResponse.json(
+        { success: false, error: "ReachPro top-up required to use communication features." },
+        { status: 403 },
+      )
+    }
     const body = await request.json()
     const { name, type, templateId, subject, content, audience, groupId, scheduledAt, action } = body
 
     if (!name) return NextResponse.json({ success: false, error: "Name required" }, { status: 400 })
+    if (action === "schedule") {
+      if (!scheduledAt) {
+        return NextResponse.json({ success: false, error: "Scheduled time is required." }, { status: 400 })
+      }
+      const scheduledDate = new Date(scheduledAt)
+      if (Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+        return NextResponse.json({ success: false, error: "Please provide a valid future scheduled time." }, { status: 400 })
+      }
+    }
 
     // If action === "send", execute immediately
     if (action === "send") {
+      const wallet = await getReachProWallet(String(userId))
+      const costPerMail = Number(wallet?.currentCostPerMail || 0)
       // Resolve recipients
       let recipients: any[] = []
       if (audience === "group" && groupId) {
@@ -102,6 +128,21 @@ export const POST = withAuth(async (request: NextRequest, user) => {
         { _id: campaignId },
         { $set: { status: "sent", sentCount, failedCount, updatedAt: new Date() } }
       )
+
+      if (costPerMail > 0 && sentCount > 0) {
+        const reachProCost = Number((sentCount * costPerMail).toFixed(2))
+        const deduction = await deductReachProBalance({
+          userId: String(userId),
+          amount: reachProCost,
+          emailsDeducted: sentCount,
+          costPerMail,
+          type: type === "bulk_message" ? "whatsapp_campaign" : "email_campaign",
+          referenceId: String(campaignId),
+        })
+        if (!deduction.success) {
+          return NextResponse.json({ success: false, error: deduction.error }, { status: 400 })
+        }
+      }
       return NextResponse.json({ success: true, data: { _id: campaignId, sentCount, failedCount } })
     }
 

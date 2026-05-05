@@ -212,6 +212,11 @@ export interface SubscriptionPlan {
   isActive: boolean
   subscriberCount: number
   revenue: number
+  isPayAsYouGo?: boolean
+  minTopupAmount?: number
+  costPerEmailCampaign?: number
+  costPerBulkMessageCampaign?: number
+  taxIncluded?: boolean
   createdAt: string
   updatedAt: string
 }

@@ -2,11 +2,19 @@ import { type NextRequest, NextResponse } from "next/server"
 import { withAuth } from "@/lib/api-auth"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
+import { hasReachProAccess } from "@/lib/reachpro-wallet"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
     const db = await connectDB()
     const userId = user.isAdminUser && user.companyId ? user.companyId : user.userId
+    const reachProAllowed = await hasReachProAccess(String(userId))
+    if (!reachProAllowed) {
+      return NextResponse.json(
+        { success: false, error: "ReachPro top-up required to use communication features." },
+        { status: 403 },
+      )
+    }
 
     const campaigns = await db.collection(Collections.CAMPAIGNS)
       .find({ userId: String(userId) }).toArray()

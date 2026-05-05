@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs"
 import { generateAccessToken, generateRefreshToken } from "@/lib/jwt"
 import { ObjectId } from "mongodb"
 import { getPaymentDetails } from "@/lib/razorpay"
+import { isReachProPlan } from "@/lib/reachpro"
+import { getReachProConfig } from "@/lib/reachpro-wallet"
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,11 +34,44 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(signupData.password, 10)
     
-    // Determine subscription status
-    const subscriptionStatus = signupData.freeTrial ? "trial" : "active"
-    const trialEndsAt = signupData.freeTrial 
-      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) 
+    let subscriptionStatus = signupData.freeTrial ? "trial" : "active"
+    let trialEndsAt = signupData.freeTrial
+      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       : null
+    let isReachProUser = false
+    let reachProMinTopup = 0
+    const reachProEnabled = Boolean(signupData.reachProEnabled)
+    const reachProTopupAmount = Number(signupData.reachProTopupAmount || signupData.walletBalance || 0)
+    if (signupData.subscriptionPlanId && ObjectId.isValid(String(signupData.subscriptionPlanId))) {
+      const selectedPlan = await db.collection(Collections.SUBSCRIPTION_PLANS).findOne({
+        _id: new ObjectId(String(signupData.subscriptionPlanId)),
+      })
+      isReachProUser = isReachProPlan(selectedPlan)
+      reachProMinTopup = Number(selectedPlan?.minTopupAmount || 0)
+      if (isReachProUser) {
+        subscriptionStatus = Number(signupData.walletBalance || 0) > 0 ? "active" : "inactive"
+        trialEndsAt = null
+      }
+    }
+    if (isReachProUser) {
+      const walletAmount = Number(signupData.walletBalance || 0)
+      if (!walletAmount || walletAmount < reachProMinTopup) {
+        return NextResponse.json(
+          { success: false, error: `Minimum topup amount is ₹${reachProMinTopup}.` },
+          { status: 400 },
+        )
+      }
+    }
+    if (reachProEnabled && !isReachProUser) {
+      const cfg = await getReachProConfig()
+      const minTopup = Number(cfg?.minTopupAmount || 0)
+      if (!reachProTopupAmount || reachProTopupAmount < minTopup) {
+        return NextResponse.json(
+          { success: false, error: `Minimum topup amount is ₹${minTopup}.` },
+          { status: 400 },
+        )
+      }
+    }
 
     // Fetch Razorpay payment details so we can store customer/token IDs for auto-debit
     let razorpayCustomerId = ""
@@ -65,10 +100,13 @@ export async function POST(request: NextRequest) {
       phone: signupData.phone || "",
       address: signupData.address || "",
       subscriptionPlanId: signupData.subscriptionPlanId || "",
-      billingCycle: signupData.billingCycle || "monthly",
+      billingCycle: isReachProUser ? undefined : signupData.billingCycle || "monthly",
       subscriptionPrice: signupData.subscriptionPrice || 0,
       paidAmount: signupData.paidAmount || 0,
       discountPercentage: signupData.discountPercentage || 0,
+      walletBalance: Number(signupData.walletBalance || 0),
+      totalRechargeAmount: Number(signupData.totalRechargeAmount || signupData.walletBalance || 0),
+      lastRechargeAt: signupData.lastRechargeAt ? new Date(signupData.lastRechargeAt) : undefined,
       subscriptionStatus: subscriptionStatus,
       trialEndsAt: trialEndsAt,
       trialEndDate: trialEndsAt,
@@ -85,6 +123,36 @@ export async function POST(request: NextRequest) {
     
     const result = await db.collection(Collections.USERS).insertOne(newUser)
     const userId = result.insertedId.toString()
+
+    if (isReachProUser || reachProEnabled) {
+      const balance = Number(reachProTopupAmount || 0)
+      await db.collection(Collections.REACHPRO_WALLETS).updateOne(
+        { userId },
+        {
+          $set: {
+            userId,
+            balance,
+            totalRecharge: balance,
+            isActive: balance > 0,
+            lastRechargeAt: new Date(),
+            updatedAt: new Date(),
+          },
+          $setOnInsert: { createdAt: new Date() },
+        },
+        { upsert: true },
+      )
+      await db.collection(Collections.REACHPRO_TRANSACTIONS).insertOne({
+        userId,
+        type: "recharge",
+        amount: balance,
+        taxAmount: Number(signupData.reachProTaxAmount || 0),
+        balanceBefore: 0,
+        balanceAfter: balance,
+        referenceId: String(paymentId || ""),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
 
     if (razorpaySubscriptionId && signupData.subscriptionPlanId && razorpayCustomerId) {
       try {

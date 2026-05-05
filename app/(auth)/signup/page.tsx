@@ -53,6 +53,7 @@ export default function SignUpPage() {
   });
   const [availablePlans, setAvailablePlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [addReachPro, setAddReachPro] = useState(false);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(
     "monthly"
   );
@@ -78,6 +79,7 @@ export default function SignUpPage() {
   const router = useRouter();
   const { trialDays } = useTrialPeriod();
   const [yearlyDiscount, setYearlyDiscount] = useState(17);
+  const [reachProTopupAmount, setReachProTopupAmount] = useState(0);
  const [content, setContent] = useState<WebsiteContent | null>(null)
 
   useEffect(() => {
@@ -147,9 +149,6 @@ export default function SignUpPage() {
           .getAll()
           .then((plans) => plans.filter((p: { isActive: any }) => p.isActive));
         setAvailablePlans(plans);
-        if (plans.length > 0) {
-          setSelectedPlan(plans[0]._id || plans[0].id);
-        }
       } catch (error) {
         console.error("Failed to load plans:", error);
       }
@@ -511,15 +510,19 @@ export default function SignUpPage() {
     setError("");
 
     try {
-      if (!selectedPlan) {
-        setError("Please select a subscription plan");
+      if (!selectedPlan && !addReachPro) {
+        setError("Please select a subscription plan and/or ReachPro");
         return;
       }
 
       // Find selected plan
-      const plan = availablePlans.find((p) => (p._id || p.id) === selectedPlan);
-      if (!plan) {
+      const plan = selectedPlan ? availablePlans.find((p) => (p._id || p.id) === selectedPlan) : null;
+      if (selectedPlan && !plan) {
         setError("Selected plan not found");
+        return;
+      }
+      if (isReachProSelected && reachProTopupBase < reachProMinTopup) {
+        setError(`Minimum topup amount is ₹${reachProMinTopup}`);
         return;
       }
 
@@ -530,18 +533,21 @@ export default function SignUpPage() {
         name: formData.name,
         phone: formData.phone || "",
         address: formData.address || "",
-        subscriptionPlanId: selectedPlan,
-        billingCycle: billingCycle,
+        subscriptionPlanId: selectedPlan || undefined,
+        billingCycle: selectedPlan ? billingCycle : undefined,
+        reachProEnabled: addReachPro,
+        reachProTopupAmount: addReachPro ? reachProTopupBase : 0,
+        reachProTaxAmount: addReachPro ? reachProTaxAmount : 0,
         verificationToken: verificationToken || undefined,
       };
       localStorage.setItem("pending_signup", JSON.stringify(signupData));
       console.log("Pending signup data:", signupData);
 
-      // Calculate the final amount based on billing cycle
-      // Apply 17% discount for yearly billing
-      const yearlyTotal = plan.price * 12;
-      const discount = billingCycle === "yearly" ? Math.round(yearlyTotal * (yearlyDiscount / 100)) : 0;
-      const finalAmount = billingCycle === "yearly" ? yearlyTotal - discount : plan.price;
+      const paymentPlanName = plan?.name || (addReachPro ? "ReachPro" : "custom");
+      const yearlyTotal = plan ? plan.price * 12 : 0;
+      const discount = plan && billingCycle === "yearly" ? Math.round(yearlyTotal * (yearlyDiscount / 100)) : 0;
+      const subscriptionAmount = !plan ? 0 : billingCycle === "yearly" ? yearlyTotal - discount : plan.price;
+      const amountToPayToday = (selectedPlan ? 1 : 0) + (addReachPro ? reachProTotalPayable : 0);
 
       // Save current state to sessionStorage so we can return to step 2
       sessionStorage.setItem(
@@ -557,11 +563,11 @@ export default function SignUpPage() {
 
       // Redirect to payment page with selected plan
       router.push(
-        `/payment?plan=${plan.name.toLowerCase()}&planId=${selectedPlan}&email=${encodeURIComponent(
+        `/payment?plan=${paymentPlanName.toLowerCase()}&planId=${selectedPlan || ""}&email=${encodeURIComponent(
           formData.email
         )}&company=${encodeURIComponent(
           formData.name
-        )}&amount=${finalAmount}&billingCycle=${billingCycle}`
+        )}&amount=${amountToPayToday}&actualPlanAmount=${subscriptionAmount}&billingCycle=${billingCycle}&isPayAsYouGo=${addReachPro && !selectedPlan ? "1" : "0"}&topupBase=${addReachPro ? reachProTopupBase : 0}&topupTax=${addReachPro ? reachProTaxAmount : 0}`
       );
     } catch (err: any) {
       setError(err?.message || "Failed to process signup. Please try again.");
@@ -1113,6 +1119,22 @@ export default function SignUpPage() {
 const currentSelectedPlan = availablePlans.find(
   (p) => (p._id || p.id) === selectedPlan
 )
+const reachProPlan = availablePlans.find(
+  (p) => String(p.name || "").toLowerCase() === "ReachPro" || p.isPayAsYouGo
+)
+const subscriptionPlans = availablePlans.filter(
+  (p) => !(String(p.name || "").toLowerCase() === "reachpro" || p.isPayAsYouGo)
+)
+const isReachProSelected = Boolean(addReachPro)
+const reachProMinTopup = Number(reachProPlan?.minTopupAmount || 0)
+const reachProTaxIncluded = Boolean(reachProPlan?.taxIncluded)
+const reachProRanges = Array.isArray(reachProPlan?.reachProPricingRanges) ? [...reachProPlan.reachProPricingRanges].sort((a: any, b: any) => Number(a.minAmount || 0) - Number(b.minAmount || 0)) : []
+const reachProTopupBase = Math.max(Number(reachProTopupAmount || 0), reachProMinTopup)
+const reachProTaxAmount = reachProTaxIncluded ? Math.round(reachProTopupBase * 0.18) : 0
+const reachProTotalPayable = reachProTopupBase + reachProTaxAmount
+const selectedRange = reachProRanges.find((r: any) => reachProTopupBase >= Number(r.minAmount || 0) && reachProTopupBase <= Number(r.maxAmount || 0))
+const selectedCostPerMail = Number(selectedRange?.costPerMail || 0)
+const estimatedMails = selectedCostPerMail > 0 ? Math.floor(reachProTopupBase / selectedCostPerMail) : 0
 
 const transformedPlan = currentSelectedPlan
   ? {
@@ -1132,14 +1154,20 @@ const transformedPlan = currentSelectedPlan
       features: currentSelectedPlan.features || [],
     }
   : null
+
+const transformedReachPro = addReachPro && reachProPlan
+  ? {
+      name: reachProPlan.name,
+      price: reachProTotalPayable,
+      billingCycle: "topup",
+      features: reachProPlan.features || [],
+    }
+  : null;
+
   const planBillCycle = currentSelectedPlan?.billingCycle
   return (
     <div className="min-h-screen flex">
-      <FeaturesSidebar
-        selectedPlan={
-        transformedPlan
-        }
-      />
+      <FeaturesSidebar selectedPlan={transformedPlan} reachProPlan={transformedReachPro} />
 
       {/* Right Side - Plan Selection (Scrollable) */}
       <div className="w-full lg:w-1/2 lg:ml-[50%] overflow-y-auto bg-gray-50">
@@ -1161,38 +1189,49 @@ const transformedPlan = currentSelectedPlan
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Choose Your Plan
               </h2>
-              <p className="text-gray-600 mb-4">
-                Start with a <strong>{trialDays}-day free trial</strong>. After the
-                trial, billing will automatically start based on your selected
-                plan.
-              </p>
+              {selectedPlan ? (
+                <p className="text-gray-600 mb-4">
+                  Start with a <strong>{trialDays}-day free trial</strong>. After the
+                  trial, billing will automatically start based on your selected
+                  plan.
+                </p>
+              ) : addReachPro ? (
+                <p className="text-gray-600 mb-4">
+                  Selected <strong>ReachPro Communication Add-on</strong>. This is a pay-as-you-go service with no monthly subscription.
+                </p>
+              ) : (
+                <p className="text-gray-600 mb-4">
+                  Select a subscription plan or the ReachPro add-on to continue.
+                </p>
+              )}
 
-              {/* Billing Cycle Toggle */}
-              <div className="flex items-center justify-center gap-2 bg-gray-100 rounded-xl p-1 w-fit mx-auto">
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("monthly")}
-                  className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingCycle === "monthly"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                    }`}
-                >
-                  Monthly
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBillingCycle("yearly")}
-                  className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all relative ${billingCycle === "yearly"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                    }`}
-                >
-                  Yearly
-                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                    Save {yearlyDiscount}%
-                  </span>
-                </button>
-              </div>
+              {selectedPlan && subscriptionPlans.length > 0 && (
+                <div className="flex items-center justify-center gap-2 bg-gray-100 rounded-xl p-1 w-fit mx-auto">
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${billingCycle === "monthly"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("yearly")}
+                    className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all relative ${billingCycle === "yearly"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    Yearly
+                    <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                      Save {yearlyDiscount}%
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -1203,7 +1242,7 @@ const transformedPlan = currentSelectedPlan
 
             <form onSubmit={handleSignUp}>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                {availablePlans.map((plan) => {
+                {subscriptionPlans.map((plan) => {
                   const isSelected = selectedPlan === (plan._id || plan.id);
                   const isPopular = plan.name === "Premium";
 
@@ -1228,7 +1267,10 @@ const transformedPlan = currentSelectedPlan
                             ? "border-2 border-amber-400 shadow-lg bg-gradient-to-br from-amber-50 to-white hover:shadow-xl"
                             : "border border-gray-300 bg-white hover:border-blue-300 hover:shadow-lg"
                         }`}
-                      onClick={() => setSelectedPlan(plan._id || plan.id)}
+                      onClick={() => {
+                        const planId = plan._id || plan.id;
+                        setSelectedPlan(selectedPlan === planId ? "" : planId);
+                      }}
                     >
                       {/* Corner Trial Badge */}
                       <div className="absolute top-0 right-0">
@@ -1309,12 +1351,69 @@ const transformedPlan = currentSelectedPlan
                 })}
               </div>
 
+              {reachProPlan && (
+                <Card className="mb-6">
+                  <CardContent className="pt-6 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="reachpro-enable" className="font-medium">ReachPro Communication Add-On</Label>
+                      <Checkbox
+                        id="reachpro-enable"
+                        checked={addReachPro}
+                        onCheckedChange={(v) => setAddReachPro(Boolean(v))}
+                      />
+                    </div>
+                    {addReachPro && (
+                      <>
+                        <div className="space-y-2">
+                          {reachProRanges.map((range: any, idx: number) => {
+                            const min = Number(range.minAmount || 0)
+                            const max = Number(range.maxAmount || 0)
+                            const cpm = Number(range.costPerMail || 0)
+                            const minMails = cpm > 0 ? Math.floor(min / cpm) : 0
+                            const maxMails = cpm > 0 ? Math.floor(max / cpm) : 0
+                            return (
+                              <div key={idx} className="rounded-md border p-2 text-xs text-gray-700 flex justify-between">
+                                <span>Recharge ₹{min} - ₹{max}</span>
+                                <span>₹{cpm}/mail | ~{minMails.toLocaleString()} - {maxMails.toLocaleString()} emails</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <div className="text-sm text-gray-600">Minimum Topup: ₹{reachProMinTopup.toLocaleString()}</div>
+                        <div>
+                          <Label htmlFor="reachpro-topup">Topup Amount</Label>
+                          <Input
+                            id="reachpro-topup"
+                            type="number"
+                            min={reachProMinTopup}
+                            value={reachProTopupAmount || ""}
+                            onChange={(e) => setReachProTopupAmount(Number(e.target.value || 0))}
+                            placeholder={`Enter amount >= ₹${reachProMinTopup}`}
+                          />
+                        </div>
+                        <div className="text-sm text-gray-700">Wallet Credit: ₹{reachProTopupBase.toLocaleString()}</div>
+                        {selectedRange && (
+                          <div className="text-sm text-gray-700">
+                            Cost/Mail: ₹{selectedCostPerMail} | Estimated Emails: {estimatedMails.toLocaleString()}
+                          </div>
+                        )}
+                        {reachProTaxIncluded && (
+                          <div className="text-sm text-gray-700">
+                            Tax: ₹{reachProTaxAmount.toLocaleString()} | Total Payable: ₹{reachProTotalPayable.toLocaleString()}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               <Button
                 type="submit"
                 className="w-full h-11 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold"
-                disabled={loading || !selectedPlan}
+                disabled={loading || (!selectedPlan && !addReachPro)}
               >
-                {loading ? "Processing..." : "Start My Free Trial"}
+                {loading ? "Processing..." : addReachPro && !selectedPlan ? "Proceed to ReachPro Payment" : "Continue to Payment"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 

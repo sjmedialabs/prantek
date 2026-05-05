@@ -121,6 +121,9 @@ export interface User extends BaseDocument {
   subscriptionPrice?: number
   paidAmount?: number
   discountPercentage?: number
+  walletBalance?: number
+  totalRechargeAmount?: number
+  lastRechargeAt?: Date
   /** Super-admin comped / free period: exclude from MRR & revenue dashboards */
   subscriptionRevenueExcluded?: boolean
   /** Audit trail of plan assignments (admin + optional payment snapshots) */
@@ -762,6 +765,42 @@ export interface SubscriptionPlan extends BaseDocument {
   subscriberCount?: number
   revenue?: number
   order?: number // Display order for sorting
+  isPayAsYouGo?: boolean
+  isReachPro?: boolean
+  minTopupAmount?: number
+  costPerEmailCampaign?: number
+  costPerBulkMessageCampaign?: number
+  taxIncluded?: boolean
+}
+
+export interface ReachProTransaction extends BaseDocument {
+  userId: string
+  type: "recharge" | "email_campaign" | "bulk_message"
+  amount: number
+  emailsDeducted?: number
+  costPerMail?: number
+  taxAmount: number
+  balanceBefore: number
+  balanceAfter: number
+  creditsBefore?: number
+  creditsAfter?: number
+  referenceId?: string
+}
+
+export interface ReachProWallet extends BaseDocument {
+  userId: string
+  balance: number
+  totalRecharge: number
+  isActive: boolean
+  lastRechargeAt?: Date
+  currentCostPerMail?: number
+  remainingMailCredits?: number
+  totalPurchasedMailCredits?: number
+  activePricingRange?: {
+    minAmount: number
+    maxAmount: number
+    costPerMail: number
+  } | null
 }
 
 export interface PaymentMethod extends BaseDocument {

@@ -133,6 +133,7 @@ export function PricingSection() {
           {plans.map((plan, index) => {
             const isPopular = popularName && plan.name === popularName
             const isEnterprise = enterpriseName && plan.name === enterpriseName
+            const isReachPro = String(plan.name || "").toLowerCase() === "reachpro"
             const monthlyPrice = plan.price
             const yearlyPrice = monthlyPrice * 12
             const discountAmount = Math.round(yearlyPrice * (yearlyDiscount / 100))
@@ -166,7 +167,7 @@ export function PricingSection() {
                 <CardHeader className="text-center pb-6 pt-8 space-y-4">
                   <div className="space-y-2">
                     <CardTitle
-                      className={`text-3xl font-extrabold tracking-tight ${
+                      className={`text-3xl font-bold tracking-tight ${
                         isPopular ? "text-primary" : "text-gray-900"
                       }`}
                     >
@@ -188,6 +189,19 @@ export function PricingSection() {
                         {enterpriseSub ? (
                           <p className="text-sm text-gray-500 font-medium mt-2">{enterpriseSub}</p>
                         ) : null}
+                      </>
+                    ) : isReachPro ? (
+                      <>
+                        <div className="flex items-start justify-center gap-1">
+                          <span
+                            className={`text-5xl font-extrabold bg-gradient-to-br bg-clip-text text-transparent ${
+                              isPopular ? "from-blue-600 to-indigo-600" : "from-gray-900 to-gray-700"
+                            }`}
+                          >
+                            Pay As You Go
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium mt-2">Lifetime validity</p>
                       </>
                     ) : (
                       <>

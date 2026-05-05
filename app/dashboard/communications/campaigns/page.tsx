@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Send, ArrowLeft, Loader2 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import Link from "next/link"
+import RichTextEditor from "@/components/editor/rich-text-editor"
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([])
@@ -20,6 +21,7 @@ export default function CampaignsPage() {
   const [sending, setSending] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState({ name: "", subject: "", content: "", audience: "all", groupId: "", scheduledAt: "" })
+  const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 
   useEffect(() => {
     Promise.all([
@@ -35,6 +37,13 @@ export default function CampaignsPage() {
 
   const handleSend = async (action: "send" | "schedule") => {
     if (!form.name || !form.content) { toast.error("Name and content required"); return }
+    if (action === "schedule") {
+      if (!form.scheduledAt) { toast.error("Scheduled time is required"); return }
+      if (new Date(form.scheduledAt).getTime() <= Date.now()) {
+        toast.error("Please select a future scheduled time")
+        return
+      }
+    }
     setSending(true)
     try {
       const r = await fetch("/api/campaigns", {
@@ -52,8 +61,14 @@ export default function CampaignsPage() {
   }
 
   const applyTemplate = (templateId: string) => {
-    const t = templates.find(t => t._id === templateId)
-    if (t) setForm({ ...form, subject: t.subject || t.name, content: t.content })
+    const t = templates.find((tpl: any) => String(tpl._id || tpl.id) === String(templateId))
+    if (t) {
+      setForm((prev) => ({
+        ...prev,
+        subject: t.subject || t.name || prev.subject,
+        content: t.content || "",
+      }))
+    }
   }
 
   const statusColors: Record<string, string> = { sent: "bg-green-100 text-green-800", draft: "bg-gray-100 text-gray-800", scheduled: "bg-blue-100 text-blue-800", sending: "bg-yellow-100 text-yellow-800", failed: "bg-red-100 text-red-800" }
@@ -89,16 +104,40 @@ export default function CampaignsPage() {
       )}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>New Email Campaign</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-2">
+          <div className="space-y-4 pt-2 max-h-[80vh] overflow-y-auto">
             <div className="space-y-2"><Label>Campaign Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. March Newsletter" /></div>
             {templates.length > 0 && (
               <div className="space-y-2"><Label>Use Template</Label>
                 <Select onValueChange={applyTemplate}><SelectTrigger><SelectValue placeholder="Select a template" /></SelectTrigger>
-                  <SelectContent>{templates.map(t => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    {templates.map((t: any) => {
+                      const templateId = String(t._id || t.id)
+                      return (
+                        <SelectItem key={templateId} value={templateId}>
+                          {t.name}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
                 </Select></div>
             )}
             <div className="space-y-2"><Label>Subject</Label><Input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Content (HTML supported, use {"{{name}}"} for personalization)</Label><Textarea value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} rows={6} /></div>
+            <div className="space-y-2">
+              <Label>
+                Email Content (use {"{{name}}"} for personalization)
+              </Label>
+
+              <RichTextEditor
+                value={form.content}
+                onChange={(value) =>
+                  setForm({ ...form, content: value })
+                }
+              />
+
+              <p className="text-xs text-muted-foreground">
+                Available variables: {"{{name}}"}
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Audience</Label>
                 <Select value={form.audience} onValueChange={v => setForm({ ...form, audience: v })}><SelectTrigger><SelectValue /></SelectTrigger>
@@ -111,7 +150,15 @@ export default function CampaignsPage() {
                   </Select></div>
               )}
             </div>
-            <div className="space-y-2"><Label>Schedule (leave empty to send now)</Label><Input type="datetime-local" value={form.scheduledAt} onChange={e => setForm({ ...form, scheduledAt: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Schedule (leave empty to send now)</Label>
+              <Input
+                type="datetime-local"
+                min={nowLocal}
+                value={form.scheduledAt}
+                onChange={e => setForm({ ...form, scheduledAt: e.target.value })}
+              />
+            </div>
             <div className="flex gap-2">
               <Button onClick={() => handleSend("send")} disabled={sending} className="flex-1">{sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Send className="h-4 w-4 mr-2" />Send Now</>}</Button>
               {form.scheduledAt && <Button variant="outline" onClick={() => handleSend("schedule")} disabled={sending} className="flex-1">Schedule</Button>}

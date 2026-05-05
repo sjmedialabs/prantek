@@ -282,7 +282,17 @@ export async function POST(request: NextRequest) {
     <p style="color: #e0e0e0; font-size: 12px; margin: 0; line-height: 1.5;">
       ${companyAddress ? `${companyAddress}<br/>` : ""}
       ${companyPhone ? `📞 ${companyPhone}<br/>` : ""}
-      ${companyEmail ? `✉️ ${companyEmail}<br/>` : ""}
+      ${companyEmail ? `
+      <div style="color: #e0e0e0; font-size: 12px; line-height: 1.5;">
+        ✉️ 
+        <a 
+          href="mailto:${companyEmail}" 
+          style="color: #e0e0e0; text-decoration: none;"
+        >
+          ${companyEmail}
+        </a>
+      </div>
+    ` : ""}
       ${companyWebsite ? `🌐 ${companyWebsite}` : ""}
     </p>
   ` : ""}

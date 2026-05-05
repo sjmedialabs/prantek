@@ -26,6 +26,10 @@ import {
   Plus,
   Receipt,
   CreditCard,
+  MessageSquare,
+  Zap,
+  PlusCircle,
+  History,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/currency-utils";
@@ -35,6 +39,8 @@ import DateFilter, {
 } from "@/components/dashboard/date-filter";
 import Link from "next/link";
 import ReceiptsPage from "./receipts/page";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 // const normalizeDate = (date: string | Date) => {
 //   const d = new Date(date)
@@ -74,7 +80,7 @@ export default function DashboardPage() {
   const { hasPermission } = useUser()
   const { user } = useUser();
   const { getCompletionPercentage, isOnboardingComplete, progress, updateProgress } = useOnboarding();
-
+  const router = useRouter();
   const [stats, setStats] = useState({
     totalReceipts: 0,
     totalPayments: 0,
@@ -112,6 +118,8 @@ export default function DashboardPage() {
 
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [currentPlan, setCurrentPlan] = useState<any>(null);
+  const [currentUserData, setCurrentUserData] = useState<any>(null);
+  const [reachProMeta, setReachProMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilterType>("lifetime");
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -133,8 +141,26 @@ const getEntityDate = (entity: any) =>
     if (user) {
       loadDashboardData();
       validateOnboardingProgress();
+      
+      api.users.getById(user.id)
+        .then(data => setCurrentUserData(data))
+        .catch(err => console.error("ReachPro data fetch error:", err));
+
+      fetch("/api/reachpro/transactions", { credentials: "include" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.success) setReachProMeta(data)
+        })
+        .catch((err) => console.error("ReachPro wallet meta fetch error:", err));
     }
   }, [user, dateRange]);
+
+  const rpWalletBalance = Number(reachProMeta?.walletBalance ?? currentUserData?.walletBalance ?? 0)
+  const rpCredits = Number(reachProMeta?.remainingMailCredits ?? currentUserData?.remainingMailCredits ?? 0)
+  const rpRate = Number(reachProMeta?.currentCostPerMail ?? currentUserData?.currentCostPerMail ?? 0)
+  const rpLowBalance = rpCredits <= 0 || rpRate <= 0 || rpWalletBalance <= 0
+  const rpRecentTransactions = Array.isArray(reachProMeta?.data) ? reachProMeta.data : (currentUserData?.reachProTransactions || [])
+  const rpLatestTxn = rpRecentTransactions.length > 0 ? rpRecentTransactions[0] : null
 
   // Validate onboarding progress against real data
   const validateOnboardingProgress = async () => {
@@ -502,6 +528,7 @@ const clearedPayments = filteredPayments.filter(
 
   return (
     <div className="space-y-3">
+
       {/* Trial Expiry Alert */}
       {/* {user?.subscriptionStatus === "trial" && user?.trialEndsAt ? (
         <div className="relative">
@@ -606,6 +633,142 @@ const clearedPayments = filteredPayments.filter(
           </div>
         </div>
       </div>
+      {/* ReachPro Summary Card - Primary for PAYG users */}
+      {(currentUserData?.reachProEnabled || (rpWalletBalance ?? 0) > 0) && !user?.subscriptionPlanId && (
+        <Card className="overflow-hidden border-l-4 border-l-emerald-500 shadow-md">
+          <CardContent className="p-0">
+            <div className="flex flex-col md:flex-row">
+              <div className="p-6 flex-1 bg-gradient-to-br from-emerald-50 to-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <Zap className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">ReachPro Communication Wallet</h3>
+                      <p className="text-xs text-gray-500">Active Communication Credits</p>
+                    </div>
+                  </div>
+                  <Link href="/dashboard/plans">
+                    <Button size="sm" variant="default" className="bg-emerald-600 hover:bg-emerald-700">
+                      Recharge Wallet
+                    </Button>
+                  </Link>
+                </div>
+                
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black text-gray-900">₹{rpWalletBalance.toLocaleString()}</span>
+                  {rpLowBalance && (
+                    <Badge variant="destructive" className="animate-pulse px-2 py-1">
+                      {rpWalletBalance === 0 ? "Recharge Required" : "Low Balance"}
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="mt-6 pt-4 border-t border-emerald-100 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400">Mail Credits</p>
+                    <p className="text-base font-bold text-gray-700">{rpCredits.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400">Current Rate</p>
+                    <p className="text-base font-bold text-gray-700">₹{rpRate.toLocaleString()}<span className="text-[10px] font-normal text-gray-500 ml-1">/mail</span></p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6 flex-1 bg-white border-l md:border-l-gray-100 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Last Deduction</h4>
+                    {currentUserData?.lastRechargeAt && (
+                      <span className="text-[10px] text-gray-400">Last Recharge: {new Date(currentUserData.lastRechargeAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                  {rpLatestTxn ? (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${String(rpLatestTxn.type || "").toLowerCase() === 'recharge' ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+                          {String(rpLatestTxn.type || "").toLowerCase() === 'recharge' ? <ArrowUpRight className="h-4 w-4 text-emerald-600" /> : <MessageSquare className="h-4 w-4 text-gray-600" />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900">{String(rpLatestTxn.type || "").replace(/_/g, " ")}</p>
+                          <p className="text-[10px] text-gray-500">{new Date(rpLatestTxn.createdAt || rpLatestTxn.date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-bold ${String(rpLatestTxn.type || "").toLowerCase() === 'recharge' ? 'text-emerald-600' : 'text-gray-900'}`}>
+                        {String(rpLatestTxn.type || "").toLowerCase() === 'recharge' ? '+' : '-'}₹{Number(rpLatestTxn.amount || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">No deductions recorded yet.</p>
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" className="w-full mt-6 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 text-xs font-bold" onClick={() => router.push('/dashboard/profile')}>
+                  View Wallet History
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {/* ReachPro Summary Card (Inline Version for Subscription Users) */}
+      {/* {(currentUserData?.reachProEnabled || (rpWalletBalance ?? 0) > 0) && user?.subscriptionPlanId && (
+        <Card className="overflow-hidden border border-emerald-100 bg-white">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 rounded-lg">
+                  <Zap className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase">ReachPro Wallet</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-gray-900">₹{rpWalletBalance.toLocaleString()}</span>
+                    {rpLowBalance && (
+                      <Badge variant="destructive" className="text-[10px] px-1.5 h-4">
+                        {rpWalletBalance === 0 ? "Empty" : "Low"}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="hidden xl:flex items-center gap-6 px-6 border-x border-gray-100">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase">Credits</p>
+                  <p className="text-xs font-bold">{rpCredits.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase">Rate</p>
+                  <p className="text-xs font-bold">₹{rpRate.toLocaleString()}/mail</p>
+                </div>
+                {currentUserData?.lastRechargeAt && (
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase">Last Recharge</p>
+                    <p className="text-xs font-bold">{new Date(currentUserData.lastRechargeAt).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center bg-red-500 gap-2">
+                <Link href="/dashboard/profile">
+                  <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+                    <History className="h-3.5 w-3.5 mr-1" />
+                    History
+                  </Button>
+                </Link>
+                <Link href="/dashboard/plans">
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-xs h-8">
+                    <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                    Recharge
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )} */}
 
       {/* Onboarding Progress Cards - Below Welcome - Only for account owners */}
       {/* {!user?.isAdminUser && <OnboardingProgressCards />} */}
