@@ -32,10 +32,25 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       let recipients: any[] = []
       if (audience === "group" && groupId) {
         const group = await db.collection(Collections.CLIENT_GROUPS).findOne({ _id: new ObjectId(groupId) })
-        if (group?.filters) {
-          const filter: any = { userId: String(userId) }
-          if (group.filters.location) filter.address = { $regex: group.filters.location, $options: "i" }
-          recipients = await db.collection("clients").find(filter).project({ email: 1, name: 1 }).toArray()
+        if (group) {
+          // Recipients matched by filters on the `clients` collection.
+          if (group.filters) {
+            const filter: any = { userId: String(userId) }
+            if (group.filters.location) filter.address = { $regex: group.filters.location, $options: "i" }
+            recipients = await db.collection("clients").find(filter).project({ email: 1, name: 1 }).toArray()
+          }
+          // Plus any ad-hoc emails stored directly on the group.
+          if (Array.isArray(group.emails) && group.emails.length > 0) {
+            const seen = new Set(
+              recipients.map((r: any) => String(r.email || "").trim().toLowerCase()).filter(Boolean),
+            )
+            for (const e of group.emails) {
+              const email = String(e?.email || "").trim().toLowerCase()
+              if (!email || seen.has(email)) continue
+              seen.add(email)
+              recipients.push({ email, name: e?.name || "" })
+            }
+          }
         }
       } else {
         recipients = await db.collection("clients").find({ userId: String(userId) })
