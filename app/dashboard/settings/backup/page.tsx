@@ -53,7 +53,7 @@ const formatDateTime = (value: any) => {
     hour12: true,
   })
 }
-const EXCLUDED_FIELDS = ["_id", "createdAt", "updatedAt", "id", "Id"]
+const EXCLUDED_FIELDS = ["_id", "createdAt", "updatedAt", "updateAt", "id", "Id", "clientId", "vendorId", "employeeId", "userId", "companyId", "tenantId", "recipientId", "designation", "transactionId", "lastLogin", "employee", "screenshotUrl", "screenshotFile", "billFile", "billUpload", "photo", "adharUpload", "educationCertificates", "experienceCertificates", "userCount", "isActive", ]
 const capitalizeWords = (value: any) => {
   if (typeof value !== "string") return value
 
@@ -61,28 +61,6 @@ const capitalizeWords = (value: any) => {
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
-// const SENSITIVE_KEYS_TO_EXCLUDE = [
-//   // Phone numbers
-//   "phone", "phone2", "mobileNo1", "mobileNo2", "clientPhone", "clientContact", "recipientPhone", "contactNumber", "emergencyContact",
-
-//   // Financial amounts & numbers
-//   "amount", "price", "total", "subtotal", "grandTotal", "paidAmount", "balanceAmount", "taxAmount", "discount", "salary", "purchasePrice", "currentValue", "depreciationRate", "ReceiptAmount", "refundedAmount", "invoiceTotalAmount", "expenseAdjustment", "payAbleAmount", "subscriptionPrice", "invoicegrandTotal", "invoiceBalance", "quantity", "cgst", "sgst", "igst", "taxRate",
-
-//   // Financial identifiers
-//   "bankAccount", "bankAccountNumber", "ifscCode", "upiId", "razorpayTokenId", "stripeCustomerId", "razorpayCustomerId",
-
-//   // Government IDs
-//   "gst", "gstin", "pan", "tan", "aadharNumber",
-
-//   // Other
-//   "pincode",
-
-//   // Passwords/secrets
-//   "password",
-
-//   // Location
-//   "address", "city", "state",
-// ]
   const exportData = async (
     label: string,
     fetcher: () => Promise<any[]>
@@ -152,13 +130,31 @@ const formattedData = data.map((row) => {
       value = formatDateTime(value)
     } 
     // 🔥 Convert objects AFTER date check
-    else if (typeof value === "object") {
-      try {
-        value = JSON.stringify(value)
-      } catch {
-        value = ""
-      }
+else if (typeof value === "object") {
+
+  // ✅ Handle ITEMS ARRAY
+  if (Array.isArray(value) && key.toLowerCase().includes("item")) {
+    value = value
+      .map((item: any) =>
+        `${item.itemName || ""} (Qty:${item.quantity || 0}, Price:${item.price || 0})`
+      )
+      .join(" | ")
+  }
+
+  // ✅ Handle BANK DETAILS OBJECT
+  else if (key.toLowerCase().includes("bank")) {
+    value = `${value.bankName || ""} - ${value.accountNumber || ""} (IFSC: ${value.ifscCode || ""})`
+  }
+
+  // ✅ Fallback (if any other object)
+  else {
+    try {
+      value = JSON.stringify(value)
+    } catch {
+      value = ""
     }
+  }
+}
 
     // Capitalization
     if (fieldsToCapitalize.includes(key)) {
@@ -174,7 +170,7 @@ const formattedData = data.map((row) => {
         lowerKey.includes("pincode") ||
         lowerKey.includes("gst") ||
         lowerKey.includes("pan") ||
-        lowerKey.includes("aadhaar")
+        lowerKey.includes("aadharNo") || lowerKey.includes("accountNumber") || lowerKey.includes("ifsc") || lowerKey.includes("reference")
       )
     ) {
       value = `="${value}"`

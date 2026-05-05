@@ -111,9 +111,9 @@ function resolveTotalAmount(doc: any): number {
 }
 
 export async function POST(request: NextRequest) {
+
   try {
-    const { documentType, documentId, recipientEmail, recipientName, tenantId } =
-      await request.json()
+    const { documentType, documentId, recipientEmail, recipientName, tenantId, companyDetails } = await request.json()
 
     if (!documentType || !documentId || !recipientEmail) {
       return NextResponse.json(
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       recipientName || doc.clientName || doc.recipientName || "Customer"
     const totalAmount = resolveTotalAmount(doc)
     const date = doc.date || doc.invoiceDate || doc.createdAt
-    const company = doc.companyDetails || {}
+    const company = doc.companyDetails || companyDetails || {}
 
     // ---------------------------------------------------------------
     // Document / PDF generation
@@ -237,12 +237,12 @@ export async function POST(request: NextRequest) {
       pdfFilePath = null
     }
 
-    const companyName = company.name || ""
-    const companyLogo = company.logo || ""
-    const companyAddress = company.address || ""
-    const companyPhone = company.phone || ""
-    const companyEmail = company.email || ""
-    const companyWebsite = company.website || ""
+    const companyName = company?.name || companyDetails?.name || ""
+    const companyLogo = company?.logo || companyDetails?.logo || ""
+    const companyAddress = company?.address || companyDetails?.address || ""
+    const companyPhone = company?.phone || companyDetails?.phone || ""
+    const companyEmail = company?.email || companyDetails?.email || ""
+    const companyWebsite = company?.website || companyDetails?.website || ""
 
     const attachmentBlock = pdfFileUrl
       ? `
