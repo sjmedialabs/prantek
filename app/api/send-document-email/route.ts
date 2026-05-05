@@ -52,12 +52,12 @@ export async function POST(request: NextRequest) {
     const totalAmount = doc.grandTotal ?? doc.total ?? doc.ReceiptAmount ?? doc.amount ?? 0
     const date = doc.date || doc.invoiceDate || doc.createdAt
     const company = doc.companyDetails || {}
-const companyName = company?.name || companyDetails?.name || ""
-const companyLogo = company?.logo || companyDetails?.logo || ""
-const companyAddress = company?.address || companyDetails?.address || ""
-const companyPhone = company?.phone || companyDetails?.phone || ""
-const companyEmail = company?.email || companyDetails?.email || ""
-const companyWebsite = company?.website || companyDetails?.website || ""
+    const companyName = company?.name || companyDetails?.name || ""
+    const companyLogo = company?.logo || companyDetails?.logo || ""
+    const companyAddress = company?.address || companyDetails?.address || ""
+    const companyPhone = company?.phone || companyDetails?.phone || ""
+    const companyEmail = company?.email || companyDetails?.email || ""
+    const companyWebsite = company?.website || companyDetails?.website || ""
     const html = `
 <!DOCTYPE html>
 <html>
@@ -85,7 +85,17 @@ const companyWebsite = company?.website || companyDetails?.website || ""
     <p style="color: #e0e0e0; font-size: 12px; margin: 0; line-height: 1.5;">
       ${companyAddress ? `${companyAddress}<br/>` : ""}
       ${companyPhone ? `📞 ${companyPhone}<br/>` : ""}
-      ${companyEmail ? `✉️ ${companyEmail}<br/>` : ""}
+      ${companyEmail ? `
+      <div style="color: #e0e0e0; font-size: 12px; line-height: 1.5;">
+        ✉️ 
+        <a 
+          href="mailto:${companyEmail}" 
+          style="color: #e0e0e0; text-decoration: none;"
+        >
+          ${companyEmail}
+        </a>
+      </div>
+    ` : ""}
       ${companyWebsite ? `🌐 ${companyWebsite}` : ""}
     </p>
   ` : ""}

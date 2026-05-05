@@ -240,7 +240,7 @@ console.log("payment amount is ", paymentAmount)
       restoredTotalBeforeEdit - paymentAmount - advanceApplyAmount
 
     const updatedStatus =
-      updatedBalanceAmount <= 0 ? "cleared" : "Partial"
+      updatedBalanceAmount <= 0 ? "collected" : "partially collected"
 
 
     setSubmitting(true)
