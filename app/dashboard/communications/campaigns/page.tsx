@@ -21,7 +21,12 @@ export default function CampaignsPage() {
   const [sending, setSending] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState({ name: "", subject: "", content: "", audience: "all", groupId: "", scheduledAt: "" })
+  const [templateSearch, setTemplateSearch] = useState("")
   const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  const filteredTemplates = templates.filter((t: any) =>
+    String(t?.name || "").toLowerCase().includes(templateSearch.toLowerCase()),
+  )
+  const isScheduledTimeInPast = !!form.scheduledAt && new Date(form.scheduledAt).getTime() <= Date.now()
 
   useEffect(() => {
     Promise.all([
@@ -39,24 +44,30 @@ export default function CampaignsPage() {
     if (!form.name || !form.content) { toast.error("Name and content required"); return }
     if (action === "schedule") {
       if (!form.scheduledAt) { toast.error("Scheduled time is required"); return }
-      if (new Date(form.scheduledAt).getTime() <= Date.now()) {
-        toast.error("Please select a future scheduled time")
+      if (isScheduledTimeInPast) {
+        toast.error("Scheduled time cannot be in the past.")
         return
       }
     }
     setSending(true)
     try {
+      const payload = {
+        ...form,
+        action,
+        type: "email",
+        scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : "",
+      }
       const r = await fetch("/api/campaigns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, action, type: "email" }),
+        body: JSON.stringify(payload),
       })
       const d = await r.json()
       if (d.success) {
         toast.success(action === "send" ? `Campaign sent! ${d.data.sentCount} emails delivered, ${d.data.failedCount} failed` : "Campaign scheduled!")
-        setDialogOpen(false); setForm({ name: "", subject: "", content: "", audience: "all", groupId: "", scheduledAt: "" })
+        setDialogOpen(false); setTemplateSearch(""); setForm({ name: "", subject: "", content: "", audience: "all", groupId: "", scheduledAt: "" })
         const refresh = await fetch("/api/campaigns").then(r => r.json())
         if (refresh.success) setCampaigns(refresh.data || [])
-      } else toast.error(d.error)
+      } else toast.error(d.message || d.error)
     } catch { toast.error("Failed") } finally { setSending(false) }
   }
 
@@ -71,7 +82,7 @@ export default function CampaignsPage() {
     }
   }
 
-  const statusColors: Record<string, string> = { sent: "bg-green-100 text-green-800", draft: "bg-gray-100 text-gray-800", scheduled: "bg-blue-100 text-blue-800", sending: "bg-yellow-100 text-yellow-800", failed: "bg-red-100 text-red-800" }
+  const statusColors: Record<string, string> = { sent: "bg-green-100 text-green-800", draft: "bg-gray-100 text-gray-800", scheduled: "bg-blue-100 text-blue-800", sending: "bg-yellow-100 text-yellow-800", processing: "bg-yellow-100 text-yellow-800", failed: "bg-red-100 text-red-800" }
 
   return (
     <div className="p-6 space-y-6">
@@ -110,7 +121,7 @@ export default function CampaignsPage() {
               <div className="space-y-2"><Label>Use Template</Label>
                 <Select onValueChange={applyTemplate}><SelectTrigger><SelectValue placeholder="Select a template" /></SelectTrigger>
                   <SelectContent>
-                    {templates.map((t: any) => {
+                    {filteredTemplates.map((t: any) => {
                       const templateId = String(t._id || t.id)
                       return (
                         <SelectItem key={templateId} value={templateId}>
@@ -158,10 +169,13 @@ export default function CampaignsPage() {
                 value={form.scheduledAt}
                 onChange={e => setForm({ ...form, scheduledAt: e.target.value })}
               />
+              {isScheduledTimeInPast && (
+                <p className="text-xs text-red-600">Scheduled time cannot be in the past.</p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button onClick={() => handleSend("send")} disabled={sending} className="flex-1">{sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Send className="h-4 w-4 mr-2" />Send Now</>}</Button>
-              {form.scheduledAt && <Button variant="outline" onClick={() => handleSend("schedule")} disabled={sending} className="flex-1">Schedule</Button>}
+              {form.scheduledAt && <Button variant="outline" onClick={() => handleSend("schedule")} disabled={sending || isScheduledTimeInPast} className="flex-1">Schedule</Button>}
             </div>
           </div>
         </DialogContent>
