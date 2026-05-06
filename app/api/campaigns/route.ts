@@ -2,9 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { withAuth } from "@/lib/api-auth"
 import { connectDB } from "@/lib/mongodb"
 import { Collections } from "@/lib/db-config"
-import { ObjectId } from "mongodb"
-import { sendEmailBatch } from "@/lib/email/sendEmail"
-import { deductReachProBalance, getReachProWallet, hasReachProAccess } from "@/lib/reachpro-wallet"
+import { hasReachProAccess } from "@/lib/reachpro-wallet"
+import { processCampaignSend } from "@/lib/campaigns/processCampaignSend"
 
 export const GET = withAuth(async (request: NextRequest, user) => {
   try {
@@ -42,107 +41,37 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     if (!name) return NextResponse.json({ success: false, error: "Name required" }, { status: 400 })
     if (action === "schedule") {
       if (!scheduledAt) {
-        return NextResponse.json({ success: false, error: "Scheduled time is required." }, { status: 400 })
+        return NextResponse.json({ success: false, error: "Scheduled time is required.", message: "Scheduled time is required." }, { status: 400 })
       }
       const scheduledDate = new Date(scheduledAt)
       if (Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
-        return NextResponse.json({ success: false, error: "Please provide a valid future scheduled time." }, { status: 400 })
+        return NextResponse.json(
+          { success: false, error: "Cannot schedule campaign in the past.", message: "Cannot schedule campaign in the past." },
+          { status: 400 },
+        )
       }
     }
 
     // If action === "send", execute immediately
     if (action === "send") {
-      const wallet = await getReachProWallet(String(userId))
-      const costPerMail = Number(wallet?.currentCostPerMail || 0)
-      // Resolve recipients
-      let recipients: any[] = []
-      if (audience === "group" && groupId) {
-        const group = await db.collection(Collections.CLIENT_GROUPS).findOne({ _id: new ObjectId(groupId) })
-        if (group) {
-          // Recipients matched by filters on the `clients` collection.
-          if (group.filters) {
-            const filter: any = { userId: String(userId) }
-            if (group.filters.location) filter.address = { $regex: group.filters.location, $options: "i" }
-            recipients = await db.collection("clients").find(filter).project({ email: 1, name: 1 }).toArray()
-          }
-          // Plus any ad-hoc emails stored directly on the group.
-          if (Array.isArray(group.emails) && group.emails.length > 0) {
-            const seen = new Set(
-              recipients.map((r: any) => String(r.email || "").trim().toLowerCase()).filter(Boolean),
-            )
-            for (const e of group.emails) {
-              const email = String(e?.email || "").trim().toLowerCase()
-              if (!email || seen.has(email)) continue
-              seen.add(email)
-              recipients.push({ email, name: e?.name || "" })
-            }
-          }
-        }
-      } else {
-        recipients = await db.collection("clients").find({ userId: String(userId) })
-          .project({ email: 1, name: 1 }).toArray()
-      }
-
       const campaign = {
         name, type: type || "email", templateId, subject, content, audience: audience || "all",
-        groupId, status: "sending", sentAt: new Date(), userId: String(userId),
-        totalRecipients: recipients.length, sentCount: 0, failedCount: 0,
+        groupId, status: "processing", userId: String(userId),
+        totalRecipients: 0, sentCount: 0, failedCount: 0, failureReason: null,
         createdAt: new Date(), updatedAt: new Date(),
       }
       const result = await db.collection(Collections.CAMPAIGNS).insertOne(campaign)
       const campaignId = result.insertedId
-
-      const withEmail = recipients.filter((r) => r.email)
-      let sentCount = 0
-      let failedCount = recipients.length - withEmail.length
-
-      const items = withEmail.map((r) => {
-        const personalizedContent = (content || "").replace(/\{\{name\}\}/g, r.name || "Customer")
-        return {
-          to: r.email,
-          subject: subject || name,
-          html: personalizedContent,
-          text: personalizedContent.replace(/<[^>]*>/g, ""),
-        }
+      const { sentCount, failedCount } = await processCampaignSend(db, {
+        _id: campaignId,
+        userId: String(userId),
+        name,
+        subject,
+        content,
+        audience: audience || "all",
+        groupId,
+        type: type || "email",
       })
-
-      const batchResults = await sendEmailBatch(items)
-
-      for (let idx = 0; idx < withEmail.length; idx++) {
-        const r = withEmail[idx]
-        const emailResult = batchResults[idx]
-        const recipientDoc = {
-          campaignId,
-          recipientEmail: r.email,
-          recipientName: r.name || "",
-          status: emailResult.success ? "sent" : "failed",
-          sentAt: new Date(),
-          failedReason: emailResult.success ? null : (emailResult as { error?: string }).error ?? null,
-        }
-        await db.collection(Collections.CAMPAIGN_RECIPIENTS).insertOne(recipientDoc)
-        if (emailResult.success) sentCount++
-        else failedCount++
-      }
-
-      await db.collection(Collections.CAMPAIGNS).updateOne(
-        { _id: campaignId },
-        { $set: { status: "sent", sentCount, failedCount, updatedAt: new Date() } }
-      )
-
-      if (costPerMail > 0 && sentCount > 0) {
-        const reachProCost = Number((sentCount * costPerMail).toFixed(2))
-        const deduction = await deductReachProBalance({
-          userId: String(userId),
-          amount: reachProCost,
-          emailsDeducted: sentCount,
-          costPerMail,
-          type: type === "bulk_message" ? "whatsapp_campaign" : "email_campaign",
-          referenceId: String(campaignId),
-        })
-        if (!deduction.success) {
-          return NextResponse.json({ success: false, error: deduction.error }, { status: 400 })
-        }
-      }
       return NextResponse.json({ success: true, data: { _id: campaignId, sentCount, failedCount } })
     }
 
@@ -152,7 +81,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       audience: audience || "all", groupId,
       status: scheduledAt ? "scheduled" : "draft",
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      userId: String(userId), totalRecipients: 0, sentCount: 0, failedCount: 0,
+      userId: String(userId), totalRecipients: 0, sentCount: 0, failedCount: 0, failureReason: null,
       createdAt: new Date(), updatedAt: new Date(),
     }
     const result = await db.collection(Collections.CAMPAIGNS).insertOne(campaign)

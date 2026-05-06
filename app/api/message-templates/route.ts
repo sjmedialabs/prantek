@@ -9,7 +9,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     const db = await connectDB()
     const userId = user.isAdminUser && user.companyId ? user.companyId : user.userId
     const templates = await db.collection(Collections.MESSAGE_TEMPLATES)
-      .find({ userId: String(userId) }).sort({ createdAt: -1 }).toArray()
+      .find({ userId: String(userId), isActive: { $ne: false } }).sort({ createdAt: -1 }).toArray()
     return NextResponse.json({ success: true, data: templates })
   } catch (error) {
     return NextResponse.json({ success: false, error: "Failed to fetch templates" }, { status: 500 })
@@ -25,6 +25,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     if (!name || !content) return NextResponse.json({ success: false, error: "Name and content required" }, { status: 400 })
     const doc = {
       name, subject: subject || name, content, type: type || "email",
+      isActive: true,
       userId: String(userId), createdAt: new Date(), updatedAt: new Date(),
     }
     const result = await db.collection(Collections.MESSAGE_TEMPLATES).insertOne(doc)
