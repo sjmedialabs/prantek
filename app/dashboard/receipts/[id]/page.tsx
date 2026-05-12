@@ -617,6 +617,27 @@ export default function ReceiptDetailsPage() {
               </div>
             </CardContent>
           </Card>
+          {(receipt?.screenshotUrl || (receipt as any)?.screenshot) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Screenshot</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <a
+                  href={receipt?.screenshotUrl || (receipt as any)?.screenshot}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full"
+                >
+                  <img
+                    src={receipt?.screenshotUrl || (receipt as any)?.screenshot}
+                    alt={`Payment screenshot for ${receipt?.receiptNumber || "receipt"}`}
+                    className="w-full max-h-[420px] rounded-lg border object-contain bg-gray-50"
+                  />
+                </a>
+              </CardContent>
+            </Card>
+          )}
           {(receipt?.paymentMethod?.toLowerCase() !== "cash" && (receipt?.bankDetails || receipt.bankAccount)) && (
             <div className="border flex flex-col gap-1 rounded-lg mt-2 p-4 bg-white text-sm space-y-1">
               <h3 className="text-base font-medium py-2">Bank Details</h3>

@@ -254,6 +254,30 @@ export async function POST(request: NextRequest) {
       <p style="margin: 12px 0 0; font-size: 12px; color: #999; word-break: break-all;">${pdfFileUrl}</p>
     </div>`
       : ""
+      const rawScreenshotUrl =
+      documentType === "receipt"
+        ? String(doc?.screenshotUrl || doc?.screenshot || "").trim()
+        : ""
+    
+    const screenshotUrl = rawScreenshotUrl
+      ? rawScreenshotUrl.startsWith("http")
+        ? rawScreenshotUrl
+        : `${getBaseUrl()}${rawScreenshotUrl.startsWith("/") ? "" : "/"}${rawScreenshotUrl}`
+      : ""
+    const screenshotBlock = screenshotUrl
+      ? `
+    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="margin: 0 0 12px; color: #555;">Payment Screenshot</h3>
+      <a href="${screenshotUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
+        <img src="${screenshotUrl}" alt="Payment Screenshot" style="max-width: 100%; width: 100%; max-height: 360px; border: 1px solid #e0e0e0; border-radius: 8px; object-fit: contain; background: #fafafa;" />
+      </a>
+      <p style="margin: 10px 0 0; font-size: 12px; color: #999; word-break: break-all;">
+        <a href="${screenshotUrl}" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none;">
+          View Payment Screenshot
+        </a>
+      </p>
+    </div>`
+      : ""
 
     const html = `
 <!DOCTYPE html>
@@ -311,6 +335,7 @@ export async function POST(request: NextRequest) {
       </table>
     </div>
     ${attachmentBlock}
+    ${screenshotBlock}
     ${doc.items?.length ? `
     <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="margin-top: 0; color: #555;">Items</h3>
@@ -336,7 +361,8 @@ export async function POST(request: NextRequest) {
 </html>`
 
     const textAttachmentLine = pdfFileUrl ? `\nDownload PDF: ${pdfFileUrl}\n` : ""
-    const text = `${label}: ${docNumber}\nDear ${name},\n\nAmount: ₹${Number(totalAmount).toLocaleString("en-IN")}\n${date ? `Date: ${new Date(date).toLocaleDateString("en-IN")}` : ""}\n${doc.status ? `Status: ${doc.status}` : ""}${textAttachmentLine}\n---\n${APP_NAME}`
+    const textScreenshotLine = screenshotUrl ? `\nPayment Screenshot: ${screenshotUrl}\n` : ""
+    const text = `${label}: ${docNumber}\nDear ${name},\n\nAmount: ₹${Number(totalAmount).toLocaleString("en-IN")}\n${date ? `Date: ${new Date(date).toLocaleDateString("en-IN")}` : ""}\n${doc.status ? `Status: ${doc.status}` : ""}${textAttachmentLine}${textScreenshotLine}\n---\n${APP_NAME}`
 
     console.log("[SEND-DOC-EMAIL] Sending email:", {
       to: recipientEmail,

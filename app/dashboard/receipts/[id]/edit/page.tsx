@@ -593,6 +593,27 @@ console.log("payment amount is ", paymentAmount)
   )}
 </CardContent>
       </Card>
+      {(receipt?.screenshotUrl || receipt?.screenshot) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Screenshot</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <a
+              href={receipt?.screenshotUrl || receipt?.screenshot}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full"
+            >
+              <img
+                src={receipt?.screenshotUrl || receipt?.screenshot}
+                alt={`Payment screenshot for ${receipt?.receiptNumber || "receipt"}`}
+                className="w-full max-h-[420px] rounded-lg border object-contain bg-gray-50"
+              />
+            </a>
+          </CardContent>
+        </Card>
+      )}
       {/* PAYMENT SECTION */}
       <Card>
         <CardHeader>
