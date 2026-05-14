@@ -16,38 +16,44 @@ type CampaignDoc = {
 
 async function resolveRecipients(db: any, campaign: CampaignDoc) {
   const userId = String(campaign.userId)
-  let recipients: any[] = []
 
+  // GROUP AUDIENCE → only manually added group emails
   if (campaign.audience === "group" && campaign.groupId) {
-    const group = await db.collection(Collections.CLIENT_GROUPS).findOne({ _id: new ObjectId(campaign.groupId) })
-    if (group) {
-      if (group.filters) {
-        const filter: any = { userId }
-        if (group.filters.location) filter.address = { $regex: group.filters.location, $options: "i" }
-        recipients = await db.collection("clients").find(filter).project({ email: 1, name: 1 }).toArray()
-      }
-      if (Array.isArray(group.emails) && group.emails.length > 0) {
-        const seen = new Set(recipients.map((r: any) => String(r.email || "").trim().toLowerCase()).filter(Boolean))
-        for (const e of group.emails) {
-          const email = String(e?.email || "").trim().toLowerCase()
-          if (!email || seen.has(email)) continue
-          seen.add(email)
-          recipients.push({ email, name: e?.name || "" })
-        }
-      }
+    const group = await db
+      .collection(Collections.CLIENT_GROUPS)
+      .findOne({ _id: new ObjectId(campaign.groupId) })
+
+    if (!group || !Array.isArray(group.emails)) {
+      return []
     }
+
+    const recipients = group.emails
+      .filter((e: any) => e?.email)
+      .map((e: any) => ({
+        email: String(e.email).trim().toLowerCase(),
+        name: e?.name || "",
+      }))
+
     return recipients
   }
 
-  recipients = await db.collection("clients").find({ userId }).project({ email: 1, name: 1 }).toArray()
-  return recipients
+  // ALL AUDIENCE → send to all clients
+  if (campaign.audience === "all") {
+    return await db
+      .collection("clients")
+      .find({ userId })
+      .project({ email: 1, name: 1 })
+      .toArray()
+  }
+
+  return []
 }
 
 export async function processCampaignSend(db: any, campaign: CampaignDoc) {
   const userId = String(campaign.userId)
   const recipients = await resolveRecipients(db, campaign)
-  const withEmail = recipients.filter((r) => r.email)
-  const items = withEmail.map((r) => {
+  const withEmail = recipients.filter((r:any) => r.email)
+  const items = withEmail.map((r:any) => {
     const personalizedContent = String(campaign.content || "").replace(/\{\{name\}\}/g, r.name || "Customer")
     return {
       to: r.email,

@@ -60,7 +60,7 @@ export default function TemplatesPage() {
       )}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent><DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Template</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-2">
+          <div className="space-y-4 pt-2 max-h-[80vh] overflow-y-auto">
             <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Payment Reminder" /></div>
             <div className="space-y-2"><Label>Subject</Label><Input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} /></div>
             <div className="space-y-2">

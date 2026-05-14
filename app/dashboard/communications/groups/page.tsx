@@ -17,14 +17,14 @@ type GroupEmail = { email: string; name?: string }
 type GroupForm = {
   name: string
   description: string
-  filters: { location: string; minRevenue: string; activity: string }
+  filters: { minRevenue: string; activity: string }
   emails: GroupEmail[]
 }
 
 const EMPTY_FORM: GroupForm = {
   name: "",
   description: "",
-  filters: { location: "", minRevenue: "", activity: "" },
+  filters: { minRevenue: "", activity: "" },
   emails: [],
 }
 
@@ -92,7 +92,7 @@ export default function ClientGroupsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState<GroupForm>(EMPTY_FORM)
-
+  const [saving, setSaving] = useState(false)
   // Email-management working state inside the dialog
   const [newEmail, setNewEmail] = useState("")
   const [newName, setNewName] = useState("")
@@ -123,22 +123,58 @@ export default function ClientGroupsPage() {
   }
 
   const handleSave = async () => {
-    if (!form.name) { toast.error("Name is required"); return }
-    const method = editing ? "PUT" : "POST"
-    const body = editing ? { id: editing._id, ...form } : form
-    const r = await fetch("/api/client-groups", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    if (!form.name.trim()) {
+      toast.error("Group name is required")
+      return
+    }
+
+    // Prevent double click
+    if (saving) return
+
+    // Prevent duplicate names
+    const normalizedName = form.name.trim().toLowerCase()
+
+    const duplicate = groups.find((g) => {
+      // while editing, ignore current group
+      if (editing && g._id === editing._id) return false
+
+      return String(g.name || "").trim().toLowerCase() === normalizedName
     })
-    const d = await r.json()
-    if (d.success) {
-      toast.success(editing ? "Group updated" : "Group created")
-      setDialogOpen(false)
-      resetDialog()
-      loadGroups()
-    } else {
-      toast.error(d.error)
+
+    if (duplicate) {
+      toast.error("Group with this name already exists")
+      return
+    }
+
+    try {
+      setSaving(true)
+
+      const method = editing ? "PUT" : "POST"
+      const body = editing
+        ? { id: editing._id, ...form }
+        : form
+
+      const r = await fetch("/api/client-groups", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+
+      const d = await r.json()
+
+      if (d.success) {
+        toast.success(editing ? "Group updated" : "Group created")
+
+        setDialogOpen(false)
+        resetDialog()
+        loadGroups()
+      } else {
+        toast.error(d.error || "Failed to save group")
+      }
+    } catch (err) {
+      toast.error("Something went wrong")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -155,7 +191,7 @@ export default function ClientGroupsPage() {
       name: g.name || "",
       description: g.description || "",
       filters: {
-        location: g.filters?.location || "",
+        // location: g.filters?.location || "",
         minRevenue: g.filters?.minRevenue || "",
         activity: g.filters?.activity || "",
       },
@@ -273,7 +309,7 @@ export default function ClientGroupsPage() {
                     <Mail className="h-3.5 w-3.5" />
                     {Array.isArray(g.emails) ? g.emails.length : 0} email{(Array.isArray(g.emails) ? g.emails.length : 0) === 1 ? "" : "s"}
                   </span>
-                  {g.filters?.location && <span>• Location: {g.filters.location}</span>}
+                  {/* {g.filters?.location && <span>• Location: {g.filters.location}</span>} */}
                 </div>
               </CardContent>
             </Card>
@@ -303,14 +339,14 @@ export default function ClientGroupsPage() {
                 rows={2}
               />
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label>Filter: Location</Label>
               <Input
                 value={form.filters.location}
                 onChange={(e) => setForm({ ...form, filters: { ...form.filters, location: e.target.value } })}
                 placeholder="e.g. Mumbai"
               />
-            </div>
+            </div> */}
 
             {/* --- Email management --- */}
             <div className="border-t pt-4 space-y-3">
@@ -398,8 +434,14 @@ export default function ClientGroupsPage() {
               )}
             </div>
 
-            <Button onClick={handleSave} className="w-full">
-              {editing ? "Update" : "Create"} Group
+            <Button
+              onClick={handleSave}
+              className="w-full"
+              disabled={saving}
+            >
+              {saving
+                ? (editing ? "Updating..." : "Creating...")
+                : (editing ? "Update" : "Create")} Group
             </Button>
           </div>
         </DialogContent>
